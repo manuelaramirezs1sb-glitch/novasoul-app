@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; }
+  .ph { position:relative; width:320px; height:680px; background:#fbfaf9; border:2px solid #2b2b2b; border-radius:32px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 3px 12px rgba(0,0,0,.12); }
+  .notch { position:absolute; top:0; left:50%; transform:translateX(-50%); width:104px; height:18px; background:#000; border-radius:0 0 13px 13px; z-index:6; }
+  .stat { display:flex; justify-content:space-between; align-items:center; padding:15px 22px 2px; font:600 11px/1 'DM Sans',sans-serif; color:#9a958c; }
+  .statD { color:#8e8880; }
+  .nhead { background:#2b2b2b; padding-bottom:14px; }
+  .nrow { padding:6px 18px 0; display:flex; justify-content:space-between; align-items:center; }
+  .nback { font:500 11px/1 'DM Sans',sans-serif; color:#a8a29a; }
+  .nbrand { font:600 12px/1 'DM Sans',sans-serif; letter-spacing:2px; color:#e2876b; }
+  .ntitle { font:600 20px/1 'Fraunces',serif; color:#faf8f5; padding:8px 18px 0; }
+  .nsub { font:500 11px/1 'DM Sans',sans-serif; color:#9a958c; padding:5px 18px 0; }
+  .body { flex:1; padding:14px 16px; display:flex; flex-direction:column; gap:11px; overflow:hidden; }
+  .sec { font:600 10px/1 'DM Sans',sans-serif; color:#a39d94; text-transform:uppercase; letter-spacing:.6px; }
+  .card { background:#f1efec; border-radius:13px; padding:13px; }
+  .bar { height:9px; border-radius:5px; background:#dcd9d4; }
+  .num { height:18px; border-radius:5px; background:#cfcbc4; }
+  .tabs { display:flex; justify-content:space-around; align-items:flex-end; padding:9px 6px 16px; background:#232323; border-top:1.5px solid #3a3a3a; margin-top:auto; }
+  .tab { display:flex; flex-direction:column; align-items:center; gap:5px; }
+  .tsq { width:21px; height:21px; border-radius:7px; background:#4a4a4a; }
+  .tlb { font:500 9px/1 'DM Sans',sans-serif; color:#8e8880; }
+  .tsqA { background:#e2876b; }
+  .tlbA { color:#faf8f5; font-weight:600; }
+  .pill { border-radius:20px; padding:5px 12px; font:600 10px/1 'DM Sans',sans-serif; }
+  .note { background:#fff7d6; border:1.5px solid #ecdf9e; border-radius:12px; padding:12px 14px; font:600 15px/1.35 'Caveat',cursive; color:#5c5326; }
+</style>
+</helmet>
+
+<div style="width:max-content; min-width:100%; min-height:100vh; box-sizing:border-box; padding:48px; background:#e7e5df; font-family:'DM Sans',sans-serif;">
+
+  <div style="max-width:920px; margin-bottom:32px;">
+    <div style="font:700 34px/1 'Caveat',cursive; color:#37332e;">NOVA · menú interior — wireframes lo-fi</div>
+    <div style="font:500 14px/1.5 'DM Sans'; color:#6f6a62; margin-top:8px; max-width:780px;">Las cuatro secciones del negocio con el patrón de la opción A: cabecera oscura, barra inferior propia. Marketing y NOVA AI quedan fuera (fase futura). Estructura y datos — sin decisiones visuales finales.</div>
+  </div>
+
+  <div style="display:flex; gap:56px; align-items:flex-start;">
+
+    <!-- ============ 1 · CEO DASHBOARD ============ -->
+    <div style="display:flex; flex-direction:column; gap:13px; width:320px; flex:none;">
+      <div style="font:700 22px/1 'Caveat',cursive; color:#37332e;">1 · CEO Dashboard</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="nhead">
+          <div class="stat statD"><span>9:41</span><span></span><span>●●●</span></div>
+          <div class="nrow"><span class="nback">← NovaSoul</span><span class="nbrand">NOVA</span></div>
+          <div class="ntitle">CEO Dashboard</div>
+          <div class="nsub">Resumen de hoy · 3 tiendas</div>
+        </div>
+        <div class="body">
+          <div class="sec">Hoy por tienda</div>
+          <div style="display:flex; gap:8px;">
+            <div class="card" style="flex:1; padding:10px; display:flex; flex-direction:column; gap:7px;"><div style="font:600 10px/1 'DM Sans';color:#8e8880;">Nutrea GT</div><div class="num" style="width:85%; height:14px;"></div></div>
+            <div class="card" style="flex:1; padding:10px; display:flex; flex-direction:column; gap:7px;"><div style="font:600 10px/1 'DM Sans';color:#8e8880;">Nutrea EC</div><div class="num" style="width:85%; height:14px;"></div></div>
+            <div class="card" style="flex:1; padding:10px; display:flex; flex-direction:column; gap:6px; background:#f5f3f0; border:1.5px dashed #d8d4cd;"><div style="display:flex; align-items:center; justify-content:space-between; gap:4px;"><span style="font:600 10px/1 'DM Sans';color:#a39d94;">Dilore</span><span class="pill" style="background:#e6cdf0; color:#6a4a8a; padding:3px 7px; font-size:8px;">Pronto</span></div><div style="font:500 9px/1.1 'DM Sans';color:#bdb8b0;">aún no opera</div></div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div class="card" style="flex:1; display:flex; flex-direction:column; gap:8px;"><div class="bar" style="width:60%; height:7px;"></div><div class="num" style="width:88%; height:22px;"></div><div style="font:500 9px/1 'DM Sans';color:#a39d94;">Ventas hoy</div></div>
+            <div class="card" style="flex:1; display:flex; flex-direction:column; gap:8px;"><div class="bar" style="width:55%; height:7px;"></div><div class="num" style="width:70%; height:22px; background:#e2876b;"></div><div style="font:500 9px/1 'DM Sans';color:#a39d94;">Margen</div></div>
+          </div>
+          <sc-if value="{{ showCompare }}" hint-placeholder-val="{{ true }}">
+          <div class="card" style="display:flex; flex-direction:column; gap:9px; height:96px;"><div style="display:flex; justify-content:space-between;"><div class="bar" style="width:40%; height:7px;"></div><div class="pill" style="background:#cfe3cf; color:#4a6a4a;">+12% vs ayer</div></div><div style="flex:1; display:flex; align-items:flex-end; gap:5px;"><div style="flex:1;background:#cfcbc4;border-radius:4px 4px 0 0;height:45%;"></div><div style="flex:1;background:#cfcbc4;border-radius:4px 4px 0 0;height:62%;"></div><div style="flex:1;background:#cfcbc4;border-radius:4px 4px 0 0;height:55%;"></div><div style="flex:1;background:#e2876b;border-radius:4px 4px 0 0;height:90%;"></div></div></div>
+          </sc-if>
+          <div class="sec">Operación de hoy</div>
+          <div style="display:flex; gap:8px;">
+            <div class="card" style="flex:1; padding:11px; text-align:center;"><div class="num" style="width:50%; height:16px; margin:0 auto 6px;"></div><div style="font:500 9px/1 'DM Sans';color:#a39d94;">Pedidos</div></div>
+            <div class="card" style="flex:1; padding:11px; text-align:center;"><div class="num" style="width:50%; height:16px; margin:0 auto 6px;"></div><div style="font:500 9px/1 'DM Sans';color:#a39d94;">Entregados</div></div>
+            <div class="card" style="flex:1; padding:11px; text-align:center;"><div class="num" style="width:50%; height:16px; margin:0 auto 6px; background:#e6b8ad;"></div><div style="font:500 9px/1 'DM Sans';color:#a39d94;">Incidencias</div></div>
+          </div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tsq tsqA"></div><div class="tlb tlbA">Dashboard</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Productos</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Oper.</div></div>
+        </div>
+        </sc-if>
+      </div>
+      <div style="font:500 12px/1.4 'DM Sans'; color:#6f6a62;">Foto del día: las 3 tiendas, ventas, margen y la operación de un vistazo.</div>
+      <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+      <div class="note" style="transform:rotate(-0.5deg);">"Resumen Hoy" usa FECHA DE ÚLTIMO MOVIMIENTO de Dropi, no la fecha de importación.</div>
+      </sc-if>
+    </div>
+
+    <!-- ============ 2 · FINANZAS ============ -->
+    <div style="display:flex; flex-direction:column; gap:13px; width:320px; flex:none;">
+      <div style="font:700 22px/1 'Caveat',cursive; color:#37332e;">2 · Finanzas</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="nhead">
+          <div class="stat statD"><span>9:41</span><span></span><span>●●●</span></div>
+          <div class="nrow"><span class="nback">← NovaSoul</span><span class="nbrand">NOVA</span></div>
+          <div class="ntitle">Finanzas</div>
+          <div class="nsub">Comparación mensual · COP</div>
+        </div>
+        <div class="body">
+          <div class="sec">GLISEN · Guatemala (GTQ)</div>
+          <div class="card" style="display:flex; flex-direction:column; gap:9px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font:500 10px/1 'DM Sans';color:#8e8880;">Ingresos</span><div class="num" style="width:90px; height:14px;"></div></div>
+            <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font:500 10px/1 'DM Sans';color:#8e8880;">Gastos</span><div class="bar" style="width:72px; height:12px; background:#e6b8ad;"></div></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1.5px dashed #d8d4cd; padding-top:8px;"><span style="font:600 11px/1 'DM Sans';color:#4a453f;">Neto</span><div class="num" style="width:80px; height:16px; background:#bcd0b8;"></div></div>
+          </div>
+          <div class="sec">DAFERASE · Ecuador (COP/USD)</div>
+          <div class="card" style="display:flex; flex-direction:column; gap:9px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font:500 10px/1 'DM Sans';color:#8e8880;">Ingresos</span><div class="num" style="width:90px; height:14px;"></div></div>
+            <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font:500 10px/1 'DM Sans';color:#8e8880;">Gastos</span><div class="bar" style="width:64px; height:12px; background:#e6b8ad;"></div></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1.5px dashed #d8d4cd; padding-top:8px;"><span style="font:600 11px/1 'DM Sans';color:#4a453f;">Neto</span><div class="num" style="width:80px; height:16px; background:#bcd0b8;"></div></div>
+          </div>
+          <sc-if value="{{ showCompare }}" hint-placeholder-val="{{ true }}">
+          <div class="sec">Mes vs mes (COP)</div>
+          <div class="card" style="height:88px; display:flex; align-items:flex-end; gap:7px;"><div style="flex:1;background:#cfcbc4;border-radius:4px 4px 0 0;height:55%;"></div><div style="flex:1;background:#cfcbc4;border-radius:4px 4px 0 0;height:70%;"></div><div style="flex:1;background:#cfcbc4;border-radius:4px 4px 0 0;height:48%;"></div><div style="flex:1;background:#cfcbc4;border-radius:4px 4px 0 0;height:80%;"></div><div style="flex:1;background:#e2876b;border-radius:4px 4px 0 0;height:95%;"></div></div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tsq"></div><div class="tlb">Dashboard</div></div>
+          <div class="tab"><div class="tsq tsqA"></div><div class="tlb tlbA">Finanzas</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Productos</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Oper.</div></div>
+        </div>
+        </sc-if>
+      </div>
+      <div style="font:500 12px/1.4 'DM Sans'; color:#6f6a62;">GLISEN y DAFERASE lado a lado, con neto por tienda y comparación mensual.</div>
+      <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+      <div class="note" style="transform:rotate(0.5deg);">Pendiente: combinar GTQ + COP para el resumen del socio. Falta decidir manejo de moneda.</div>
+      </sc-if>
+    </div>
+
+    <!-- ============ 3 · PRODUCTOS ============ -->
+    <div style="display:flex; flex-direction:column; gap:13px; width:320px; flex:none;">
+      <div style="font:700 22px/1 'Caveat',cursive; color:#37332e;">3 · Productos</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="nhead">
+          <div class="stat statD"><span>9:41</span><span></span><span>●●●</span></div>
+          <div class="nrow"><span class="nback">← NovaSoul</span><span class="nbrand">NOVA</span></div>
+          <div class="ntitle">Productos</div>
+          <div class="nsub">Top ventas · márgenes</div>
+        </div>
+        <div class="body">
+          <div style="display:flex; gap:10px;">
+            <div class="card" style="flex:1; display:flex; flex-direction:column; gap:8px;"><div class="bar" style="width:55%; height:7px;"></div><div class="num" style="width:60%; height:20px;"></div><div style="font:500 9px/1 'DM Sans';color:#a39d94;">Margen prom.</div></div>
+            <div class="card" style="flex:1; display:flex; flex-direction:column; gap:8px;"><div class="bar" style="width:55%; height:7px;"></div><div class="num" style="width:50%; height:20px;"></div><div style="font:500 9px/1 'DM Sans';color:#a39d94;">SKUs activos</div></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;"><div class="sec">Top productos</div><div style="font:500 9px/1 'DM Sans';color:#a39d94;">unidades · margen</div></div>
+          <div class="card" style="display:flex; align-items:center; gap:11px;"><div style="width:30px;height:30px;border-radius:8px;background:#dcd9d4;flex:none;"></div><div style="display:flex;flex-direction:column;gap:6px;flex:1;"><div class="bar" style="width:75%; height:8px;"></div><div class="bar" style="width:40%; height:6px;"></div></div><div class="pill" style="background:#cfe3cf; color:#4a6a4a;">42%</div></div>
+          <div class="card" style="display:flex; align-items:center; gap:11px;"><div style="width:30px;height:30px;border-radius:8px;background:#dcd9d4;flex:none;"></div><div style="display:flex;flex-direction:column;gap:6px;flex:1;"><div class="bar" style="width:65%; height:8px;"></div><div class="bar" style="width:35%; height:6px;"></div></div><div class="pill" style="background:#cfe3cf; color:#4a6a4a;">38%</div></div>
+          <div class="card" style="display:flex; align-items:center; gap:11px;"><div style="width:30px;height:30px;border-radius:8px;background:#dcd9d4;flex:none;"></div><div style="display:flex;flex-direction:column;gap:6px;flex:1;"><div class="bar" style="width:80%; height:8px;"></div><div class="bar" style="width:45%; height:6px;"></div></div><div class="pill" style="background:#f3e0c0; color:#8a6a30;">21%</div></div>
+          <div class="card" style="display:flex; align-items:center; gap:11px;"><div style="width:30px;height:30px;border-radius:8px;background:#dcd9d4;flex:none;"></div><div style="display:flex;flex-direction:column;gap:6px;flex:1;"><div class="bar" style="width:60%; height:8px;"></div><div class="bar" style="width:30%; height:6px;"></div></div><div class="pill" style="background:#f3d0c8; color:#9a4a3a;">9%</div></div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tsq"></div><div class="tlb">Dashboard</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tsq tsqA"></div><div class="tlb tlbA">Productos</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Oper.</div></div>
+        </div>
+        </sc-if>
+      </div>
+      <div style="font:500 12px/1.4 'DM Sans'; color:#6f6a62;">Ranking por unidades con el margen de cada producto, en colores semáforo.</div>
+      <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+      <div class="note" style="transform:rotate(-0.6deg);">Los datos ya vienen del Sheet. Falta exactamente esta vista: top productos + márgenes.</div>
+      </sc-if>
+    </div>
+
+    <!-- ============ 4 · OPERACIONES ============ -->
+    <div style="display:flex; flex-direction:column; gap:13px; width:320px; flex:none;">
+      <div style="font:700 22px/1 'Caveat',cursive; color:#37332e;">4 · Operaciones</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="nhead">
+          <div class="stat statD"><span>9:41</span><span></span><span>●●●</span></div>
+          <div class="nrow"><span class="nback">← NovaSoul</span><span class="nbrand">NOVA</span></div>
+          <div class="ntitle">Operaciones</div>
+        </div>
+        <div style="padding:12px 16px 4px;"><div style="display:flex; gap:8px;"><div style="background:#2b2b2b;color:#faf8f5;border-radius:9px;padding:7px 16px;font:600 12px/1 'DM Sans';">Hoy</div><div style="background:#ece9e4;color:#8e8880;border-radius:9px;padding:7px 16px;font:500 12px/1 'DM Sans';">Mes</div></div></div>
+        <div class="body" style="padding-top:8px;">
+          <div style="display:flex; gap:8px;">
+            <div class="card" style="flex:1; padding:11px; text-align:center;"><div class="num" style="width:45%; height:16px; margin:0 auto 6px;"></div><div style="font:500 9px/1 'DM Sans';color:#a39d94;">Pedidos</div></div>
+            <div class="card" style="flex:1; padding:11px; text-align:center;"><div class="num" style="width:45%; height:16px; margin:0 auto 6px; background:#e6b8ad;"></div><div style="font:500 9px/1 'DM Sans';color:#a39d94;">Incidencias</div></div>
+            <div class="card" style="flex:1; padding:11px; text-align:center;"><div class="num" style="width:45%; height:16px; margin:0 auto 6px; background:#e6c9a8;"></div><div style="font:500 9px/1 'DM Sans';color:#a39d94;">Pendientes</div></div>
+          </div>
+          <div class="sec">Estados de pedidos</div>
+          <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 13px;"><div style="display:flex;flex-direction:column;gap:5px;"><div class="bar" style="width:80px; height:8px;"></div><div class="bar" style="width:46px; height:6px;"></div></div><div class="pill" style="background:#f3e0c0; color:#8a6a30; white-space:nowrap; font-size:9px;">Pendiente por confirmar</div></div>
+          <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 13px;"><div style="display:flex;flex-direction:column;gap:5px;"><div class="bar" style="width:70px; height:8px;"></div><div class="bar" style="width:54px; height:6px;"></div></div><div class="pill" style="background:#cdddf0; color:#3a5a8a; white-space:nowrap;">Guía generada</div></div>
+          <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 13px;"><div style="display:flex;flex-direction:column;gap:5px;"><div class="bar" style="width:88px; height:8px;"></div><div class="bar" style="width:50px; height:6px;"></div></div><div class="pill" style="background:#cfe3cf; color:#4a6a4a; white-space:nowrap;">Entregado</div></div>
+          <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 13px;"><div style="display:flex;flex-direction:column;gap:5px;"><div class="bar" style="width:74px; height:8px;"></div><div class="bar" style="width:48px; height:6px;"></div></div><div class="pill" style="background:#ddd9d2; color:#6f6a62; white-space:nowrap;">Cancelado</div></div>
+          <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 13px;"><div style="display:flex;flex-direction:column;gap:5px;"><div class="bar" style="width:76px; height:8px;"></div><div class="bar" style="width:44px; height:6px;"></div></div><div class="pill" style="background:#e6cdf0; color:#6a4a8a; white-space:nowrap;">Devolución</div></div>
+          <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 13px; border:1.5px solid #e6b8ad; background:#fbeee8;"><div style="display:flex;flex-direction:column;gap:5px;"><div class="bar" style="width:92px; height:8px;"></div><div class="bar" style="width:40px; height:6px;"></div></div><div class="pill" style="background:#f3d0c8; color:#9a4a3a; white-space:nowrap; font-size:9px;">Incidencia</div></div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tsq"></div><div class="tlb">Dashboard</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Productos</div></div>
+          <div class="tab"><div class="tsq tsqA"></div><div class="tlb tlbA">Oper.</div></div>
+        </div>
+        </sc-if>
+      </div>
+      <div style="font:500 12px/1.4 'DM Sans'; color:#6f6a62;">Tabs Hoy / Mes, conteos arriba y la lista de pedidos por estado.</div>
+      <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+      <div class="note" style="transform:rotate(0.5deg);">Pendientes documentados: clasificar incidencias por ID y avisar a los 3 días sin confirmar.</div>
+      </sc-if>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1620, &quot;height&quot;: 1000 },
+  &quot;showAnnotations&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; },
+  &quot;showTabBar&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; },
+  &quot;showCompare&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; }
+}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showAnnotations: this.props.showAnnotations ?? true,
+      showTabBar: this.props.showTabBar ?? true,
+      showCompare: this.props.showCompare ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>

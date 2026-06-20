@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; }
+  .ph { position:relative; width:320px; height:684px; background:#fffaf4; border:8px solid #241b16; border-radius:42px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 10px 30px rgba(60,40,28,.20); }
+  .notch { position:absolute; top:0; left:50%; transform:translateX(-50%); width:108px; height:20px; background:#241b16; border-radius:0 0 14px 14px; z-index:6; }
+  .stat { display:flex; justify-content:space-between; align-items:center; padding:14px 20px 2px; font:600 11px/1 'DM Sans',sans-serif; color:#b7a08e; }
+  .hrow { padding:8px 18px 0; display:flex; justify-content:space-between; align-items:center; }
+  .hb { font:600 11px/1 'DM Sans',sans-serif; color:#b09a86; }
+  .hamb { display:flex; flex-direction:column; gap:3.5px; }
+  .hamb span { width:18px; height:2.5px; border-radius:2px; background:#7c6b5c; display:block; }
+  .scr { font:600 24px/1.05 'Fraunces',serif; color:#3b302a; padding:10px 18px 0; letter-spacing:.2px; }
+  .ssub { font:500 11px/1 'DM Sans',sans-serif; color:#a8917f; padding:5px 18px 0; }
+  .body { flex:1; padding:14px 16px; display:flex; flex-direction:column; gap:11px; overflow:hidden; }
+  .sec { font:600 10px/1 'DM Sans',sans-serif; color:#a3917f; text-transform:uppercase; letter-spacing:.7px; }
+  .card { background:#f7ede2; border:1px solid #f0e4d6; border-radius:16px; padding:13px; }
+  .big { font:600 26px/1 'Fraunces',serif; color:#3b302a; }
+  .big2 { font:600 20px/1 'Fraunces',serif; color:#3b302a; }
+  .lab { font:500 10px/1.2 'DM Sans',sans-serif; color:#a3917f; }
+  .mny { font:600 13px/1 'DM Sans',sans-serif; color:#3b302a; }
+  .tabs { display:flex; justify-content:space-around; align-items:flex-end; padding:10px 6px 14px; background:#fbf1e7; border-top:1px solid #f0e2d3; margin-top:auto; }
+  .tab { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .tdot { width:6px; height:6px; border-radius:50%; background:#d8c4b2; }
+  .tlb { font:500 9.5px/1 'DM Sans',sans-serif; color:#b09a86; }
+  .tdotA { background:#e0815f; box-shadow:0 0 0 4px rgba(224,129,95,.16); }
+  .tlbA { color:#3b302a; font-weight:600; }
+  .dot { border-radius:50%; flex:none; }
+  .add { border:1.5px dashed #e0cdba; border-radius:14px; padding:13px; text-align:center; font:600 12px/1 'DM Sans'; color:#bb9b82; }
+  .chev { color:#cbb6a3; font:15px/1 'DM Sans'; margin-left:auto; }
+  .pillc { border-radius:20px; padding:6px 11px; font:600 11px/1 'DM Sans'; display:flex; align-items:center; gap:7px; }
+</style>
+</helmet>
+
+<div style="width:max-content; min-width:100%; min-height:100vh; box-sizing:border-box; padding:48px; background:#efe3d7; font-family:'DM Sans',sans-serif;">
+
+  <div style="max-width:920px; margin-bottom:34px;">
+    <div style="font:600 34px/1 'Fraunces',serif; color:#3b302a; letter-spacing:.2px;">NovaSoul · mundo personal</div>
+    <div style="font:500 14px/1.5 'DM Sans'; color:#7c6b5c; margin-top:9px; max-width:780px;">Las pantallas personales con la identidad real: Fraunces + DM Sans, paleta durazno / coral / sage, en su versión clara y cálida. Sin barra oscura — esa queda exclusiva de NOVA para separar los dos mundos. <span style="color:#a3917f;">Datos de ejemplo.</span></div>
+  </div>
+
+  <div style="display:flex; gap:56px; align-items:flex-start;">
+
+    <!-- ============ 0 · INICIO ============ -->
+    <div style="display:flex; flex-direction:column; gap:14px; width:320px; flex:none;">
+      <div style="font:600 16px/1 'DM Sans'; color:#7c6b5c; letter-spacing:.3px;">0 · Inicio</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="stat"><span>9:41</span><span></span><span style="letter-spacing:1px;">●●●</span></div>
+        <div class="hrow"><div class="hamb"><span></span><span></span><span></span></div><span class="hb">martes 17 ›</span></div>
+        <div class="scr">Buenos días,<br>Manuela</div>
+        <div class="body" style="gap:9px;">
+          <div class="sec">Cómo estoy hoy</div>
+          <div class="card" style="display:flex; gap:6px; padding:10px 13px;">
+            <div style="flex:1; display:flex; align-items:baseline; justify-content:center; gap:5px;"><span class="big2" style="color:#7c9a5a;font-size:17px;">7</span><span class="lab">Energía</span></div>
+            <div style="width:1px; background:#ecdfcf;"></div>
+            <div style="flex:1; display:flex; align-items:baseline; justify-content:center; gap:5px;"><span class="big2" style="color:#c79a3f;font-size:17px;">6</span><span class="lab">Enfoque</span></div>
+            <div style="width:1px; background:#ecdfcf;"></div>
+            <div style="flex:1; display:flex; align-items:baseline; justify-content:center; gap:5px;"><span class="big2" style="color:#a880c0;font-size:17px;">3</span><span class="lab">Prior.</span></div>
+          </div>
+          <div class="sec">Mi día · pendientes</div>
+          <div class="card" style="display:flex; flex-direction:column; gap:9px;">
+            <div style="display:flex; align-items:center; gap:10px;"><div style="width:16px;height:16px;border-radius:6px;border:2px solid #d8c4b2;flex:none;"></div><span style="font:500 12px/1 'DM Sans';color:#4a3f37;flex:1;">Entregar ensayo</span><span class="dot" style="width:8px;height:8px;background:#8fb6d6;"></span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="width:16px;height:16px;border-radius:6px;border:2px solid #d8c4b2;flex:none;"></div><span style="font:500 12px/1 'DM Sans';color:#4a3f37;flex:1;">Llamar proveedor</span><span class="dot" style="width:8px;height:8px;background:#a0c08a;"></span></div>
+            <div style="display:flex; align-items:center; gap:10px; border-top:1px dashed #e6d8c8; padding-top:9px;"><div style="width:16px;height:16px;border-radius:6px;border:2px solid #c79a3f;background:#fdf3e7;flex:none;display:flex;align-items:center;justify-content:center;"><span style="font:700 10px/1 'DM Sans';color:#b8841f;">✓</span></div><span style="font:600 12px/1 'DM Sans';color:#4a3f37;flex:1;">Comer sano</span><span class="lab">hábito diario</span></div>
+            <div style="display:flex; align-items:center; gap:9px; border-top:1px solid #eee0d0; padding-top:9px;"><div style="height:8px;border-radius:5px;background:#ecd9cb;flex:1;"><div style="width:70%;height:8px;border-radius:5px;background:#7c9a5a;"></div></div><span style="font:600 10px/1 'DM Sans';color:#5f7a42;white-space:nowrap;">Meta 70%</span></div>
+            <div style="display:flex; gap:8px;">
+              <div style="flex:1; text-align:center; background:#efe2d4; border-radius:10px; padding:8px; font:600 10px/1 'DM Sans'; color:#7c6b5c;">Mi Semana ›</div>
+              <div style="flex:1; text-align:center; background:#efe2d4; border-radius:10px; padding:8px; font:600 10px/1 'DM Sans'; color:#7c6b5c;">Objetivos ›</div>
+            </div>
+          </div>
+          <div class="sec">Racha de la semana</div>
+          <div class="card" style="display:flex; align-items:center; gap:9px; padding:11px 13px; background:#fdf3e7; border-color:#f3e2c8;">
+            <div style="display:flex; gap:8px; flex:1;">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="dot" style="width:18px;height:18px;background:#7c9a5a;"></div><span style="font:500 8px/1 'DM Sans';color:#a3917f;">D</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="dot" style="width:18px;height:18px;background:#7c9a5a;"></div><span style="font:500 8px/1 'DM Sans';color:#a3917f;">L</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="dot" style="width:18px;height:18px;background:#ecd9cb;"></div><span style="font:500 8px/1 'DM Sans';color:#a3917f;">M</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="dot" style="width:18px;height:18px;background:#7c9a5a;"></div><span style="font:500 8px/1 'DM Sans';color:#a3917f;">M</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="dot" style="width:18px;height:18px;border:2px dashed #d8c4b2;box-sizing:border-box;"></div><span style="font:600 8px/1 'DM Sans';color:#7c6b5c;">J</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="dot" style="width:18px;height:18px;border:2px solid #d9a23f;box-sizing:border-box;background:#fff;display:flex;align-items:center;justify-content:center;"><span style="font:9px/1 'DM Sans';color:#d9a23f;">★</span></div><span style="font:600 8px/1 'DM Sans';color:#b8841f;">V</span></div>
+            </div>
+            <span style="color:#d9a23f; font:18px/1 'DM Sans';">›</span>
+          </div>
+          <div class="card" style="display:flex; align-items:center; gap:10px; padding:9px 13px;">
+            <span class="lab" style="text-transform:uppercase;letter-spacing:.5px;font-weight:600;">Negocio hoy</span>
+            <div style="display:flex; gap:11px; margin-left:auto;">
+              <span style="font:600 13px/1 'Fraunces',serif;color:#3b302a;">$4.2M</span>
+              <span style="font:600 13px/1 'Fraunces',serif;color:#3b302a;">64</span>
+              <span style="font:600 13px/1 'Fraunces',serif;color:#c25b3a;">3</span>
+            </div>
+          </div>
+          <div style="border-radius:16px; padding:13px 15px; background:linear-gradient(135deg,#e88a64,#dd6f4e); display:flex; align-items:center; gap:12px; box-shadow:0 6px 16px rgba(221,111,78,.28);">
+            <div style="width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.22);flex:none;display:flex;align-items:center;justify-content:center;"><span style="font:700 9px/1 'DM Sans';letter-spacing:1.5px;color:#fff;">NOVA</span></div>
+            <div style="display:flex; flex-direction:column; gap:3px;"><div style="font:600 15px/1 'DM Sans';color:#fff;">Entrar a NOVA</div><div style="font:500 11px/1 'DM Sans';color:#ffe4d8;">Tu negocio completo</div></div>
+            <span style="margin-left:auto; color:#fff; font:21px/1 'DM Sans';">→</span>
+          </div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tdot tdotA"></div><div class="tlb tlbA">Inicio</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Semana</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Ciclo</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Config</div></div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1 · MI SEMANA ============ -->
+    <div style="display:flex; flex-direction:column; gap:14px; width:320px; flex:none;">
+      <div style="font:600 16px/1 'DM Sans'; color:#7c6b5c; letter-spacing:.3px;">1 · Mi Semana</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="stat"><span>9:41</span><span></span><span style="letter-spacing:1px;">●●●</span></div>
+        <div class="hrow"><div class="hamb"><span></span><span></span><span></span></div><span class="hb">Junio ›</span></div>
+        <div class="scr">Mi Semana</div>
+        <div class="body">
+          <div style="display:flex; gap:6px;">
+            <div style="flex:1; text-align:center; background:#f7ede2; border-radius:12px; padding:9px 0;"><div class="lab">L</div><div style="font:600 14px/1 'DM Sans';color:#3b302a;margin-top:5px;">16</div></div>
+            <div style="flex:1; text-align:center; background:#e0815f; border-radius:12px; padding:9px 0;"><div style="font:600 9px/1 'DM Sans';color:#ffe4d8;">M</div><div style="font:600 14px/1 'DM Sans';color:#fff;margin-top:5px;">17</div></div>
+            <div style="flex:1; text-align:center; background:#f7ede2; border-radius:12px; padding:9px 0;"><div class="lab">M</div><div style="font:600 14px/1 'DM Sans';color:#3b302a;margin-top:5px;">18</div></div>
+            <div style="flex:1; text-align:center; background:#f7ede2; border-radius:12px; padding:9px 0;"><div class="lab">J</div><div style="font:600 14px/1 'DM Sans';color:#3b302a;margin-top:5px;">19</div></div>
+            <div style="flex:1; text-align:center; background:#f7ede2; border-radius:12px; padding:9px 0;"><div class="lab">V</div><div style="font:600 14px/1 'DM Sans';color:#3b302a;margin-top:5px;">20</div></div>
+          </div>
+          <div class="sec">Hoy · martes 17</div>
+          <div class="card" style="display:flex; align-items:center; gap:11px; padding:11px 13px;"><div class="dot" style="width:10px;height:34px;border-radius:5px;background:#a880c0;"></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;"><span style="font:600 12.5px/1 'DM Sans';color:#3b302a;">Cálculo · parcial</span><span class="lab">Universidad</span></div><span class="lab" style="font-weight:600;">10:00</span></div>
+          <div class="card" style="display:flex; align-items:center; gap:11px; padding:11px 13px;"><div class="dot" style="width:10px;height:34px;border-radius:5px;background:#8fb6d6;"></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;"><span style="font:600 12.5px/1 'DM Sans';color:#3b302a;">Entregar ensayo</span><span class="lab">Comunicación</span></div><span class="lab" style="font-weight:600;">14:00</span></div>
+          <div class="card" style="display:flex; align-items:center; gap:11px; padding:11px 13px;"><div class="dot" style="width:10px;height:34px;border-radius:5px;background:#a0c08a;"></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;"><span style="font:600 12.5px/1 'DM Sans';color:#3b302a;">Yoga</span><span class="lab">Personal</span></div><span class="lab" style="font-weight:600;">17:30</span></div>
+          <div style="display:flex; flex-wrap:wrap; gap:7px;">
+            <div class="pillc" style="background:#f1e3f4;color:#7a5a8a;"><span class="dot" style="width:8px;height:8px;background:#a880c0;"></span>Cálculo</div>
+            <div class="pillc" style="background:#e3eef6;color:#4a6a82;"><span class="dot" style="width:8px;height:8px;background:#8fb6d6;"></span>Comunic.</div>
+            <div class="pillc" style="background:#e6f0df;color:#5f7a42;"><span class="dot" style="width:8px;height:8px;background:#a0c08a;"></span>Personal</div>
+          </div>
+          <div class="add">+ Agregar pendiente</div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tdot"></div><div class="tlb">Inicio</div></div>
+          <div class="tab"><div class="tdot tdotA"></div><div class="tlb tlbA">Semana</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Ciclo</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Config</div></div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 2 · OBJETIVOS ============ -->
+    <div style="display:flex; flex-direction:column; gap:14px; width:320px; flex:none;">
+      <div style="font:600 16px/1 'DM Sans'; color:#7c6b5c; letter-spacing:.3px;">2 · Objetivos</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="stat"><span>9:41</span><span></span><span style="letter-spacing:1px;">●●●</span></div>
+        <div class="hrow"><div class="hamb"><span></span><span></span><span></span></div><span class="hb">+ Nuevo</span></div>
+        <div class="scr">Objetivos</div>
+        <div class="ssub">3 activos · este trimestre</div>
+        <div class="body">
+          <div class="card" style="display:flex; flex-direction:column; gap:11px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font:600 13px/1 'DM Sans';color:#3b302a;">Terminar semestre</span><span class="big2" style="color:#7c9a5a;">70%</span></div>
+            <div style="height:9px; border-radius:6px; background:#ecd9cb;"><div style="width:70%;height:9px;border-radius:6px;background:#7c9a5a;"></div></div>
+            <span class="lab">7 de 10 entregas listas</span>
+          </div>
+          <div class="card" style="display:flex; flex-direction:column; gap:11px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font:600 13px/1 'DM Sans';color:#3b302a;">Ahorro viaje</span><span class="big2" style="color:#c79a3f;">45%</span></div>
+            <div style="height:9px; border-radius:6px; background:#ecd9cb;"><div style="width:45%;height:9px;border-radius:6px;background:#d9a23f;"></div></div>
+            <span class="lab">$1.8M de $4M</span>
+          </div>
+          <div class="card" style="display:flex; flex-direction:column; gap:11px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font:600 13px/1 'DM Sans';color:#3b302a;">Rutina ejercicio</span><span class="big2" style="color:#c25b3a;">20%</span></div>
+            <div style="height:9px; border-radius:6px; background:#ecd9cb;"><div style="width:20%;height:9px;border-radius:6px;background:#e0815f;"></div></div>
+            <span class="lab">3 de 15 sesiones</span>
+          </div>
+          <div class="add">+ Agregar objetivo</div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tdot"></div><div class="tlb">Inicio</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Semana</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Ciclo</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Config</div></div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 3 · FINANZAS PERSONALES ============ -->
+    <div style="display:flex; flex-direction:column; gap:14px; width:320px; flex:none;">
+      <div style="font:600 16px/1 'DM Sans'; color:#7c6b5c; letter-spacing:.3px;">3 · Finanzas personales</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="stat"><span>9:41</span><span></span><span style="letter-spacing:1px;">●●●</span></div>
+        <div class="hrow"><div class="hamb"><span></span><span></span><span></span></div><span class="hb">Junio ›</span></div>
+        <div class="scr">Finanzas</div>
+        <div class="ssub">Personal · este mes</div>
+        <div class="body">
+          <div class="card" style="display:flex; flex-direction:column; gap:5px; align-items:center; padding:14px;">
+            <div class="lab">Saldo del mes</div>
+            <div class="big" style="font-size:28px;">$1.4M</div>
+            <div style="display:flex; align-items:center; gap:5px;"><span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:6px solid #7c9a5a;"></span><span style="font:600 10px/1 'DM Sans';color:#5f7a42;">+8% vs mayo</span></div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div class="card" style="flex:1; display:flex; flex-direction:column; gap:5px;"><div class="lab">Ingresos</div><div class="big2" style="color:#7c9a5a;">$3.2M</div></div>
+            <div class="card" style="flex:1; display:flex; flex-direction:column; gap:5px;"><div class="lab">Gastos</div><div class="big2" style="color:#c25b3a;">$1.8M</div></div>
+          </div>
+          <div class="sec">Ingresos por fuente</div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="dot" style="width:9px;height:9px;background:#7c9a5a;"></span><span style="font:500 11px/1 'DM Sans';color:#4a3f37;width:70px;">Nutrea GT</span><div style="flex:1;height:8px;border-radius:5px;background:#ecd9cb;"><div style="width:55%;height:8px;border-radius:5px;background:#7c9a5a;"></div></div><span class="lab" style="width:42px;text-align:right;">$1.8M</span></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="dot" style="width:9px;height:9px;background:#a0c08a;"></span><span style="font:500 11px/1 'DM Sans';color:#4a3f37;width:70px;">Nutrea EC</span><div style="flex:1;height:8px;border-radius:5px;background:#ecd9cb;"><div style="width:32%;height:8px;border-radius:5px;background:#a0c08a;"></div></div><span class="lab" style="width:42px;text-align:right;">$1.0M</span></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="dot" style="width:9px;height:9px;background:#c79a3f;"></span><span style="font:500 11px/1 'DM Sans';color:#4a3f37;width:70px;">Utilidades</span><div style="flex:1;height:8px;border-radius:5px;background:#ecd9cb;"><div style="width:14%;height:8px;border-radius:5px;background:#d9a23f;"></div></div><span class="lab" style="width:42px;text-align:right;">$0.4M</span></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <div class="sec" style="white-space:nowrap;">Gastos · categoría</div>
+            <span style="font:600 9.5px/1 'DM Sans';color:#a3917f;white-space:nowrap;">Fijos $1.1M · Var. $0.7M</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="dot" style="width:9px;height:9px;background:#a880c0;"></span><span style="font:500 11px/1 'DM Sans';color:#4a3f37;width:70px;">Universidad</span><div style="flex:1;height:8px;border-radius:5px;background:#ecd9cb;"><div style="width:65%;height:8px;border-radius:5px;background:#a880c0;"></div></div></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="dot" style="width:9px;height:9px;background:#8fb6d6;"></span><span style="font:500 11px/1 'DM Sans';color:#4a3f37;width:70px;">Comida</span><div style="flex:1;height:8px;border-radius:5px;background:#ecd9cb;"><div style="width:45%;height:8px;border-radius:5px;background:#8fb6d6;"></div></div></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="dot" style="width:9px;height:9px;background:#a0c08a;"></span><span style="font:500 11px/1 'DM Sans';color:#4a3f37;width:70px;">Ocio</span><div style="flex:1;height:8px;border-radius:5px;background:#ecd9cb;"><div style="width:30%;height:8px;border-radius:5px;background:#a0c08a;"></div></div></div>
+          <div class="add">+ Registrar movimiento</div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tdot"></div><div class="tlb">Inicio</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Semana</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Ciclo</div></div>
+          <div class="tab"><div class="tdot tdotA"></div><div class="tlb tlbA">Finanzas</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Config</div></div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 4 · CONFIGURACIÓN ============ -->
+    <div style="display:flex; flex-direction:column; gap:14px; width:320px; flex:none;">
+      <div style="font:600 16px/1 'DM Sans'; color:#7c6b5c; letter-spacing:.3px;">4 · Configuración</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="stat"><span>9:41</span><span></span><span style="letter-spacing:1px;">●●●</span></div>
+        <div class="hrow"><div class="hamb"><span></span><span></span><span></span></div><span></span></div>
+        <div class="scr">Configuración</div>
+        <div class="body">
+          <div class="sec">Tienda activa</div>
+          <div class="card" style="display:flex; flex-direction:column; gap:9px;">
+            <div style="display:flex; gap:6px;">
+              <div style="flex:1; text-align:center; background:#e0815f; border-radius:10px; padding:9px; font:600 11px/1 'DM Sans'; color:#fff;">Nutrea GT</div>
+              <div style="flex:1; text-align:center; background:#fffaf4; border:1px solid #ecdcca; border-radius:10px; padding:9px; font:500 11px/1 'DM Sans'; color:#6f5e50;">Nutrea EC</div>
+              <div style="flex:1; text-align:center; background:#fffaf4; border:1px dashed #e0cdba; border-radius:10px; padding:9px; font:500 11px/1 'DM Sans'; color:#bba894;">Dilore</div>
+            </div>
+            <span class="lab" style="line-height:1.4;">Define qué tienda se ve al entrar a NOVA.</span>
+          </div>
+          <div class="sec">Cuenta</div>
+          <div class="card" style="display:flex; align-items:center; gap:12px; padding:12px;"><div class="dot" style="width:34px;height:34px;background:#efd9c9;"></div><div style="display:flex;flex-direction:column;gap:3px;"><span style="font:600 12.5px/1 'DM Sans';color:#3b302a;">Manuela</span><span class="lab">Perfil y datos</span></div><span class="chev">›</span></div>
+          <div class="card" style="display:flex; align-items:center; gap:12px; padding:13px 12px;"><div class="dot" style="width:18px;height:18px;background:#e7d6c4;"></div><span style="font:500 12.5px/1 'DM Sans';color:#4a3f37;">Notificaciones</span><span class="chev">›</span></div>
+          <div class="card" style="display:flex; align-items:center; gap:12px; padding:13px 12px;"><div class="dot" style="width:18px;height:18px;background:#e7d6c4;"></div><span style="font:500 12.5px/1 'DM Sans';color:#4a3f37;">Apariencia</span><span class="chev">›</span></div>
+          <div class="sec">Datos</div>
+          <div style="border:1.5px solid #ecbfac; background:#fbe6da; border-radius:14px; padding:13px; display:flex; align-items:center; gap:11px;"><span class="dot" style="width:11px;height:11px;background:#d8745a;"></span><span style="font:600 12.5px/1 'DM Sans';color:#b0472d;">Resetear datos locales</span><span class="chev" style="color:#dba493;">›</span></div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tdot"></div><div class="tlb">Inicio</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Semana</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Ciclo</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tdot tdotA"></div><div class="tlb tlbA">Config</div></div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 5 · REGISTRAR MOVIMIENTO ============ -->
+    <div style="display:flex; flex-direction:column; gap:14px; width:320px; flex:none;">
+      <div style="font:600 16px/1 'DM Sans'; color:#7c6b5c; letter-spacing:.3px;">5 · Registrar movimiento</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <!-- pantalla Finanzas atenuada de fondo -->
+        <div style="position:absolute; inset:0; background:#fffaf4;"></div>
+        <div style="position:absolute; inset:0; padding-top:54px; opacity:.45;">
+          <div class="scr">Finanzas</div>
+          <div style="padding:14px 16px; display:flex; flex-direction:column; gap:11px;">
+            <div class="card" style="height:70px;"></div>
+            <div style="display:flex; gap:10px;"><div class="card" style="flex:1;height:46px;"></div><div class="card" style="flex:1;height:46px;"></div></div>
+          </div>
+        </div>
+        <div style="position:absolute; inset:0; background:rgba(43,27,22,.32);"></div>
+        <!-- bottom sheet -->
+        <div style="position:absolute; left:0; right:0; bottom:0; background:#fffaf4; border-radius:26px 26px 0 0; padding:16px 18px 26px; box-shadow:0 -8px 30px rgba(60,40,28,.22); display:flex; flex-direction:column; gap:14px;">
+          <div style="width:38px; height:4px; border-radius:3px; background:#e7d6c4; align-self:center;"></div>
+          <div style="font:600 19px/1 'Fraunces',serif; color:#3b302a;">Nuevo movimiento</div>
+          <div>
+            <div class="sec" style="margin-bottom:8px;">Tipo</div>
+            <div style="display:flex; gap:7px;">
+              <div style="flex:1; text-align:center; background:#e6f0df; border:1.5px solid #7c9a5a; border-radius:11px; padding:11px 4px; display:flex; flex-direction:column; gap:5px; align-items:center;"><span class="dot" style="width:9px;height:9px;background:#7c9a5a;"></span><span style="font:600 11px/1 'DM Sans';color:#5f7a42;">Ingreso</span></div>
+              <div style="flex:1; text-align:center; background:#fffaf4; border:1px solid #ecdcca; border-radius:11px; padding:11px 4px; display:flex; flex-direction:column; gap:5px; align-items:center;"><span class="dot" style="width:9px;height:9px;background:#c79a3f;"></span><span style="font:600 11px/1 'DM Sans';color:#6f5e50;">Gasto fijo</span></div>
+              <div style="flex:1; text-align:center; background:#fffaf4; border:1px solid #ecdcca; border-radius:11px; padding:11px 4px; display:flex; flex-direction:column; gap:5px; align-items:center;"><span class="dot" style="width:9px;height:9px;background:#e0815f;"></span><span style="font:600 11px/1 'DM Sans';color:#6f5e50;">Gasto variable</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="sec" style="margin-bottom:8px;">Monto</div>
+            <div class="card" style="display:flex; align-items:center; gap:6px; padding:13px;"><span style="font:600 18px/1 'Fraunces',serif;color:#3b302a;">$</span><div style="height:9px;width:100px;border-radius:5px;background:#e6d3c3;"></div></div>
+          </div>
+          <div>
+            <div class="sec" style="margin-bottom:8px;">Fuente <span style="color:#cbb6a3;font-weight:500;text-transform:none;letter-spacing:0;">· para ingresos</span></div>
+            <div style="display:flex; flex-wrap:wrap; gap:7px;">
+              <div class="pillc" style="background:#e6f0df;color:#5f7a42;border:1.5px solid #7c9a5a;"><span class="dot" style="width:8px;height:8px;background:#7c9a5a;"></span>Nutrea GT</div>
+              <div class="pillc" style="background:#fffaf4;color:#6f5e50;border:1px solid #ecdcca;"><span class="dot" style="width:8px;height:8px;background:#a0c08a;"></span>Nutrea EC</div>
+              <div class="pillc" style="background:#fffaf4;color:#6f5e50;border:1px solid #ecdcca;"><span class="dot" style="width:8px;height:8px;background:#c79a3f;"></span>Utilidades</div>
+              <div class="pillc" style="background:#fffaf4;color:#bba894;border:1px dashed #e0cdba;">+ Nueva fuente</div>
+            </div>
+          </div>
+          <div style="text-align:center; background:#e0815f; border-radius:13px; padding:14px; font:600 14px/1 'DM Sans'; color:#fff; box-shadow:0 6px 16px rgba(224,129,95,.28);">Guardar movimiento</div>
+        </div>
+      </div>
+      <div style="font:500 12px/1.4 'DM Sans'; color:#7c6b5c;">Hoja que sube al tocar "+ Registrar movimiento": tipo, monto y —según el tipo— Fuente (ingresos) o Categoría (gastos).</div>
+    </div>
+
+    <!-- ============ 6 · RECOMPENSAS · HISTORIAL ============ -->
+    <div style="display:flex; flex-direction:column; gap:14px; width:320px; flex:none;">
+      <div style="font:600 16px/1 'DM Sans'; color:#7c6b5c; letter-spacing:.3px;">6 · Recompensas · historial</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="stat"><span>9:41</span><span></span><span style="letter-spacing:1px;">●●●</span></div>
+        <div class="hrow"><span class="hb">‹ Inicio</span><span></span></div>
+        <div class="scr">Recompensas</div>
+        <div class="ssub">Tu constancia, semana a semana</div>
+        <div class="body" style="gap:10px;">
+          <div class="card" style="display:flex; flex-direction:column; gap:11px; background:#fdf3e7; border:1.5px solid #ecd29a;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font:600 13px/1 'DM Sans';color:#3b302a;">Esta semana</span><span style="font:600 10px/1 'DM Sans';color:#b8841f;background:#f6e4c2;border-radius:20px;padding:4px 10px;">En curso</span></div>
+            <div style="display:flex; gap:7px;">
+              <div class="dot" style="width:20px;height:20px;background:#7c9a5a;"></div>
+              <div class="dot" style="width:20px;height:20px;background:#7c9a5a;"></div>
+              <div class="dot" style="width:20px;height:20px;background:#ecd9cb;"></div>
+              <div class="dot" style="width:20px;height:20px;background:#7c9a5a;"></div>
+              <div class="dot" style="width:20px;height:20px;border:2px dashed #d8c4b2;box-sizing:border-box;"></div>
+              <div class="dot" style="width:20px;height:20px;border:2px solid #d9a23f;box-sizing:border-box;background:#fff;display:flex;align-items:center;justify-content:center;"><span style="font:11px/1 'DM Sans';color:#d9a23f;">★</span></div>
+            </div>
+            <span class="lab" style="line-height:1.4;">3 de 6 días · 3 de 4 sesiones · el viernes se revela</span>
+          </div>
+          <div class="sec">Anteriores</div>
+          <div class="card" style="display:flex; align-items:center; gap:12px; padding:12px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#e6f0df;display:flex;align-items:center;justify-content:center;flex:none;"><span style="font:16px/1 'DM Sans';color:#5f7a42;">★</span></div>
+            <div style="display:flex; flex-direction:column; gap:4px; flex:1;"><span style="font:600 12.5px/1 'DM Sans';color:#3b302a;">9 – 14 jun</span><span class="lab">6/6 días · 4 sesiones</span></div>
+            <span class="pillc" style="background:#d3e0c2;color:#566f3f;">Ganada</span>
+          </div>
+          <div class="card" style="display:flex; align-items:center; gap:12px; padding:12px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#e6f0df;display:flex;align-items:center;justify-content:center;flex:none;"><span style="font:16px/1 'DM Sans';color:#5f7a42;">★</span></div>
+            <div style="display:flex; flex-direction:column; gap:4px; flex:1;"><span style="font:600 12.5px/1 'DM Sans';color:#3b302a;">2 – 7 jun</span><span class="lab">5/6 días · 4 sesiones</span></div>
+            <span class="pillc" style="background:#d3e0c2;color:#566f3f;">Ganada</span>
+          </div>
+          <div class="card" style="display:flex; align-items:center; gap:12px; padding:12px; opacity:.85;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#efe2d4;display:flex;align-items:center;justify-content:center;flex:none;"><span style="font:16px/1 'DM Sans';color:#bba894;">○</span></div>
+            <div style="display:flex; flex-direction:column; gap:4px; flex:1;"><span style="font:600 12.5px/1 'DM Sans';color:#3b302a;">26 – 31 may</span><span class="lab">4/6 días · 3 sesiones</span></div>
+            <span class="pillc" style="background:#ece3d6;color:#a3917f;">No esta vez</span>
+          </div>
+          <div class="card" style="display:flex; align-items:center; gap:12px; padding:12px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#e6f0df;display:flex;align-items:center;justify-content:center;flex:none;"><span style="font:16px/1 'DM Sans';color:#5f7a42;">★</span></div>
+            <div style="display:flex; flex-direction:column; gap:4px; flex:1;"><span style="font:600 12.5px/1 'DM Sans';color:#3b302a;">19 – 24 may</span><span class="lab">6/6 días · 5 sesiones</span></div>
+            <span class="pillc" style="background:#d3e0c2;color:#566f3f;">Ganada</span>
+          </div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tdot tdotA"></div><div class="tlb tlbA">Inicio</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Semana</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Ciclo</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Config</div></div>
+        </div>
+        </sc-if>
+      </div>
+      <div style="font:500 12px/1.4 'DM Sans'; color:#7c6b5c;">Se abre al tocar "Racha de la semana": semana en curso + historial. Recompensa si ≥5/6 días y ≥4 sesiones.</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1980, &quot;height&quot;: 1000 },
+  &quot;showTabBar&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; }
+}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showTabBar: this.props.showTabBar ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>

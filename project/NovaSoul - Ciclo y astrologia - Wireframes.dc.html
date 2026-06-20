@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; }
+  .ph { position:relative; width:320px; height:680px; background:#fbfaf9; border:2px solid #2b2b2b; border-radius:32px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 3px 12px rgba(0,0,0,.12); }
+  .notch { position:absolute; top:0; left:50%; transform:translateX(-50%); width:104px; height:18px; background:#2b2b2b; border-radius:0 0 13px 13px; z-index:6; }
+  .stat { display:flex; justify-content:space-between; align-items:center; padding:15px 22px 2px; font:600 11px/1 'DM Sans',sans-serif; color:#9a958c; }
+  .hrow { padding:8px 18px 0; display:flex; justify-content:space-between; align-items:center; }
+  .hback { font:500 11px/1 'DM Sans',sans-serif; color:#a8a299; }
+  .scr { font:600 21px/1 'Fraunces',serif; color:#37332e; padding:8px 18px 0; }
+  .ssub { font:500 11px/1 'DM Sans',sans-serif; color:#a8a299; padding:5px 18px 0; }
+  .body { flex:1; padding:14px 16px; display:flex; flex-direction:column; gap:11px; overflow:hidden; }
+  .sec { font:600 10px/1 'DM Sans',sans-serif; color:#a39d94; text-transform:uppercase; letter-spacing:.6px; }
+  .card { background:#f1efec; border-radius:13px; padding:13px; }
+  .bar { height:9px; border-radius:5px; background:#dcd9d4; }
+  .num { height:18px; border-radius:5px; background:#cfcbc4; }
+  .tabs { display:flex; justify-content:space-around; align-items:flex-end; padding:9px 6px 16px; background:#fff; border-top:1.5px solid #e9e5df; margin-top:auto; }
+  .tab { display:flex; flex-direction:column; align-items:center; gap:5px; }
+  .tsq { width:21px; height:21px; border-radius:7px; background:#d2cec7; }
+  .tlb { font:500 9px/1 'DM Sans',sans-serif; color:#a39d94; }
+  .tsqA { background:#37332e; }
+  .tlbA { color:#37332e; font-weight:600; }
+  .dot { border-radius:50%; flex:none; }
+  .note { background:#fff7d6; border:1.5px solid #ecdf9e; border-radius:12px; padding:12px 14px; font:600 15px/1.35 'Caveat',cursive; color:#5c5326; }
+  .chev { color:#bdb8b0; font:15px/1 'DM Sans'; margin-left:auto; }
+  .glyph { width:30px; height:30px; border-radius:50%; border:1.5px solid #c8c3ba; display:flex; align-items:center; justify-content:center; font:600 13px/1 'DM Sans'; color:#8a847b; flex:none; }
+</style>
+</helmet>
+
+<div style="width:max-content; min-width:100%; min-height:100vh; box-sizing:border-box; padding:48px; background:#e7e5df; font-family:'DM Sans',sans-serif;">
+
+  <div style="max-width:920px; margin-bottom:32px;">
+    <div style="font:700 34px/1 'Caveat',cursive; color:#37332e;">NovaSoul · Ciclo y astrología — wireframes lo-fi</div>
+    <div style="font:500 14px/1.5 'DM Sans'; color:#6f6a62; margin-top:8px; max-width:780px;">Tracker del ciclo con el botón "me llegó hoy" (ya existe), la tarjeta de fase con energía + ejercicio recomendado, y la carta natal solo con planetas personales. Estructura primero — sin estilo todavía.</div>
+  </div>
+
+  <div style="display:flex; gap:56px; align-items:flex-start;">
+
+    <!-- ============ 1 · CICLO · HOY ============ -->
+    <div style="display:flex; flex-direction:column; gap:13px; width:320px; flex:none;">
+      <div style="font:700 22px/1 'Caveat',cursive; color:#37332e;">1 · Ciclo · hoy</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="stat"><span>9:41</span><span>NovaSoul</span><span>●●●</span></div>
+        <div class="hrow"><span class="hback">☰</span><span class="hback">Astrología ›</span></div>
+        <div class="scr">Ciclo</div>
+        <div class="body">
+          <div class="card" style="display:flex; align-items:center; gap:16px;">
+            <div style="width:84px; height:84px; border-radius:50%; border:7px solid #dcd9d4; border-top-color:#c2bcb2; border-right-color:#c2bcb2; flex:none; display:flex; flex-direction:column; align-items:center; justify-content:center;"><div style="font:600 22px/1 'Fraunces',serif; color:#37332e;">14</div><div style="font:500 8px/1 'DM Sans'; color:#a39d94;">día</div></div>
+            <div style="display:flex; flex-direction:column; gap:7px;"><div class="bar" style="width:90px; height:9px;"></div><div class="bar" style="width:64px; height:7px;"></div><div class="bar" style="width:78px; height:7px;"></div></div>
+          </div>
+          <div style="background:#2b2b2b; border-radius:13px; padding:14px; text-align:center;"><span style="font:600 14px/1 'DM Sans'; color:#fbf3ec;">● Me llegó hoy</span></div>
+          <div class="sec">Fase actual</div>
+          <div style="display:flex; gap:6px;">
+            <div style="flex:1; text-align:center; background:#f1efec; border-radius:9px; padding:7px 0; font:500 9px/1 'DM Sans'; color:#a39d94;">Menstrual</div>
+            <div style="flex:1; text-align:center; background:#f1efec; border-radius:9px; padding:7px 0; font:500 9px/1 'DM Sans'; color:#a39d94;">Folicular</div>
+            <div style="flex:1; text-align:center; background:#37332e; border-radius:9px; padding:7px 0; font:600 9px/1 'DM Sans'; color:#fff;">Ovulación</div>
+            <div style="flex:1; text-align:center; background:#f1efec; border-radius:9px; padding:7px 0; font:500 9px/1 'DM Sans'; color:#a39d94;">Lútea</div>
+          </div>
+          <div class="card" style="display:flex; flex-direction:column; gap:11px; border:1.5px solid #d8d4cd;">
+            <div style="display:flex; align-items:center; gap:10px;"><div class="dot" style="width:12px;height:12px;background:#c2bcb2;"></div><div class="bar" style="width:90px; height:9px;"></div></div>
+            <div style="display:flex; align-items:center; gap:10px;"><span style="font:600 10px/1 'DM Sans'; color:#a39d94; width:56px;">Energía</span><div style="flex:1; display:flex; gap:4px;"><div style="flex:1;height:8px;border-radius:3px;background:#c2bcb2;"></div><div style="flex:1;height:8px;border-radius:3px;background:#c2bcb2;"></div><div style="flex:1;height:8px;border-radius:3px;background:#c2bcb2;"></div><div style="flex:1;height:8px;border-radius:3px;background:#dcd9d4;"></div><div style="flex:1;height:8px;border-radius:3px;background:#dcd9d4;"></div></div></div>
+            <div style="display:flex; align-items:flex-start; gap:10px;"><span style="font:600 10px/1 'DM Sans'; color:#a39d94; width:56px;">Ejercicio</span><div style="flex:1; display:flex; flex-direction:column; gap:6px;"><div class="bar" style="width:80%; height:8px;"></div><div class="bar" style="width:55%; height:7px;"></div></div></div>
+          </div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tsq"></div><div class="tlb">Inicio</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Semana</div></div>
+          <div class="tab"><div class="tsq tsqA"></div><div class="tlb tlbA">Ciclo</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Config</div></div>
+        </div>
+        </sc-if>
+      </div>
+      <div style="font:500 12px/1.4 'DM Sans'; color:#6f6a62;">Anillo con el día del ciclo, botón "me llegó hoy", y la fase actual resaltada.</div>
+      <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+      <div class="note" style="transform:rotate(-0.5deg);">El botón "me llegó hoy" ya funciona con localStorage en la app actual — aquí solo se reubica.</div>
+      </sc-if>
+    </div>
+
+    <!-- ============ 2 · FASE DE HOY ============ -->
+    <div style="display:flex; flex-direction:column; gap:13px; width:320px; flex:none;">
+      <div style="font:700 22px/1 'Caveat',cursive; color:#37332e;">2 · Fase de hoy (detalle)</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="stat"><span>9:41</span><span>NovaSoul</span><span>●●●</span></div>
+        <div class="hrow"><span class="hback">‹ Ciclo</span><span></span></div>
+        <div class="scr">Fase: Ovulación</div>
+        <div class="ssub">Día 14 · energía alta</div>
+        <div class="body">
+          <div class="card" style="display:flex; flex-direction:column; gap:9px;">
+            <div class="sec">Energía del día</div>
+            <div style="display:flex; gap:5px;"><div style="flex:1;height:12px;border-radius:4px;background:#c2bcb2;"></div><div style="flex:1;height:12px;border-radius:4px;background:#c2bcb2;"></div><div style="flex:1;height:12px;border-radius:4px;background:#c2bcb2;"></div><div style="flex:1;height:12px;border-radius:4px;background:#c2bcb2;"></div><div style="flex:1;height:12px;border-radius:4px;background:#dcd9d4;"></div></div>
+            <div class="bar" style="width:65%; height:8px;"></div>
+            <div style="display:flex; align-items:center; gap:8px; border-top:1px solid #e4e0d9; padding-top:9px;">
+              <span style="font:600 10px/1 'DM Sans'; color:#a39d94;">Esta semana</span>
+              <div style="display:flex; gap:4px;"><div class="dot" style="width:9px;height:9px;background:#c2bcb2;"></div><div class="dot" style="width:9px;height:9px;background:#c2bcb2;"></div><div class="dot" style="width:9px;height:9px;background:#c2bcb2;"></div><div class="dot" style="width:9px;height:9px;background:#dcd9d4;"></div></div>
+              <span style="font:600 10px/1 'DM Sans'; color:#5c574f; margin-left:auto;">3 de 4 sesiones</span>
+            </div>
+          </div>
+          <div class="sec">Ejercicio recomendado</div>
+          <div class="card" style="display:flex; align-items:center; gap:12px;"><div class="dot" style="width:38px;height:38px;background:#dcd9d4;"></div><div style="display:flex; flex-direction:column; gap:6px; flex:1;"><div class="bar" style="width:70%;height:9px;"></div><div class="bar" style="width:90%;height:7px;"></div></div></div>
+          <div class="card" style="display:flex; align-items:center; gap:12px;"><div class="dot" style="width:38px;height:38px;background:#dcd9d4;"></div><div style="display:flex; flex-direction:column; gap:6px; flex:1;"><div class="bar" style="width:60%;height:9px;"></div><div class="bar" style="width:85%;height:7px;"></div></div></div>
+          <div class="sec">Cómo me siento</div>
+          <div style="display:flex; gap:8px;">
+            <div style="flex:1; text-align:center; border:1.5px solid #d8d4cd; border-radius:11px; padding:11px 0;"><div class="dot" style="width:18px;height:18px;background:#dcd9d4;margin:0 auto;"></div></div>
+            <div style="flex:1; text-align:center; border:1.5px solid #d8d4cd; border-radius:11px; padding:11px 0;"><div class="dot" style="width:18px;height:18px;background:#dcd9d4;margin:0 auto;"></div></div>
+            <div style="flex:1; text-align:center; border:1.5px solid #d8d4cd; border-radius:11px; padding:11px 0;"><div class="dot" style="width:18px;height:18px;background:#dcd9d4;margin:0 auto;"></div></div>
+            <div style="flex:1; text-align:center; border:1.5px solid #d8d4cd; border-radius:11px; padding:11px 0;"><div class="dot" style="width:18px;height:18px;background:#dcd9d4;margin:0 auto;"></div></div>
+          </div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tsq"></div><div class="tlb">Inicio</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Semana</div></div>
+          <div class="tab"><div class="tsq tsqA"></div><div class="tlb tlbA">Ciclo</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Config</div></div>
+        </div>
+        </sc-if>
+      </div>
+      <div style="font:500 12px/1.4 'DM Sans'; color:#6f6a62;">Detalle al tocar la tarjeta de fase: energía, 1-2 ejercicios sugeridos y registro de cómo me siento.</div>
+      <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+      <div class="note" style="transform:rotate(0.5deg);">La sugerencia de energía y ejercicio se calcula desde la fase, que sale de los datos del ciclo ya registrados.</div>
+      </sc-if>
+    </div>
+
+    <!-- ============ 3 · CARTA NATAL ============ -->
+    <div style="display:flex; flex-direction:column; gap:13px; width:320px; flex:none;">
+      <div style="font:700 22px/1 'Caveat',cursive; color:#37332e;">3 · Carta natal</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="stat"><span>9:41</span><span>NovaSoul</span><span>●●●</span></div>
+        <div class="hrow"><span class="hback">‹ Ciclo</span><span></span></div>
+        <div class="scr">Carta natal</div>
+        <div class="ssub">Planetas personales</div>
+        <div class="body">
+          <div class="card" style="display:flex; align-items:center; gap:13px;"><div class="glyph">☉</div><div style="display:flex; flex-direction:column; gap:5px; flex:1;"><div style="font:600 12px/1 'DM Sans'; color:#5c574f;">Sol</div><div class="bar" style="width:50px; height:7px;"></div></div><div style="font:600 12px/1 'DM Sans'; color:#37332e;">Virgo</div></div>
+          <div class="card" style="display:flex; align-items:center; gap:13px;"><div class="glyph">☾</div><div style="display:flex; flex-direction:column; gap:5px; flex:1;"><div style="font:600 12px/1 'DM Sans'; color:#5c574f;">Luna</div><div class="bar" style="width:50px; height:7px;"></div></div><div style="font:600 12px/1 'DM Sans'; color:#37332e;">Leo</div></div>
+          <div class="card" style="display:flex; align-items:center; gap:13px;"><div class="glyph">Asc</div><div style="display:flex; flex-direction:column; gap:5px; flex:1;"><div style="font:600 12px/1 'DM Sans'; color:#5c574f;">Ascendente</div><div class="bar" style="width:50px; height:7px;"></div></div><div style="font:600 12px/1 'DM Sans'; color:#37332e;">Capricornio</div></div>
+          <div class="card" style="display:flex; align-items:center; gap:13px;"><div class="glyph">☿</div><div style="display:flex; flex-direction:column; gap:5px; flex:1;"><div style="font:600 12px/1 'DM Sans'; color:#5c574f;">Mercurio</div><div class="bar" style="width:50px; height:7px;"></div></div><div style="font:600 12px/1 'DM Sans'; color:#37332e;">Libra</div></div>
+          <div class="card" style="display:flex; align-items:center; gap:13px;"><div class="glyph">♀</div><div style="display:flex; flex-direction:column; gap:5px; flex:1;"><div style="font:600 12px/1 'DM Sans'; color:#5c574f;">Venus</div><div class="bar" style="width:50px; height:7px;"></div></div><div style="font:600 12px/1 'DM Sans'; color:#37332e;">Libra</div></div>
+          <div class="card" style="display:flex; align-items:center; gap:13px;"><div class="glyph">♂</div><div style="display:flex; flex-direction:column; gap:5px; flex:1;"><div style="font:600 12px/1 'DM Sans'; color:#5c574f;">Marte</div><div class="bar" style="width:50px; height:7px;"></div></div><div style="font:600 12px/1 'DM Sans'; color:#37332e;">Escorpio</div></div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tsq"></div><div class="tlb">Inicio</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Semana</div></div>
+          <div class="tab"><div class="tsq tsqA"></div><div class="tlb tlbA">Ciclo</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tsq"></div><div class="tlb">Config</div></div>
+        </div>
+        </sc-if>
+      </div>
+      <div style="font:500 12px/1.4 'DM Sans'; color:#6f6a62;">Solo los 6 personales: Sol, Luna, Ascendente, Mercurio, Venus, Marte. Sin casas ni planetas lentos.</div>
+      <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+      <div class="note" style="transform:rotate(-0.6deg);">Sol Virgo · Luna Leo · Asc Capricornio · Mercurio Libra · Venus Libra · Marte Escorpio.</div>
+      </sc-if>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1180, &quot;height&quot;: 1000 },
+  &quot;showAnnotations&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; },
+  &quot;showTabBar&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; }
+}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showAnnotations: this.props.showAnnotations ?? true,
+      showTabBar: this.props.showTabBar ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>

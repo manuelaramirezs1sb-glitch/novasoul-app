@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; }
+  .ph { position:relative; width:320px; height:684px; background:#fffaf4; border:8px solid #241b16; border-radius:42px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 10px 30px rgba(60,40,28,.20); }
+  .notch { position:absolute; top:0; left:50%; transform:translateX(-50%); width:108px; height:20px; background:#241b16; border-radius:0 0 14px 14px; z-index:6; }
+  .stat { display:flex; justify-content:space-between; align-items:center; padding:14px 20px 2px; font:600 11px/1 'DM Sans',sans-serif; color:#b7a08e; }
+  .hrow { padding:8px 18px 0; display:flex; justify-content:space-between; align-items:center; }
+  .hb { font:600 11px/1 'DM Sans',sans-serif; color:#b09a86; }
+  .hamb { display:flex; flex-direction:column; gap:3.5px; }
+  .hamb span { width:18px; height:2.5px; border-radius:2px; background:#7c6b5c; display:block; }
+  .scr { font:600 24px/1.05 'Fraunces',serif; color:#3b302a; padding:10px 18px 0; letter-spacing:.2px; }
+  .ssub { font:500 11px/1 'DM Sans',sans-serif; color:#a8917f; padding:5px 18px 0; }
+  .body { flex:1; padding:14px 16px; display:flex; flex-direction:column; gap:11px; overflow:hidden; }
+  .sec { font:600 10px/1 'DM Sans',sans-serif; color:#a3917f; text-transform:uppercase; letter-spacing:.7px; }
+  .card { background:#f7ede2; border:1px solid #f0e4d6; border-radius:16px; padding:13px; }
+  .big2 { font:600 20px/1 'Fraunces',serif; color:#3b302a; }
+  .lab { font:500 10px/1.2 'DM Sans',sans-serif; color:#a3917f; }
+  .tabs { display:flex; justify-content:space-around; align-items:flex-end; padding:10px 6px 14px; background:#fbf1e7; border-top:1px solid #f0e2d3; margin-top:auto; }
+  .tab { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .tdot { width:6px; height:6px; border-radius:50%; background:#d8c4b2; }
+  .tlb { font:500 9.5px/1 'DM Sans',sans-serif; color:#b09a86; }
+  .tdotA { background:#e0815f; box-shadow:0 0 0 4px rgba(224,129,95,.16); }
+  .tlbA { color:#3b302a; font-weight:600; }
+  .dot { border-radius:50%; flex:none; }
+  .glyph { width:34px; height:34px; border-radius:50%; background:#f3e3d3; display:flex; align-items:center; justify-content:center; font:500 16px/1 'DM Sans'; color:#b06a4a; flex:none; }
+</style>
+</helmet>
+
+<div style="width:max-content; min-width:100%; min-height:100vh; box-sizing:border-box; padding:48px; background:#efe3d7; font-family:'DM Sans',sans-serif;">
+
+  <div style="max-width:920px; margin-bottom:34px;">
+    <div style="font:600 34px/1 'Fraunces',serif; color:#3b302a; letter-spacing:.2px;">NovaSoul · Ciclo y astrología</div>
+    <div style="font:500 14px/1.5 'DM Sans'; color:#7c6b5c; margin-top:9px; max-width:780px;">Tracker del ciclo, fase del día con energía + ejercicio, y la carta natal personal. Identidad clara y cálida, sin barra oscura. <span style="color:#a3917f;">Datos de ejemplo.</span></div>
+  </div>
+
+  <div style="display:flex; gap:56px; align-items:flex-start;">
+
+    <!-- ============ 1 · CICLO · HOY ============ -->
+    <div style="display:flex; flex-direction:column; gap:14px; width:320px; flex:none;">
+      <div style="font:600 16px/1 'DM Sans'; color:#7c6b5c; letter-spacing:.3px;">1 · Ciclo · hoy</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="stat"><span>9:41</span><span></span><span style="letter-spacing:1px;">●●●</span></div>
+        <div class="hrow"><div class="hamb"><span></span><span></span><span></span></div><span class="hb">Carta natal ›</span></div>
+        <div class="scr">Ciclo</div>
+        <div class="body">
+          <div class="card" style="display:flex; align-items:center; gap:16px;">
+            <div style="width:88px; height:88px; border-radius:50%; background:conic-gradient(#e0815f 0% 50%, #f0d9c8 50% 100%); flex:none; display:flex; align-items:center; justify-content:center;">
+              <div style="width:66px; height:66px; border-radius:50%; background:#fffaf4; display:flex; flex-direction:column; align-items:center; justify-content:center;"><div style="font:600 24px/1 'Fraunces',serif; color:#3b302a;">14</div><div class="lab">día</div></div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:5px;"><div style="font:600 15px/1 'DM Sans'; color:#3b302a;">Ovulación</div><span class="lab">Próximo período</span><span style="font:600 12px/1 'DM Sans'; color:#c79a3f;">en 14 días</span></div>
+          </div>
+          <div style="background:#e0815f; border-radius:14px; padding:14px; text-align:center; box-shadow:0 6px 16px rgba(224,129,95,.26); display:flex; align-items:center; justify-content:center; gap:8px;"><span class="dot" style="width:9px;height:9px;background:#fff;"></span><span style="font:600 14px/1 'DM Sans'; color:#fff;">Me llegó hoy</span></div>
+          <div class="sec">Fase actual</div>
+          <div style="display:flex; gap:5px;">
+            <div style="flex:1; text-align:center; background:#f7ede2; border-radius:10px; padding:8px 0; font:500 9px/1 'DM Sans'; color:#b09a86;">Menstrual</div>
+            <div style="flex:1; text-align:center; background:#f7ede2; border-radius:10px; padding:8px 0; font:500 9px/1 'DM Sans'; color:#b09a86;">Folicular</div>
+            <div style="flex:1; text-align:center; background:#d9a23f; border-radius:10px; padding:8px 0; font:600 9px/1 'DM Sans'; color:#fff;">Ovulación</div>
+            <div style="flex:1; text-align:center; background:#f7ede2; border-radius:10px; padding:8px 0; font:500 9px/1 'DM Sans'; color:#b09a86;">Lútea</div>
+          </div>
+          <div class="card" style="display:flex; flex-direction:column; gap:11px; background:#fdf3e7; border-color:#f3e2c8;">
+            <div style="display:flex; align-items:center; gap:9px;"><span class="dot" style="width:11px;height:11px;background:#d9a23f;"></span><span style="font:600 13px/1 'DM Sans'; color:#3b302a;">Tu pico de energía</span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><span class="lab" style="width:54px;">Energía</span><div style="flex:1; display:flex; gap:4px;"><div style="flex:1;height:8px;border-radius:3px;background:#d9a23f;"></div><div style="flex:1;height:8px;border-radius:3px;background:#d9a23f;"></div><div style="flex:1;height:8px;border-radius:3px;background:#d9a23f;"></div><div style="flex:1;height:8px;border-radius:3px;background:#d9a23f;"></div><div style="flex:1;height:8px;border-radius:3px;background:#eddcc4;"></div></div></div>
+            <div style="display:flex; align-items:flex-start; gap:10px;"><span class="lab" style="width:54px;">Ejercicio</span><span style="font:500 11.5px/1.4 'DM Sans'; color:#4a3f37; flex:1;">Cardio intenso o fuerza — aprovecha el empuje.</span></div>
+          </div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tdot"></div><div class="tlb">Inicio</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Semana</div></div>
+          <div class="tab"><div class="tdot tdotA"></div><div class="tlb tlbA">Ciclo</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Config</div></div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 2 · FASE DE HOY ============ -->
+    <div style="display:flex; flex-direction:column; gap:14px; width:320px; flex:none;">
+      <div style="font:600 16px/1 'DM Sans'; color:#7c6b5c; letter-spacing:.3px;">2 · Fase de hoy (detalle)</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="stat"><span>9:41</span><span></span><span style="letter-spacing:1px;">●●●</span></div>
+        <div class="hrow"><span class="hb">‹ Ciclo</span><span></span></div>
+        <div style="display:flex; align-items:center; gap:10px; padding:10px 18px 0;"><div class="scr" style="padding:0;">Ovulación</div><span class="dot" style="width:12px;height:12px;background:#d9a23f;"></span></div>
+        <div class="ssub">Día 14 · energía alta</div>
+        <div class="body">
+          <div class="card" style="display:flex; flex-direction:column; gap:10px; background:#fdf3e7; border-color:#f3e2c8;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><span class="sec">Energía del día</span><span style="font:600 12px/1 'DM Sans'; color:#b8841f;">Alta</span></div>
+            <div style="display:flex; gap:5px;"><div style="flex:1;height:12px;border-radius:4px;background:#d9a23f;"></div><div style="flex:1;height:12px;border-radius:4px;background:#d9a23f;"></div><div style="flex:1;height:12px;border-radius:4px;background:#d9a23f;"></div><div style="flex:1;height:12px;border-radius:4px;background:#d9a23f;"></div><div style="flex:1;height:12px;border-radius:4px;background:#eddcc4;"></div></div>
+            <span style="font:500 11px/1.4 'DM Sans'; color:#7c6b5c;">Buen día para esfuerzo y decisiones. Tu cuerpo rinde más.</span>
+            <div style="display:flex; align-items:center; gap:8px; border-top:1px solid #f0dfc8; padding-top:10px;">
+              <span class="lab" style="font-weight:600;">Esta semana</span>
+              <div style="display:flex; gap:4px;"><div class="dot" style="width:9px;height:9px;background:#7c9a5a;"></div><div class="dot" style="width:9px;height:9px;background:#7c9a5a;"></div><div class="dot" style="width:9px;height:9px;background:#7c9a5a;"></div><div class="dot" style="width:9px;height:9px;background:#e3d3c0;"></div></div>
+              <span style="font:600 11px/1 'DM Sans'; color:#5f7a42; margin-left:auto;">3 de 4 sesiones</span>
+            </div>
+          </div>
+          <div class="sec">Ejercicio recomendado</div>
+          <div class="card" style="display:flex; align-items:center; gap:12px; padding:12px;"><div class="dot" style="width:40px;height:40px;background:#f1ddc9;"></div><div style="display:flex; flex-direction:column; gap:4px; flex:1;"><span style="font:600 13px/1 'DM Sans'; color:#3b302a;">HIIT o cardio intenso</span><span class="lab">30–40 min · alta intensidad</span></div></div>
+          <div class="card" style="display:flex; align-items:center; gap:12px; padding:12px;"><div class="dot" style="width:40px;height:40px;background:#f1ddc9;"></div><div style="display:flex; flex-direction:column; gap:4px; flex:1;"><span style="font:600 13px/1 'DM Sans'; color:#3b302a;">Entrenamiento de fuerza</span><span class="lab">Aprovecha el pico hormonal</span></div></div>
+          <div class="sec">Cómo me siento</div>
+          <div style="display:flex; gap:7px;">
+            <div style="flex:1; text-align:center; background:#e6f0df; border:1.5px solid #a0c08a; border-radius:12px; padding:10px 0; font:600 10px/1 'DM Sans'; color:#5f7a42;">Animada</div>
+            <div style="flex:1; text-align:center; background:#fffaf4; border:1px solid #ecdcca; border-radius:12px; padding:10px 0; font:500 10px/1 'DM Sans'; color:#8a7464;">Bien</div>
+            <div style="flex:1; text-align:center; background:#fffaf4; border:1px solid #ecdcca; border-radius:12px; padding:10px 0; font:500 10px/1 'DM Sans'; color:#8a7464;">Cansada</div>
+            <div style="flex:1; text-align:center; background:#fffaf4; border:1px solid #ecdcca; border-radius:12px; padding:10px 0; font:500 10px/1 'DM Sans'; color:#8a7464;">Sensible</div>
+          </div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tdot"></div><div class="tlb">Inicio</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Semana</div></div>
+          <div class="tab"><div class="tdot tdotA"></div><div class="tlb tlbA">Ciclo</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Config</div></div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 3 · CARTA NATAL ============ -->
+    <div style="display:flex; flex-direction:column; gap:14px; width:320px; flex:none;">
+      <div style="font:600 16px/1 'DM Sans'; color:#7c6b5c; letter-spacing:.3px;">3 · Carta natal</div>
+      <div class="ph">
+        <div class="notch"></div>
+        <div class="stat"><span>9:41</span><span></span><span style="letter-spacing:1px;">●●●</span></div>
+        <div class="hrow"><span class="hb">‹ Ciclo</span><span></span></div>
+        <div class="scr">Carta natal</div>
+        <div class="ssub">Planetas personales</div>
+        <div class="body" style="gap:9px;">
+          <div class="card" style="display:flex; align-items:center; gap:13px; padding:12px;"><div class="glyph">☉</div><div style="display:flex; flex-direction:column; gap:3px; flex:1;"><span style="font:600 13px/1 'DM Sans'; color:#3b302a;">Sol</span><span class="lab">Identidad</span></div><span style="font:600 15px/1 'Fraunces',serif; color:#b06a4a;">Virgo</span></div>
+          <div class="card" style="display:flex; align-items:center; gap:13px; padding:12px;"><div class="glyph">☾</div><div style="display:flex; flex-direction:column; gap:3px; flex:1;"><span style="font:600 13px/1 'DM Sans'; color:#3b302a;">Luna</span><span class="lab">Emoción</span></div><span style="font:600 15px/1 'Fraunces',serif; color:#b06a4a;">Leo</span></div>
+          <div class="card" style="display:flex; align-items:center; gap:13px; padding:12px;"><div class="glyph" style="font-size:11px; font-weight:600;">Asc</div><div style="display:flex; flex-direction:column; gap:3px; flex:1;"><span style="font:600 13px/1 'DM Sans'; color:#3b302a;">Ascendente</span><span class="lab">Cómo me ven</span></div><span style="font:600 15px/1 'Fraunces',serif; color:#b06a4a;">Capricornio</span></div>
+          <div class="card" style="display:flex; align-items:center; gap:13px; padding:12px;"><div class="glyph">☿</div><div style="display:flex; flex-direction:column; gap:3px; flex:1;"><span style="font:600 13px/1 'DM Sans'; color:#3b302a;">Mercurio</span><span class="lab">Mente</span></div><span style="font:600 15px/1 'Fraunces',serif; color:#b06a4a;">Libra</span></div>
+          <div class="card" style="display:flex; align-items:center; gap:13px; padding:12px;"><div class="glyph">♀</div><div style="display:flex; flex-direction:column; gap:3px; flex:1;"><span style="font:600 13px/1 'DM Sans'; color:#3b302a;">Venus</span><span class="lab">Amor</span></div><span style="font:600 15px/1 'Fraunces',serif; color:#b06a4a;">Libra</span></div>
+          <div class="card" style="display:flex; align-items:center; gap:13px; padding:12px;"><div class="glyph">♂</div><div style="display:flex; flex-direction:column; gap:3px; flex:1;"><span style="font:600 13px/1 'DM Sans'; color:#3b302a;">Marte</span><span class="lab">Impulso</span></div><span style="font:600 15px/1 'Fraunces',serif; color:#b06a4a;">Escorpio</span></div>
+        </div>
+        <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+        <div class="tabs">
+          <div class="tab"><div class="tdot"></div><div class="tlb">Inicio</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Semana</div></div>
+          <div class="tab"><div class="tdot tdotA"></div><div class="tlb tlbA">Ciclo</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Finanzas</div></div>
+          <div class="tab"><div class="tdot"></div><div class="tlb">Config</div></div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1180, &quot;height&quot;: 1000 },
+  &quot;showTabBar&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; }
+}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showTabBar: this.props.showTabBar ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>
