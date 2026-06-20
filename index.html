@@ -171,7 +171,7 @@ body { display: flex; justify-content: center; font-family: 'DM Sans', sans-seri
   <div class="statusbar"><span id="clock">9:41</span><span style="letter-spacing:2px">●●●</span></div>
   <div class="hrow">
     <div class="hamb"><span></span><span></span><span></span></div>
-    <span class="hb" id="today-label">martes 17 ›</span>
+    <span class="hb" id="today-label"></span>
   </div>
   <div class="scr-title">Buenos días,<br>Manuela</div>
   <div class="scroll-body">
@@ -257,18 +257,12 @@ body { display: flex; justify-content: center; font-family: 'DM Sans', sans-seri
   <div class="statusbar"><span>9:41</span><span style="letter-spacing:2px">●●●</span></div>
   <div class="hrow">
     <div class="hamb"><span></span><span></span><span></span></div>
-    <span class="hb">Junio ›</span>
+    <span class="hb" id="semana-month"></span>
   </div>
   <div class="scr-title">Mi Semana</div>
   <div class="scroll-body">
-    <div style="display:flex;gap:7px;">
-      <div class="day-item"><div class="day-lbl">L</div><div class="day-num">16</div></div>
-      <div class="day-item today"><div class="day-lbl">M</div><div class="day-num">17</div></div>
-      <div class="day-item"><div class="day-lbl">M</div><div class="day-num">18</div></div>
-      <div class="day-item"><div class="day-lbl">J</div><div class="day-num">19</div></div>
-      <div class="day-item"><div class="day-lbl">V</div><div class="day-num">20</div></div>
-    </div>
-    <div class="sec">Hoy · martes 17</div>
+    <div style="display:flex;gap:7px;" id="week-strip"></div>
+    <div class="sec" id="semana-hoy"></div>
     <div class="card" style="display:flex;align-items:center;gap:12px;padding:12px 14px;">
       <div style="width:10px;height:38px;border-radius:5px;background:var(--purple);flex-shrink:0;"></div>
       <div style="flex:1;"><div style="font:600 13px/1 'DM Sans';color:var(--text);">Cálculo · parcial</div><div style="font:500 11px/1 'DM Sans';color:var(--label);margin-top:4px;">Universidad</div></div>
@@ -1006,7 +1000,37 @@ function showToast(msg) {
   toastTimer = setTimeout(() => t.style.opacity = '0', 2800);
 }
 
+// ── DATE UI ──
+function initDateUI() {
+  const DAYS_ES    = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const DAYS_SHORT = ['D','L','M','M','J','V','S'];
+  const MONTHS_ES  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const today = new Date();
+  const dayName  = DAYS_ES[today.getDay()];
+  const dayNum   = today.getDate();
+
+  document.getElementById('today-label').textContent = `${dayName} ${dayNum} ›`;
+  document.getElementById('semana-month').textContent = `${MONTHS_ES[today.getMonth()]} ›`;
+  document.getElementById('semana-hoy').textContent   = `Hoy · ${dayName} ${dayNum}`;
+
+  // Build Mon–Fri strip for the current week
+  const strip = document.getElementById('week-strip');
+  const dow = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + (dow === 0 ? -6 : 1 - dow));
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const isToday = d.toDateString() === today.toDateString();
+    const item = document.createElement('div');
+    item.className = 'day-item' + (isToday ? ' today' : '');
+    item.innerHTML = `<div class="day-lbl">${DAYS_SHORT[d.getDay()]}</div><div class="day-num">${d.getDate()}</div>`;
+    strip.appendChild(item);
+  }
+}
+
 // ── INIT ──
+initDateUI();
 updateCicloUI();
 renderStreakDots('streak-dots-inicio');
 renderStreakDots('streak-dots-recomp');
