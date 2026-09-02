@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nova Empresarial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── tokens ── */
+:root,[data-tema="verde"]{--s-bg:#e6eadb;--s-card:#fbfcf7;--s-card2:#fdfefa;--s-card3:#f5f7ee;--s-soft:#f1f4e8;--s-soft2:#eef2e4;--s-soft7:#e0e6d2;--s-line:#d7dcc6;--s-line2:#e4e9d6;--s-line3:#dde2ce;--s-line4:#cbd3b8;--s-dark:#e0e6d2;--s-dark2:#d5ddc0;--s-dark3:#c6d1ab;--s-deep:#cfd8b8;--t-ink:#333a2b;--t-ink2:#3f4735;--t-ink3:#4d5642;--t-mut:#6f7a62;--t-mut2:#5f6b52;--t-mut3:#98a189;--t-mut4:#a9b39a;--t-mut5:#8b957c;--t-ondark:#2b3124;--t-ondark-mut:#5a6449;--acc:#b9cf8e;--acc-d:#5f7a3a;--a-chip:#7e9a52;}
+[data-modo="oscuro"]{--s-bg:#1f241a;--s-card:#272d20;--s-card2:#2b3124;--s-card3:#2b3124;--s-soft:#333a2b;--s-soft2:#333a2b;--s-soft7:#434c37;--s-line:#3c4433;--s-line2:#363d2d;--s-line3:#3c4433;--s-line4:#4a543a;--s-dark:#242a1c;--s-dark2:#2b3124;--s-dark3:#3c4433;--s-deep:#1b2015;--t-ink:#f1f4e8;--t-ink2:#e2e7d6;--t-ink3:#cbd2bd;--t-mut:#a9b39a;--t-mut2:#b9c2a8;--t-mut3:#8b957c;--t-mut4:#7a8470;--t-ondark:#f1f4e8;--t-ondark-mut:#b9c2a8;--a-chip:#b9cf8e;}
+[data-tema="verde"][data-modo="oscuro"]{--acc-d:#b9cf8e;--a-chip:#b9cf8e;}
+[data-tema="amarillo"]{--acc:#E7CA74;--acc-d:#8F6E1E;--a-chip:#C9A63F;--s-dark:#eee4c9;--s-dark2:#e6d8b2;--s-dark3:#dcc894;--s-deep:#e2d3a8;}
+[data-tema="amarillo"][data-modo="oscuro"]{--acc-d:#E7CA74;--a-chip:#E7CA74;--s-dark:#282316;--s-dark2:#2f2a1b;--s-dark3:#413928;--s-deep:#1f1b10;}
+[data-tema="terracota"]{--acc:#DFAB8D;--acc-d:#A85E3C;--a-chip:#C47B57;--s-dark:#f0dfd3;--s-dark2:#e8cfbd;--s-dark3:#dcb89e;--s-deep:#e4c9b3;}
+[data-tema="terracota"][data-modo="oscuro"]{--acc-d:#E3B79C;--a-chip:#E3B79C;--s-dark:#291e18;--s-dark2:#2f231d;--s-dark3:#43322a;--s-deep:#1f1611;}
+[data-tema="azul"]{--acc:#A8C2D8;--acc-d:#3C6684;--a-chip:#5C87A6;--s-dark:#dbe4ec;--s-dark2:#c8d7e4;--s-dark3:#adc3d6;--s-deep:#bfd1e0;}
+[data-tema="azul"][data-modo="oscuro"]{--acc-d:#A8C2D8;--a-chip:#A8C2D8;--s-dark:#1b242b;--s-dark2:#1e2830;--s-dark3:#2c3a44;--s-deep:#131b21;}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--s-bg);color:var(--t-ink);transition:background .2s,color .2s;}
+
+/* ── login ── */
+#login{position:fixed;inset:0;background:var(--s-bg);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.login-box{width:720px;max-width:100%;min-height:520px;border-radius:16px;overflow:hidden;border:1px solid var(--s-line);background:var(--s-card2);display:flex;box-shadow:0 12px 34px rgba(60,40,28,.14);}
+.login-left{width:260px;flex:0 0 260px;padding:34px 28px;display:flex;flex-direction:column;gap:18px;background:var(--s-dark2);}
+.login-left h1{font:600 24px/1.18 'Fraunces',serif;color:var(--t-ondark);}
+.login-left p{font:500 12px/1.65 'DM Sans';color:var(--t-mut2);margin:0;}
+.login-dot{display:flex;align-items:center;gap:8px;}
+.login-dot span:first-child{width:7px;height:7px;border-radius:50%;flex:none;}
+.login-dot span:last-child{font:500 11px/1 'DM Sans';color:var(--t-mut2);}
+.login-right{flex:1;padding:38px 34px;display:flex;flex-direction:column;justify-content:center;gap:18px;}
+.login-step{display:none;flex-direction:column;gap:18px;}
+.login-step.active{display:flex;}
+.step-tag{font:600 10px/1 'DM Sans';letter-spacing:1.2px;color:var(--t-mut2);}
+.login-title{font:600 26px/1.15 'Fraunces',serif;color:var(--t-ink);}
+.login-sub{font:500 13px/1.6 'DM Sans';color:var(--t-mut);margin:0;}
+label.field{display:flex;flex-direction:column;gap:6px;}
+label.field span{font:600 10px/1 'DM Sans';letter-spacing:1.1px;color:var(--t-mut2);}
+input.txt{border:1px solid var(--s-line3);background:var(--s-card2);border-radius:11px;padding:14px 15px;font:500 14px/1 'DM Sans';color:var(--t-ink);outline:none;width:100%;}
+input.txt:focus{border-color:var(--acc-d);}
+.btn-primary{background:var(--acc-d);color:#f1f4e8;font:600 14px/1 'DM Sans';padding:15px;border-radius:12px;text-align:center;cursor:pointer;border:none;width:100%;transition:opacity .15s;}
+.btn-primary:hover{opacity:.88;}
+.btn-ghost{border:1px solid var(--s-line3);color:var(--t-ink3);font:600 13px/1 'DM Sans';padding:14px;border-radius:12px;text-align:center;cursor:pointer;text-align:center;}
+.divider{display:flex;align-items:center;gap:12px;}.divider span:not(.lbl){flex:1;height:1px;background:var(--s-line2);}.divider .lbl{font:500 10px/1 'DM Sans';color:var(--t-mut3);}
+.link{font:600 12px/1 'DM Sans';color:var(--acc-d);cursor:pointer;}
+.demo-tags{display:flex;gap:6px;flex-wrap:wrap;}
+.demo-tag{font:600 11px/1 'DM Sans';color:var(--t-mut2);background:var(--s-bg);border:1px solid var(--s-line);border-radius:20px;padding:6px 10px;cursor:pointer;}
+.demo-tag:hover{border-color:var(--acc-d);color:var(--acc-d);}
+.store-pick{border:1.5px solid var(--s-line3);background:var(--s-bg);border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:border-color .15s;}
+.store-pick:hover,.store-pick.sel{border-color:var(--acc-d);}
+.store-icon{width:40px;height:40px;border-radius:12px;background:var(--s-soft);flex:none;display:flex;align-items:center;justify-content:center;font:700 11px/1 'DM Sans';color:var(--t-mut);}
+.store-info{flex:1;}
+.store-info strong{display:block;font:600 14px/1 'DM Sans';color:var(--t-ink);}
+.store-info small{font:500 11px/1 'DM Sans';color:var(--t-mut2);}
+.code-grid{display:flex;gap:8px;}
+.code-box{flex:1;height:58px;border:1px solid var(--s-line3);background:var(--s-card2);border-radius:11px;display:flex;align-items:center;justify-content:center;font:600 22px/1 'Fraunces',serif;color:var(--t-ink);}
+.code-box.filled{border-color:var(--acc-d);}
+
+/* ── app shell ── */
+#app{display:none;height:100vh;overflow:hidden;}
+#app.visible{display:flex;}
+.sidebar{width:220px;flex:0 0 220px;background:var(--s-dark2);display:flex;flex-direction:column;padding:20px 14px;gap:20px;overflow-y:auto;}
+.sidebar::-webkit-scrollbar{width:0;}
+.brand{display:flex;align-items:center;gap:10px;padding:0 6px;}
+.brand-icon{width:32px;height:32px;border-radius:9px;background:#3c4433;flex:none;display:flex;align-items:center;justify-content:center;font:700 14px/1 'DM Sans';color:#b9cf8e;}
+.brand-text strong{display:block;font:600 14px/1 'Fraunces',serif;color:var(--t-ondark);}
+.brand-text small{font:500 10px/1.3 'DM Sans';color:var(--t-ondark-mut);}
+.nav-group{display:flex;flex-direction:column;gap:2px;}
+.nav-label{font:600 9px/1 'DM Sans';letter-spacing:1.1px;color:var(--t-ink3);padding:0 12px 4px;}
+.nav-item{border-left:3px solid transparent;border-radius:9px;padding:9px 12px;cursor:pointer;font:600 12px/1 'DM Sans';color:var(--t-ondark-mut);transition:background .12s;}
+.nav-item:hover{background:var(--s-deep);}
+.nav-item.active{background:var(--s-deep);border-left-color:var(--a-chip);color:var(--t-ondark);}
+.stores-section{margin-top:auto;padding-top:14px;border-top:1px solid var(--s-deep);display:flex;flex-direction:column;gap:8px;}
+.stores-label{font:600 9px/1 'DM Sans';letter-spacing:1px;color:var(--t-ondark-mut);padding:0 2px;}
+.store-chip{border-radius:12px;padding:9px 12px;cursor:pointer;transition:background .12s;}
+.store-chip.sel{background:var(--a-chip);}
+.store-chip:not(.sel){background:var(--s-deep);}
+.store-chip strong{display:block;font:600 12px/1.1 'DM Sans';}
+.store-chip.sel strong{color:#232c19;}
+.store-chip:not(.sel) strong{color:var(--t-ondark-mut);}
+.store-chip small{font:500 10px/1.2 'DM Sans';}
+.store-chip.sel small{color:var(--t-ink2);}
+.store-chip:not(.sel) small{color:var(--t-ondark-mut);}
+.upload-btn{font:600 12px/1 'DM Sans';color:#232c19;background:var(--s-bg);border-radius:20px;padding:9px 12px;text-align:center;cursor:pointer;}
+
+/* ── main ── */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{padding:16px 24px 14px;border-bottom:1px solid var(--s-line2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;}
+.page-title{font:600 20px/1.1 'Fraunces',serif;color:var(--t-ink);}
+.page-sub{font:500 11.5px/1 'DM Sans';color:var(--t-mut2);margin-top:3px;}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.user-chip{font:500 11px/1 'DM Sans';color:var(--t-mut2);padding:0 8px;}
+.mode-toggle{display:flex;gap:2px;background:var(--s-bg);border:1px solid var(--s-line);border-radius:20px;padding:3px;}
+.mode-btn{font:600 11px/1 'DM Sans';padding:6px 10px;border-radius:16px;cursor:pointer;transition:background .12s,color .12s;}
+.mode-btn.active{background:var(--s-deep);color:var(--t-ondark);}
+.mode-btn:not(.active){color:var(--t-mut2);}
+.color-dots{display:flex;gap:4px;align-items:center;padding:0 4px;}
+.cdot{width:14px;height:14px;border-radius:50%;cursor:pointer;transition:transform .15s,outline .1s;}
+.cdot:hover{transform:scale(1.15);}
+.cdot.active{outline:2px solid var(--t-ink);outline-offset:2px;}
+.logout-btn{font:600 11px/1 'DM Sans';color:var(--t-ondark);background:var(--s-deep);border-radius:20px;padding:7px 12px;cursor:pointer;}
+
+.content{flex:1;overflow-y:auto;padding:24px;}
+.content::-webkit-scrollbar{width:6px;}.content::-webkit-scrollbar-thumb{background:var(--s-line4);border-radius:3px;}
+
+/* ── mobile sidebar overlay ── */
+.mob-toggle{display:none;background:var(--s-deep);border:none;border-radius:10px;padding:8px 12px;cursor:pointer;font:600 12px/1 'DM Sans';color:var(--t-ondark);}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50;}
+@media(max-width:720px){
+  .mob-toggle{display:block;}
+  .sidebar{position:fixed;left:-240px;top:0;bottom:0;z-index:60;width:220px;transition:left .25s;box-shadow:4px 0 20px rgba(0,0,0,.15);}
+  .sidebar.open{left:0;}
+  .sidebar-overlay.open{display:block;}
+  .user-chip{display:none;}
+  .topbar{padding:12px 16px 10px;}
+  .content{padding:16px;}
+}
+
+/* ── sections ── */
+.section{display:none;flex-direction:column;gap:22px;}
+.section.active{display:flex;}
+
+/* ── cards ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:11px;}
+.kpi-card{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:14px;padding:15px 17px;display:flex;flex-direction:column;gap:5px;}
+.kpi-card.accent{border-left:4px solid var(--acc-d);}
+.kpi-card.good{border-left:4px solid #6d7d4a;}
+.kpi-card.warn{border-left:4px solid #8a6a13;}
+.kpi-card.bad{border-left:4px solid #b8322f;}
+.kpi-label{font:600 9px/1 'DM Sans';letter-spacing:.9px;color:var(--t-mut2);}
+.kpi-value{font:700 22px/1.1 'Fraunces',serif;color:var(--t-ink);font-variant-numeric:tabular-nums;}
+.kpi-sub{font:500 11px/1.4 'DM Sans';color:var(--t-mut);}
+.card{background:var(--s-card);border:1px solid var(--s-line);border-radius:16px;padding:17px 19px;display:flex;flex-direction:column;gap:12px;}
+.card-title{font:600 14px/1.1 'Fraunces',serif;color:var(--t-ink);}
+.card-link{font:600 11px/1 'DM Sans';color:var(--acc-d);cursor:pointer;}
+.card-header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+.dark-card{background:var(--s-dark);border-radius:16px;padding:17px 19px;display:flex;flex-direction:column;gap:12px;}
+.section-title{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--t-mut2);}
+
+/* ── equilibrio ── */
+.eq-val{font:700 26px/1.05 'Fraunces',serif;color:var(--t-ink);}
+.progress-bar{height:9px;background:var(--s-line2);border-radius:99px;overflow:hidden;}
+.progress-fill{height:9px;background:#6d7d4a;border-radius:99px;transition:width .4s;}
+
+/* ── alerta banners ── */
+.alert-crit{background:#f6e3db;border:1px solid #e0b4a8;border-radius:14px;padding:14px 17px;display:flex;align-items:flex-start;gap:12px;}
+.alert-crit-dot{width:8px;height:8px;border-radius:50%;background:#a8563a;flex:none;margin-top:4px;}
+.alert-crit-text{flex:1;}
+.alert-crit-title{font:600 13px/1.3 'DM Sans';color:#a8563a;}
+.alert-crit-sub{font:500 12px/1.5 'DM Sans';color:#c06040;margin-top:3px;}
+.alert-crit-action{font:600 11px/1 'DM Sans';color:#a8563a;background:#f0c8bc;border-radius:20px;padding:6px 11px;cursor:pointer;white-space:nowrap;flex:none;}
+[data-modo="oscuro"] .alert-crit{background:#3a1a14;border-color:#7a2a1a;}
+[data-modo="oscuro"] .alert-crit-title{color:#e89070;}
+[data-modo="oscuro"] .alert-crit-sub{color:#c07050;}
+[data-modo="oscuro"] .alert-crit-action{background:#5a2010;color:#e89070;}
+
+/* ── bar chart ── */
+.bar-chart{display:flex;gap:9px;align-items:flex-end;height:120px;}
+.bar-col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:7px;cursor:pointer;}
+.bar-fill{width:100%;border-radius:5px 5px 0 0;transition:opacity .15s;}
+.bar-fill:hover{opacity:.8;}
+.bar-label{font:600 9.5px/1 'DM Sans';color:var(--t-mut3);}
+.bar-label.today{color:var(--acc-d);}
+
+/* ── status bar ── */
+.status-bar{height:13px;border-radius:8px;overflow:hidden;display:flex;background:var(--s-line2);}
+.status-seg{height:100%;}
+.status-list{display:flex;flex-direction:column;gap:0;}
+.status-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--s-line2);}
+.status-dot{width:8px;height:8px;border-radius:50%;flex:none;}
+
+/* ── order rows ── */
+.order-row{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:7px;cursor:pointer;transition:border-color .12s;}
+.order-row:hover{border-color:var(--s-line4);}
+.order-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.order-name{font:600 13px/1.2 'DM Sans';color:var(--t-ink);}
+.order-id{font:500 11px/1 'DM Sans';color:var(--t-mut2);font-variant-numeric:tabular-nums;}
+.order-meta{display:flex;gap:16px;flex-wrap:wrap;font:500 12px/1.4 'DM Sans';color:var(--t-mut);}
+.order-meta b{font-weight:600;color:var(--t-ink);}
+.badge{font:700 10px/1 'DM Sans';border-radius:99px;padding:5px 9px;white-space:nowrap;}
+.badge-ok{color:#3f5330;background:#d3e0c2;}
+.badge-warn{color:#8a6a13;background:#f6ecd0;}
+.badge-err{color:#b8322f;background:#f7dedc;}
+.badge-blue{color:#3C6684;background:#dbe8f4;}
+.badge-mut{color:var(--t-mut2);background:var(--s-soft7);}
+
+/* ── nov rows ── */
+.nov-row{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:13px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
+.nov-row.urgent{border-left:3px solid #a8563a;}
+.nov-header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.nov-client{font:600 13px/1.2 'DM Sans';color:var(--t-ink);}
+.nov-meta{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font:500 12px/1.4 'DM Sans';color:var(--t-mut);}
+.nov-val{font-weight:600;color:var(--t-ink);}
+.nov-time{font-weight:600;color:var(--acc-d);}
+.nov-toggle{font-weight:600;color:var(--acc-d);cursor:pointer;}
+.nov-detail{border-top:1px solid var(--s-line2);padding-top:12px;display:flex;flex-direction:column;gap:10px;}
+.detail-label{font:600 9px/1 'DM Sans';letter-spacing:.9px;color:var(--t-mut2);}
+.detail-text{font:500 12px/1.6 'DM Sans';color:var(--t-ink2);}
+.ges-note{background:var(--s-bg);border:1px solid var(--s-line2);border-left:3px solid var(--acc-d);border-radius:11px;padding:11px 13px;}
+.note-states{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+.n-state{font:600 10px/1 'DM Sans';padding:7px 11px;border-radius:20px;cursor:pointer;border:1px solid var(--s-line3);color:var(--t-ink3);}
+.n-state:hover,.n-state.sel{background:var(--acc-d);color:#f1f4e8;border-color:var(--acc-d);}
+.note-area{width:100%;min-height:60px;resize:vertical;background:var(--s-bg);border:1px solid var(--s-line);border-radius:11px;padding:10px 12px;font:500 12px/1.6 'DM Sans';color:var(--t-ink);outline:none;}
+.note-area:focus{border-color:var(--acc-d);}
+.save-btn{background:var(--acc-d);color:#f1f4e8;font:600 12px/1 'DM Sans';padding:12px 18px;border-radius:11px;cursor:pointer;align-self:flex-start;}
+
+/* ── team rows ── */
+.team-card{background:var(--s-card);border:1px solid var(--s-line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;}
+.team-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.team-avatar{width:36px;height:36px;border-radius:50%;background:var(--s-soft7);color:var(--t-mut);font:700 12px/36px 'DM Sans';text-align:center;flex:none;}
+.team-name{font:600 14px/1.1 'Fraunces',serif;color:var(--t-ink);}
+.team-role{font:500 11px/1.2 'DM Sans';color:var(--t-mut2);}
+.team-stats{display:flex;gap:20px;flex-wrap:wrap;font:500 12px/1.4 'DM Sans';color:var(--t-mut);}
+.team-stats b{font-weight:600;color:var(--t-ink);}
+.eff-bar{height:8px;background:var(--s-line2);border-radius:99px;overflow:hidden;}
+.eff-fill{height:8px;border-radius:99px;transition:width .4s;}
+
+/* ── jornada ── */
+.jorn-card{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:13px;padding:15px 17px;display:flex;flex-direction:column;gap:10px;}
+.jorn-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.jorn-name{font:600 14px/1.1 'Fraunces',serif;color:var(--t-ink);}
+.jorn-times{display:flex;gap:22px;flex-wrap:wrap;font:500 12px/1.4 'DM Sans';color:var(--t-mut2);}
+.jorn-times b{font-weight:600;color:var(--t-ink);}
+
+/* ── inventory ── */
+.inv-row{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.inv-name{font:600 13px/1.3 'DM Sans';color:var(--t-ink);}
+.inv-sub{font:500 11px/1.4 'DM Sans';color:var(--t-mut);margin-top:3px;}
+
+/* ── pauta ── */
+.pauta-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--s-line2);padding-bottom:8px;}
+.pauta-name{font:600 12px/1.3 'DM Sans';color:var(--t-ink);}
+
+/* ── pending ── */
+.pend-row{background:var(--s-bg);border:1px solid var(--s-line2);border-left:3px solid #b8322f;border-radius:11px;padding:11px 13px;}
+.pend-title{font:600 12px/1.4 'DM Sans';color:var(--t-ink);}
+.pend-sub{font:500 11px/1.4 'DM Sans';color:var(--t-mut);margin-top:3px;}
+
+/* ── commission table ── */
+.comm-card{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:14px;padding:15px 17px;display:flex;flex-direction:column;gap:10px;}
+.comm-name{font:600 14px/1.1 'Fraunces',serif;color:var(--t-ink);}
+.comm-total{font:700 20px/1 'Fraunces',serif;color:var(--t-ink);}
+.comm-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--s-line);}
+.comm-row-label{font:500 12px/1.4 'DM Sans';color:var(--t-ink3);}
+.comm-row-val{font:600 13px/1 'DM Sans';color:var(--t-ink);}
+.comm-row-val.pos{color:#566f3f;}
+.comm-row-val.neg{color:#A06A52;}
+
+/* ── pauta (Dinero) ── */
+.din-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;align-items:start;}
+.roas-big{font:700 36px/1 'Fraunces',serif;color:var(--t-ink);}
+
+/* ── responsive two-col ── */
+.two-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;align-items:start;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ LOGIN -->
+<div id="login">
+<div class="login-box">
+  <div class="login-left">
+    <strong style="font:700 16px/1 'DM Sans';color:var(--t-ondark-mut);letter-spacing:1px;">NOVA EMPRESARIAL</strong>
+    <h1>Lo que construiste merece orden</h1>
+    <p>Cada mañana que no pasas cuadrando cifras se la devuelves a tu negocio.</p>
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px;">
+      <div class="login-dot"><span style="background:#6d7d4a;"></span><span>Órdenes conectadas</span></div>
+      <div class="login-dot"><span style="background:#6d7d4a;"></span><span>Operación conectada</span></div>
+      <div class="login-dot"><span style="background:#d9a23f;"></span><span>Dinero · 2 campos por asignar</span></div>
+    </div>
+  </div>
+  <div class="login-right">
+    <!-- paso 1: correo -->
+    <div class="login-step active" id="step-correo">
+      <div>
+        <div class="step-tag">PASO 1 DE 3</div>
+        <div class="login-title">Entra con tu correo</div>
+        <p class="login-sub">Te mando un código de 6 dígitos. Sin contraseña que se te olvide.</p>
+      </div>
+      <label class="field"><span>CORREO</span><input class="txt" id="correo-input" type="email" placeholder="tu@correo.com" value="manuela@nutrea.co"></label>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <span style="font:600 9px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut3);">CUENTAS DE PRUEBA</span>
+        <div class="demo-tags">
+          <span class="demo-tag" onclick="setDemo('manuela@nutrea.co')">Dueña · Nutrea</span>
+          <span class="demo-tag" onclick="setDemo('daniela@nutrea.co')">Admin</span>
+          <span class="demo-tag" onclick="setDemo('camila@nutrea.co')">Gestora</span>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="gotoStep('step-codigo')">Enviarme el código</button>
+      <div class="divider"><span></span><span class="lbl">o</span><span></span></div>
+      <div class="btn-ghost">Entrar con Google</div>
+    </div>
+
+    <!-- paso 2: código -->
+    <div class="login-step" id="step-codigo">
+      <div>
+        <div class="step-tag">PASO 2 DE 3</div>
+        <div class="login-title">Revisa tu correo</div>
+        <p class="login-sub">Mandé un código a <strong id="correo-show" style="color:var(--acc-d);">manuela@nutrea.co</strong>. Vence en 10 minutos.</p>
+      </div>
+      <div class="code-grid">
+        <div class="code-box filled">4</div>
+        <div class="code-box filled">1</div>
+        <div class="code-box filled">8</div>
+        <div class="code-box">·</div>
+        <div class="code-box">·</div>
+        <div class="code-box">·</div>
+      </div>
+      <button class="btn-primary" onclick="gotoStep('step-tienda')">Verificar y entrar</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="link" onclick="gotoStep('step-correo')">← Cambiar correo</span>
+        <span class="link">Reenviar código</span>
+      </div>
+    </div>
+
+    <!-- paso 3: tienda -->
+    <div class="login-step" id="step-tienda">
+      <div>
+        <div class="step-tag">PASO 3 DE 3</div>
+        <div class="login-title">¿Con cuál abrimos?</div>
+        <p class="login-sub">Nova muestra una tienda a la vez. Puedes cambiarla en el menú.</p>
+      </div>
+      <div class="store-pick sel" onclick="selectStore('ec');enterApp();">
+        <div class="store-icon">NE</div>
+        <div class="store-info"><strong>Nutrea Ecuador</strong><small>Shopify + Dropi · USD · 3 fuentes conectadas</small></div>
+        <span style="color:var(--acc-d);font-size:18px;">→</span>
+      </div>
+      <div class="store-pick" onclick="selectStore('gt');enterApp();">
+        <div class="store-icon">NG</div>
+        <div class="store-info"><strong>Nutrea GT</strong><small>Dropi · GTQ · 2 fuentes conectadas</small></div>
+        <span style="color:var(--t-mut4);font-size:18px;">→</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ APP -->
+<div id="app">
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="brand-icon">N</div>
+    <div class="brand-text"><strong>Nova · Dueña</strong><small id="brand-sub">Manuela · Nutrea EC</small></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div class="nav-group">
+      <div class="nav-label">PRINCIPAL</div>
+      <div class="nav-item active" data-view="hoy" onclick="goView('hoy',this)">Hoy</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">PEDIDOS</div>
+      <div class="nav-item" data-view="pedidos" onclick="goView('pedidos',this)">Pedidos</div>
+      <div class="nav-item" data-view="novedades" onclick="goView('novedades',this)">Novedades</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">EQUIPO</div>
+      <div class="nav-item" data-view="gestoras" onclick="goView('gestoras',this)">Gestoras</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">DINERO</div>
+      <div class="nav-item" data-view="dinero" onclick="goView('dinero',this)">Pauta y ROAS</div>
+      <div class="nav-item" data-view="inventario" onclick="goView('inventario',this)">Inventario</div>
+    </div>
+  </div>
+
+  <div class="stores-section">
+    <div class="stores-label">TIENDA</div>
+    <div class="store-chip sel" id="chip-ec" onclick="switchStore('ec')">
+      <strong>Nutrea Ecuador</strong><small>Shopify + Dropi · USD</small>
+    </div>
+    <div class="store-chip" id="chip-gt" onclick="switchStore('gt')">
+      <strong>Nutrea GT</strong><small>Dropi · GTQ</small>
+    </div>
+    <div class="upload-btn">Subir archivos</div>
+  </div>
+</nav>
+
+<!-- main -->
+<div class="main">
+  <div class="topbar">
+    <div>
+      <button class="mob-toggle" onclick="openSidebar()">☰ Menú</button>
+      <div class="page-title" id="page-title">Hoy</div>
+      <div class="page-sub" id="page-sub">Cargando…</div>
+    </div>
+    <div class="topbar-right">
+      <span class="user-chip">Manuela · dueña</span>
+      <div class="mode-toggle">
+        <div class="mode-btn active" id="btn-claro" onclick="setMode('claro')">Claro</div>
+        <div class="mode-btn" id="btn-oscuro" onclick="setMode('oscuro')">Oscuro</div>
+      </div>
+      <div class="color-dots">
+        <div class="cdot active" style="background:#7e9a52;" data-tema="verde" onclick="setTema('verde',this)" title="Verde"></div>
+        <div class="cdot" style="background:#C9A63F;" data-tema="amarillo" onclick="setTema('amarillo',this)" title="Amarillo"></div>
+        <div class="cdot" style="background:#C47B57;" data-tema="terracota" onclick="setTema('terracota',this)" title="Terracota"></div>
+        <div class="cdot" style="background:#5C87A6;" data-tema="azul" onclick="setTema('azul',this)" title="Azul"></div>
+      </div>
+      <div class="logout-btn" onclick="logout()">Salir</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ─── HOY ─── -->
+    <div class="section active" id="view-hoy">
+
+      <!-- alerta crítica demo -->
+      <div class="alert-crit" id="alert-crit">
+        <div class="alert-crit-dot"></div>
+        <div class="alert-crit-text">
+          <div class="alert-crit-title">CPA superó el techo · Producto Colágeno Premium</div>
+          <div class="alert-crit-sub">CPA actual $14.80 USD vs. techo $10.00. Lleva 2 días por encima.</div>
+        </div>
+        <div class="alert-crit-action" onclick="goView('dinero',null)">Ver pauta →</div>
+        <div style="cursor:pointer;color:#a8563a;padding:4px 0 0 8px;font-size:16px;" onclick="this.parentElement.remove()">×</div>
+      </div>
+
+      <!-- kpis del mes -->
+      <div>
+        <div class="section-title" style="margin-bottom:10px;">EL MES HASTA HOY</div>
+        <div class="kpi-grid" id="kpi-mes"></div>
+      </div>
+
+      <!-- punto de equilibrio -->
+      <div class="card" style="cursor:pointer;" onclick="goView('dinero',null)">
+        <div class="card-header">
+          <span class="card-title">Punto de equilibrio</span>
+          <span class="card-link">Abrir →</span>
+        </div>
+        <div class="eq-val" id="eq-faltan">$4,200 USD por llegar</div>
+        <div class="progress-bar"><div class="progress-fill" id="eq-bar" style="width:64%;"></div></div>
+        <div style="font:500 11px/1.4 'DM Sans';color:var(--t-mut2);" id="eq-sub">$7,500 de $11,700 necesarios para cubrir costos del mes</div>
+      </div>
+
+      <!-- dos columnas: decisiones + pauta -->
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Solo tú puedes decidir</span>
+            <span class="badge badge-err">3</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="pend-row"><div class="pend-title">¿Renovamos el contrato con Dropi por 6 meses?</div><div class="pend-sub">Vence el 30 de sep. Descuento del 12% si renuevas antes del 15.</div></div>
+            <div class="pend-row"><div class="pend-title">Presupuesto extra de pauta para Colágeno Premium</div><div class="pend-sub">La gestora propone $500 USD más esta semana. CPA subió.</div></div>
+            <div class="pend-row"><div class="pend-title">Bonificación especial para Camila · julio</div><div class="pend-sub">93% de efectividad, 47 entregas. Propone $120.000 extra.</div></div>
+          </div>
+        </div>
+
+        <div class="card" style="cursor:pointer;" onclick="goView('dinero',null)">
+          <div class="card-header"><span class="card-title">Escalar o frenar</span><span class="card-link">Abrir →</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;" id="pauta-list"></div>
+        </div>
+      </div>
+
+      <!-- equipo + inventario -->
+      <div class="two-col">
+        <div class="card" style="cursor:pointer;" onclick="goView('gestoras',null)">
+          <div class="card-header"><span class="card-title">El equipo hoy</span><span class="card-link">Abrir →</span></div>
+          <div style="display:flex;flex-direction:column;gap:9px;" id="equipo-hoy"></div>
+        </div>
+
+        <div class="card" style="cursor:pointer;" onclick="goView('inventario',null)">
+          <div class="card-header"><span class="card-title">Inventario en riesgo</span><span class="card-link">Abrir →</span></div>
+          <div style="display:flex;flex-direction:column;gap:9px;" id="inv-riesgo"></div>
+        </div>
+      </div>
+
+      <!-- permisos cta -->
+      <div class="dark-card" style="cursor:pointer;" onclick="goView('gestoras',null)">
+        <span style="font:600 14px/1.15 'Fraunces',serif;color:var(--t-ondark);">Tu equipo y sus permisos</span>
+        <span style="font:500 12px/1.55 'DM Sans';color:var(--t-ondark-mut);">Cambias el rol, asignas tiendas, prendes o apagas cada permiso y entras a ver la pantalla de cada una.</span>
+        <span style="font:600 11px/1 'DM Sans';color:#232c19;background:var(--a-chip);border-radius:20px;padding:9px 13px;align-self:flex-start;">Abrir permisos →</span>
+      </div>
+
+      <!-- gráficas -->
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Recaudo por día</span>
+            <div style="display:flex;align-items:baseline;gap:8px;">
+              <span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--acc-d);" id="dia-label">HOY</span>
+              <span style="font:600 17px/1 'Fraunces',serif;color:var(--t-ink);" id="dia-val">$1,240</span>
+            </div>
+          </div>
+          <div class="bar-chart" id="bar-chart"></div>
+          <span style="font:500 11px/1.4 'DM Sans';color:var(--t-mut2);border-top:1px solid var(--s-line2);padding-top:10px;" id="bar-footer">Mejor día: martes con $1,800. La semana va 11% por encima del promedio.</span>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Estado de los pedidos</span></div>
+          <div class="status-bar" id="status-bar"></div>
+          <div class="status-list" id="status-list"></div>
+        </div>
+      </div>
+    </div><!-- /hoy -->
+
+    <!-- ─── PEDIDOS ─── -->
+    <div class="section" id="view-pedidos">
+      <p style="font:500 12px/1.5 'DM Sans';color:var(--t-mut);">Los pedidos del día en esta tienda. Ves quién lo tiene y en qué va.</p>
+      <div style="display:flex;flex-direction:column;gap:9px;" id="pedidos-list"></div>
+    </div>
+
+    <!-- ─── NOVEDADES ─── -->
+    <div class="section" id="view-novedades">
+      <div>
+        <div class="card-title" style="font-size:20px;margin-bottom:6px;">Bandeja de novedades</div>
+        <p style="font:500 12px/1.5 'DM Sans';color:var(--t-mut2);">Toca un pedido para ver la nota de la gestora y todos los contactos con la clienta.</p>
+      </div>
+      <div class="kpi-grid" id="nov-kpi"></div>
+      <div style="display:flex;flex-direction:column;gap:9px;" id="nov-list"></div>
+    </div>
+
+    <!-- ─── GESTORAS ─── -->
+    <div class="section" id="view-gestoras">
+      <div>
+        <div class="card-title" style="font-size:20px;margin-bottom:6px;">Gestoras · jornada de hoy</div>
+        <p style="font:500 12px/1.5 'DM Sans';color:var(--t-mut);">Cuánto estuvo cada una, qué hizo y qué quedó sin hacer.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:11px;" id="jornada-list"></div>
+
+      <div>
+        <div class="card-title" style="font-size:16px;margin-bottom:10px;">Estado de cada integrante</div>
+        <div style="display:flex;flex-direction:column;gap:10px;" id="team-list"></div>
+      </div>
+
+      <div>
+        <div class="card-title" style="font-size:16px;margin-bottom:4px;">Comisiones del mes</div>
+        <p style="font:500 11px/1.4 'DM Sans';color:var(--t-mut2);margin-bottom:10px;">Cierre mensual · se paga con el corte del 31</p>
+        <div class="dark-card" style="margin-bottom:14px;">
+          <div class="section-title">DE DÓNDE SALE EL PAGO</div>
+          <p style="font:500 12px/1.65 'DM Sans';color:var(--t-ondark-mut);">Sueldo base fijo, más comisión por pedido entregado, más bono si la efectividad supera un escalón. Las devoluciones mal gestionadas restan.</p>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-top:1px solid var(--s-deep);padding-top:11px;flex-wrap:wrap;">
+            <span style="font:500 11px/1 'DM Sans';color:var(--t-ondark-mut);">3 gestoras · agosto</span>
+            <div style="display:flex;align-items:baseline;gap:8px;">
+              <span style="font:600 9px/1 'DM Sans';letter-spacing:1px;color:var(--t-ondark-mut);">NÓMINA DEL MES</span>
+              <span style="font:700 22px/1 'Fraunces',serif;color:var(--t-ondark);" id="nomina-total">$1,340,000</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;" id="comm-list"></div>
+      </div>
+    </div>
+
+    <!-- ─── DINERO (Pauta y ROAS) ─── -->
+    <div class="section" id="view-dinero">
+      <div class="kpi-grid" id="din-kpi"></div>
+      <div class="din-two">
+        <div class="card">
+          <div class="card-header"><span class="card-title">ROAS por producto</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;" id="roas-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Gasto diario de pauta</span></div>
+          <div class="bar-chart" id="pauta-bar"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">CPA por conjunto de anuncios</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="cpa-list"></div>
+      </div>
+    </div>
+
+    <!-- ─── INVENTARIO ─── -->
+    <div class="section" id="view-inventario">
+      <div class="kpi-grid" id="inv-kpi"></div>
+      <div>
+        <div class="section-title" style="margin-bottom:10px;">TODOS LOS SKUs</div>
+        <div style="display:flex;flex-direction:column;gap:9px;" id="inv-list"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ── state ──────────────────────────────────────────────────────
+let store = localStorage.getItem('ne_store') || 'ec';
+let tema  = localStorage.getItem('ne_tema')  || 'verde';
+let modo  = localStorage.getItem('ne_modo')  || 'claro';
+let currentView = 'hoy';
+let expandedNov = null;
+
+// ── data ───────────────────────────────────────────────────────
+const STORES = {
+  ec: { name:'Nutrea Ecuador', sub:'Shopify + Dropi · USD', cur:'USD', sym:'$', factor:1 },
+  gt: { name:'Nutrea GT',      sub:'Dropi · GTQ',           cur:'GTQ', sym:'Q', factor:3.7 }
+};
+
+function cur(usd) {
+  const s = STORES[store];
+  const v = usd * s.factor;
+  return s.sym + v.toLocaleString('es', {minimumFractionDigits:v<100?2:0,maximumFractionDigits:v<100?2:0});
+}
+
+function initData() {
+  const s = STORES[store];
+
+  // KPIs mes
+  document.getElementById('kpi-mes').innerHTML = [
+    {lb:'VENTAS',    v:cur(11200), sub:'Meta: '+cur(18000)+' al mes',      cl:'good'},
+    {lb:'PEDIDOS',   v:'312',      sub:'Promedio 14/día · meta 600',        cl:'accent'},
+    {lb:'ENTREGADOS',v:'78%',      sub:'214 entregados de 274 despachados', cl:'good'},
+    {lb:'DEVOLUC.',  v:'8%',       sub:'21 devoluciones · umbral 10%',      cl:'warn'},
+  ].map(m=>`<div class="kpi-card ${m.cl}"><div class="kpi-label">${m.lb}</div><div class="kpi-value">${m.v}</div><div class="kpi-sub">${m.sub}</div></div>`).join('');
+
+  // Equilibrio
+  const meta = 18000, actual = 11200, faltan = meta - actual;
+  document.getElementById('eq-faltan').textContent = cur(faltan) + ' por llegar';
+  document.getElementById('eq-bar').style.width = Math.round(actual/meta*100) + '%';
+  document.getElementById('eq-sub').textContent = cur(actual) + ' de ' + cur(meta) + ' necesarios para cubrir costos del mes';
+
+  // Pauta list (escalar o frenar)
+  document.getElementById('pauta-list').innerHTML = [
+    {nm:'Colágeno Premium', ver:'Frenar ↓', vBg:'#f7dedc', vInk:'#b8322f'},
+    {nm:'Proteína Vainilla', ver:'Escalar ↑', vBg:'#d3e0c2', vInk:'#3f5330'},
+    {nm:'Omega 3',           ver:'Mantener', vBg:'var(--s-soft7)', vInk:'var(--t-mut2)'},
+    {nm:'Multivitamínico',   ver:'Mantener', vBg:'var(--s-soft7)', vInk:'var(--t-mut2)'},
+  ].map(p=>`<div class="pauta-row"><span class="pauta-name">${p.nm}</span><span class="badge" style="background:${p.vBg};color:${p.vInk};">${p.ver}</span></div>`).join('');
+
+  // Equipo hoy
+  document.getElementById('equipo-hoy').innerHTML = [
+    {nm:'Camila Restrepo',  color:'#6d7d4a', tiempo:'6h 12m activa'},
+    {nm:'Valentina Ospina', color:'#8a6a13', tiempo:'4h 30m activa'},
+    {nm:'Daniela Ríos',     color:'#b8322f', tiempo:'Sin conectarse hoy'},
+  ].map(j=>`<div style="display:flex;align-items:center;gap:10px;"><span style="width:9px;height:9px;border-radius:99px;background:${j.color};flex:none;"></span><span style="font:600 12px/1.3 'DM Sans';color:var(--t-ink);flex:1;">${j.nm}</span><span style="font:500 11px/1 'DM Sans';color:var(--t-mut);">${j.tiempo}</span></div>`).join('');
+
+  // Inv riesgo
+  document.getElementById('inv-riesgo').innerHTML = [
+    {nm:'Colágeno Premium 300g', alerta:'3 días de stock', aInk:'#b8322f', aBg:'#f7dedc', sub:'Reposición tarda 8 días · pedir hoy'},
+    {nm:'Omega 3 120 caps',      alerta:'Sin ventas 31d',  aInk:'#8a6a13', aBg:'#f6ecd0', sub:'48 unidades sin movimiento'},
+  ].map(r=>`<div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid var(--s-line2);padding-bottom:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span class="inv-name">${r.nm}</span><span class="badge" style="color:${r.aInk};background:${r.aBg};">${r.alerta}</span></div><span class="kpi-sub">${r.sub}</span></div>`).join('');
+
+  // Bar chart
+  const days = ['L','M','M','J','V','S','D'];
+  const vals = [980,1800,1240,1560,1100,820,1240];
+  const max = Math.max(...vals);
+  document.getElementById('bar-chart').innerHTML = days.map((d,i)=>{
+    const isToday = i===6;
+    const pct = Math.round(vals[i]/max*100);
+    return `<div class="bar-col" onclick="pickDay('${d}','${cur(vals[i])}')">
+      <div class="bar-fill" style="height:${pct}%;background:${isToday?'var(--acc-d)':'var(--s-dark3)'};" title="${cur(vals[i])}"></div>
+      <span class="bar-label ${isToday?'today':''}">${d}</span>
+    </div>`;
+  }).join('');
+
+  // Status bar
+  const statuses = [
+    {label:'Entregados',   pct:38,n:214,color:'#6d7d4a'},
+    {label:'En tránsito',  pct:26,n:146,color:'var(--acc-d)'},
+    {label:'Novedad',      pct:12,n:67, color:'#8a6a13'},
+    {label:'Por despachar',pct:16,n:90, color:'var(--t-mut4)'},
+    {label:'Devueltos',    pct:8, n:45, color:'#b8322f'},
+  ];
+  document.getElementById('status-bar').innerHTML = statuses.map(e=>`<span class="status-seg" style="width:${e.pct}%;background:${e.color};"></span>`).join('');
+  document.getElementById('status-list').innerHTML = statuses.map(e=>`<div class="status-row"><span class="status-dot" style="background:${e.color};"></span><span style="font:500 12px/1 'DM Sans';color:var(--t-ink2);flex:1;">${e.label}</span><span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">${e.pct}%</span><span style="font:600 12px/1 'DM Sans';color:var(--t-ink);width:34px;text-align:right;">${e.n}</span></div>`).join('');
+
+  // Pedidos
+  const pedidos = [
+    {cli:'Andrea Morales',   id:'#NE-4412', prod:'Colágeno Premium x2', ciu:'Quito',   val:cur(68), ges:'Camila', est:'En tránsito',   eInk:'#3C6684', eBg:'#dbe8f4'},
+    {cli:'Luisa Fernández',  id:'#NE-4410', prod:'Proteína Vainilla',   ciu:'Guayaquil',val:cur(45), ges:'Valentina',est:'Novedad',      eInk:'#8a6a13', eBg:'#f6ecd0'},
+    {cli:'Carolina Jiménez', id:'#NE-4408', prod:'Multivitamínico x3',  ciu:'Cuenca',  val:cur(52), ges:'Camila', est:'Entregado',    eInk:'#3f5330', eBg:'#d3e0c2'},
+    {cli:'Paola Díaz',       id:'#NE-4405', prod:'Omega 3 120 caps',    ciu:'Quito',   val:cur(38), ges:'Valentina',est:'Sin despachar',eInk:'var(--t-mut2)', eBg:'var(--s-soft7)'},
+    {cli:'Marcela Torres',   id:'#NE-4401', prod:'Colágeno Premium',    ciu:'Loja',    val:cur(34), ges:'Camila', est:'En tránsito',   eInk:'#3C6684', eBg:'#dbe8f4'},
+    {cli:'Diana Castro',     id:'#NE-4398', prod:'Proteína Chocolate',  ciu:'Guayaquil',val:cur(45), ges:'Valentina',est:'Devuelto',    eInk:'#b8322f', eBg:'#f7dedc'},
+  ];
+  document.getElementById('pedidos-list').innerHTML = pedidos.map(p=>`<div class="order-row"><div class="order-top"><div><span class="order-name">${p.cli}</span> <span class="order-id">${p.id}</span></div><span class="badge" style="color:${p.eInk};background:${p.eBg};">${p.est}</span></div><div class="order-meta"><span>${p.prod}</span><span>${p.ciu}</span><b>${p.val}</b><span>Gestiona ${p.ges}</span></div></div>`).join('');
+
+  // Novedades KPI
+  document.getElementById('nov-kpi').innerHTML = [
+    {lb:'ABIERTAS',     v:'22', sub:'Esta semana', c:'#b8322f'},
+    {lb:'SIN RESOLVER',  v:'14', sub:'Más de 24h → alerta', c:'#8a6a13'},
+    {lb:'RESUELTAS 7D',  v:'38', sub:'Tasa 63% resolución', c:'#6d7d4a'},
+    {lb:'REINCIDENTES',  v:'5',  sub:'Mismo pedido ≥2 nov', c:'#8a6a13'},
+    {lb:'% ENTREGA 7D',  v:'78%',sub:'Umbral: 65%',         c:'#6d7d4a'},
+  ].map(k=>`<div class="kpi-card" style="border-left:4px solid ${k.c};"><div class="kpi-label">${k.lb}</div><div class="kpi-value">${k.v}</div><div class="kpi-sub">${k.sub}</div></div>`).join('');
+
+  // Novedades list
+  const novs = [
+    {id:'#NE-4410',cli:'Luisa Fernández',zona:'Guayaquil',motivo:'Dirección incorrecta',transp:'Servientrega',prod:'Proteína Vainilla',valor:cur(45),dias:'36h sin resolver',est:'En gestión',eInk:'#8a6a13',eBg:'#f6ecd0',veces:'2 novedades',devN:'Segundo intento de entrega hoy',detalle:'La clienta dio una dirección desactualizada. Camila intentó entregar ayer y hoy en el mismo lugar sin resultado.',notaGes:'La señora dice que no vive allá. Me dio otra dirección en Urdesa. Voy a reprogramar.',notaAut:'Camila · hace 3h',ges:'Camila'},
+    {id:'#NE-4389',cli:'Sofía Vargas',zona:'Quito',motivo:'Rechazo en puerta',transp:'Laar Courier',prod:'Colágeno Premium x2',valor:cur(68),dias:'8h sin resolver',est:'Pendiente',eInk:'#b8322f',eBg:'#f7dedc',veces:'1 novedad',devN:'Primer rechazo',detalle:'El mensajero llegó y la clienta no abrió. Número de teléfono no contesta.',notaGes:'Llamé 3 veces. WhatsApp enviado sin respuesta. Esperando instrucciones.',notaAut:'Valentina · hace 1h',ges:'Valentina'},
+    {id:'#NE-4371',cli:'Paola Ríos',zona:'Cuenca',motivo:'Paquete dañado',transp:'Servientrega',prod:'Omega 3',valor:cur(38),dias:'Resuelto hoy',est:'Resuelto',eInk:'#3f5330',eBg:'#d3e0c2',veces:'1 novedad',devN:'',detalle:'El paquete llegó aplastado. Foto enviada por la clienta.',notaGes:'Coordiné reenvío sin costo. Saldrá mañana.',notaAut:'Camila · hace 6h',ges:'Camila'},
+  ];
+  let novHTML = '';
+  novs.forEach((n,i)=>{
+    novHTML += `<div class="nov-row ${n.eInk==='#b8322f'||n.eInk==='#8a6a13'?'urgent':''}" id="nov-${i}">
+      <div class="nov-header">
+        <div><span class="nov-client">${n.cli}</span> <span class="order-id">${n.id} · ${n.zona}</span></div>
+        <span class="badge" style="color:${n.eInk};background:${n.eBg};">${n.est}</span>
+      </div>
+      <div class="nov-meta">
+        <span>${n.motivo}</span>
+        <span>${n.transp} · ${n.prod}</span>
+        <span class="nov-val">${n.valor}</span>
+        <span class="nov-time">${n.dias}</span>
+        <span style="color:var(--t-mut3);">${n.veces}</span>
+        <span class="nov-toggle" onclick="toggleNov(${i})">Ver detalle ▾</span>
+      </div>
+      <div class="nov-detail" id="novd-${i}" style="display:none;">
+        ${n.devN?`<div style="font:500 11px/1.5 'DM Sans';color:var(--acc-d);background:var(--s-bg);border-radius:9px;padding:10px 12px;">${n.devN}</div>`:''}
+        <div><div class="detail-label">QUÉ PASÓ</div><div class="detail-text">${n.detalle}</div></div>
+        <div class="ges-note">
+          <div class="detail-label">NOTA DE LA GESTORA · ${n.ges}</div>
+          <div class="detail-text" style="margin-top:4px;">${n.notaGes}</div>
+          <div style="font:500 10px/1 'DM Sans';color:var(--t-mut2);margin-top:4px;">${n.notaAut}</div>
+        </div>
+        <div>
+          <div class="detail-label">CAMBIAR ESTADO</div>
+          <div class="note-states">
+            ${['En gestión','Esperando clienta','Reprogramar','Reenviar','Devolver','Resuelto'].map(e=>`<div class="n-state ${e===n.est?'sel':''}" onclick="selState(this,'nov-${i}')">${e}</div>`).join('')}
+          </div>
+        </div>
+        <textarea class="note-area" placeholder="Qué pasó, qué acordaste con la clienta y qué sigue."></textarea>
+        <div class="save-btn">Guardar</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('nov-list').innerHTML = novHTML;
+
+  // Gestoras jornada
+  const jornada = [
+    {nm:'Camila Restrepo',  rol:'Gestora senior', color:'#6d7d4a', est:'Activa',   ent:'8:03',  sal:'—',    tiempo:'6h 12m', hizo:'34 novedades gestionadas, 22 resueltas, 8 reprogramadas. 4 entregas en oficina confirmadas.', falto:'Quedan 4 casos sin nota de cierre.'},
+    {nm:'Valentina Ospina', rol:'Gestora',        color:'#8a6a13', est:'Activa',   ent:'8:45',  sal:'—',    tiempo:'4h 30m', hizo:'18 novedades gestionadas, 12 resueltas.', falto:'3 casos esperando respuesta más de 2h.'},
+    {nm:'Daniela Ríos',     rol:'Gestora',        color:'#b8322f', est:'Sin conectar',ent:'—', sal:'—',    tiempo:'0h',     hizo:'—', falto:'No abrió Nova en su turno. 8 casos asignados sin atender.'},
+  ];
+  document.getElementById('jornada-list').innerHTML = jornada.map(j=>`<div class="jorn-card" style="border-left:4px solid ${j.color};">
+    <div class="jorn-top"><div><span class="jorn-name">${j.nm}</span> <span class="order-id">${j.rol}</span></div>
+    <span class="badge" style="color:${j.color};background:var(--s-card);border:1px solid var(--s-line);">${j.est}</span></div>
+    <div class="jorn-times"><span>Entró <b>${j.ent}</b></span><span>Salió <b>${j.sal}</b></span><span>Conectada <b>${j.tiempo}</b></span></div>
+    <div><div class="detail-label">QUÉ HIZO</div><div class="detail-text">${j.hizo}</div></div>
+    <div><div class="detail-label">QUÉ LE FALTÓ</div><div class="detail-text">${j.falto}</div></div>
+  </div>`).join('');
+
+  // Team list
+  const team = [
+    {nm:'Camila Restrepo',  ini:'CR', rol:'Gestora senior', desde:'mar 2024', est:'Activa',   estCl:'badge-ok',   jornada:'8h',  horas:'148h', entregas:'214', efect:'93%', eff:93},
+    {nm:'Valentina Ospina', ini:'VO', rol:'Gestora',        desde:'jun 2024', est:'Activa',   estCl:'badge-ok',   jornada:'8h',  horas:'130h', entregas:'178', efect:'81%', eff:81},
+    {nm:'Daniela Ríos',     ini:'DR', rol:'Gestora',        desde:'ago 2024', est:'Ausente',  estCl:'badge-err',  jornada:'8h',  horas:'94h',  entregas:'122', efect:'76%', eff:76},
+  ];
+  document.getElementById('team-list').innerHTML = team.map(p=>`<div class="team-card">
+    <div class="team-header">
+      <div class="team-avatar">${p.ini}</div>
+      <div style="flex:1;min-width:140px;"><div class="team-name">${p.nm}</div><div class="team-role">${p.rol} · desde ${p.desde}</div></div>
+      <span class="badge ${p.estCl}">${p.est}</span>
+    </div>
+    <div class="team-stats"><span>Jornada <b>${p.jornada}</b></span><span>Horas mes <b>${p.horas}</b></span><span>Entregas <b>${p.entregas}</b></span><span>Efectividad <b>${p.efect}</b></span></div>
+    <div class="eff-bar"><div class="eff-fill" style="width:${p.eff}%;background:${p.eff>=85?'#6d7d4a':p.eff>=75?'#8a6a13':'#b8322f'};"></div></div>
+  </div>`).join('');
+
+  // Comisiones
+  const comms = [
+    {nm:'Camila Restrepo',  total:cur(680000/s.factor), base:cur(450000/s.factor), ent:cur(180000/s.factor), det:'214 entregas × '+cur(840/s.factor), esc:'1', bono:cur(80000/s.factor), dev:'2 devol.', desc:cur(-30000/s.factor)},
+    {nm:'Valentina Ospina', total:cur(540000/s.factor), base:cur(400000/s.factor), ent:cur(142000/s.factor), det:'178 entregas × '+cur(800/s.factor), esc:'1', bono:cur(20000/s.factor), dev:'5 devol.', desc:cur(-22000/s.factor)},
+    {nm:'Daniela Ríos',     total:cur(420000/s.factor), base:cur(380000/s.factor), ent:cur(98000/s.factor),  det:'122 entregas × '+cur(800/s.factor), esc:'0', bono:cur(0),              dev:'8 devol.', desc:cur(-58000/s.factor)},
+  ];
+  document.getElementById('nomina-total').textContent = cur(1640000/s.factor);
+  document.getElementById('comm-list').innerHTML = comms.map(p=>`<div class="comm-card">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span class="comm-name">${p.nm}</span><span class="comm-total">${p.total}</span></div>
+    <div><div class="comm-row"><span class="comm-row-label">Sueldo base</span><span class="comm-row-val">${p.base}</span></div>
+    <div class="comm-row"><span class="comm-row-label">Por entregas · ${p.det}</span><span class="comm-row-val">${p.ent}</span></div>
+    <div class="comm-row"><span class="comm-row-label">Bono efectividad · escalón ${p.esc}</span><span class="comm-row-val pos">${p.bono}</span></div>
+    <div class="comm-row"><span class="comm-row-label">Devoluciones mal gestionadas · ${p.dev}</span><span class="comm-row-val neg">${p.desc}</span></div></div>
+  </div>`).join('');
+
+  // Dinero KPI
+  document.getElementById('din-kpi').innerHTML = [
+    {lb:'GASTO PAUTA MES', v:cur(2840), sub:'Meta: '+cur(3500)+' · queda '+cur(660), cl:'accent'},
+    {lb:'ROAS GENERAL',    v:'3.9x',    sub:'Mínimo 2.0x · lleva 18 días OK',        cl:'good'},
+    {lb:'CPA PROMEDIO',    v:cur(9.10), sub:'Techo: '+cur(10.00)+' · 1 producto sobre',cl:'warn'},
+    {lb:'COSTO POR CLIC',  v:cur(0.42), sub:'CPM promedio '+cur(2.80),               cl:'accent'},
+  ].map(m=>`<div class="kpi-card ${m.cl}"><div class="kpi-label">${m.lb}</div><div class="kpi-value">${m.v}</div><div class="kpi-sub">${m.sub}</div></div>`).join('');
+
+  // ROAS list
+  document.getElementById('roas-list').innerHTML = [
+    {nm:'Proteína Vainilla',   roas:'5.2x', cl:'badge-ok'},
+    {nm:'Colágeno Premium',    roas:'2.1x', cl:'badge-warn'},
+    {nm:'Omega 3',             roas:'4.1x', cl:'badge-ok'},
+    {nm:'Multivitamínico',     roas:'3.8x', cl:'badge-ok'},
+  ].map(r=>`<div class="pauta-row"><span class="pauta-name">${r.nm}</span><span class="badge ${r.cl}">${r.roas}</span></div>`).join('');
+
+  // Pauta bar
+  const pgasto = [220,310,290,380,420,340,280];
+  const pm = Math.max(...pgasto);
+  document.getElementById('pauta-bar').innerHTML = ['L','M','M','J','V','S','D'].map((d,i)=>`<div class="bar-col">
+    <div class="bar-fill" style="height:${Math.round(pgasto[i]/pm*100)}%;background:${i===4?'var(--acc-d)':'var(--s-dark3)'};"></div>
+    <span class="bar-label ${i===6?'today':''}">${d}</span>
+  </div>`).join('');
+
+  // CPA list
+  document.getElementById('cpa-list').innerHTML = [
+    {nm:'Colágeno · conjunto principal', cpa:cur(14.80), cl:'badge-err', techo:cur(10)},
+    {nm:'Proteína · remarketing',         cpa:cur(7.20),  cl:'badge-ok',  techo:cur(10)},
+    {nm:'Omega 3 · frío',                 cpa:cur(9.80),  cl:'badge-warn',techo:cur(10)},
+    {nm:'Multivit · lookalike',           cpa:cur(8.40),  cl:'badge-ok',  techo:cur(10)},
+  ].map(c=>`<div class="pauta-row"><div><div class="pauta-name">${c.nm}</div><div style="font:500 11px/1 'DM Sans';color:var(--t-mut2);margin-top:2px;">Techo: ${c.techo}</div></div><span class="badge ${c.cl}">CPA ${c.cpa}</span></div>`).join('');
+
+  // Inventario KPI
+  document.getElementById('inv-kpi').innerHTML = [
+    {lb:'SKUs ACTIVOS',     v:'12', sub:'4 tienda · 8 complementos',  cl:'accent'},
+    {lb:'EN RIESGO',        v:'2',  sub:'Menos de 5 días de stock',   cl:'bad'},
+    {lb:'SIN ROTACIÓN',     v:'1',  sub:'30+ días sin venta',         cl:'warn'},
+    {lb:'VALOR INVENTARIO', v:cur(28400), sub:'Precio de costo',      cl:'accent'},
+  ].map(m=>`<div class="kpi-card ${m.cl}"><div class="kpi-label">${m.lb}</div><div class="kpi-value">${m.v}</div><div class="kpi-sub">${m.sub}</div></div>`).join('');
+
+  // Inventario list
+  document.getElementById('inv-list').innerHTML = [
+    {nm:'Colágeno Premium 300g', sku:'NE-001', stock:18,  dias:3,  reposi:8,  cl:'bad',   alerta:'Pedir hoy'},
+    {nm:'Proteína Vainilla 1kg', sku:'NE-002', stock:142, dias:28, reposi:10, cl:'good',  alerta:'OK'},
+    {nm:'Omega 3 120 caps',      sku:'NE-003', stock:48,  dias:34, reposi:12, cl:'warn',  alerta:'Sin rotación 31d'},
+    {nm:'Multivitamínico 60cap', sku:'NE-004', stock:76,  dias:19, reposi:10, cl:'good',  alerta:'OK'},
+    {nm:'Proteína Chocolate 1kg',sku:'NE-005', stock:94,  dias:22, reposi:10, cl:'good',  alerta:'OK'},
+  ].map(r=>{
+    const badgeCl = r.cl==='bad'?'badge-err':r.cl==='warn'?'badge-warn':'badge-ok';
+    return `<div class="inv-row">
+      <div><div class="inv-name">${r.nm}</div><div class="inv-sub">${r.sku} · ${r.stock} unidades · ${r.dias} días de cobertura · reposición ${r.reposi}d</div></div>
+      <span class="badge ${badgeCl}">${r.alerta}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── navigation ─────────────────────────────────────────────────
+function goView(view, el) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  if (el) el.classList.add('active');
+  else {
+    const match = document.querySelector('[data-view="'+view+'"]');
+    if (match) match.classList.add('active');
+  }
+  currentView = view;
+  const titles = {hoy:'Hoy',pedidos:'Pedidos',novedades:'Novedades',gestoras:'Gestoras',dinero:'Pauta y ROAS',inventario:'Inventario'};
+  document.getElementById('page-title').textContent = titles[view] || view;
+  closeSidebar();
+}
+
+function toggleNov(i) {
+  const d = document.getElementById('novd-'+i);
+  const isOpen = d.style.display !== 'none';
+  d.style.display = isOpen ? 'none' : 'flex';
+  d.style.flexDirection = 'column';
+  d.style.gap = '10px';
+  const toggle = document.querySelector('#nov-'+i+' .nov-toggle');
+  if (toggle) toggle.textContent = isOpen ? 'Ver detalle ▾' : 'Cerrar ▴';
+}
+
+function selState(el, rowId) {
+  el.closest('.note-states').querySelectorAll('.n-state').forEach(n=>n.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function pickDay(label, val) {
+  document.getElementById('dia-label').textContent = label;
+  document.getElementById('dia-val').textContent = val;
+}
+
+// ── store switching ─────────────────────────────────────────────
+function switchStore(s) {
+  store = s;
+  localStorage.setItem('ne_store', s);
+  document.getElementById('chip-ec').classList.toggle('sel', s==='ec');
+  document.getElementById('chip-gt').classList.toggle('sel', s==='gt');
+  document.getElementById('brand-sub').textContent = 'Manuela · Nutrea ' + (s==='ec'?'EC':'GT');
+  const st = STORES[s];
+  document.getElementById('page-sub').textContent = formatDate() + ' · ' + st.name + ' · Manuela';
+  initData();
+}
+
+// ── theme / mode ───────────────────────────────────────────────
+function setTema(t, el) {
+  tema = t;
+  localStorage.setItem('ne_tema', t);
+  document.getElementById('app').setAttribute('data-tema', t);
+  document.getElementById('login').setAttribute('data-tema', t);
+  document.querySelectorAll('.cdot').forEach(d=>d.classList.toggle('active', d.dataset.tema===t));
+}
+function setMode(m) {
+  modo = m;
+  localStorage.setItem('ne_modo', m);
+  const app = document.getElementById('app');
+  const login = document.getElementById('login');
+  if (m==='oscuro') { app.setAttribute('data-modo','oscuro'); login.setAttribute('data-modo','oscuro'); }
+  else { app.removeAttribute('data-modo'); login.removeAttribute('data-modo'); }
+  document.getElementById('btn-claro').classList.toggle('active', m==='claro');
+  document.getElementById('btn-oscuro').classList.toggle('active', m==='oscuro');
+}
+
+// ── login flow ─────────────────────────────────────────────────
+function gotoStep(id) {
+  document.querySelectorAll('.login-step').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id==='step-codigo') {
+    document.getElementById('correo-show').textContent = document.getElementById('correo-input').value || 'tu@correo.co';
+  }
+}
+function setDemo(email) { document.getElementById('correo-input').value = email; }
+function selectStore(s) { store = s; localStorage.setItem('ne_store',s); }
+function enterApp() {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  applyPrefs();
+  initData();
+  updatePageSub();
+}
+function logout() {
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login').style.display = 'flex';
+  document.querySelectorAll('.login-step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('step-correo').classList.add('active');
+}
+
+// ── sidebar mobile ─────────────────────────────────────────────
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebar-overlay').classList.add('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+
+// ── utils ──────────────────────────────────────────────────────
+function formatDate() {
+  const d = new Date();
+  const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  return `${days[d.getDay()]} ${d.getDate()} de ${months[d.getMonth()]}`;
+}
+function updatePageSub() {
+  document.getElementById('page-sub').textContent = formatDate() + ' · ' + STORES[store].name + ' · Manuela';
+}
+function applyPrefs() {
+  const app = document.getElementById('app');
+  app.setAttribute('data-tema', tema);
+  if (modo==='oscuro') app.setAttribute('data-modo','oscuro');
+  else app.removeAttribute('data-modo');
+  document.getElementById('btn-claro').classList.toggle('active', modo==='claro');
+  document.getElementById('btn-oscuro').classList.toggle('active', modo==='oscuro');
+  document.querySelectorAll('.cdot').forEach(d=>d.classList.toggle('active', d.dataset.tema===tema));
+  const s = STORES[store];
+  document.getElementById('brand-sub').textContent = 'Manuela · Nutrea ' + (store==='ec'?'EC':'GT');
+  document.getElementById('chip-ec').classList.toggle('sel', store==='ec');
+  document.getElementById('chip-gt').classList.toggle('sel', store==='gt');
+}
+
+// ── init ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // apply stored theme to login too
+  document.getElementById('login').setAttribute('data-tema', tema);
+  if (modo==='oscuro') document.getElementById('login').setAttribute('data-modo','oscuro');
+});
+</script>
+</body>
+</html>
