@@ -1,817 +1,468 @@
 /**
  * NOVA Motor — Centro de Comando v3
- * Plataformas: Dropi (EC + GT), Effi, Mastershop, Shopify, Meta, TikTok, IRIS
  *
- * Pegar en Extensions → Apps Script del sheet Centro de Comando.
- * Ejecutar instalarBotones() una vez para crear el menú y los triggers.
+ * Rol de este script:
+ *  1. instalarHojas()     — crea todas las tabs con headers correctos si no existen
+ *  2. actualizarDashboard() — recalcula DASHBOARD-DUENO / ADMIN / GESTORA
+ *     (se llama automáticamente via trigger cuando Netlify escribe datos)
+ *  3. limpiarDatos()      — consolida y depura Pedidos/Novedades/Pauta
  *
- * ESTRUCTURA DE PESTAÑAS REQUERIDAS:
- *   PARAMETROS, MAPEO-PLATAFORMA, MAPEO-ESTATUS, MAPEO-CARTERA, MAPEO-PAUTA
- *   IMP-ORDENES, IMP-CARTERA, IMP-PAUTA, IMP-TARJETA
- *   MAESTRO-PEDIDOS, MAESTRO-CARTERA, MAESTRO-PAUTA
- *   GASTOS, DASHBOARD-DUENO, HISTORICO-CAMBIOS, RESUMEN, CIERRE-MES
+ * Los IMPORTADORES viven en Netlify (/import). Este motor no necesita
+ * pegar archivos; procesa lo que Netlify ya escribió en las hojas normalizadas.
+ *
+ * ESTRUCTURA DE PESTAÑAS (el script las crea todas):
+ *   PARAMETROS · Pedidos · Novedades · Pauta · Inventario · Equipo · Cartera
+ *   Movimientos · alertas_enviadas
+ *   DASHBOARD-DUENO · DASHBOARD-ADMIN · DASHBOARD-GESTORA
+ *   (Dias · Pendientes · Estudiantes · Progreso · Ejercicios — para otros productos)
  */
 
-// ── Constantes globales ──────────────────────────────────────────────────────
+// ── Esquemas de headers ──────────────────────────────────────────────────────
 
-var HOJAS = {
-  par:    'PARAMETROS',
-  mapPl:  'MAPEO-PLATAFORMA',
-  mapEs:  'MAPEO-ESTATUS',
-  mapCa:  'MAPEO-CARTERA',
-  mapPa:  'MAPEO-PAUTA',
-  impOr:  'IMP-ORDENES',
-  impCa:  'IMP-CARTERA',
-  impPa:  'IMP-PAUTA',
-  impTa:  'IMP-TARJETA',
-  mPed:   'MAESTRO-PEDIDOS',
-  mCar:   'MAESTRO-CARTERA',
-  mPau:   'MAESTRO-PAUTA',
-  gas:    'GASTOS',
-  dash:   'DASHBOARD-DUENO',
-  hist:   'HISTORICO-CAMBIOS',
-  res:    'RESUMEN',
-  cie:    'CIERRE-MES',
+var SCHEMAS = {
+  // ── Nova Empresarial ────────────────────────────────────────────────────
+  Pedidos: [
+    'id','fecha','tienda','cliente','telefono','ciudad','direccion',
+    'producto','cantidad','valor','costo_producto','costo_envio',
+    'estado','transportadora','guia','intentos','gestora_asignada',
+    'fecha_promesa','fecha_entrega','actualizado_en','actualizado_por'
+  ],
+  Novedades: [
+    'id','pedido_id','fecha','tipo','motivo','estado',
+    'gestora','nota','intentos','resuelta_en','actualizado_en'
+  ],
+  Pauta: [
+    'fecha','tienda','plataforma','campaña','conjunto',
+    'gasto','impresiones','clics','resultados','cpm','cpa','roas'
+  ],
+  Inventario: [
+    'sku','producto','tienda','stock','costo_unitario','precio',
+    'dias_cobertura','ultimo_conteo'
+  ],
+  Equipo: [
+    'id','nombre','correo','rol','tienda','estado',
+    'casos_asignados','casos_resueltos','nota_auditoria','ultima_conexion'
+  ],
+  Cartera: [
+    'telefono','nombre','ciudad','tienda',
+    'pedidos_activos','pedidos_entregados','pedidos_devueltos',
+    'total_facturado','total_cobrado','saldo_pendiente',
+    'dias_sin_contacto','ultimo_contacto','gestora_asignada','notas'
+  ],
+  Parametros: [
+    'tienda','clave','valor','actualizado_en','actualizado_por'
+  ],
+  // ── Nova Central ────────────────────────────────────────────────────────
+  Clientes: [
+    'id','empresa','pais','plan','tarifa','costo','estado',
+    'fecha_alta','fecha_corte','ultimo_pago','tickets_mes','usuarios','tiendas'
+  ],
+  Planes: [
+    'id','nombre','modulos','limite_usuarios','limite_tiendas',
+    'costo_calculado','precio_sugerido','tarifa_fijada'
+  ],
+  Solicitudes: [
+    'id','cliente_id','nombre','correo','rol_pedido','estado',
+    'fecha_solicitud','resuelta_en','resuelta_por'
+  ],
+  Candidatas: [
+    'id','nombre','pais','experiencia','equipo_disponible',
+    'estado','fecha_postulacion','nota'
+  ],
+  // ── NovaSoul (toda la data la genera la plataforma, no hay importación) ─
+  Usuarios: [
+    'id','nombre','correo','fecha_nacimiento','hora_nacimiento',
+    'lugar_nacimiento','zona_horaria','acento','modo','idioma'
+  ],
+  Pendientes: [
+    'id','usuario_id','texto','tipo','origen','fecha',
+    'hecho','hecho_en','plataforma_id'
+  ],
+  Dias: [
+    'usuario_id','fecha','comidas_marcadas','movimiento_hecho',
+    'puntos','cerrado','cerrado_en','perdonado'
+  ],
+  Recompensas: [
+    'id','usuario_id','nombre','costo_puntos','canjeada','canjeada_en'
+  ],
+  Transitos: [
+    // precalculado desde datos natales con librería de efemérides, no importado
+    'usuario_id','fecha','casa','tema','intensidad_pct',
+    'texto_transito','por_que','como_trabajarlo','el_otro_lado'
+  ],
+  // ── novAcademy (todo lo genera la plataforma, no hay importación) ───────
+  Estudiantes: [
+    'id','nombre','correo','empresa','perfil','estado',
+    'fecha_alta','alta_por','acceso_vence','primer_ingreso'
+  ],
+  Permisos: [
+    'estudiante_id','ver_dinero','descargar_plantillas',
+    'ver_avance_equipo','emitir_certificado','entrar_practica'
+  ],
+  Documentos: [
+    'id','estudiante_id','nombre_archivo','tipo','peso','subido_en','subido_por'
+  ],
+  Progreso: [
+    'estudiante_id','leccion_id','modulo','estado',
+    'completada_en','nota_quiz','intentos','ultima_conexion'
+  ],
+  Ejercicios: [
+    'id','estudiante_id','perfil','fecha','respuestas','aciertos','total',
+    'nota','segundos','enviado_revision','comentario_profesor','comentado_en'
+  ],
+  Certificados: [
+    'id','estudiante_id','ruta','emitido_en','vence','url_pdf'
+  ],
+  // ── Comunes ─────────────────────────────────────────────────────────────
+  Movimientos: [
+    'fecha','usuario','entidad','entidad_id','campo','valor_anterior','valor_nuevo'
+  ],
+  Alertas_enviadas: [
+    'alarma_id','entidad_id','enviado_en','resuelta_en'
+  ],
 };
 
-var FILA_ENC  = 4;  // headers en fila 4
-var FILA_DATOS = 5; // datos desde fila 5
+var ROW_DATA = 2; // datos desde fila 2 (fila 1 = headers)
 
-// Headers canónicos MAESTRO-PEDIDOS (26 cols A–Z)
-var ENC_PEDIDOS = [
-  'ID_ORDEN','FECHA_ORDEN','MES','PLATAFORMA',
-  'NOMBRE_CLIENTE','TELEFONO','CIUDAD','ZONA',
-  'TRANSPORTADORA','GUIA','PRODUCTO','CANTIDAD',
-  'VALOR_ORDEN','GANANCIA_NETA','COSTO_ENVIO',
-  'ESTATUS_PLATAFORMA','ESTATUS_NORM','ESTADO_ENTREGA',
-  'NOVEDAD_TIPO','NOVEDAD_DETALLE','SOLUCION',
-  'GESTORA_ASIGNADA','INTENTOS_CONTACTO',
-  'FECHA_ENTREGA','ULTIMA_ACTUALIZACION','NOTAS_INTERNAS',
-];
+// ── INSTALACIÓN ──────────────────────────────────────────────────────────────
 
-// Headers canónicos MAESTRO-CARTERA (15 cols A–O)
-var ENC_CARTERA = [
-  'TELEFONO','NOMBRE_CLIENTE','CIUDAD','ZONA','ESTATUS_ACTUAL',
-  'ORDENES_ACTIVAS','ORDENES_ENTREGADAS','ORDENES_DEVUELTAS',
-  'TOTAL_FACTURADO','TOTAL_COBRADO','SALDO_PENDIENTE',
-  'DIAS_SIN_CONTACTO','ULTIMO_CONTACTO','GESTORA_ASIGNADA','NOTAS',
-];
-
-// Headers canónicos MAESTRO-PAUTA (14 cols A–N)
-var ENC_PAUTA = [
-  'FECHA_INICIO','FECHA_FIN','MES','PLATAFORMA',
-  'CAMPAÑA','CONJUNTO','PRESUPUESTO','GASTO',
-  'IMPRESIONES','CLICS','RESULTADOS','CPR','ROAS','VALOR_CONVERSION',
-];
-
-// ── Punto de entrada principal ───────────────────────────────────────────────
-
-function procesarTodo() {
+function instalarHojas() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  log_(ss, 'Iniciando procesarTodo()');
-  procesarPedidos_(ss);
-  procesarCartera_(ss);
-  procesarPautaYGastos_(ss);
-  actualizarDashboard_(ss);
-  log_(ss, 'procesarTodo() completado');
-  SpreadsheetApp.getUi().alert('✅ Procesamiento completo');
-}
 
-function procesarPedidos()    { procesarPedidos_(SpreadsheetApp.getActiveSpreadsheet()); }
-function procesarCartera()    { procesarCartera_(SpreadsheetApp.getActiveSpreadsheet()); }
-function procesarPautaYGastos(){ procesarPautaYGastos_(SpreadsheetApp.getActiveSpreadsheet()); }
-
-// ── PEDIDOS ──────────────────────────────────────────────────────────────────
-
-function procesarPedidos_(ss) {
-  var shImp  = ss.getSheetByName(HOJAS.impOr);
-  var shMaes = ss.getSheetByName(HOJAS.mPed);
-  if (!shImp || !shMaes) { log_(ss,'FALTA hoja IMP-ORDENES o MAESTRO-PEDIDOS'); return; }
-
-  garantizarHeaders_(shMaes, ENC_PEDIDOS);
-
-  var impData = shImp.getDataRange().getValues();
-  if (impData.length < 2) { log_(ss,'IMP-ORDENES vacía'); return; }
-
-  // Leer lo escrito por gestora en NOTAS_INTERNAS (col Z = índice 25) antes de reescribir
-  var notasGuardadas = leerNotas_(shMaes);
-
-  var encReales = impData[0].map(function(v){ return String(v).trim(); });
-  var plataforma = detectarPlataforma_(ss, encReales);
-  log_(ss, 'Plataforma detectada: ' + plataforma);
-
-  var mapEstatus = leerMapeoEstatus_(ss);
-
-  var filasMaes = [];
-  for (var i = 1; i < impData.length; i++) {
-    var row = impData[i];
-    if (row.every(function(c){ return c === '' || c === null; })) continue;
-    var fila = importarFilaPedido_(row, encReales, plataforma, mapEstatus);
-    if (!fila) continue;
-    // Restaurar nota interna si existe
-    var id = String(fila[0]);
-    if (notasGuardadas[id]) fila[25] = notasGuardadas[id];
-    filasMaes.push(fila);
-  }
-
-  if (filasMaes.length === 0) { log_(ss,'Sin filas válidas en IMP-ORDENES'); return; }
-
-  // Escribir desde FILA_DATOS, borrar lo anterior
-  var lastRow = shMaes.getLastRow();
-  if (lastRow >= FILA_DATOS) {
-    shMaes.getRange(FILA_DATOS, 1, lastRow - FILA_DATOS + 1, ENC_PEDIDOS.length).clearContent();
-  }
-  shMaes.getRange(FILA_DATOS, 1, filasMaes.length, ENC_PEDIDOS.length).setValues(filasMaes);
-  log_(ss, 'MAESTRO-PEDIDOS: ' + filasMaes.length + ' filas escritas (' + plataforma + ')');
-}
-
-function importarFilaPedido_(row, enc, plataforma, mapEstatus) {
-  var g = function(nombre) {
-    var i = enc.indexOf(nombre);
-    return i >= 0 ? String(row[i] || '').trim() : '';
-  };
-
-  var id, fecha, nombre, tel, ciudad, zona, transp, guia, producto, cantidad,
-      valor, ganancia, costoEnvio, estatusPlat, novedad, novDet, solucion, fechaEnt, ultAct;
-
-  switch(plataforma) {
-    case 'dropi_ec':
-    case 'dropi_gt':
-      id         = g('ID');
-      fecha      = aFecha_(g('FECHA') || g('FECHA INGRESO'));
-      nombre     = g('NOMBRE CLIENTE');
-      tel        = tel10_(g('TELÉFONO') || g('TELEFONO'));
-      ciudad     = g('CIUDAD DESTINO');
-      zona       = '';
-      transp     = g('TRANSPORTADORA');
-      guia       = g('NÚMERO GUIA') || g('NUMERO GUIA');
-      producto   = g('PRODUCTO');
-      cantidad   = aNum_(g('CANTIDAD'));
-      valor      = aNum_(g('TOTAL DE LA ORDEN'));
-      ganancia   = aNum_(g('GANANCIA'));
-      costoEnvio = 0;
-      estatusPlat= g('ESTATUS');
-      novedad    = g('NOVEDAD');
-      novDet     = novedad;
-      solucion   = g('SOLUCIÓN') || g('SOLUCION');
-      fechaEnt   = '';
-      ultAct     = g('ÚLTIMA ACTUALIZACIÓN') || g('ULTIMO MOVIMIENTO');
-      break;
-
-    case 'effi':
-      id         = g('Reporte ID Pedido');
-      fecha      = aFecha_(g('Fecha del Pedido'));
-      nombre     = g('Cliente');
-      tel        = tel10_(g('Teléfono'));
-      ciudad     = g('Ciudad');
-      zona       = g('Departamento');
-      transp     = g('Transportadora');
-      guia       = g('N° de Guía');
-      producto   = g('Producto');
-      cantidad   = aNum_(g('Cantidad'));
-      valor      = aNum_(g('Valor del pedido'));
-      ganancia   = 0;
-      costoEnvio = aNum_(g('Valor del Envio'));
-      estatusPlat= g('Estado del Pedido');
-      novedad    = g('Presento Novedad') === 'SI' ? 'NOVEDAD' : '';
-      novDet     = '';
-      solucion   = g('Razón de cancelación');
-      fechaEnt   = aFecha_(g('Fecha de Entrega'));
-      ultAct     = g('Última Actualización');
-      break;
-
-    case 'mastershop':
-      id         = g('Número de Orden') || g('ID');
-      fecha      = aFecha_(g('Fecha de Orden') || g('Fecha'));
-      nombre     = g('Nombre Completo') || g('Cliente');
-      tel        = tel10_(g('Teléfono') || g('Celular'));
-      ciudad     = g('Ciudad');
-      zona       = g('Departamento');
-      transp     = g('Transportadora');
-      guia       = g('Guía') || g('Numero de Guia');
-      producto   = g('Producto');
-      cantidad   = aNum_(g('Cantidad'));
-      valor      = aNum_(g('Valor') || g('Total'));
-      ganancia   = 0;
-      costoEnvio = aNum_(g('Costo Envío') || g('Flete'));
-      estatusPlat= g('Estado') || g('Estatus');
-      novedad    = g('Novedad') || '';
-      novDet     = novedad;
-      solucion   = g('Solución') || '';
-      fechaEnt   = aFecha_(g('Fecha Entrega'));
-      ultAct     = g('Última Actualización') || '';
-      break;
-
-    case 'shopify':
-      id         = g('Name') || g('Order');
-      fecha      = aFecha_(g('Created at'));
-      nombre     = (g('Billing Name') || g('Shipping Name') || '').trim();
-      tel        = tel10_(g('Billing Phone') || g('Shipping Phone'));
-      ciudad     = g('Shipping City');
-      zona       = g('Shipping Province');
-      transp     = '';
-      guia       = g('Tracking Number') || '';
-      producto   = g('Lineitem name') || g('Name');
-      cantidad   = aNum_(g('Lineitem quantity') || '1');
-      valor      = aNum_(g('Total') || g('Subtotal'));
-      ganancia   = 0;
-      costoEnvio = aNum_(g('Shipping'));
-      estatusPlat= g('Financial Status') || g('Fulfillment Status') || '';
-      novedad    = '';
-      novDet     = '';
-      solucion   = g('Notes') || '';
-      fechaEnt   = '';
-      ultAct     = '';
-      break;
-
-    case 'iris':
-      // IRIS: CRM de auditoría de llamadas
-      id         = g('Llamada ID') || g('ID Llamada') || g('id');
-      fecha      = aFecha_(g('Fecha Llamada') || g('Fecha') || g('fecha'));
-      nombre     = g('Nombre Cliente') || g('Cliente') || g('nombre');
-      tel        = tel10_(g('Teléfono') || g('Celular') || g('telefono'));
-      ciudad     = g('Ciudad') || '';
-      zona       = g('Departamento') || '';
-      transp     = '';
-      guia       = g('Guía') || g('Orden') || '';
-      producto   = '';
-      cantidad   = 0;
-      valor      = 0;
-      ganancia   = 0;
-      costoEnvio = 0;
-      estatusPlat= g('Resultado') || g('Estado') || '';
-      novedad    = g('Novedad') || '';
-      novDet     = g('Observación') || g('Comentario') || '';
-      solucion   = g('Solución') || '';
-      fechaEnt   = '';
-      ultAct     = g('Fecha') || '';
-      break;
-
-    default:
-      return null;
-  }
-
-  if (!id) return null;
-
-  var estatusNorm   = normEstatus_(estatusPlat, mapEstatus);
-  var estadoEntrega = resolverEstadoEntrega_(estatusNorm, novedad);
-  var mes           = fecha ? aMes_(fecha) : '';
-
-  return [
-    id, fecha, mes, plataforma,
-    norm_(nombre), tel, norm_(ciudad), norm_(zona),
-    norm_(transp), guia, norm_(producto), cantidad,
-    valor, ganancia, costoEnvio,
-    estatusPlat, estatusNorm, estadoEntrega,
-    novedad, novDet, solucion,
-    '', 0,
-    fechaEnt, ultAct, '',
-  ];
-}
-
-// ── CARTERA ──────────────────────────────────────────────────────────────────
-
-function procesarCartera_(ss) {
-  var shMaes = ss.getSheetByName(HOJAS.mPed);
-  var shCar  = ss.getSheetByName(HOJAS.mCar);
-  if (!shMaes || !shCar) return;
-
-  garantizarHeaders_(shCar, ENC_CARTERA);
-
-  var maesData = shMaes.getDataRange().getValues();
-  if (maesData.length < FILA_DATOS) return;
-
-  var encPed = maesData[FILA_ENC - 1].map(function(v){ return String(v).trim(); });
-  var idx = function(n){ return encPed.indexOf(n); };
-
-  // Leer notas guardadas en cartera
-  var notasCartera = leerNotasCartera_(shCar);
-
-  // Agrupar por teléfono
-  var mapa = {};
-  for (var i = FILA_DATOS - 1; i < maesData.length; i++) {
-    var r = maesData[i];
-    var tel   = String(r[idx('TELEFONO')] || '').trim();
-    if (!tel) continue;
-    var nombre = String(r[idx('NOMBRE_CLIENTE')] || '');
-    var ciudad = String(r[idx('CIUDAD')] || '');
-    var zona   = String(r[idx('ZONA')] || '');
-    var estado = String(r[idx('ESTADO_ENTREGA')] || '');
-    var valor  = aNum_(r[idx('VALOR_ORDEN')]);
-    var ultAct = r[idx('ULTIMA_ACTUALIZACION')];
-    var gestora= String(r[idx('GESTORA_ASIGNADA')] || '');
-
-    if (!mapa[tel]) {
-      mapa[tel] = {
-        tel:tel, nombre:nombre, ciudad:ciudad, zona:zona,
-        activas:0, entregadas:0, devueltas:0,
-        facturado:0, cobrado:0,
-        ultContact: ultAct, gestora:gestora,
-      };
+  Object.keys(SCHEMAS).forEach(function(nombre) {
+    var sh = ss.getSheetByName(nombre);
+    if (!sh) {
+      sh = ss.insertSheet(nombre);
     }
-    var c = mapa[tel];
-    c.facturado += valor;
-    if (estado === 'entregado')  { c.entregadas++; c.cobrado += valor; }
-    else if (estado === 'devuelto') c.devueltas++;
-    else if (estado === 'en_camino' || estado === 'pendiente') c.activas++;
-    if (gestora && !c.gestora) c.gestora = gestora;
-  }
-
-  var hoy = new Date();
-  var filas = Object.values(mapa).map(function(c){
-    var diasSin = c.ultContact
-      ? Math.floor((hoy - new Date(c.ultContact)) / 86400000) : 999;
-    var saldo  = c.facturado - c.cobrado;
-    var estatus = resolverEstatusCartera_(c.entregadas, c.devueltas, c.activas, saldo);
-    return [
-      c.tel, c.nombre, c.ciudad, c.zona, estatus,
-      c.activas, c.entregadas, c.devueltas,
-      c.facturado, c.cobrado, saldo,
-      diasSin, c.ultContact || '', c.gestora,
-      notasCartera[c.tel] || '',
-    ];
+    var enc = SCHEMAS[nombre];
+    var actual = sh.getRange(1, 1, 1, enc.length).getValues()[0]
+                    .map(function(v){ return String(v).trim(); });
+    var igual  = enc.every(function(h, i){ return actual[i] === h; });
+    if (!igual) {
+      sh.getRange(1, 1, 1, enc.length).setValues([enc]);
+      sh.getRange(1, 1, 1, enc.length)
+        .setBackground('#1a1a2e').setFontColor('#ffffff').setFontWeight('bold');
+    }
   });
 
-  var lastRow = shCar.getLastRow();
-  if (lastRow >= FILA_DATOS) {
-    shCar.getRange(FILA_DATOS, 1, lastRow - FILA_DATOS + 1, ENC_CARTERA.length).clearContent();
-  }
-  if (filas.length > 0) {
-    shCar.getRange(FILA_DATOS, 1, filas.length, ENC_CARTERA.length).setValues(filas);
-  }
-  log_(ss, 'MAESTRO-CARTERA: ' + filas.length + ' clientes');
-}
+  // Crear DASHBOARD tabs vacías si no existen (uno por producto/rol)
+  [
+    'DASHBOARD-DUENO','DASHBOARD-ADMIN','DASHBOARD-GESTORA',
+    'DASHBOARD-CENTRAL',
+    'DASHBOARD-SOUL',
+    'DASHBOARD-ACADEMY-PROFESOR','DASHBOARD-ACADEMY-ESTUDIANTE',
+  ].forEach(function(nm) {
+    if (!ss.getSheetByName(nm)) ss.insertSheet(nm);
+  });
 
-function resolverEstatusCartera_(ent, dev, act, saldo) {
-  if (dev > 2)         return 'bloqueado';
-  if (saldo > 200000)  return 'moroso';
-  if (dev > 0 && act > 0) return 'dudoso';
-  if (ent > 0)         return 'ok';
-  return 'activo';
-}
-
-// ── PAUTA ────────────────────────────────────────────────────────────────────
-
-function procesarPautaYGastos_(ss) {
-  var shImp  = ss.getSheetByName(HOJAS.impPa);
-  var shMaes = ss.getSheetByName(HOJAS.mPau);
-  if (!shImp || !shMaes) return;
-
-  garantizarHeaders_(shMaes, ENC_PAUTA);
-
-  var impData = shImp.getDataRange().getValues();
-  if (impData.length < 2) return;
-
-  var encReales = impData[0].map(function(v){ return String(v).trim(); });
-  var plataforma = detectarPlataformaPauta_(encReales);
-  log_(ss, 'Pauta plataforma: ' + plataforma);
-
-  var filas = [];
-  for (var i = 1; i < impData.length; i++) {
-    var row = impData[i];
-    if (row.every(function(c){ return c === '' || c === null; })) continue;
-    var fila = importarFilaPauta_(row, encReales, plataforma);
-    if (fila) filas.push(fila);
-  }
-
-  var lastRow = shMaes.getLastRow();
-  if (lastRow >= FILA_DATOS) {
-    shMaes.getRange(FILA_DATOS, 1, lastRow - FILA_DATOS + 1, ENC_PAUTA.length).clearContent();
-  }
-  if (filas.length > 0) {
-    shMaes.getRange(FILA_DATOS, 1, filas.length, ENC_PAUTA.length).setValues(filas);
-  }
-  log_(ss, 'MAESTRO-PAUTA: ' + filas.length + ' filas (' + plataforma + ')');
-}
-
-function importarFilaPauta_(row, enc, plataforma) {
-  var g = function(n) {
-    var i = enc.indexOf(n);
-    return i >= 0 ? String(row[i] || '').trim() : '';
-  };
-
-  var inicio, fin, campaña, conjunto, presup, gasto, imp, clics, res, cpr, roas, valConv;
-
-  switch(plataforma) {
-    case 'meta_camp':
-      inicio  = aFecha_(g('Inicio del informe'));
-      fin     = aFecha_(g('Fin del informe'));
-      campaña = g('Nombre de la campaña');
-      conjunto= '';
-      presup  = aNum_(g('Presupuesto del conjunto de anuncios'));
-      gasto   = aNum_(g('Importe gastado (COP)'));
-      imp     = aNum_(g('Impresiones'));
-      clics   = aNum_(g('Clics en el enlace'));
-      res     = aNum_(g('Resultados') || g('Compras'));
-      cpr     = aNum_(g('Coste por compra (COP)'));
-      roas    = aNum_(g('ROAS'));
-      valConv = aNum_(g('Valor de conversión'));
-      break;
-
-    case 'meta_adset':
-      inicio  = aFecha_(g('Inicio del informe'));
-      fin     = aFecha_(g('Fin del informe'));
-      campaña = '';
-      conjunto= g('Nombre del conjunto de anuncios');
-      presup  = aNum_(g('Presupuesto del conjunto de anuncios'));
-      gasto   = aNum_(g('Importe gastado (COP)'));
-      imp     = aNum_(g('Impresiones'));
-      clics   = aNum_(g('Clics en el enlace'));
-      res     = aNum_(g('Resultados') || g('Compras'));
-      cpr     = aNum_(g('Coste por compra (COP)'));
-      roas    = aNum_(g('ROAS'));
-      valConv = aNum_(g('Valor de conversión'));
-      break;
-
-    case 'tiktok':
-      inicio  = aFecha_(g('Date') || g('Start Date') || g('Fecha'));
-      fin     = inicio;
-      campaña = g('Campaign Name') || g('Nombre de Campaña');
-      conjunto= g('Ad Group Name') || g('Nombre del Grupo de Anuncios');
-      presup  = aNum_(g('Budget') || g('Presupuesto'));
-      gasto   = aNum_(g('Cost') || g('Gasto') || g('Spend'));
-      imp     = aNum_(g('Impressions') || g('Impresiones'));
-      clics   = aNum_(g('Clicks') || g('Clics'));
-      res     = aNum_(g('Conversions') || g('Conversiones') || g('Results'));
-      cpr     = aNum_(g('CPA') || g('Cost per Conversion'));
-      roas    = aNum_(g('ROAS'));
-      valConv = aNum_(g('Conversion Value') || g('Valor de Conversión'));
-      break;
-
-    default:
-      return null;
-  }
-
-  if (!inicio) return null;
-  return [
-    inicio, fin, aMes_(inicio), plataforma,
-    campaña, conjunto, presup, gasto,
-    imp, clics, res, cpr, roas, valConv,
+  // Valores por defecto en Parametros (tienda=ec primero, gt segundo)
+  var shPar = ss.getSheetByName('Parametros');
+  var defaults = [
+    // tienda, clave, valor, actualizado_en, actualizado_por
+    ['ec','cpa_techo',              '38000',  '', 'instalacion'],
+    ['ec','costos_fijos_mes',       '0',      '', 'instalacion'],
+    ['ec','entrega_minima_pct',     '0.65',   '', 'instalacion'],
+    ['ec','corte_despacho_hora',    '15:00',  '', 'instalacion'],
+    ['ec','dias_reposicion_proveedor','7',    '', 'instalacion'],
+    ['gt','cpa_techo',              '200',    '', 'instalacion'],
+    ['gt','costos_fijos_mes',       '0',      '', 'instalacion'],
+    ['gt','entrega_minima_pct',     '0.65',   '', 'instalacion'],
+    ['gt','corte_despacho_hora',    '15:00',  '', 'instalacion'],
+    ['gt','dias_reposicion_proveedor','7',    '', 'instalacion'],
   ];
+  if (shPar.getLastRow() < 2) {
+    shPar.getRange(2, 1, defaults.length, defaults[0].length).setValues(defaults);
+  }
+
+  instalarTriggers_();
+  SpreadsheetApp.getActiveSpreadsheet()
+    .toast('Nova CC instalado. Hojas y triggers listos.', '✅', 5);
 }
 
-// ── DASHBOARD-DUENO ──────────────────────────────────────────────────────────
+function instalarTriggers_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  // Borrar triggers previos para evitar duplicados
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('onSheetChange')
+    .forSpreadsheet(ss)
+    .onChange()
+    .create();
+}
 
-function actualizarDashboard_(ss) {
-  var shDash  = ss.getSheetByName(HOJAS.dash);
-  var shMaes  = ss.getSheetByName(HOJAS.mPed);
-  var shPauta = ss.getSheetByName(HOJAS.mPau);
-  if (!shDash || !shMaes) return;
+// Se llama automáticamente cuando Netlify escribe en la hoja
+function onSheetChange(e) {
+  var hojas = ['Pedidos','Novedades','Pauta','Inventario'];
+  if (e && e.source) {
+    var sheet = e.source.getActiveSheet();
+    if (hojas.indexOf(sheet.getName()) >= 0) {
+      actualizarDashboard();
+    }
+  }
+}
 
-  var hoy = Utilities.formatDate(new Date(), 'America/Bogota', 'yyyy-MM-dd');
-  var mesAct = hoy.substring(0, 7);
+// ── DASHBOARD ────────────────────────────────────────────────────────────────
 
-  var maesData = shMaes.getDataRange().getValues();
-  var encPed   = maesData[FILA_ENC - 1].map(function(v){ return String(v).trim(); });
-  var idx = function(n){ return encPed.indexOf(n); };
+function actualizarDashboard() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var par = leerParametros_(ss);
 
-  var pedHoy = 0, ventasHoy = 0, ganHoy = 0, novHoy = 0;
-  var pedMes = 0, ventasMes = 0, ganMes = 0, devMes = 0, canMes = 0, entMes = 0;
+  var hoy     = Utilities.formatDate(new Date(), 'America/Bogota', 'yyyy-MM-dd');
+  var mesAct  = hoy.substring(0, 7);
+
+  var pedidos  = leerHoja_(ss, 'Pedidos',  SCHEMAS.Pedidos);
+  var noveds   = leerHoja_(ss, 'Novedades',SCHEMAS.Novedades);
+  var pauta    = leerHoja_(ss, 'Pauta',    SCHEMAS.Pauta);
+  var equipo   = leerHoja_(ss, 'Equipo',   SCHEMAS.Equipo);
+
+  // ── Métricas de pedidos ──────────────────────────────────────────────────
+  var pedHoy=0, ventasHoy=0, pedMes=0, ventasMes=0;
+  var devMes=0, canMes=0, entMes=0;
   var activos = [];
 
-  for (var i = FILA_DATOS - 1; i < maesData.length; i++) {
-    var r = maesData[i];
-    var fechaOrd = String(r[idx('FECHA_ORDEN')] || '');
-    var mes      = String(r[idx('MES')] || '');
-    var estado   = String(r[idx('ESTADO_ENTREGA')] || '');
-    var valor    = aNum_(r[idx('VALOR_ORDEN')]);
-    var gan      = aNum_(r[idx('GANANCIA_NETA')]);
-    var nov      = String(r[idx('NOVEDAD_TIPO')] || '');
+  pedidos.forEach(function(r) {
+    var fecha  = String(r.fecha || '').substring(0, 10);
+    var mes    = fecha.substring(0, 7);
+    var estado = String(r.estado || '');
+    var valor  = aNum_(r.valor);
+    var esEnt  = estado === 'entregado';
+    var esDev  = estado === 'devuelto';
+    var esCan  = estado === 'cancelado';
+    var esAct  = ['en_camino','pendiente','novedad','en_bodega'].indexOf(estado) >= 0;
 
-    if (fechaOrd.startsWith(hoy)) {
-      pedHoy++;
-      ventasHoy += valor;
-      ganHoy    += gan;
-      if (nov)   novHoy++;
+    if (fecha === hoy)     { pedHoy++; ventasHoy += valor; }
+    if (mes   === mesAct)  {
+      pedMes++; ventasMes += valor;
+      if (esEnt) entMes++;
+      if (esDev) devMes++;
+      if (esCan) canMes++;
     }
-    if (mes === mesAct) {
-      pedMes++;
-      ventasMes += valor;
-      ganMes    += gan;
-      if (estado === 'devuelto')   devMes++;
-      if (estado === 'cancelado')  canMes++;
-      if (estado === 'entregado')  entMes++;
+    if (esAct) {
+      activos.push({
+        id:r.id, cliente:r.cliente, telefono:r.telefono, ciudad:r.ciudad,
+        guia:r.guia, estado:r.estado, gestora:r.gestora_asignada
+      });
     }
-    if (estado === 'en_camino' || estado === 'pendiente' || estado === 'novedad') {
-      activos.push([
-        r[idx('ID_ORDEN')], r[idx('NOMBRE_CLIENTE')], r[idx('TELEFONO')],
-        r[idx('CIUDAD')], r[idx('GUIA')], r[idx('ESTATUS_NORM')],
-        r[idx('NOVEDAD_TIPO')], r[idx('GESTORA_ASIGNADA')],
-      ]);
+  });
+
+  var tasaEnt = pedMes > 0 ? entMes / pedMes : 0;
+
+  // ── Novedades abiertas ───────────────────────────────────────────────────
+  var novAbiertas = noveds.filter(function(r) {
+    return String(r.estado || '') !== 'resuelta';
+  });
+  var novHoy = novAbiertas.filter(function(r) {
+    return String(r.fecha || '').substring(0,10) === hoy;
+  }).length;
+
+  // ── Pauta del mes ────────────────────────────────────────────────────────
+  var gastoPauta=0, sumaRoas=0, contRoas=0;
+  pauta.forEach(function(r) {
+    if (String(r.fecha || '').substring(0,7) === mesAct) {
+      gastoPauta += aNum_(r.gasto);
+      var rv = aNum_(r.roas);
+      if (rv > 0) { sumaRoas += rv; contRoas++; }
     }
-  }
+  });
+  var roasMes = contRoas > 0 ? sumaRoas / contRoas : 0;
 
-  var tasaEnt = pedMes > 0 ? (entMes / pedMes) : 0;
+  // ── PARAMETROS ───────────────────────────────────────────────────────────
+  var techoCP = aNum_(par['techo_cpa'] || '38000');
 
-  // Pauta del mes
-  var gastoPauta = 0, sumaRoas = 0, contRoas = 0;
-  if (shPauta) {
-    var pauData = shPauta.getDataRange().getValues();
-    var encPau  = pauData[FILA_ENC - 1].map(function(v){ return String(v).trim(); });
-    var ip = function(n){ return encPau.indexOf(n); };
-    for (var j = FILA_DATOS - 1; j < pauData.length; j++) {
-      var pr = pauData[j];
-      if (String(pr[ip('MES')] || '') === mesAct) {
-        gastoPauta += aNum_(pr[ip('GASTO')]);
-        var r = aNum_(pr[ip('ROAS')]);
-        if (r > 0) { sumaRoas += r; contRoas++; }
-      }
-    }
-  }
-  var roasMes = contRoas > 0 ? (sumaRoas / contRoas) : 0;
+  // ── Alarmas ──────────────────────────────────────────────────────────────
+  var alarmas = calcularAlarmas_(pedidos, noveds, pauta, equipo, par, hoy, mesAct,
+    tasaEnt, roasMes, gastoPauta, techoCP);
 
-  shDash.clearContents();
+  // ── Escribir DASHBOARD-DUENO ─────────────────────────────────────────────
+  var shD = ss.getSheetByName('DASHBOARD-DUENO');
+  shD.clearContents();
 
-  var bloqueHoy = [
-    ['CLAVE', 'VALOR'],
+  var bloq = function(titulo, filas) { return [[titulo,'']].concat(filas); };
+
+  var bloqHoy = bloq('HOY', [
     ['fecha_hoy',       hoy],
     ['pedidos_hoy',     pedHoy],
     ['ventas_hoy',      ventasHoy],
-    ['ganancia_hoy',    ganHoy],
     ['novedades_hoy',   novHoy],
     ['tasa_entrega_mes',tasaEnt],
-  ];
-
-  var bloqueMes = [
-    ['CLAVE', 'VALOR'],
+  ]);
+  var bloqMes = bloq('MES', [
     ['mes_actual',      mesAct],
     ['pedidos_mes',     pedMes],
     ['ventas_mes',      ventasMes],
-    ['ganancia_mes',    ganMes],
     ['devueltos_mes',   devMes],
     ['cancelados_mes',  canMes],
     ['gasto_pauta_mes', gastoPauta],
     ['roas_mes',        roasMes],
-  ];
+  ]);
 
-  shDash.getRange(1, 1, bloqueHoy.length, 2).setValues(bloqueHoy);
-  shDash.getRange(12, 1, bloqueMes.length, 2).setValues(bloqueMes);
-
-  if (activos.length > 0) {
-    var encActivos = [['ID_ORDEN','NOMBRE_CLIENTE','TELEFONO','CIUDAD','GUIA',
-                       'ESTATUS_NORM','NOVEDAD_TIPO','GESTORA_ASIGNADA']];
-    shDash.getRange(23, 1, 1, 8).setValues(encActivos);
-    shDash.getRange(24, 1, activos.length, 8).setValues(activos);
-  }
-
-  // Alarmas
-  var alarmas = [];
-  if (roasMes > 0 && roasMes < 1.5)
-    alarmas.push(['CRITICA', 'ROAS bajo: ' + roasMes.toFixed(2)]);
-  if (tasaEnt > 0 && tasaEnt < 0.6)
-    alarmas.push(['CRITICA', 'Tasa de entrega baja: ' + (tasaEnt*100).toFixed(1) + '%']);
-  if (pedHoy === 0)
-    alarmas.push(['ALERTA', 'Sin pedidos hoy']);
+  var pos = 1;
+  shD.getRange(pos, 1, bloqHoy.length, 2).setValues(bloqHoy);
+  pos += bloqHoy.length + 1;
+  shD.getRange(pos, 1, bloqMes.length, 2).setValues(bloqMes);
+  pos += bloqMes.length + 1;
 
   if (alarmas.length > 0) {
-    var rowAl = 24 + activos.length + 2;
-    shDash.getRange(rowAl, 1, 1, 2).setValues([['NIVEL','ALARMA']]);
-    shDash.getRange(rowAl + 1, 1, alarmas.length, 2).setValues(alarmas);
+    shD.getRange(pos, 1, 1, 3).setValues([['NIVEL','ALARMA','ACCION']]);
+    pos++;
+    shD.getRange(pos, 1, alarmas.length, 3)
+       .setValues(alarmas.map(function(a){ return [a.nivel, a.titulo, a.accion]; }));
+    pos += alarmas.length + 1;
   }
 
-  log_(ss, 'DASHBOARD-DUENO actualizado');
-}
-
-// ── Detección de plataforma ──────────────────────────────────────────────────
-
-function detectarPlataforma_(ss, encReales) {
-  var shMap = ss.getSheetByName(HOJAS.mapPl);
-  if (!shMap) return detectarPorDefecto_(encReales);
-
-  var mapData = shMap.getDataRange().getValues();
-  if (mapData.length < 2) return detectarPorDefecto_(encReales);
-
-  var plataformas = mapData[0].map(function(v){ return String(v).trim(); });
-  var mejorPl = '';
-  var mejorScore = 3; // mínimo 4 matches
-
-  for (var col = 0; col < plataformas.length; col++) {
-    if (!plataformas[col]) continue;
-    var headers = [];
-    for (var row = 1; row < mapData.length; row++) {
-      var h = String(mapData[row][col] || '').trim();
-      if (h) headers.push(h);
-    }
-    var score = 0;
-    headers.forEach(function(h){
-      if (encReales.indexOf(h) >= 0) score++;
-    });
-    if (score > mejorScore) {
-      mejorScore = score;
-      mejorPl    = plataformas[col];
-    }
+  if (activos.length > 0) {
+    shD.getRange(pos, 1, 1, 7)
+       .setValues([['ACTIVOS — id','cliente','telefono','ciudad','guia','estado','gestora']]);
+    pos++;
+    shD.getRange(pos, 1, activos.length, 7)
+       .setValues(activos.map(function(r){
+         return [r.id, r.cliente, r.telefono, r.ciudad, r.guia, r.estado, r.gestora];
+       }));
   }
-  return mejorPl || detectarPorDefecto_(encReales);
-}
 
-function detectarPorDefecto_(enc) {
-  var tiene = function(n){ return enc.indexOf(n) >= 0; };
-  if (tiene('NÚMERO GUIA') || tiene('NUMERO GUIA'))      return 'dropi_ec';
-  if (tiene('Reporte ID Pedido'))                         return 'effi';
-  if (tiene('Name') && tiene('Financial Status'))         return 'shopify';
-  if (tiene('Número de Orden') || tiene('Numero de Orden')) return 'mastershop';
-  if (tiene('Llamada ID') || tiene('ID Llamada'))         return 'iris';
-  return 'dropi_ec';
-}
+  // ── DASHBOARD-ADMIN ──────────────────────────────────────────────────────
+  var shA = ss.getSheetByName('DASHBOARD-ADMIN');
+  shA.clearContents();
 
-function detectarPlataformaPauta_(enc) {
-  var tiene = function(n){ return enc.indexOf(n) >= 0; };
-  if (tiene('Nombre de la campaña'))           return 'meta_camp';
-  if (tiene('Nombre del conjunto de anuncios')) return 'meta_adset';
-  if (tiene('Campaign Name') || tiene('Ad Group Name')) return 'tiktok';
-  return 'meta_camp';
-}
-
-// ── Mapeo de estatus ─────────────────────────────────────────────────────────
-
-function leerMapeoEstatus_(ss) {
-  var sh = ss.getSheetByName(HOJAS.mapEs);
-  var mapa = {};
-  if (!sh) return mapa;
-  var data = sh.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    var raw  = norm_(String(data[i][0] || ''));
-    var norm = String(data[i][1] || '').trim();
-    if (raw && norm) mapa[raw] = norm;
-  }
-  return mapa;
-}
-
-function normEstatus_(estatusPlat, mapEstatus) {
-  var k = norm_(estatusPlat);
-  if (mapEstatus[k]) return mapEstatus[k];
-  if (k.includes('entreg'))    return 'entregado';
-  if (k.includes('devuel'))    return 'devuelto';
-  if (k.includes('cancel'))    return 'cancelado';
-  if (k.includes('camino') || k.includes('transito')) return 'en_camino';
-  if (k.includes('novedad') || k.includes('excep'))   return 'novedad';
-  if (k.includes('bodeg'))     return 'en_bodega';
-  return 'pendiente';
-}
-
-function resolverEstadoEntrega_(estatusNorm, novedad) {
-  if (estatusNorm === 'entregado') return 'entregado';
-  if (estatusNorm === 'devuelto')  return 'devuelto';
-  if (estatusNorm === 'cancelado') return 'cancelado';
-  if (novedad && novedad.length > 0) return 'en_camino';
-  if (estatusNorm === 'en_camino' || estatusNorm === 'en_bodega') return 'en_camino';
-  return 'pendiente';
-}
-
-// ── Lectura de notas guardadas ────────────────────────────────────────────────
-
-function leerNotas_(sh) {
-  var mapa = {};
-  var lastRow = sh.getLastRow();
-  if (lastRow < FILA_DATOS) return mapa;
-  var data = sh.getRange(FILA_DATOS, 1, lastRow - FILA_DATOS + 1, ENC_PEDIDOS.length).getValues();
-  data.forEach(function(r){
-    var id   = String(r[0] || '').trim();
-    var nota = String(r[25] || '').trim();
-    if (id && nota) mapa[id] = nota;
+  var urgentes = pedidos.filter(function(r) {
+    var f = String(r.fecha_promesa || '').substring(0,10);
+    return f === hoy && String(r.estado||'') !== 'entregado';
   });
-  return mapa;
-}
+  var novSinRes = novAbiertas.length;
 
-function leerNotasCartera_(sh) {
-  var mapa = {};
-  var lastRow = sh.getLastRow();
-  if (lastRow < FILA_DATOS) return mapa;
-  var data = sh.getRange(FILA_DATOS, 1, lastRow - FILA_DATOS + 1, ENC_CARTERA.length).getValues();
-  data.forEach(function(r){
-    var tel  = String(r[0] || '').trim();
-    var nota = String(r[14] || '').trim();
-    if (tel && nota) mapa[tel] = nota;
-  });
-  return mapa;
-}
-
-// ── Helpers de headers ───────────────────────────────────────────────────────
-
-function garantizarHeaders_(sh, enc) {
-  var encAct = sh.getRange(FILA_ENC, 1, 1, enc.length).getValues()[0];
-  var iguales = enc.every(function(h, i){ return String(encAct[i] || '').trim() === h; });
-  if (!iguales) {
-    sh.getRange(FILA_ENC, 1, 1, enc.length).setValues([enc]);
-    sh.getRange(FILA_ENC, 1, 1, enc.length)
-      .setBackground('#1a1a2e')
-      .setFontColor('#ffffff')
-      .setFontWeight('bold');
-  }
-}
-
-// ── Cierre de mes ─────────────────────────────────────────────────────────────
-
-function guardarCierre() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var shRes = ss.getSheetByName(HOJAS.res);
-  var shCie = ss.getSheetByName(HOJAS.cie);
-  if (!shRes || !shCie) return;
-
-  var mes = Utilities.formatDate(new Date(), 'America/Bogota', 'yyyy-MM');
-  var dashData = ss.getSheetByName(HOJAS.dash).getDataRange().getValues();
-
-  var resumen = {};
-  dashData.forEach(function(r){
-    if (r[0] && r[1] !== '') resumen[String(r[0])] = r[1];
-  });
-
-  var fila = [
-    mes,
-    resumen['pedidos_mes']    || 0,
-    resumen['ventas_mes']     || 0,
-    resumen['ganancia_mes']   || 0,
-    resumen['devueltos_mes']  || 0,
-    resumen['cancelados_mes'] || 0,
-    resumen['gasto_pauta_mes']|| 0,
-    resumen['roas_mes']       || 0,
-    new Date(),
+  var bloqAdmin = [
+    ['HOY',''],
+    ['urgentes_hoy',   urgentes.length],
+    ['novedades_sin_resolver', novSinRes],
+    ['tasa_entrega_mes', tasaEnt],
+    ['',''],
+    ['EQUIPO',''],
   ];
+  equipo.forEach(function(g) {
+    bloqAdmin.push([g.nombre + ' · ' + (g.rol || 'gestora'), g.casos_asignados + ' casos']);
+  });
+  shA.getRange(1, 1, bloqAdmin.length, 2).setValues(bloqAdmin);
 
-  var lastRow = shCie.getLastRow();
-  shCie.getRange(lastRow + 1, 1, 1, fila.length).setValues([fila]);
-  log_(ss, 'Cierre guardado: ' + mes);
-  SpreadsheetApp.getUi().alert('✅ Cierre ' + mes + ' guardado');
+  // ── DASHBOARD-GESTORA ────────────────────────────────────────────────────
+  var shG = ss.getSheetByName('DASHBOARD-GESTORA');
+  shG.clearContents();
+  // Cada gestora leerá filtrando por su nombre desde el cliente.
+  // El dashboard guarda todos los casos activos agrupados.
+  var encCasos = [['gestora','id','cliente','telefono','ciudad','guia','estado','novedad']];
+  var filasCasos = activos.map(function(r) {
+    var nov = novAbiertas.find(function(n){ return n.pedido_id === r.id; });
+    return [r.gestora, r.id, r.cliente, r.telefono, r.ciudad, r.guia, r.estado,
+            nov ? nov.tipo : ''];
+  });
+  if (filasCasos.length > 0) {
+    shG.getRange(1, 1, 1, 8).setValues(encCasos);
+    shG.getRange(2, 1, filasCasos.length, 8).setValues(filasCasos);
+  }
 }
 
-// ── Menú e instalación ───────────────────────────────────────────────────────
+// ── Alarmas ──────────────────────────────────────────────────────────────────
 
-function instalarBotones() {
-  var ui = SpreadsheetApp.getUi();
-  ui.createMenu('🏠 Nova CC')
-    .addItem('▶ Procesar todo',         'procesarTodo')
+function calcularAlarmas_(pedidos, noveds, pauta, equipo, par, hoy, mes,
+    tasaEnt, roasMes, gastoPauta, techoCP) {
+  var al = [];
+  var add = function(nivel, titulo, accion) {
+    al.push({ nivel:nivel, titulo:titulo, accion:accion });
+  };
+
+  // 1. Pedidos sin movimiento > 3 días
+  var diasMaxMov = aNum_(par['dias_sin_mov_max'] || '3');
+  pedidos.forEach(function(r) {
+    if (['entregado','devuelto','cancelado'].indexOf(String(r.estado||'')) < 0) {
+      var ultAct = r.actualizado_en ? new Date(r.actualizado_en) : new Date(r.fecha);
+      var dias = (new Date(hoy) - ultAct) / 86400000;
+      if (dias > diasMaxMov) {
+        add('CRITICA', 'Pedido ' + r.id + ' sin movimiento ' + Math.floor(dias) + ' días',
+            'Ver pedido ' + r.id);
+      }
+    }
+  });
+
+  // 2. Novedades sin resolver > 24 h
+  var diasNov = aNum_(par['dias_novedad_max'] || '1');
+  noveds.forEach(function(r) {
+    if (String(r.estado||'') !== 'resuelta') {
+      var fechaNov = r.fecha ? new Date(r.fecha) : new Date(hoy);
+      var horas = (new Date(hoy + 'T23:59') - fechaNov) / 3600000;
+      if (horas > diasNov * 24) {
+        add('CRITICA', 'Novedad ' + r.id + ' sin resolver ' + Math.round(horas) + ' h',
+            'Ver novedad ' + r.id);
+      }
+    }
+  });
+
+  // 5. Tasa de entrega < umbral
+  var tasaMin = aNum_(par['tasa_entrega_min'] || '0.65');
+  if (tasaEnt > 0 && tasaEnt < tasaMin) {
+    add('CRITICA', 'Tasa de entrega ' + (tasaEnt*100).toFixed(1) + '% < ' + (tasaMin*100) + '%',
+        'Revisar pedidos del mes');
+  }
+
+  // 6. CPA > techo
+  var cpaMes = gastoPauta > 0 ? gastoPauta / Math.max(1, pedidos.filter(function(r){
+    return r.fecha && r.fecha.substring(0,7) === mes && r.estado === 'entregado';
+  }).length) : 0;
+  if (cpaMes > techoCP) {
+    add('CRITICA', 'CPA del mes $' + Math.round(cpaMes).toLocaleString('es') +
+        ' > techo $' + techoCP.toLocaleString('es'), 'Ver Pauta');
+  }
+
+  if (tasaEnt > 0 && tasaEnt < 0.75) {
+    add('ATENCION', 'Tasa de entrega por debajo del 75%', 'Revisar novedades');
+  }
+
+  if (roasMes > 0 && roasMes < 2.0) {
+    add('ATENCION', 'ROAS del mes ' + roasMes.toFixed(2) + ' < 2.0×', 'Ver Pauta y ROAS');
+  }
+
+  return al;
+}
+
+// ── Lectura de hojas ──────────────────────────────────────────────────────────
+
+function leerHoja_(ss, nombre, enc) {
+  var sh = ss.getSheetByName(nombre);
+  if (!sh || sh.getLastRow() < 2) return [];
+  var data = sh.getRange(2, 1, sh.getLastRow() - 1, enc.length).getValues();
+  return data
+    .filter(function(r){ return r.some(function(c){ return c !== '' && c !== null; }); })
+    .map(function(r) {
+      var obj = {};
+      enc.forEach(function(h, i){ obj[h] = r[i]; });
+      return obj;
+    });
+}
+
+function leerParametros_(ss) {
+  var sh = ss.getSheetByName('PARAMETROS');
+  var par = {};
+  if (!sh || sh.getLastRow() < 2) return par;
+  var data = sh.getRange(2, 1, sh.getLastRow()-1, 2).getValues();
+  data.forEach(function(r){ if (r[0]) par[String(r[0]).trim()] = String(r[1]||'').trim(); });
+  return par;
+}
+
+// ── Menú ─────────────────────────────────────────────────────────────────────
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('🏠 Nova CC')
+    .addItem('Instalar hojas y triggers', 'instalarHojas')
     .addSeparator()
-    .addItem('📦 Solo pedidos',          'procesarPedidos')
-    .addItem('👥 Solo cartera',          'procesarCartera')
-    .addItem('📣 Solo pauta',            'procesarPautaYGastos')
-    .addSeparator()
-    .addItem('📅 Guardar cierre de mes', 'guardarCierre')
+    .addItem('Recalcular dashboards', 'actualizarDashboard')
     .addToUi();
-
-  SpreadsheetApp.getActiveSpreadsheet().toast(
-    'Motor Nova CC instalado. Usa el menú 🏠 Nova CC para procesar.', '✅', 5
-  );
 }
 
-// ── Utilidades ───────────────────────────────────────────────────────────────
-
-function norm_(v) {
-  if (!v) return '';
-  return String(v).trim()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase();
-}
-
-function tel10_(v) {
-  if (!v) return '';
-  var t = String(v).replace(/\D/g, '');
-  // Ecuador: prefijo 593 + 9 dígitos → quitar 593 → queda 9 dígitos, completar a 10 con 0
-  if (t.length === 12 && t.startsWith('593')) { t = '0' + t.substring(3); }
-  // Colombia: prefijo 57 + 10 dígitos
-  if (t.length === 12 && t.startsWith('57'))  { t = t.substring(2); }
-  // Guatemala: prefijo 502 + 8 dígitos
-  if (t.length === 11 && t.startsWith('502')) { t = t.substring(3); }
-  // Quitar + al inicio
-  if (t.startsWith('+')) t = t.substring(1);
-  // Dejar solo los últimos 10 dígitos
-  if (t.length > 10) t = t.slice(-10);
-  return t;
-}
-
-function aFecha_(v) {
-  if (!v) return '';
-  if (v instanceof Date) return Utilities.formatDate(v, 'America/Bogota', 'yyyy-MM-dd');
-  var s = String(v).trim();
-  // dd/mm/yyyy
-  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (m) return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
-  // yyyy-mm-dd already
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
-  // mm/dd/yyyy
-  var m2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (m2) return m2[3] + '-' + m2[1].padStart(2,'0') + '-' + m2[2].padStart(2,'0');
-  return s.substring(0, 10);
-}
-
-function aMes_(v) {
-  if (!v) return '';
-  var s = String(v);
-  if (s.length >= 7) return s.substring(0, 7);
-  return '';
-}
+// ── Utilidades ────────────────────────────────────────────────────────────────
 
 function aNum_(v) {
-  if (v === null || v === undefined || v === '') return 0;
+  if (!v && v !== 0) return 0;
   if (typeof v === 'number') return v;
-  var s = String(v).replace(/[^\d.,-]/g, '').replace(/\./g, '').replace(',', '.');
-  var n = parseFloat(s);
+  var n = parseFloat(String(v).replace(/[^\d.,-]/g,'').replace(/\./g,'').replace(',','.'));
   return isNaN(n) ? 0 : n;
-}
-
-function log_(ss, msg) {
-  var sh = ss.getSheetByName(HOJAS.hist);
-  if (!sh) return;
-  var ts = Utilities.formatDate(new Date(), 'America/Bogota', 'yyyy-MM-dd HH:mm:ss');
-  sh.appendRow([ts, msg]);
 }
