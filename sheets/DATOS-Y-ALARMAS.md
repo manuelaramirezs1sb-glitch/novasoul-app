@@ -72,7 +72,9 @@ Paneles ──────escritura────────→ │ normalizadas 
 - **Escritura optimista** — la interfaz marca el cambio de inmediato y confirma cuando la hoja responde.
 - **Cola local** si no hay conexión.
 
-### Fuentes externas identificadas (solo Nova Empresarial y Nova Central)
+### Fuentes externas identificadas
+
+#### Nova Empresarial
 
 | Fuente | Qué trae | Alimenta |
 |---|---|---|
@@ -88,6 +90,23 @@ Paneles ──────escritura────────→ │ normalizadas 
 | Tarjeta (XLSX) | Transacciones de crédito | `Gastos` |
 
 **Moneda:** Meta viene en COP; otras fuentes en USD. La importación normaliza a moneda base de la tienda con la tasa del día de la transacción.
+
+#### Nova Central
+
+| Fuente | Qué trae | Alimenta |
+|---|---|---|
+| Inventario físico/bodega (CSV/XLSX/formato propio) | SKU, stock, costos, precios | `Inventario_Central` |
+| Documentos internos (PDF, XLSX, DOCX, CSV) | Contratos, informes, acuerdos | `Documentos_Central` |
+
+El importador de inventario usa detección automática de columnas. Si no reconoce el formato, muestra mapeo manual antes de importar.
+
+#### NovaSoul
+
+| Fuente | Qué trae | Alimenta |
+|---|---|---|
+| Imagen carta astral (JPG / PNG — pantallazo) | Mapa natal: signos, casas, aspectos | `Usuarios` (datos natales) → motor de `Transitos` |
+
+La imagen se procesa para extraer datos natales. `Transitos` se genera desde esos datos con librería de efemérides; no se importa directamente.
 
 ---
 
@@ -121,6 +140,8 @@ Claves mínimas: `cpa_techo`, `costos_fijos_mes`, `entrega_minima_pct`, `corte_d
 
 ### Nova Central
 
+Nova Central **sí consume documentos externos**. Formatos específicos pendientes de muestra, pero la arquitectura ya contempla importadores por tipo.
+
 **Clientes**
 `id · empresa · pais · plan · tarifa · costo · estado · fecha_alta · fecha_corte · ultimo_pago · tickets_mes · usuarios · tiendas`
 
@@ -133,9 +154,16 @@ Claves mínimas: `cpa_techo`, `costos_fijos_mes`, `entrega_minima_pct`, `corte_d
 **Candidatas** — postulantes a gestora
 `id · nombre · pais · experiencia · equipo_disponible · estado · fecha_postulacion · nota`
 
+**Inventario_Central** — importación de inventario de establecimiento físico o bodega.
+Botón **"Importar inventario"** acepta formatos de terceros con detección automática de columnas (mismo patrón de MAPEO-PLATAFORMA). Si no reconoce el formato, muestra un paso de mapeo manual de columnas antes de importar.
+`sku · producto · ubicacion · stock · costo_unitario · precio · unidad · proveedor · ultimo_conteo · actualizado_en`
+
+**Documentos_Central** — archivos del equipo Nova Central (contratos, informes, acuerdos). Formatos: PDF, XLSX, DOCX, CSV. Importador se construye cuando haya muestra real; el botón y la UI ya existen.
+`id · tipo · nombre · cliente_id · subido_en · subido_por · url · notas`
+
 ### NovaSoul
 
-Todo lo escribe la persona; no hay importación.
+La persona no sube exportaciones de plataformas. Su única entrada de archivo es la **carta astral**: sube una imagen (JPG, PNG — pantallazo del mapa natal) que la plataforma procesa para extraer los datos natales (signos, casas, aspectos).
 
 **Usuarios**
 `id · nombre · correo · fecha_nacimiento · hora_nacimiento · lugar_nacimiento · zona_horaria · acento · modo · idioma`
