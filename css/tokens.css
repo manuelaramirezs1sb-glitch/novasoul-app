@@ -1,0 +1,426 @@
+/* ============================================================
+   NOVA FAMILY — Design Tokens
+   Paletas: verde (default) · amarillo · terracota · azul
+   Modos: claro (default) · oscuro
+   Uso: <div data-tema="verde" data-modo="claro"> ... </div>
+   ============================================================ */
+
+/* ── Tipografía ─────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+/* ── Reset mínimo ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body { font-family: 'DM Sans', system-ui, sans-serif; }
+
+/* ── Escalas compartidas (no cambian con tema ni modo) ──────── */
+:root {
+  /* Radio */
+  --r-xs:  4px;
+  --r-sm:  8px;
+  --r-md:  12px;
+  --r-lg:  16px;
+  --r-xl:  24px;
+  --r-2xl: 32px;
+  --r-pill: 999px;
+
+  /* Sombras */
+  --sh-xs:  0 1px 2px rgba(0,0,0,.06);
+  --sh-sm:  0 2px 6px rgba(0,0,0,.08);
+  --sh-md:  0 4px 16px rgba(0,0,0,.10);
+  --sh-lg:  0 8px 32px rgba(0,0,0,.12);
+  --sh-card: 0 1px 3px rgba(0,0,0,.07), 0 4px 12px rgba(0,0,0,.05);
+
+  /* Tipografía — escala */
+  --text-xs:   11px;
+  --text-sm:   13px;
+  --text-base: 15px;
+  --text-md:   17px;
+  --text-lg:   20px;
+  --text-xl:   24px;
+  --text-2xl:  30px;
+  --text-3xl:  36px;
+
+  /* Espaciado */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-8:  32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+
+  /* Animaciones */
+  --ease-out: cubic-bezier(.2,.8,.4,1);
+  --ease-spring: cubic-bezier(.34,1.56,.64,1);
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 400ms;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   NOVA EMPRESARIAL
+   Tokens de superficie, texto y acento para los 4 temas
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Verde · Claro (default) ────────────────────────────────── */
+:root,
+[data-tema="verde"] {
+  /* Superficies */
+  --s-bg:    #e6eadb;
+  --s-card:  #fbfcf7;
+  --s-card2: #fdfefa;
+  --s-card3: #f5f7ee;
+  --s-soft:  #f1f4e8;
+  --s-soft2: #eef2e4;
+  --s-soft3: #f3f6ec;
+  --s-soft4: #f1f4e8;
+  --s-soft5: #f6f8f0;
+  --s-soft6: #e9eedd;
+  --s-soft7: #e0e6d2;
+
+  /* Líneas / bordes */
+  --s-line:  #d7dcc6;
+  --s-line2: #e4e9d6;
+  --s-line3: #dde2ce;
+  --s-line4: #cbd3b8;
+  --s-line5: #d0d8bd;
+  --s-line6: #d7dcc6;
+
+  /* Fondos oscuros / énfasis */
+  --s-dark:  #e0e6d2;
+  --s-dark2: #d5ddc0;
+  --s-dark3: #c6d1ab;
+  --s-deep:  #cfd8b8;
+
+  /* Texto */
+  --t-ink:       #333a2b;
+  --t-ink2:      #3f4735;
+  --t-ink3:      #4d5642;
+  --t-mut:       #6f7a62;
+  --t-mut2:      #5f6b52;
+  --t-mut3:      #98a189;
+  --t-mut4:      #a9b39a;
+  --t-mut5:      #8b957c;
+  --t-ondark:    #2b3124;
+  --t-ondark-mut:#5a6449;
+
+  /* Acento verde */
+  --acc:   #b9cf8e;
+  --acc-d: #5f7a3a;
+  --a-chip:#7e9a52;
+}
+
+/* ── Verde · Oscuro ─────────────────────────────────────────── */
+[data-tema="verde"][data-modo="oscuro"],
+:root[data-modo="oscuro"],
+[data-modo="oscuro"] {
+  --s-bg:    #1f241a;
+  --s-card:  #272d20;
+  --s-card2: #2b3124;
+  --s-card3: #2b3124;
+  --s-soft:  #333a2b;
+  --s-soft2: #333a2b;
+  --s-soft6: #3a4230;
+  --s-soft7: #434c37;
+  --s-line:  #3c4433;
+  --s-line2: #363d2d;
+  --s-line4: #4a543a;
+  --s-dark:  #242a1c;
+  --s-dark2: #2b3124;
+  --s-dark3: #3c4433;
+  --s-deep:  #1b2015;
+  --t-ink:       #f1f4e8;
+  --t-ink2:      #e2e7d6;
+  --t-ink3:      #cbd2bd;
+  --t-mut:       #a9b39a;
+  --t-mut2:      #b9c2a8;
+  --t-ondark:    #f1f4e8;
+  --t-ondark-mut:#b9c2a8;
+  --a-chip:      #b9cf8e;
+}
+[data-tema="verde"][data-modo="oscuro"] {
+  --acc-d: #b9cf8e;
+  --a-chip:#b9cf8e;
+  --s-dark: #242a1c; --s-dark2:#2b3124; --s-dark3:#3c4433; --s-deep:#1b2015;
+}
+
+/* ── Amarillo · Claro ───────────────────────────────────────── */
+[data-tema="amarillo"] {
+  --acc:   #E7CA74;
+  --acc-d: #8F6E1E;
+  --a-chip:#C9A63F;
+  --s-dark: #eee4c9; --s-dark2:#e6d8b2; --s-dark3:#dcc894; --s-deep:#e2d3a8;
+
+  --s-bg:    #ede8d8;
+  --s-card:  #fdfbf4;
+  --s-card2: #fffef9;
+  --s-card3: #f7f4ea;
+  --s-soft:  #f5f0e2;
+  --s-soft2: #f2eed9;
+  --s-soft3: #f6f2e5;
+  --s-soft4: #f5f0e2;
+  --s-soft5: #f8f4e8;
+  --s-soft6: #ede7d2;
+  --s-soft7: #e4ddc4;
+  --s-line:  #d9d2bc;
+  --s-line2: #e6e0cc;
+  --s-line3: #dfd8c2;
+  --s-line4: #cdc5af;
+  --s-line5: #d2cbb5;
+  --s-line6: #d9d2bc;
+  --t-ink:   #3a3626;
+  --t-ink2:  #46422f;
+  --t-ink3:  #55503c;
+  --t-mut:   #7a7460;
+  --t-mut2:  #6a6452;
+  --t-mut3:  #a29c88;
+  --t-mut4:  #b2ac98;
+  --t-mut5:  #948e7a;
+  --t-ondark:    #2c2a1a;
+  --t-ondark-mut:#5c5642;
+}
+
+/* ── Amarillo · Oscuro ──────────────────────────────────────── */
+[data-tema="amarillo"][data-modo="oscuro"] {
+  --acc-d: #E7CA74;
+  --a-chip:#E7CA74;
+  --s-dark: #282316; --s-dark2:#2f2a1b; --s-dark3:#413928; --s-deep:#1f1b10;
+  --s-bg:    #231f14;
+  --s-card:  #2c2820;
+  --s-card2: #302c24;
+  --s-card3: #302c24;
+  --s-soft:  #3c3828;
+  --s-soft2: #3c3828;
+  --s-soft6: #454030;
+  --s-soft7: #504a38;
+  --s-line:  #46402e;
+  --s-line2: #3e3a28;
+  --s-line4: #564e3c;
+  --t-ink:       #f5f0e0;
+  --t-ink2:      #e8e2d0;
+  --t-ink3:      #d4ceba;
+  --t-mut:       #b2ac98;
+  --t-mut2:      #c0baa6;
+  --t-ondark:    #f5f0e0;
+  --t-ondark-mut:#c0baa6;
+}
+
+/* ── Terracota · Claro ──────────────────────────────────────── */
+[data-tema="terracota"] {
+  --acc:   #DFAB8D;
+  --acc-d: #A85E3C;
+  --a-chip:#C47B57;
+  --s-dark: #f0dfd3; --s-dark2:#e8cfbd; --s-dark3:#dcb89e; --s-deep:#e4c9b3;
+
+  --s-bg:    #ece4da;
+  --s-card:  #fdf8f4;
+  --s-card2: #fffdf9;
+  --s-card3: #f8f2ec;
+  --s-soft:  #f5ede5;
+  --s-soft2: #f2e8de;
+  --s-soft3: #f7f0e8;
+  --s-soft4: #f5ede5;
+  --s-soft5: #f8f1e9;
+  --s-soft6: #ece3d8;
+  --s-soft7: #e4d8ca;
+  --s-line:  #ddd2c4;
+  --s-line2: #e8dfd4;
+  --s-line3: #e2d6c8;
+  --s-line4: #d0c4b4;
+  --s-line5: #d5c8ba;
+  --s-line6: #ddd2c4;
+  --t-ink:   #3a2e28;
+  --t-ink2:  #463830;
+  --t-ink3:  #56463e;
+  --t-mut:   #7a6e64;
+  --t-mut2:  #6a5e54;
+  --t-mut3:  #a29890;
+  --t-mut4:  #b2a8a0;
+  --t-mut5:  #948880;
+  --t-ondark:    #2c221e;
+  --t-ondark-mut:#5c504a;
+}
+
+/* ── Terracota · Oscuro ─────────────────────────────────────── */
+[data-tema="terracota"][data-modo="oscuro"] {
+  --acc-d: #E3B79C;
+  --a-chip:#E3B79C;
+  --s-dark: #291e18; --s-dark2:#2f231d; --s-dark3:#43322a; --s-deep:#1f1611;
+  --s-bg:    #221a16;
+  --s-card:  #2a211c;
+  --s-card2: #2e2620;
+  --s-card3: #2e2620;
+  --s-soft:  #3a302a;
+  --s-soft2: #3a302a;
+  --s-soft6: #44392e;
+  --s-soft7: #4f4238;
+  --s-line:  #453930;
+  --s-line2: #3c312a;
+  --s-line4: #554540;
+  --t-ink:       #f5ede8;
+  --t-ink2:      #e8deda;
+  --t-ink3:      #d4c8c2;
+  --t-mut:       #b2a8a0;
+  --t-mut2:      #c0b4ae;
+  --t-ondark:    #f5ede8;
+  --t-ondark-mut:#c0b4ae;
+}
+
+/* ── Azul · Claro ───────────────────────────────────────────── */
+[data-tema="azul"] {
+  --acc:   #A8C2D8;
+  --acc-d: #3C6684;
+  --a-chip:#5C87A6;
+  --s-dark: #dbe4ec; --s-dark2:#c8d7e4; --s-dark3:#adc3d6; --s-deep:#bfd1e0;
+
+  --s-bg:    #dde4ec;
+  --s-card:  #f6f9fc;
+  --s-card2: #f9fbfd;
+  --s-card3: #eff4f8;
+  --s-soft:  #eaf0f5;
+  --s-soft2: #e6edf4;
+  --s-soft3: #ecf2f7;
+  --s-soft4: #eaf0f5;
+  --s-soft5: #f0f5f9;
+  --s-soft6: #e2eaf2;
+  --s-soft7: #d8e3ed;
+  --s-line:  #c8d5e2;
+  --s-line2: #d6e2ee;
+  --s-line3: #cfd9e6;
+  --s-line4: #bacad8;
+  --s-line5: #c4d0de;
+  --s-line6: #c8d5e2;
+  --t-ink:   #26323e;
+  --t-ink2:  #32404c;
+  --t-ink3:  #3e4e5c;
+  --t-mut:   #607080;
+  --t-mut2:  #506070;
+  --t-mut3:  #8898a8;
+  --t-mut4:  #98a8b8;
+  --t-mut5:  #788898;
+  --t-ondark:    #1c2a36;
+  --t-ondark-mut:#486078;
+}
+
+/* ── Azul · Oscuro ──────────────────────────────────────────── */
+[data-tema="azul"][data-modo="oscuro"] {
+  --acc-d: #A8C2D8;
+  --a-chip:#A8C2D8;
+  --s-dark: #1b242b; --s-dark2:#1e2830; --s-dark3:#2c3a44; --s-deep:#131b21;
+  --s-bg:    #161e26;
+  --s-card:  #1e2830;
+  --s-card2: #222c36;
+  --s-card3: #222c36;
+  --s-soft:  #2c3840;
+  --s-soft2: #2c3840;
+  --s-soft6: #34424c;
+  --s-soft7: #3e4e58;
+  --s-line:  #2e3c48;
+  --s-line2: #28363e;
+  --s-line4: #3c4e5c;
+  --t-ink:       #e8f0f6;
+  --t-ink2:      #d8e4ee;
+  --t-ink3:      #c0d0de;
+  --t-mut:       #98a8b8;
+  --t-mut2:      #a8b8c8;
+  --t-ondark:    #e8f0f6;
+  --t-ondark-mut:#a8b8c8;
+}
+
+/* ── Semánticos (alarmas / estado) — compartidos ────────────── */
+:root {
+  --sem-error-bg:   #f6e3db;
+  --sem-error-ink:  #a8563a;
+  --sem-warn-bg:    #f6ecd0;
+  --sem-warn-ink:   #8a6a13;
+  --sem-info-bg:    #e4eaee;
+  --sem-info-ink:   #546b7a;
+  --sem-success-bg: #e8f0e4;
+  --sem-success-ink:#3e6632;
+}
+[data-modo="oscuro"] {
+  --sem-error-bg:   #3a1a14;
+  --sem-error-ink:  #e89070;
+  --sem-warn-bg:    #362c14;
+  --sem-warn-ink:   #e8c060;
+  --sem-info-bg:    #1c2830;
+  --sem-info-ink:   #80a8c0;
+  --sem-success-bg: #1a2e18;
+  --sem-success-ink:#80c070;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   NOVA SOUL
+   Paleta cálida ámbar independiente — siempre en su propio
+   contenedor [data-app="soul"] o en index.html raíz
+   ══════════════════════════════════════════════════════════════ */
+[data-app="soul"],
+.soul-root {
+  --bg:        #FAF6EC;
+  --card:      #FFFDF7;
+  --soft:      #F4EFE1;
+  --soft2:     #F1EBDC;
+  --panel:     #F5F0E2;
+  --panel-line:#E7DFCB;
+  --line:      #EBE3D2;
+  --line2:     #E4DBC6;
+  --line4:     #DFD5BE;
+  --line5:     #D4C8AC;
+  --line6:     #C4B896;
+  --ink:       #35362F;
+  --ink2:      #454739;
+  --ink3:      #565947;
+  --mut:       #6F7266;
+  --mut2:      #7B7E70;
+  --acc:       #DDA43C;
+  --acc-ink:   #2C2A22;
+  --acc-lo:    #A87A24;
+  --acc-hi:    #EDC97E;
+  --amber:     #FBF4E2;
+  --amber-line:#F2DFB6;
+  --sage:      #EDF2E7;
+  --sage-line: #d8e6cb;
+  --sage-d:    #3F5A3A;
+  --lila:      #F6F1E3;
+  --lila-line: #E8E0CC;
+}
+[data-app="soul"][data-modo="oscuro"],
+.soul-root[data-modo="oscuro"] {
+  --bg:        #1B1B17;
+  --card:      #24241E;
+  --soft:      #2A2A22;
+  --soft2:     #2E2E25;
+  --panel:     #201F1A;
+  --panel-line:#33332A;
+  --line:      #35352C;
+  --line2:     #3C3C31;
+  --line4:     #434337;
+  --line5:     #4E4E40;
+  --line6:     #5B5B4A;
+  --ink:       #F3F1E7;
+  --ink2:      #E4E1D4;
+  --ink3:      #D2CFC0;
+  --mut:       #ADB0A0;
+  --mut2:      #A0A394;
+  --acc:       #E5B457;
+  --acc-ink:   #241F14;
+  --acc-d:     var(--acc-hi);
+  --amber:     #2E2A1D;
+  --amber-line:#453D28;
+  --sage:      #23281F;
+  --sage-line: #384232;
+  --sage-d:    #A8C4A2;
+  --lila:      #262620;
+  --lila-line: #3A3A30;
+}
+[data-app="soul"]:not([data-modo="oscuro"]),
+.soul-root:not([data-modo="oscuro"]) {
+  --acc-d: var(--acc-lo);
+}
+
+/* ── Utilidades scrollbar ───────────────────────────────────── */
+.hide-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.hide-scroll::-webkit-scrollbar { display: none; }
