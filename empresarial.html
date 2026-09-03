@@ -1342,7 +1342,7 @@ function buildAll() {
 
 function buildGestoraViews() {
   const nombre = document.getElementById('g-saludo');
-  if (nombre) nombre.textContent = 'Hola, ' + (ROLES[localStorage.getItem('ne_email')||'']?.nombre || 'Camila');
+  if (nombre) nombre.textContent = 'Hola, ' + (nombreDe(localStorage.getItem('ne_email')||'') || 'Camila');
   document.getElementById('g-kpi').innerHTML = [
     {lb:'MIS PEDIDOS HOY', v:'18', sub:'6 sin actualizar hoy', cl:'w'},
     {lb:'EN TRÁNSITO',     v:'9',  sub:'Con transportadora',   cl:'a'},
@@ -1390,96 +1390,80 @@ function buildGestoraViews() {
 }
 
 function buildHoy() {
+  const d = POR_TIENDA[ST];
   // KPIs mes
-  const kmes = [
-    {lb:'VENTAS',      v:C(11200), sub:'Meta: '+C(18000)+' al mes',              cl:'g'},
-    {lb:'PEDIDOS',     v:'312',    sub:'Promedio 14/día · meta 600',              cl:'a'},
-    {lb:'ENTREGADOS',  v:'78%',    sub:'214 entregados de 274 despachados',       cl:'g'},
-    {lb:'DEVOLUCIONES',v:'8%',     sub:'21 devoluciones · umbral 10%',            cl:'w'},
-  ];
-  document.getElementById('kmes').innerHTML = kmes.map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
+  document.getElementById('kmes').innerHTML = d.kmes.map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
   // Equilibrio
-  const meta=18000,act=11200,flt=meta-act,pct=Math.round(act/meta*100);
-  document.getElementById('eqflt').textContent = C(flt)+' por llegar';
-  document.getElementById('eqbar').style.width = pct+'%';
-  document.getElementById('eqsub').textContent = C(act)+' de '+C(meta)+' necesarios para cubrir costos del mes';
+  const eq = d.equilibrio;
+  document.getElementById('eqflt').textContent = eq.faltan + ' para equilibrio';
+  document.getElementById('eqbar').style.width = eq.pct;
+  document.getElementById('eqsub').textContent = eq.hechas + ' · ' + eq.sub;
   // Alerta CPA
-  document.getElementById('acrit-cpa').textContent   = C(14.80);
-  document.getElementById('acrit-techo').textContent = C(10.00);
+  const badCpa = d.cpa ? d.cpa.find(c=>!c.ok) : null;
+  if(badCpa){
+    document.getElementById('acrit-cpa').textContent   = badCpa.cpa;
+    document.getElementById('acrit-techo').textContent = ST==='ec'?'$ 10,00':'Q 38,00';
+  }
   // Recuento
-  document.getElementById('rec-ventas').textContent = C(33600);
+  document.getElementById('rec-ventas').textContent = d.mes?.[0]?.v || '';
   document.getElementById('rec-nom').textContent    = ST==='ec'?'$4.0M':'Q14.9M';
-  // Pauta list
-  document.getElementById('palist').innerHTML = [
-    {nm:'Colágeno Premium', ver:'Frenar ↓', bg:'#f7dedc', ink:'#b8322f'},
-    {nm:'Proteína Vainilla', ver:'Escalar ↑', bg:'#d3e0c2', ink:'#3f5330'},
-    {nm:'Omega 3',           ver:'Mantener', bg:'var(--s-soft7)', ink:'var(--t-mut2)'},
-    {nm:'Multivitamínico',   ver:'Mantener', bg:'var(--s-soft7)', ink:'var(--t-mut2)'},
-  ].map(p=>`<div class="parow"><span class="panm">${p.nm}</span><span class="bd" style="background:${p.bg};color:${p.ink};">${p.ver}</span></div>`).join('');
+  // Escalar / frenar list
+  document.getElementById('palist').innerHTML = d.productos.map(p=>`<div class="parow"><span class="panm">${p.nm}</span><span class="bd" style="background:${p.vBg};color:${p.vInk};">${p.ver}</span></div>`).join('');
   // Equipo hoy
-  document.getElementById('eqhoy').innerHTML = [
-    {nm:'Camila Restrepo',  color:'#6d7d4a', t:'6h 12m activa'},
-    {nm:'Valentina Ospina', color:'#8a6a13', t:'4h 30m activa'},
-    {nm:'Daniela Ríos',     color:'#b8322f', t:'Sin conectarse hoy'},
-  ].map(j=>`<div class="eq-row"><span class="eq-dot" style="background:${j.color};"></span><span class="eq-name">${j.nm}</span><span class="eq-time">${j.t}</span></div>`).join('');
-  // Inventario riesgo
-  document.getElementById('invriesgo').innerHTML = [
-    {nm:'Colágeno Premium 300g', alerta:'3 días de stock',  aInk:'#b8322f', aBg:'#f7dedc', sub:'Reposición tarda 8 días · pedir hoy'},
-    {nm:'Omega 3 120 caps',      alerta:'Sin ventas 31d',   aInk:'#8a6a13', aBg:'#f6ecd0', sub:'48 unidades sin movimiento'},
-  ].map(r=>`<div class="invr-row"><div class="invr-top"><span class="invr-nm">${r.nm}</span><span class="bd" style="color:${r.aInk};background:${r.aBg};">${r.alerta}</span></div><span class="invr-sub">${r.sub}</span></div>`).join('');
+  document.getElementById('eqhoy').innerHTML = d.jornada.map(j=>`<div class="eq-row"><span class="eq-dot" style="background:${j.color};"></span><span class="eq-name">${j.nm}</span><span class="eq-time">${j.est} · ${j.tiempo}</span></div>`).join('');
+  // Inventario riesgo — productos con Frenar o Pausado
+  const riesgo = d.productos.filter(p=>p.ver==='Frenar'||p.ver==='Pausado');
+  document.getElementById('invriesgo').innerHTML = riesgo.map(r=>`<div class="invr-row"><div class="invr-top"><span class="invr-nm">${r.nm}</span><span class="bd" style="color:${r.vInk};background:${r.vBg};">${r.ver}</span></div><span class="invr-sub">${r.stock} · ${r.por}</span></div>`).join('');
   // Pendientes pauta (dinero)
-  document.getElementById('pp-extra').textContent = C(500);
-  document.getElementById('pp-bono').textContent  = C(120);
+  document.getElementById('pp-extra').textContent = ST==='ec'?'$ 5.240.000':'Q 18.600';
+  document.getElementById('pp-bono').textContent  = ST==='ec'?'$ 320.000':'Q 1.190';
   // Bar chart
-  const days=['L','M','M','J','V','S','D'], vals=[980,1800,1240,1560,1100,820,1240], mx=Math.max(...vals);
-  document.getElementById('dval').textContent = C(vals[6]);
-  document.getElementById('barfoot').textContent = 'Mejor día: martes con '+C(1800)+'. La semana va 11% por encima del promedio.';
+  const days=['L','M','M','J','V','S','D'], vals=d.dinBarVals, mx=Math.max(...vals);
+  document.getElementById('dval').textContent = (ST==='ec'?'$ ':'Q ')+vals[6].toLocaleString('es-EC');
+  const bestI=vals.indexOf(mx), bestD=days[bestI];
+  document.getElementById('barfoot').textContent = `Mejor día: ${bestD==='M'?'miércoles/martes':bestD==='L'?'lunes':bestD==='J'?'jueves':bestD==='V'?'viernes':bestD==='S'?'sábado':'domingo'} con ${(ST==='ec'?'$ ':'Q ')+mx.toLocaleString('es-EC')}. La semana va 11% por encima del promedio.`;
   document.getElementById('barchart').innerHTML = days.map((d,i)=>{
     const pct=Math.round(vals[i]/mx*100), ht=(i===6)?'hoy':'';
-    return `<div class="bcol" onclick="document.getElementById('dlbl').textContent='${d}';document.getElementById('dval').textContent='${C(vals[i])}';">
-      <div class="bfill" style="height:${pct}%;background:${i===6?'var(--acc-d)':'var(--s-dark3)'};" title="${C(vals[i])}"></div>
+    const lbl=(ST==='ec'?'$ ':'Q ')+vals[i].toLocaleString('es-EC');
+    return `<div class="bcol" onclick="document.getElementById('dlbl').textContent='${d}';document.getElementById('dval').textContent='${lbl}';">
+      <div class="bfill" style="height:${pct}%;background:${i===6?'var(--acc-d)':'var(--s-dark3)'};" title="${lbl}"></div>
       <span class="blbl ${ht}">${d}</span></div>`;
   }).join('');
   // Status bar
-  const sts=[
-    {lb:'Entregados',   p:38,n:214,c:'#6d7d4a'},
-    {lb:'En tránsito',  p:26,n:146,c:'var(--acc-d)'},
-    {lb:'Novedad',      p:12,n:67, c:'#8a6a13'},
-    {lb:'Por despachar',p:16,n:90, c:'var(--t-mut4)'},
-    {lb:'Devueltos',    p:8, n:45, c:'#b8322f'},
+  const ec=ST==='ec';
+  const sts=ec?[
+    {lb:'Entregados',   p:37,n:47, c:'#6d7d4a'},
+    {lb:'En tránsito',  p:28,n:36, c:'var(--acc-d)'},
+    {lb:'Novedad',      p:15,n:19, c:'#8a6a13'},
+    {lb:'Por despachar',p:12,n:15, c:'var(--t-mut4)'},
+    {lb:'Devueltos',    p:8, n:10, c:'#b8322f'},
+  ]:[
+    {lb:'Entregados',   p:41,n:29, c:'#6d7d4a'},
+    {lb:'En tránsito',  p:29,n:20, c:'var(--acc-d)'},
+    {lb:'Novedad',      p:14,n:10, c:'#8a6a13'},
+    {lb:'Por despachar',p:10,n:7,  c:'var(--t-mut4)'},
+    {lb:'Devueltos',    p:6, n:4,  c:'#b8322f'},
   ];
   document.getElementById('stbar').innerHTML  = sts.map(e=>`<span class="stseg" style="width:${e.p}%;background:${e.c};"></span>`).join('');
   document.getElementById('stlist').innerHTML = sts.map(e=>`<div class="strow"><span class="stdot" style="background:${e.c};"></span><span style="font:500 12.5px/1 'DM Sans';color:var(--t-ink2);flex:1;">${e.lb}</span><span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">${e.p}%</span><span style="font:600 12.5px/1 'DM Sans';color:var(--t-ink);width:34px;text-align:right;">${e.n}</span></div>`).join('');
 }
 
 function buildPedidos() {
-  const rows=[
-    {cli:'Andrea Morales',  id:'#NE-4412',prod:'Colágeno Premium ×2',ciu:'Quito',     val:C(68), ges:'Camila',   est:'En tránsito',   eI:'#3C6684',eB:'#dbe8f4'},
-    {cli:'Luisa Fernández', id:'#NE-4410',prod:'Proteína Vainilla',  ciu:'Guayaquil', val:C(45), ges:'Valentina',est:'Novedad',        eI:'#8a6a13',eB:'#f6ecd0'},
-    {cli:'Carolina Jiménez',id:'#NE-4408',prod:'Multivitamínico ×3', ciu:'Cuenca',    val:C(52), ges:'Camila',   est:'Entregado',      eI:'#3f5330',eB:'#d3e0c2'},
-    {cli:'Paola Díaz',      id:'#NE-4405',prod:'Omega 3 120 caps',   ciu:'Quito',     val:C(38), ges:'Valentina',est:'Sin despachar',  eI:'var(--t-mut2)',eB:'var(--s-soft7)'},
-    {cli:'Marcela Torres',  id:'#NE-4401',prod:'Colágeno Premium',   ciu:'Loja',      val:C(34), ges:'Camila',   est:'En tránsito',   eI:'#3C6684',eB:'#dbe8f4'},
-    {cli:'Diana Castro',    id:'#NE-4398',prod:'Proteína Chocolate', ciu:'Guayaquil', val:C(45), ges:'Valentina',est:'Devuelto',       eI:'#b8322f',eB:'#f7dedc'},
-    {cli:'Sandra López',    id:'#NE-4393',prod:'Omega 3 ×2',         ciu:'Ibarra',    val:C(76), ges:'Daniela',  est:'Novedad',        eI:'#8a6a13',eB:'#f6ecd0'},
-    {cli:'Beatriz Vargas',  id:'#NE-4388',prod:'Colágeno Premium',   ciu:'Quito',     val:C(34), ges:'Daniela',  est:'Sin asignar',   eI:'#b8322f',eB:'#f7dedc'},
-  ];
-  document.getElementById('pedlist').innerHTML = rows.map(p=>`<div class="orow"><div class="otop"><div><span class="onm">${p.cli}</span>&ensp;<span class="oid">${p.id}</span></div><span class="bd" style="color:${p.eI};background:${p.eB};">${p.est}</span></div><div class="ometa"><span>${p.prod}</span><span>${p.ciu}</span><b>${p.val}</b><span>Gestiona ${p.ges}</span></div></div>`).join('');
+  const rows = POR_TIENDA[ST].pedidos;
+  document.getElementById('pedlist').innerHTML = rows.map(p=>`<div class="orow"><div class="otop"><div><span class="onm">${p.cli}</span>&ensp;<span class="oid">#${p.id}</span></div><span class="bd" style="color:${p.eInk};background:${p.eBg};">${p.est}</span></div><div class="ometa"><span>${p.prod}</span><span>${p.ciu}</span><b>${p.val}</b><span>Gestiona ${p.ges}</span></div></div>`).join('');
 }
 
 function buildNovedades() {
+  const ec=ST==='ec';
   document.getElementById('novkpi').innerHTML = [
-    {lb:'ABIERTAS',     v:'22', sub:'Esta semana', c:'#b8322f'},
-    {lb:'SIN RESOLVER', v:'14', sub:'Más de 24h → alerta', c:'#8a6a13'},
-    {lb:'RESUELTAS 7D', v:'38', sub:'Tasa 63% resolución', c:'#6d7d4a'},
-    {lb:'REINCIDENTES', v:'5',  sub:'Mismo pedido ≥2 novedades', c:'#8a6a13'},
-    {lb:'% ENTREGA 7D', v:'78%',sub:'Umbral mínimo: 65%', c:'#6d7d4a'},
+    {lb:'ABIERTAS',     v:ec?'2':'1',  sub:'Esta semana', c:'#b8322f'},
+    {lb:'SIN RESOLVER', v:ec?'1':'1',  sub:'Más de 24h → alerta', c:'#8a6a13'},
+    {lb:'RESUELTAS 7D', v:ec?'8':'5',  sub:ec?'Tasa 80% resolución':'Tasa 83% resolución', c:'#6d7d4a'},
+    {lb:'REINCIDENTES', v:ec?'1':'0',  sub:'Mismo pedido ≥2 novedades', c:ec?'#8a6a13':'#6d7d4a'},
+    {lb:'% ENTREGA 7D', v:ec?'71%':'68%',sub:'Umbral mínimo: 65%', c:'#6d7d4a'},
   ].map(k=>`<div class="kc" style="border-left:4px solid ${k.c};"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
 
-  const novs=[
-    {id:'#NE-4410',cli:'Luisa Fernández',zona:'Guayaquil',motivo:'Dirección incorrecta',transp:'Servientrega',prod:'Proteína Vainilla',val:C(45),dias:'36h sin resolver',est:'En gestión',eI:'#8a6a13',eB:'#f6ecd0',veces:'2ª novedad',detalle:'La clienta dio una dirección desactualizada. Camila intentó entregar ayer y hoy sin resultado.',nota:'La señora dice que no vive allá. Me dio otra dirección en Urdesa. Voy a reprogramar.',aut:'Camila · hace 3h',ges:'Camila'},
-    {id:'#NE-4389',cli:'Sofía Vargas',zona:'Quito',motivo:'Rechazo en puerta',transp:'Laar Courier',prod:'Colágeno Premium ×2',val:C(68),dias:'8h sin resolver',est:'Pendiente',eI:'#b8322f',eB:'#f7dedc',veces:'1ª novedad',detalle:'El mensajero llegó y la clienta no abrió. Número de teléfono no contesta.',nota:'Llamé 3 veces. WhatsApp enviado sin respuesta. Esperando instrucciones.',aut:'Valentina · hace 1h',ges:'Valentina'},
-    {id:'#NE-4371',cli:'Paola Ríos',zona:'Cuenca',motivo:'Paquete dañado',transp:'Servientrega',prod:'Omega 3',val:C(38),dias:'Resuelto hoy',est:'Resuelto',eI:'#3f5330',eB:'#d3e0c2',veces:'1ª novedad',detalle:'El paquete llegó aplastado. Foto enviada por la clienta.',nota:'Coordiné reenvío sin costo. Sale mañana desde bodega.',aut:'Camila · hace 6h',ges:'Camila'},
-  ];
+  const novs = POR_TIENDA[ST].novedades;
   let h='';
   novs.forEach((n,i)=>{
     const urg=n.eI==='#b8322f'||n.eI==='#8a6a13';
@@ -1488,7 +1472,7 @@ function buildNovedades() {
       <div class="nmeta"><span>${n.motivo}</span><span>${n.transp} · ${n.prod}</span><span class="nval">${n.val}</span><span class="ntime">${n.dias}</span><span style="color:var(--t-mut3);">${n.veces}</span><span class="ntog" onclick="togNov(${i})">Ver detalle ▾</span></div>
       <div class="ndtl" id="nd${i}" style="display:none;">
         <div><div class="dlbl">QUÉ PASÓ</div><div class="dtxt">${n.detalle}</div></div>
-        <div class="gnote"><div class="dlbl">NOTA DE LA GESTORA · ${n.ges}</div><div class="dtxt" style="margin-top:4px;">${n.nota}</div><div style="font:500 10.5px/1 'DM Sans';color:var(--t-mut2);margin-top:4px;">${n.aut}</div></div>
+        <div class="gnote"><div class="dlbl">NOTA DE LA GESTORA</div><div class="dtxt" style="margin-top:4px;">${n.nota}</div><div style="font:500 10.5px/1 'DM Sans';color:var(--t-mut2);margin-top:4px;">${n.aut}</div></div>
         <div><div class="dlbl">CAMBIAR ESTADO</div><div class="nstates">${['En gestión','Esperando clienta','Reprogramar','Reenviar','Devolver','Resuelto'].map(e=>`<div class="nst${e===n.est?' on':''}" onclick="this.closest('.nstates').querySelectorAll('.nst').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${e}</div>`).join('')}</div></div>
         <textarea class="narea" placeholder="Qué pasó, qué acordaste con la clienta y qué sigue."></textarea>
         <div class="nsavebtn">Guardar</div>
@@ -1544,14 +1528,10 @@ function renderOfiDet(data,i){
 }
 
 function buildGestoras() {
-  const jornada=[
-    {nm:'Camila Restrepo',  rol:'Gestora senior',color:'#6d7d4a',est:'Activa',   ent:'8:03',sal:'—',   t:'6h 12m',hizo:'34 novedades gestionadas, 22 resueltas, 8 reprogramadas. 4 entregas en oficina confirmadas.',falto:'Quedan 4 casos sin nota de cierre.'},
-    {nm:'Valentina Ospina', rol:'Gestora',       color:'#8a6a13',est:'Activa',   ent:'8:45',sal:'—',   t:'4h 30m',hizo:'18 novedades gestionadas, 12 resueltas. 2 devoluciones coordinadas.',falto:'3 casos esperando respuesta más de 2h.'},
-    {nm:'Daniela Ríos',     rol:'Gestora',       color:'#b8322f',est:'Sin conectar',ent:'—',sal:'—',  t:'0h',    hizo:'—',falto:'No abrió Nova en su turno. 8 casos asignados sin atender.'},
-  ];
+  const jornada = POR_TIENDA[ST].jornada;
   document.getElementById('jlist').innerHTML = jornada.map(j=>`<div class="jcard" style="border-left:4px solid ${j.color};">
     <div class="jtop"><div><span style="font:600 14px/1.1 'Fraunces',serif;color:var(--t-ink);">${j.nm}</span>&ensp;<span class="oid">${j.rol}</span></div><span class="bd" style="color:${j.color};background:var(--s-card);border:1px solid var(--s-line);">${j.est}</span></div>
-    <div class="jtimes"><span>Entró <b>${j.ent}</b></span><span>Salió <b>${j.sal}</b></span><span>Conectada <b>${j.t}</b></span></div>
+    <div class="jtimes"><span>Entró <b>${j.ent}</b></span><span>Salió <b>${j.sal}</b></span><span>Conectada <b>${j.tiempo}</b></span></div>
     <div><div class="dlbl">QUÉ HIZO</div><div class="dtxt">${j.hizo}</div></div>
     <div><div class="dlbl">QUÉ LE FALTÓ</div><div class="dtxt">${j.falto}</div></div>
   </div>`).join('');
@@ -1624,31 +1604,22 @@ function buildAuditoria() {
 }
 
 function buildPauta() {
+  const ec=ST==='ec';
   document.getElementById('dinkpi').innerHTML = [
-    {lb:'GASTO PAUTA MES', v:C(2840), sub:'Meta: '+C(3500)+' · queda '+C(660),   cl:'a'},
-    {lb:'ROAS GENERAL',    v:'3.9×',  sub:'Mínimo 2.0× · lleva 18 días sobre umbral',cl:'g'},
-    {lb:'CPA PROMEDIO',    v:C(9.10), sub:'Techo: '+C(10.00)+' · 1 producto sobre',  cl:'w'},
-    {lb:'CPM PROMEDIO',    v:C(2.80), sub:'Costo por 1.000 impresiones',              cl:'a'},
+    {lb:'GASTO PAUTA MES', v:ec?'$ 21.180.000':'Q 78.900', sub:ec?'31% del recaudo del mes':'31% del recaudo del mes', cl:'a'},
+    {lb:'ROAS GENERAL',    v:ec?'4.4×':'3.9×',  sub:'Mínimo 2.0× · lleva 18 días sobre umbral', cl:'g'},
+    {lb:'CPA PROMEDIO',    v:ec?'$ 9,10':'Q 33,80', sub:'Techo: '+(ec?'$ 10,00':'Q 37,20')+' · '+(!ec?'1 producto':'1 producto')+' sobre', cl:'w'},
+    {lb:'CPM PROMEDIO',    v:ec?'$ 2,80':'Q 10,40', sub:'Costo por 1.000 impresiones', cl:'a'},
   ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
 
-  document.getElementById('cpa-techo-lbl').textContent = C(10.00)+' por pedido';
+  document.getElementById('cpa-techo-lbl').textContent = (ec?'$ 10,00':'Q 37,20')+' por pedido';
 
-  document.getElementById('roaslist').innerHTML = [
-    {nm:'Proteína Vainilla',   roas:'5.2×', cl:'bd-g', bg:'#d3e0c2'},
-    {nm:'Omega 3',             roas:'4.1×', cl:'bd-g', bg:'#d3e0c2'},
-    {nm:'Multivitamínico',     roas:'3.8×', cl:'bd-g', bg:'#d3e0c2'},
-    {nm:'Colágeno Premium',    roas:'2.1×', cl:'bd-w', bg:'#f6ecd0'},
-  ].map(r=>`<div class="roas-row"><div><div class="roas-nm">${r.nm}</div></div><span class="bd ${r.cl}">${r.roas}</span></div>`).join('');
+  document.getElementById('roaslist').innerHTML = POR_TIENDA[ST].roas.map(r=>`<div class="roas-row"><div><div class="roas-nm">${r.nm}</div></div><span class="bd ${r.cl}">${r.roas}</span></div>`).join('');
 
-  const pg=[220,310,290,380,420,340,280],pm=Math.max(...pg);
-  document.getElementById('pautabar').innerHTML = ['L','M','M','J','V','S','D'].map((d,i)=>`<div class="bcol"><div class="bfill" style="height:${Math.round(pg[i]/pm*100)}%;background:${i===4?'var(--acc-d)':'var(--s-dark3)'};" title="${C(pg[i])}"></div><span class="blbl">${d}</span></div>`).join('');
+  const pg=POR_TIENDA[ST].dinBarVals,pm=Math.max(...pg);
+  document.getElementById('pautabar').innerHTML = ['L','M','M','J','V','S','D'].map((d,i)=>`<div class="bcol"><div class="bfill" style="height:${Math.round(pg[i]/pm*100)}%;background:${i===6?'var(--acc-d)':'var(--s-dark3)'};" title="${C(pg[i])}"></div><span class="blbl">${d}</span></div>`).join('');
 
-  document.getElementById('cpalist').innerHTML = [
-    {nm:'Colágeno · conjunto principal', cpa:C(14.80), cl:'bd-r', ok:false},
-    {nm:'Proteína · remarketing',         cpa:C(7.20),  cl:'bd-g', ok:true},
-    {nm:'Omega 3 · frío',                 cpa:C(9.80),  cl:'bd-w', ok:true},
-    {nm:'Multivit · lookalike',           cpa:C(8.40),  cl:'bd-g', ok:true},
-  ].map(c=>`<div class="roas-row"><div class="roas-nm">${c.nm}</div><span class="bd ${c.cl}">CPA ${c.cpa}</span></div>`).join('');
+  document.getElementById('cpalist').innerHTML = POR_TIENDA[ST].cpa.map(c=>`<div class="roas-row"><div class="roas-nm">${c.nm}</div><span class="bd ${c.cl}">CPA ${c.cpa}</span></div>`).join('');
 }
 
 function buildInventario() {
@@ -1688,18 +1659,17 @@ const D_PRODS = {
   ]
 };
 function buildProductos(){
-  const prods = D_PRODS[ST]||[];
+  const prods = POR_TIENDA[ST].productos||[];
   document.getElementById('prodkpi').innerHTML=[
     {lb:'SKUs ACTIVOS',v:prods.length+'',sub:'Con pauta este mes',cl:'a'},
     {lb:'PARA ESCALAR',v:prods.filter(p=>p.ver==='Escalar').length+'',sub:'Margen positivo',cl:'g'},
     {lb:'PARA FRENAR', v:prods.filter(p=>p.ver==='Frenar'||p.ver==='Revisar').length+'',sub:'Revisar urgente',cl:'r'},
   ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
-  const clMap={g:'bd-g',r:'bd-r',w:'bd-w',m:'bd-m'};
   document.getElementById('prodlist').innerHTML=prods.map(p=>`
     <div class="card" style="gap:10px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <span style="font:600 14px/1.2 'DM Sans';color:var(--t-ink);">${p.nm}</span>
-        <span class="bd ${clMap[p.cl]}">${p.ver}</span>
+        <span class="bd" style="background:${p.vBg};color:${p.vInk};">${p.ver}</span>
       </div>
       <p style="font:500 12px/1.5 'DM Sans';color:var(--t-mut);margin:0;">${p.por}</p>
       <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">${p.stock}</span>
@@ -1977,10 +1947,9 @@ function step(n){
 function enterApp(forceRol){
   const email = document.getElementById('em').value.toLowerCase().trim();
   localStorage.setItem('ne_email', email);
-  const info = ROLES[email];
-  ROL = forceRol || (info ? info.rol : 'dueno');
-  const nombre = info ? info.nombre : 'Manuela';
-  const label  = info ? info.label  : 'dueña';
+  ROL = forceRol || rolDe(email);
+  const nombre = nombreDe(email);
+  const label  = labelDe(email);
 
   document.getElementById('app').setAttribute('data-rol', ROL);
   document.getElementById('brand-rol').textContent = 'Nova · ' + label.charAt(0).toUpperCase() + label.slice(1);
@@ -2052,8 +2021,7 @@ function updateSub(){
   const days=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
   const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const email = localStorage.getItem('ne_email') || '';
-  const info  = ROLES[email];
-  const nombre = info ? info.nombre : 'Manuela';
+  const nombre = nombreDe(email);
   const tienda = ROL === 'gestora' ? 'Nutrea EC' : STORES[ST].name;
   document.getElementById('psub').textContent=`${days[d.getDay()]} ${d.getDate()} de ${months[d.getMonth()]} · ${tienda} · ${nombre}`;
 }
@@ -2069,8 +2037,7 @@ function applyPrefs(){
   document.getElementById('cec').classList.toggle('on',ST==='ec');
   document.getElementById('cgt').classList.toggle('on',ST==='gt');
   const email=localStorage.getItem('ne_email')||'';
-  const info=ROLES[email];
-  const nombre=info?info.nombre:'Manuela';
+  const nombre=nombreDe(email);
   document.getElementById('bsub').textContent=nombre+' · Nutrea '+(ST==='ec'?'EC':'GT');
 }
 
