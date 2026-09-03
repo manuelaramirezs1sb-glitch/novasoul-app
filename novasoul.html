@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NovaSoul</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ─────────────────────────────────────────── */
+:root {
+  --bg:#FAF6EC; --card:#FFFDF7; --soft:#F4EFE1; --soft2:#F1EBDC; --soft3:#EFE9D9;
+  --panel:#F5F0E2; --panel-line:#E7DFCB;
+  --line:#EBE3D2; --line2:#E4DBC6; --line3:#EBE3D2; --line4:#DFD5BE; --line5:#D4C8AC;
+  --ink:#35362F; --ink2:#454739; --ink3:#565947;
+  --mut:#6F7266; --mut2:#7B7E70; --mut3:#787B6C; --mut4:#878A7A; --mut5:#7E8171;
+  --acc:#DDA43C; --acc-lo:#A87A24; --acc-hi:#EDC97E; --acc-ink:#2C2A22;
+  --amber:#FBF4E2; --amber-line:#F2DFB6;
+  --lila:#F6F1E3; --lila-line:#E8E0CC;
+  --sage:#EDF2E7; --sage-line:#d8e6cb; --sage-d:#3F5A3A;
+  --acc-d:#A87A24;
+  --shadow: 0 8px 28px rgba(60,40,18,.1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-modo="claro"]) {
+    --bg:#1B1B17; --card:#24241E; --soft:#2A2A22; --soft2:#2E2E25; --soft3:#2E2E25;
+    --panel:#201F1A; --panel-line:#33332A;
+    --line:#35352C; --line2:#3C3C31; --line3:#35352C; --line4:#434337; --line5:#4E4E40;
+    --ink:#F3F1E7; --ink2:#E4E1D4; --ink3:#D2CFC0;
+    --mut:#ADB0A0; --mut2:#A0A394; --mut3:#8F9284; --mut4:#7F8274; --mut5:#7F8274;
+    --acc:#E5B457; --acc-ink:#241F14;
+    --amber:#2E2A1D; --amber-line:#453D28;
+    --acc-d:#EDC97E;
+    --lila:#262620; --lila-line:#3A3A30;
+    --sage:#23281F; --sage-line:#384232; --sage-d:#A8C4A2;
+    --shadow: 0 8px 28px rgba(0,0,0,.35);
+  }
+}
+:root[data-modo="oscuro"] {
+  --bg:#1B1B17; --card:#24241E; --soft:#2A2A22; --soft2:#2E2E25; --soft3:#2E2E25;
+  --panel:#201F1A; --panel-line:#33332A;
+  --line:#35352C; --line2:#3C3C31; --line3:#35352C; --line4:#434337; --line5:#4E4E40;
+  --ink:#F3F1E7; --ink2:#E4E1D4; --ink3:#D2CFC0;
+  --mut:#ADB0A0; --mut2:#A0A394; --mut3:#8F9284; --mut4:#7F8274; --mut5:#7F8274;
+  --acc:#E5B457; --acc-ink:#241F14;
+  --amber:#2E2A1D; --amber-line:#453D28;
+  --acc-d:#EDC97E;
+  --lila:#262620; --lila-line:#3A3A30;
+  --sage:#23281F; --sage-line:#384232; --sage-d:#A8C4A2;
+  --shadow: 0 8px 28px rgba(0,0,0,.35);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);}
+textarea,input,select,button{font-family:inherit;}
+::-webkit-scrollbar{width:0;height:0;}
+
+/* ── PUERTA (login/onboarding) ─────────────────────── */
+#puerta{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;}
+.pt-left{width:420px;flex:0 0 420px;background:var(--lila);border-right:1px solid var(--lila-line);padding:52px 44px;display:flex;flex-direction:column;justify-content:space-between;gap:28px;}
+.pt-orbs{width:130px;height:130px;border-radius:50%;background:#EBDDBB;position:relative;flex:none;}
+.pt-orbs span:first-child{position:absolute;left:20px;top:16px;width:72px;height:72px;border-radius:50%;background:var(--acc);opacity:.5;}
+.pt-orbs span:last-child{position:absolute;right:14px;bottom:18px;width:32px;height:32px;border-radius:50%;background:var(--amber);}
+.pt-frase{font:600 32px/1.18 'Fraunces',serif;color:var(--ink);max-width:16ch;}
+.pt-nota{font:500 14px/1.7 'DM Sans';color:var(--mut);max-width:36ch;}
+.pt-privacy{font:500 11.5px/1.6 'DM Sans';color:var(--mut4);}
+
+.pt-right{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 52px;}
+.pt-form{width:400px;max-width:100%;display:flex;flex-direction:column;gap:22px;}
+.pt-star{width:160px;margin:0 auto 12px;border-radius:50%;background:var(--amber);border:1px solid var(--amber-line);height:160px;display:flex;align-items:center;justify-content:center;font:700 72px/1 'Fraunces',serif;color:var(--acc);}
+.pt-lbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.4px;color:var(--acc-d);}
+.pt-h{font:600 30px/1.15 'Fraunces',serif;color:var(--ink);}
+.pt-sub{font:500 13.5px/1.7 'DM Sans';color:var(--mut);max-width:46ch;text-wrap:pretty;}
+.pt-field{display:flex;flex-direction:column;gap:8px;}
+.pt-field label{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--mut3);}
+.pt-field input{border:1px solid var(--line4);background:var(--card);border-radius:11px;padding:15px 16px;font:500 14.5px/1 'DM Sans';color:var(--ink);outline:none;width:100%;}
+.pt-field input:focus{border-color:var(--acc);}
+.pt-btn{background:var(--acc);color:var(--acc-ink);font:600 14.5px/1 'DM Sans';padding:16px;border-radius:12px;text-align:center;cursor:pointer;border:none;width:100%;}
+.pt-btn:hover{opacity:.88;}
+.pt-links{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.pt-link{font:600 12.5px/1 'DM Sans';color:var(--acc-d);cursor:pointer;}
+.pt-quiet{font:500 12.5px/1 'DM Sans';color:var(--mut3);cursor:pointer;}
+
+/* onboarding choices */
+.ob-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.ob-choice{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:13px;cursor:pointer;transition:border-color .15s;}
+.ob-choice:hover{border-color:var(--acc);}
+.ob-thumb{height:88px;border-radius:12px;border:1px dashed var(--line5);background:var(--lila);display:flex;align-items:center;justify-content:center;font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--mut3);}
+.ob-thumb-bars{height:88px;border-radius:12px;background:var(--lila);padding:18px;display:flex;flex-direction:column;justify-content:center;gap:8px;}
+.ob-bar{height:9px;border-radius:5px;background:#EBDDBB;}
+.ob-ch{font:600 18px/1.2 'Fraunces',serif;color:var(--ink);}
+.ob-cs{font:500 12.5px/1.55 'DM Sans';color:var(--mut);}
+.ob-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px;}
+.ob-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.ob-ghost{border:1px solid var(--line4);color:var(--ink3);font:600 13.5px/1 'DM Sans';padding:14px 20px;border-radius:11px;cursor:pointer;}
+.ob-confirm-chip{font:600 11.5px/1 'DM Sans';color:var(--ink2);background:var(--soft);border-radius:99px;padding:10px 14px;}
+.ob-loading{background:var(--lila);border:1px solid var(--lila-line);border-radius:16px;padding:26px;display:flex;flex-direction:column;gap:13px;}
+.ob-prog-track{height:7px;border-radius:5px;background:#EBDDBB;overflow:hidden;}
+.ob-prog-fill{height:100%;border-radius:5px;background:var(--acc);width:0;transition:width 2s ease-out;}
+
+/* ── APP SHELL ──────────────────────────────────────── */
+#app{display:none;height:100vh;overflow:hidden;}
+#app.on{display:flex;}
+
+/* sidebar */
+.sidebar{width:230px;flex:0 0 230px;background:var(--panel);border-right:1px solid var(--panel-line);padding:22px 15px 18px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;}
+.sb-brand{display:flex;align-items:center;gap:9px;padding:0 9px 4px;}
+.sb-ico{width:28px;height:28px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font:700 13px/1 'Fraunces',serif;color:var(--acc-ink);}
+.sb-name{font:600 20px/1 'Fraunces',serif;color:var(--ink);}
+.sb-section{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--mut5);padding:0 10px 6px;}
+.ni{padding:9px 11px;border-radius:11px;font:500 13px/1.2 'DM Sans';color:var(--mut);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:background .12s;}
+.ni:hover{background:var(--soft);color:var(--ink);}
+.ni.on{background:var(--soft2);color:var(--ink);font-weight:600;}
+.ni-badge{font:700 9px/1 'DM Sans';background:var(--acc);color:var(--acc-ink);border-radius:20px;padding:4px 7px;}
+.ni-sage{font:700 9px/1 'DM Sans';background:var(--sage);color:var(--sage-d);border-radius:20px;padding:4px 7px;}
+
+/* sidebar energy card */
+.sb-energy{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;display:flex;flex-direction:column;gap:9px;}
+.sb-energy-lbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--mut3);}
+.sb-scores{display:flex;gap:0;}
+.sb-sc{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:0 4px;}
+.sb-sc-v{font:600 18px/1 'Fraunces',serif;}
+.sb-sc-l{font:500 9px/1 'DM Sans';color:var(--mut3);}
+.sb-div{width:1px;background:var(--line);}
+
+/* sidebar rewards mini */
+.sb-rewards{background:var(--amber);border:1px solid var(--amber-line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;cursor:pointer;}
+.sb-rew-h{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.sb-rew-lbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--acc-d);}
+.sb-rew-pct{font:600 10px/1 'DM Sans';color:var(--acc-d);}
+.sb-rew-big{font:600 24px/1 'Fraunces',serif;color:var(--ink);}
+.sb-rew-sub{font:500 10px/1.3 'DM Sans';color:var(--mut3);}
+.sb-rew-bar{height:8px;border-radius:6px;background:var(--soft);overflow:hidden;}
+.sb-rew-fill{height:100%;border-radius:6px;background:var(--acc);}
+.sb-rew-bars{display:flex;gap:4px;align-items:flex-end;height:28px;}
+.sb-rew-day{flex:1;border-radius:3px 3px 0 0;background:var(--acc);opacity:.5;}
+.sb-rew-day.hoy{opacity:1;}
+
+/* streak */
+.sb-streak-lbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--mut5);}
+.sb-streak-bar{display:flex;gap:5px;}
+.sb-streak-seg{flex:1;height:5px;border-radius:3px;}
+.sb-nova-btn{border-radius:14px;padding:13px 14px;background:var(--acc);display:flex;align-items:center;gap:11px;cursor:pointer;box-shadow:0 6px 16px rgba(221,164,60,.22);}
+.sb-nova-tag{font:700 9px/1 'DM Sans';letter-spacing:1.5px;color:var(--acc-ink);background:rgba(255,255,255,.34);border-radius:9px;padding:9px 7px;flex:none;}
+.sb-nova-txt strong{display:block;font:600 13px/1 'DM Sans';color:var(--acc-ink);}
+.sb-nova-txt small{display:block;font:500 10px/1 'DM Sans';color:var(--acc-ink);}
+
+/* ── MAIN ───────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+.topbar{flex:0 0 58px;border-bottom:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:space-between;padding:0 26px;gap:16px;}
+.semana{display:flex;align-items:center;gap:4px;}
+.sem-day{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 12px;border-radius:10px;cursor:pointer;min-width:42px;}
+.sem-day:hover{background:var(--soft);}
+.sem-day.on{background:var(--acc);color:var(--acc-ink);}
+.sem-dow{font:600 9px/1 'DM Sans';letter-spacing:.8px;opacity:.65;}
+.sem-num{font:600 17px/1 'Fraunces',serif;}
+.sem-day.on .sem-dow,.sem-day.on .sem-num{color:var(--acc-ink);}
+.tb-right{display:flex;align-items:center;gap:12px;}
+.tb-lang{font:600 10.5px/1 'DM Sans';color:var(--mut3);border:1px solid var(--panel-line);border-radius:20px;padding:5px 9px;cursor:pointer;}
+.tb-av{width:30px;height:30px;border-radius:50%;background:var(--line3);display:flex;align-items:center;justify-content:center;font:600 12px/1 'DM Sans';color:var(--acc-d);cursor:pointer;}
+.tb-mode{display:flex;gap:3px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:3px;}
+.tb-mbtn{font:600 11px/1 'DM Sans';color:var(--mut3);padding:6px 11px;border-radius:17px;cursor:pointer;}
+.tb-mbtn.on{background:var(--soft2);color:var(--ink);}
+
+.content{flex:1;overflow-y:auto;padding:24px 26px 40px;display:flex;flex-direction:column;gap:18px;}
+
+/* ── VIEWS ──────────────────────────────────────────── */
+.view{display:none;flex-direction:column;gap:18px;}
+.view.on{display:flex;}
+
+/* ── CARDS ──────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;}
+.card-lila{background:var(--lila);border:1px solid var(--lila-line);border-radius:18px;padding:22px 26px;}
+.card-amber{background:var(--amber);border:1.5px solid var(--amber-line);border-radius:18px;padding:20px 22px;}
+.card-sage{background:var(--sage);border:1px solid var(--sage-line);border-radius:18px;padding:20px 22px;}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
+.card-lbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.2px;color:var(--mut3);}
+.card-lbl-amber{font:600 9.5px/1 'DM Sans';letter-spacing:1.2px;color:var(--acc-d);}
+.card-lbl-sage{font:600 9.5px/1 'DM Sans';letter-spacing:1.2px;color:var(--sage-d);}
+.card-lbl-lila{font:600 9.5px/1 'DM Sans';letter-spacing:1.2px;color:var(--acc-d);}
+.card-h2{font:600 28px/1.1 'Fraunces',serif;color:var(--ink);}
+.card-h3{font:600 22px/1.15 'Fraunces',serif;color:var(--ink);}
+.card-it{font:400 14px/1.2 'Fraunces',serif;font-style:italic;color:var(--mut3);}
+.card-p{font:500 13.5px/1.65 'DM Sans';color:var(--mut);text-wrap:pretty;}
+.card-cta{background:var(--acc);color:var(--acc-ink);font:600 12.5px/1 'DM Sans';padding:13px 18px;border-radius:11px;cursor:pointer;border:none;display:inline-block;}
+.card-ghost{border:1px solid var(--line4);color:var(--acc-d);font:600 12.5px/1 'DM Sans';padding:13px 18px;border-radius:11px;cursor:pointer;}
+.link{font:600 10.5px/1 'DM Sans';letter-spacing:.8px;color:var(--acc-d);cursor:pointer;}
+
+/* layout helpers */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.g155{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;}
+.g14{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;}
+.g15-1{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;}
+.slbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.2px;color:var(--mut3);}
+.row-btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+
+/* task row */
+.task-row{display:flex;align-items:center;gap:13px;padding:12px 0;border-bottom:1px solid var(--soft2);}
+.task-row:last-child{border-bottom:none;padding-bottom:0;}
+.task-box{width:20px;height:20px;border-radius:7px;border:2px solid var(--line5);flex:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font:700 11px/1 'DM Sans';color:var(--acc-d);transition:background .15s;}
+.task-box.done{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);}
+.task-lbl{flex:1;font:500 13.5px/1.35 'DM Sans';color:var(--ink);}
+.task-lbl.done{text-decoration:line-through;color:var(--mut3);}
+.task-meta{font:500 10.5px/1 'DM Sans';color:var(--mut4);white-space:nowrap;}
+
+/* intensity ring (CSS conic) */
+.ring-wrap{width:160px;height:160px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;}
+.ring-inner{width:120px;height:120px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
+
+/* progress bar */
+.prog-track{height:10px;border-radius:7px;background:var(--soft);overflow:hidden;}
+.prog-fill{height:100%;border-radius:7px;background:var(--acc);}
+
+/* tema card */
+.tema-card{background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;cursor:pointer;transition:border-color .15s;}
+.tema-card:hover{border-color:var(--acc);}
+.tema-card.on{border-color:var(--acc);background:var(--card);}
+.tema-kicker{font:600 9px/1 'DM Sans';letter-spacing:1px;color:var(--acc-d);}
+.tema-h{font:600 18px/1.2 'Fraunces',serif;color:var(--ink);}
+.tema-p{font:500 11.5px/1.5 'DM Sans';color:var(--mut);}
+.tema-bar{height:5px;border-radius:4px;background:var(--line2);overflow:hidden;margin-top:2px;}
+.tema-fill{height:100%;border-radius:4px;background:var(--acc);}
+.tema-cta{font:600 10.5px/1 'DM Sans';letter-spacing:.8px;color:var(--acc-d);}
+
+/* tema detail */
+.det-why{background:var(--lila);border:1px solid var(--lila-line);border-radius:14px;padding:18px 20px;}
+.det-how{background:var(--sage);border:1px solid var(--sage-line);border-radius:14px;padding:18px 20px;}
+.det-shadow{background:var(--amber);border:1px solid var(--amber-line);border-radius:14px;padding:16px 20px;display:flex;align-items:flex-start;gap:14px;}
+.det-accent{width:6px;align-self:stretch;border-radius:4px;background:var(--acc);flex:none;}
+.det-step{display:flex;align-items:flex-start;gap:11px;}
+.det-num{width:20px;height:20px;border-radius:50%;background:var(--card);color:var(--sage-d);font:700 10px/20px 'DM Sans';text-align:center;flex:none;}
+
+/* recompensas row */
+.rew-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--soft2);}
+.rew-dot{width:10px;height:10px;border-radius:50%;flex:none;}
+.rew-dot.done{background:var(--acc);}
+.rew-dot.pend{background:var(--line4);}
+.rew-lbl{flex:1;font:500 12.5px/1 'DM Sans';color:var(--ink2);}
+.rew-val{font:500 11px/1 'DM Sans';color:var(--mut3);}
+.rew-pts{font:600 12px/1 'DM Sans';background:var(--amber);color:var(--acc-d);border-radius:20px;padding:5px 9px;}
+.rew-pts.done{background:var(--sage);color:var(--sage-d);}
+
+/* bar chart */
+.bars{display:flex;gap:6px;align-items:flex-end;height:120px;}
+.bcol{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:7px;}
+.bfill{width:100%;border-radius:4px 4px 0 0;}
+.blbl{font:600 9px/1 'DM Sans';letter-spacing:.6px;color:var(--mut4);}
+.blbl.hoy{color:var(--acc-d);}
+.bpts{font:500 9px/1 'DM Sans';color:var(--mut3);}
+
+/* plataformas */
+.plat-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;display:flex;flex-direction:column;gap:14px;cursor:pointer;transition:border-color .15s;}
+.plat-card:hover{border-color:var(--acc);}
+.plat-ico{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font:700 14px/1 'DM Sans';color:#fff;}
+.plat-h{font:600 18px/1.15 'Fraunces',serif;color:var(--ink);}
+.plat-sub{font:500 12px/1.55 'DM Sans';color:var(--mut);}
+.plat-stat{font:600 9.5px/1 'DM Sans';letter-spacing:.8px;color:var(--mut3);}
+.plat-val{font:700 22px/1 'Fraunces',serif;color:var(--ink);}
+.plat-kpis{display:flex;gap:18px;flex-wrap:wrap;}
+
+/* perfil */
+.perf-av{width:80px;height:80px;border-radius:50%;background:var(--amber);border:3px solid var(--amber-line);display:flex;align-items:center;justify-content:center;font:700 32px/1 'Fraunces',serif;color:var(--acc-d);}
+.pref-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--soft2);gap:12px;}
+.pref-row:last-child{border-bottom:none;}
+.pref-key{font:600 12px/1 'DM Sans';color:var(--ink);}
+.pref-val{font:500 12px/1 'DM Sans';color:var(--mut3);}
+.pref-tag{font:600 10px/1 'DM Sans';padding:6px 10px;border-radius:20px;background:var(--soft);color:var(--ink3);}
+.pref-select{display:flex;gap:6px;flex-wrap:wrap;}
+.pref-chip{font:600 10px/1 'DM Sans';padding:6px 11px;border-radius:20px;border:1px solid var(--line3);color:var(--mut2);cursor:pointer;}
+.pref-chip.on{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);}
+</style>
+</head>
+<body>
+
+<!-- ════════════ PUERTA ════════════ -->
+<div id="puerta">
+  <div class="pt-left">
+    <div style="font:700 13px/1 'DM Sans';letter-spacing:1.2px;color:var(--mut4);">NOVA SOUL</div>
+    <div class="pt-orbs"><span></span><span></span></div>
+    <div>
+      <div style="font:600 9.5px/1 'DM Sans';letter-spacing:1.3px;color:var(--mut3);margin-bottom:8px;">ENERGÍA · PLUTÓN EN CAPRICORNIO</div>
+      <div class="pt-frase">Lo que sigues sosteniendo</div>
+    </div>
+    <p class="pt-nota">Tus datos natales no se comparten ni se usan para nada más que tu lectura.</p>
+  </div>
+
+  <div class="pt-right">
+    <!-- LOGIN -->
+    <div class="pt-form" id="pt-login">
+      <div class="pt-star">🌙</div>
+      <div style="text-align:center;display:flex;flex-direction:column;gap:6px;">
+        <div class="pt-lbl">ENTRAR</div>
+        <div class="pt-h">Hola de nuevo</div>
+      </div>
+      <div class="pt-field"><label>CORREO</label><input type="email" value="manuela@nutrea.ec" id="pt-email"></div>
+      <div class="pt-field"><label>CONTRASEÑA</label><input type="password" value="soulnova"></div>
+      <button class="pt-btn" onclick="enterApp()">Entrar a Soul</button>
+      <div class="pt-links">
+        <span class="pt-link" onclick="showOnb()">Crear mi cuenta</span>
+        <span class="pt-quiet">Olvidé mi contraseña</span>
+      </div>
+    </div>
+
+    <!-- ONBOARDING -->
+    <div class="pt-form" id="pt-onb" style="display:none;max-width:520px;width:100%;">
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div class="pt-lbl" id="onb-step-lbl">PASO 1 DE 2</div>
+        <div class="pt-h" id="onb-title">Tu carta natal</div>
+        <p class="pt-sub" id="onb-sub">Para leer tu cielo cada día necesito saber cuándo y dónde naciste. Son dos segundos.</p>
+      </div>
+
+      <div id="onb-elige">
+        <div class="ob-grid">
+          <div class="ob-choice" onclick="showOnbSubir()">
+            <div class="ob-thumb">JPG · PNG · PDF</div>
+            <div class="ob-ch">Subir mi carta</div>
+            <div class="ob-cs">La leo y confirmo las casas contigo.</div>
+          </div>
+          <div class="ob-choice" onclick="showOnbManual()">
+            <div class="ob-thumb-bars"><span class="ob-bar" style="width:72%;"></span><span class="ob-bar" style="width:46%;"></span><span class="ob-bar" style="width:58%;"></span></div>
+            <div class="ob-ch">Fecha, hora y lugar</div>
+            <div class="ob-cs">Dos minutos. Si no sabes la hora exacta, te muestro el margen.</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;"><span class="pt-link" onclick="backLogin()">← Volver al login</span></div>
+      </div>
+
+      <div id="onb-manual" style="display:none;">
+        <div class="ob-card">
+          <div class="ob-row">
+            <div class="pt-field"><label>FECHA</label><input value="14 / 09 / 1998"></div>
+            <div class="pt-field"><label>HORA</label><input value="04:20"></div>
+            <div class="pt-field" style="grid-column:span 2;"><label>LUGAR DE NACIMIENTO</label><input value="Medellín, Colombia"></div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="pt-btn" style="width:auto;padding:14px 22px;" onclick="showOnbLoading()">Generar mi carta</button>
+            <span class="ob-ghost" onclick="showOnbElige()">Atrás</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="onb-subir" style="display:none;">
+        <div class="ob-card">
+          <div style="display:flex;align-items:center;gap:15px;">
+            <div style="width:58px;height:58px;border-radius:12px;background:var(--lila);display:flex;align-items:center;justify-content:center;font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--acc-d);">PDF</div>
+            <div><div style="font:600 14.5px/1 'DM Sans';color:var(--ink);">carta-manuela.pdf</div><div style="font:500 12px/1 'DM Sans';color:var(--mut3);margin-top:4px;">Leí fecha, hora y lugar. Confírmalos.</div></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <span class="ob-confirm-chip">14 sep 1998</span>
+            <span class="ob-confirm-chip">04:20</span>
+            <span class="ob-confirm-chip">Medellín</span>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="pt-btn" style="width:auto;padding:14px 22px;" onclick="showOnbLoading()">Está correcto</button>
+            <span class="ob-ghost" onclick="showOnbElige()">Atrás</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="onb-loading" style="display:none;">
+        <div class="ob-loading">
+          <div style="font:600 22px/1.2 'Fraunces',serif;color:var(--ink);">Calculando tus casas…</div>
+          <div class="ob-prog-track"><div class="ob-prog-fill" id="prog-fill"></div></div>
+          <p style="font:500 12.5px/1.6 'DM Sans';color:var(--mut);">Ubicando el ascendente y los regentes. Tarda unos segundos.</p>
+          <button class="pt-btn" style="width:auto;padding:13px 20px;" onclick="enterApp()">Ver mi día →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ APP ════════════ -->
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-ico">S</div>
+      <div class="sb-name">NovaSoul</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:3px;">
+      <div class="sb-section">MI DÍA</div>
+      <div class="ni on" data-v="hoy" onclick="go('hoy',this)">✦ Hoy</div>
+      <div class="ni" data-v="pendientes" onclick="go('pendientes',this)">◎ Pendientes<span class="ni-badge">5</span></div>
+      <div class="ni" data-v="cielo" onclick="go('cielo',this)">◐ El cielo</div>
+      <div class="ni" data-v="recompensas" onclick="go('recompensas',this)">◈ Recompensas</div>
+      <div class="ni" data-v="diagnostico" onclick="go('diagnostico',this)">◉ Diagnóstico</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:3px;">
+      <div class="sb-section">MI CUENTA</div>
+      <div class="ni" data-v="plataformas" onclick="go('plataformas',this)">⊕ Mis plataformas<span class="ni-sage">3</span></div>
+      <div class="ni" data-v="perfil" onclick="go('perfil',this)">◈ Mi perfil</div>
+    </div>
+
+    <div class="sb-energy">
+      <div class="sb-energy-lbl">✨ CÓMO ESTOY HOY</div>
+      <div class="sb-scores">
+        <div class="sb-sc"><span class="sb-sc-v" style="color:var(--sage-d);">7</span><span class="sb-sc-l">Energía</span></div>
+        <div class="sb-div"></div>
+        <div class="sb-sc"><span class="sb-sc-v" style="color:var(--acc-d);">6</span><span class="sb-sc-l">Enfoque</span></div>
+        <div class="sb-div"></div>
+        <div class="sb-sc"><span class="sb-sc-v" style="color:var(--acc-d);">3</span><span class="sb-sc-l">Prior.</span></div>
+      </div>
+    </div>
+
+    <div class="sb-rewards" onclick="go('recompensas',null)">
+      <div class="sb-rew-h"><span class="sb-rew-lbl">RECOMPENSAS</span><span class="sb-rew-pct">82%</span></div>
+      <div style="display:flex;align-items:baseline;gap:7px;"><span class="sb-rew-big">74</span><span class="sb-rew-sub">de 90 esta semana</span></div>
+      <div class="sb-rew-bar"><div class="sb-rew-fill" style="width:82%;"></div></div>
+      <div class="sb-rew-bars" id="sb-bars"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--amber-line);padding-top:9px;"><span style="font:500 10px/1 'DM Sans';color:var(--mut3);">Hoy 12 de 15</span><span class="link">VER →</span></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;"><span class="sb-streak-lbl">RACHA · 12 DÍAS</span><span style="font:600 9.5px/1 'DM Sans';color:var(--sage-d);">▲ 2 vs semana ant.</span></div>
+      <div class="sb-streak-bar" id="sb-streak"></div>
+      <div class="sb-nova-btn" onclick="go('plataformas',null)">
+        <span class="sb-nova-tag">NOVA</span>
+        <div class="sb-nova-txt"><strong>Entrar a NOVA</strong><small>Tus dos tiendas</small></div>
+        <span style="color:var(--acc-ink);">→</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="semana" id="semana"></div>
+      <div class="tb-right">
+        <div class="tb-mode">
+          <div class="tb-mbtn on" id="bcl" onclick="setModo('claro')">Claro</div>
+          <div class="tb-mbtn" id="bos" onclick="setModo('oscuro')">Oscuro</div>
+        </div>
+        <span class="tb-lang">ES</span>
+        <div class="tb-av">M</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ════ HOY ════ -->
+      <div class="view on" id="v-hoy">
+
+        <!-- Cielo + intensidad -->
+        <div class="g155">
+          <div class="card-lila" style="display:flex;flex-direction:column;gap:11px;">
+            <div class="card-lbl-lila">EL CIELO DE HOY · CASA 8 ACTIVADA</div>
+            <div style="font:600 33px/1.08 'Fraunces',serif;color:var(--ink);">Lo que sigues sosteniendo</div>
+            <div class="card-it">what you still hold</div>
+            <p class="card-p" style="margin-top:4px;">No es una pérdida nueva. Es la mano que no abriste todavía. Hoy el tránsito toca lo que decidiste no mirar en marzo: por eso cuesta empezar, el día pide cerrar y no abrir.</p>
+            <div class="row-btns" style="margin-top:8px;">
+              <button class="card-cta" onclick="go('cielo',null)">Por qué me toca esto</button>
+              <button class="card-ghost" onclick="go('diagnostico',null)">Diagnóstico de hoy</button>
+            </div>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;gap:14px;align-items:center;">
+            <div style="align-self:stretch;" class="card-h">
+              <span class="card-lbl">INTENSIDAD DE LA SEMANA</span>
+              <span style="font:500 10px/1 'DM Sans';color:var(--mut4);">luna en escorpio · 21%</span>
+            </div>
+            <div class="ring-wrap" style="background:conic-gradient(var(--acc) 0% 73%,var(--line2) 73% 100%);">
+              <div class="ring-inner">
+                <span style="font:600 30px/1 'Fraunces',serif;color:var(--ink);">73</span>
+                <span style="font:500 10.5px/1 'DM Sans';color:var(--mut3);">densidad kármica</span>
+              </div>
+            </div>
+            <p style="font:500 12px/1.55 'DM Sans';color:var(--mut);text-align:center;">Tres casas activas a la vez. Semana de cierre, no de arranque.</p>
+          </div>
+        </div>
+
+        <!-- Lo primero -->
+        <div class="card-amber" style="display:flex;align-items:center;gap:24px;">
+          <div style="flex:1;display:flex;flex-direction:column;gap:9px;">
+            <div class="card-lbl-amber">LO PRIMERO · Y NADA MÁS HASTA QUE ESTÉ</div>
+            <div style="font:600 27px/1.15 'Fraunces',serif;color:var(--ink);">Responder la propuesta de Camila</div>
+            <div style="font:500 13px/1.55 'DM Sans';color:var(--mut);">Lleva 3 días esperando. Esta semana pide resolver, no agregar.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;flex:none;">
+            <button class="card-cta" style="padding:15px 22px;box-shadow:0 6px 16px rgba(224,164,60,.26);">Empezar ahora</button>
+            <span style="font:500 11.5px/1 'DM Sans';color:var(--mut3);text-align:center;cursor:pointer;">No hoy, dame otra</span>
+          </div>
+        </div>
+
+        <!-- Pendientes + Comidas -->
+        <div class="g14">
+          <div style="display:flex;flex-direction:column;gap:18px;">
+            <div class="card">
+              <div class="card-h">
+                <span class="card-lbl">PENDIENTES DE HOY</span>
+                <span style="font:500 11px/1 'DM Sans';color:var(--mut4);">2 de 5 hechos</span>
+              </div>
+              <div id="pend-hoy-list"></div>
+            </div>
+            <div class="card">
+              <div class="card-h">
+                <span class="card-lbl">MIS PENDIENTES DE LAS TIENDAS</span>
+                <span style="font:500 11px/1 'DM Sans';color:var(--mut4);">lo que no puede hacer la gestora</span>
+              </div>
+              <div id="pend-tienda-list"></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:18px;">
+            <div class="card">
+              <div class="card-h"><span class="card-lbl">COMIDAS DE HOY</span></div>
+              <div id="comidas-list"></div>
+            </div>
+            <div class="card-sage" style="display:flex;flex-direction:column;gap:13px;">
+              <div class="card-lbl-sage">MOVIMIENTO</div>
+              <div style="display:flex;align-items:flex-end;gap:12px;">
+                <span style="font:600 34px/1 'Fraunces',serif;color:var(--ink);">3</span>
+                <span style="font:500 11.5px/1.4 'DM Sans';color:var(--sage-d);padding-bottom:5px;">de 4 sesiones<br>esta semana</span>
+              </div>
+              <div style="display:flex;gap:6px;" id="mov-dots"></div>
+              <button class="card-cta" style="background:var(--card);border:1px solid var(--sage-line);color:var(--sage-d);box-shadow:none;">Registrar sesión de hoy</button>
+            </div>
+            <div class="card-amber" style="cursor:pointer;" onclick="go('recompensas',null)">
+              <div class="card-h">
+                <span class="card-lbl-amber">RECOMPENSAS</span>
+                <span style="font:600 10px/1 'DM Sans';color:var(--sage-d);background:var(--sage);border-radius:20px;padding:5px 9px;">80% del día</span>
+              </div>
+              <div style="display:flex;align-items:baseline;gap:10px;">
+                <span style="font:600 32px/1 'Fraunces',serif;color:var(--ink);">12</span>
+                <span style="font:500 11.5px/1.4 'DM Sans';color:var(--mut);">de 15 puntos hoy</span>
+              </div>
+              <div class="prog-track" style="margin:4px 0;"><div class="prog-fill" style="width:80%;"></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;"><span style="font:500 11px/1 'DM Sans';color:var(--mut3);">Semana: 74 de 90</span><span class="link">VER PREMIOS →</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Temas de la semana -->
+        <div class="card">
+          <div class="card-h">
+            <span class="card-lbl">TEMAS DE LA SEMANA</span>
+            <span class="link" onclick="go('cielo',null)">VER TODO →</span>
+          </div>
+          <div class="g3" id="temas-grid"></div>
+          <div id="tema-det" style="display:none;border-top:1px solid var(--soft2);padding-top:18px;margin-top:6px;"></div>
+        </div>
+      </div><!-- /hoy -->
+
+      <!-- ════ PENDIENTES ════ -->
+      <div class="view" id="v-pendientes">
+        <div>
+          <div style="font:600 28px/1.1 'Fraunces',serif;color:var(--ink);margin-bottom:6px;">Pendientes</div>
+          <p style="font:500 13px/1.6 'DM Sans';color:var(--mut);">Lo que tienes abierto. Márcalo aquí y suma puntos en recompensas.</p>
+        </div>
+        <div class="g2">
+          <div>
+            <div class="slbl" style="margin-bottom:12px;">PERSONALES</div>
+            <div class="card" style="display:flex;flex-direction:column;gap:0;" id="pend-pers-full"></div>
+          </div>
+          <div>
+            <div class="slbl" style="margin-bottom:12px;">DE LAS TIENDAS</div>
+            <div class="card" id="pend-tienda-full"></div>
+          </div>
+        </div>
+        <div class="card-amber" style="display:flex;align-items:flex-start;gap:18px;">
+          <div style="display:flex;flex-direction:column;gap:8px;flex:1;">
+            <div class="card-lbl-amber">AGREGAR PENDIENTE</div>
+            <input style="border:1px solid var(--amber-line);background:var(--soft);border-radius:11px;padding:13px 15px;font:500 13.5px/1 'DM Sans';color:var(--ink);outline:none;width:100%;" placeholder="Escribe y presiona Agregar">
+          </div>
+          <button class="card-cta" style="margin-top:22px;padding:14px 20px;">Agregar</button>
+        </div>
+      </div>
+
+      <!-- ════ EL CIELO ════ -->
+      <div class="view" id="v-cielo">
+        <div>
+          <div style="font:600 28px/1.1 'Fraunces',serif;color:var(--ink);margin-bottom:6px;">El cielo de esta semana</div>
+          <p style="font:500 13px/1.6 'DM Sans';color:var(--mut);">Tránsitos activos sobre tu carta natal. Calculados con tus datos.</p>
+        </div>
+        <div class="g155">
+          <div style="display:flex;flex-direction:column;gap:14px;" id="cielo-list"></div>
+          <div class="card" style="display:flex;flex-direction:column;gap:14px;align-items:center;">
+            <div class="slbl" style="align-self:stretch;">INTENSIDAD</div>
+            <div class="ring-wrap" style="background:conic-gradient(var(--acc) 0% 73%,var(--line2) 73% 100%);">
+              <div class="ring-inner">
+                <span style="font:600 30px/1 'Fraunces',serif;color:var(--ink);">73</span>
+                <span style="font:500 10.5px/1 'DM Sans';color:var(--mut3);">densidad</span>
+              </div>
+            </div>
+            <p style="font:500 12px/1.55 'DM Sans';color:var(--mut);text-align:center;">Tres casas activas. Semana de integración, no de arranque nuevo.</p>
+            <div style="align-self:stretch;background:var(--soft);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;">
+              <div class="slbl">TU CARTA NATAL</div>
+              <div style="font:500 12.5px/1 'DM Sans';color:var(--ink2);">14 sep 1998 · 04:20 · Medellín</div>
+              <div style="font:500 11px/1.4 'DM Sans';color:var(--mut3);">Ascendente en Leo · Sol en Virgo · Luna en Capricornio</div>
+              <span class="link" style="margin-top:4px;">Editar datos →</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ RECOMPENSAS ════ -->
+      <div class="view" id="v-recompensas">
+        <div>
+          <div style="font:600 28px/1.1 'Fraunces',serif;color:var(--ink);margin-bottom:6px;">Recompensas</div>
+          <p style="font:500 13px/1.6 'DM Sans';color:var(--mut);max-width:74ch;">Cada día suma puntos según lo que marcaste: comidas, pendientes, movimiento y cierre del día. La semana y la quincena se calculan solos.</p>
+        </div>
+        <div class="g2">
+          <div class="card-amber" style="display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">
+              <div>
+                <div class="card-lbl-amber" style="margin-bottom:8px;">HOY · JUEVES 3</div>
+                <div style="display:flex;align-items:baseline;gap:10px;">
+                  <span style="font:600 50px/1 'Fraunces',serif;color:var(--ink);">12</span>
+                  <span style="font:500 13px/1.4 'DM Sans';color:var(--mut);">de 15 puntos</span>
+                </div>
+              </div>
+              <span style="font:600 10px/1 'DM Sans';color:var(--sage-d);background:var(--sage);border-radius:20px;padding:7px 11px;">80%</span>
+            </div>
+            <div class="prog-track" style="height:16px;border-radius:9px;"><div class="prog-fill" style="width:80%;"></div></div>
+            <div style="display:flex;flex-direction:column;" id="rew-rows"></div>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+              <div style="display:flex;gap:8px;">
+                <div style="font:600 12px/1 'DM Sans';color:var(--ink2);background:var(--soft2);border-radius:20px;padding:8px 14px;cursor:pointer;">Semana</div>
+                <div style="font:600 12px/1 'DM Sans';color:var(--mut3);border-radius:20px;padding:8px 14px;cursor:pointer;border:1px solid var(--line);">Quincena</div>
+              </div>
+              <div style="display:flex;align-items:baseline;gap:9px;">
+                <span style="font:600 24px/1 'Fraunces',serif;color:var(--ink);">74</span>
+                <span style="font:500 11.5px/1 'DM Sans';color:var(--mut3);">de 90 · 82%</span>
+              </div>
+            </div>
+            <div class="prog-track" style="height:14px;border-radius:9px;"><div class="prog-fill" style="width:82%;"></div></div>
+            <div class="bars" id="rew-bars"></div>
+            <p style="font:500 12.5px/1.6 'DM Sans';color:var(--mut);border-top:1px solid var(--soft2);padding-top:14px;">El miércoles bajó porque no cerraste el día antes de las 22:00. Ayer lo recuperaste con el bono de racha.</p>
+          </div>
+        </div>
+
+        <!-- Cerrar el día -->
+        <div class="card" style="display:flex;flex-direction:column;gap:15px;">
+          <div class="card-h">
+            <span class="card-lbl">CERRAR EL DÍA · 21:00</span>
+            <span style="font:500 11px/1 'DM Sans';color:var(--mut3);">Aún no cerrado</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;" id="cierre-items"></div>
+          <button class="card-cta" style="align-self:flex-start;">Cerrar el día completo</button>
+        </div>
+      </div>
+
+      <!-- ════ DIAGNÓSTICO ════ -->
+      <div class="view" id="v-diagnostico">
+        <div>
+          <div style="font:600 28px/1.1 'Fraunces',serif;color:var(--ink);margin-bottom:6px;">Diagnóstico de hoy</div>
+          <p style="font:500 13px/1.6 'DM Sans';color:var(--mut);">Cómo el cielo de hoy se cruza con tu natal. Específico para tu carta.</p>
+        </div>
+        <div class="card-lila" style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card-lbl-lila">TRÁNSITO PRINCIPAL · PLUTÓN ☍ LUNA NATAL</div>
+          <div style="font:600 26px/1.15 'Fraunces',serif;color:var(--ink);">La resistencia no es tuya. Es el patrón.</div>
+          <p class="card-p">Plutón en oposición a tu Luna natal en Capricornio activa la Casa 8: pérdida, transformación y lo que heredaste sin pedirlo. La resistencia que sientes hoy no es nueva — es el eco de lo que dejaste sin cerrar en marzo cuando Saturno hizo el mismo aspecto.</p>
+        </div>
+        <div class="g2">
+          <div class="det-why" style="display:flex;flex-direction:column;gap:11px;">
+            <div class="slbl" style="color:var(--acc-d);">POR QUÉ TE TOCA ESTA SEMANA</div>
+            <p style="font:500 13px/1.65 'DM Sans';color:var(--ink2);">Plutón ha estado en esta posición desde enero, pero esta semana forma el ángulo exacto a tu Luna natal por primera vez en 12 años. Coincide con la Luna nueva en Escorpio del domingo.</p>
+            <p style="font:500 11px/1.5 'DM Sans';color:var(--mut3);border-top:1px solid var(--lila-line);padding-top:9px;">Se activa: 2–9 sep · pico máximo hoy y mañana</p>
+          </div>
+          <div class="det-how" style="display:flex;flex-direction:column;gap:11px;">
+            <div class="slbl" style="color:var(--sage-d);">CÓMO TRABAJARLO A FAVOR</div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div class="det-step"><div class="det-num">1</div><span style="font:500 12.5px/1.55 'DM Sans';color:var(--ink2);">Cierra algo incompleto — una conversación, un archivo, un hábito. Plutón premia el cierre real.</span></div>
+              <div class="det-step"><div class="det-num">2</div><span style="font:500 12.5px/1.55 'DM Sans';color:var(--ink2);">Mueve el cuerpo antes del mediodía. La Luna en Capricornio necesita tierra física, no mental.</span></div>
+              <div class="det-step"><div class="det-num">3</div><span style="font:500 12.5px/1.55 'DM Sans';color:var(--ink2);">Anota lo que resististe hoy. La escritura desactiva el patrón inconsciente que Plutón expone.</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="det-shadow">
+          <div class="det-accent"></div>
+          <div>
+            <div class="slbl" style="color:var(--acc-d);margin-bottom:9px;">EL OTRO LADO · SI NO LO MIRAS</div>
+            <p style="font:500 12.5px/1.65 'DM Sans';color:var(--ink2);">Si evitas la incomodidad de hoy, Plutón la amplifica. El patrón no desaparece: se asienta más hondo y vuelve más denso en el siguiente ciclo de 12 años. La resistencia de hoy es exactamente la puerta.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ MIS PLATAFORMAS ════ -->
+      <div class="view" id="v-plataformas">
+        <div>
+          <div style="font:600 28px/1.1 'Fraunces',serif;color:var(--ink);margin-bottom:6px;">Mis plataformas</div>
+          <p style="font:500 13px/1.6 'DM Sans';color:var(--mut);">Acceso directo a cada producto Nova. Tu resumen al día.</p>
+        </div>
+        <div class="g3" id="plat-grid"></div>
+        <div class="card" style="display:flex;align-items:center;gap:20px;">
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+            <div class="slbl">SINCRONIZACIÓN</div>
+            <div style="font:600 14px/1.2 'DM Sans';color:var(--ink);">Los datos de tus tiendas se actualizan solos</div>
+            <div style="font:500 12px/1.5 'DM Sans';color:var(--mut);">Tus pendientes de Nova Empresarial y Nova Central aparecen en Soul automáticamente. Último sync hace 4 minutos.</div>
+          </div>
+          <div style="width:48px;height:48px;border-radius:50%;background:var(--sage);border:1px solid var(--sage-line);display:flex;align-items:center;justify-content:center;font:700 20px/1 'DM Sans';color:var(--sage-d);">✓</div>
+        </div>
+      </div>
+
+      <!-- ════ MI PERFIL ════ -->
+      <div class="view" id="v-perfil">
+        <div style="display:flex;align-items:center;gap:20px;">
+          <div class="perf-av">M</div>
+          <div>
+            <div style="font:600 24px/1.1 'Fraunces',serif;color:var(--ink);">Manuela Ramírez</div>
+            <div style="font:500 13px/1 'DM Sans';color:var(--mut3);margin-top:5px;">manuela@nutrea.ec</div>
+          </div>
+        </div>
+        <div class="g2">
+          <div class="card">
+            <div class="slbl" style="margin-bottom:12px;">DATOS NATALES</div>
+            <div class="pref-row"><span class="pref-key">Fecha</span><span class="pref-val">14 septiembre 1998</span></div>
+            <div class="pref-row"><span class="pref-key">Hora</span><span class="pref-val">04:20</span></div>
+            <div class="pref-row"><span class="pref-key">Lugar</span><span class="pref-val">Medellín, Colombia</span></div>
+            <div class="pref-row"><span class="pref-key">Ascendente</span><span class="pref-tag">Leo</span></div>
+            <div class="pref-row"><span class="pref-key">Sol</span><span class="pref-tag">Virgo</span></div>
+            <div class="pref-row"><span class="pref-key">Luna</span><span class="pref-tag">Capricornio</span></div>
+          </div>
+          <div class="card">
+            <div class="slbl" style="margin-bottom:12px;">PREFERENCIAS</div>
+            <div class="pref-row">
+              <span class="pref-key">Idioma</span>
+              <div class="pref-select">
+                <div class="pref-chip on">Español</div>
+                <div class="pref-chip">English</div>
+              </div>
+            </div>
+            <div class="pref-row">
+              <span class="pref-key">Acento</span>
+              <div class="pref-select">
+                <div class="pref-chip on">Colombia</div>
+                <div class="pref-chip">México</div>
+                <div class="pref-chip">España</div>
+              </div>
+            </div>
+            <div class="pref-row">
+              <span class="pref-key">Modo</span>
+              <div class="pref-select">
+                <div class="pref-chip on" onclick="setModo('claro');this.closest('.pref-select').querySelectorAll('.pref-chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">Claro</div>
+                <div class="pref-chip" onclick="setModo('oscuro');this.closest('.pref-select').querySelectorAll('.pref-chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">Oscuro</div>
+              </div>
+            </div>
+            <div class="pref-row">
+              <span class="pref-key">Zona horaria</span>
+              <span class="pref-val">America/Bogota (UTC−5)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ── STATE ─────────────────────────────────────────────
+let MD = localStorage.getItem('ns_modo') || 'claro';
+let SEL_DIA = 3; // today index (0=Mon ... 6=Sun)
+let SEL_TEMA = -1;
+
+// ── PUERTA FLOW ───────────────────────────────────────
+function showOnb(){
+  document.getElementById('pt-login').style.display='none';
+  document.getElementById('pt-onb').style.display='flex';
+  showOnbElige();
+}
+function backLogin(){
+  document.getElementById('pt-onb').style.display='none';
+  document.getElementById('pt-login').style.display='flex';
+}
+function showOnbElige(){
+  ['onb-elige','onb-manual','onb-subir','onb-loading'].forEach(id=>{
+    document.getElementById(id).style.display=id==='onb-elige'?'block':'none';
+  });
+  document.getElementById('onb-step-lbl').textContent='PASO 1 DE 2';
+  document.getElementById('onb-title').textContent='Tu carta natal';
+  document.getElementById('onb-sub').textContent='Para leer tu cielo cada día necesito saber cuándo y dónde naciste.';
+}
+function showOnbManual(){
+  document.getElementById('onb-elige').style.display='none';
+  document.getElementById('onb-manual').style.display='block';
+  document.getElementById('onb-step-lbl').textContent='PASO 2 DE 2';
+  document.getElementById('onb-title').textContent='Fecha, hora y lugar';
+}
+function showOnbSubir(){
+  document.getElementById('onb-elige').style.display='none';
+  document.getElementById('onb-subir').style.display='block';
+  document.getElementById('onb-step-lbl').textContent='PASO 2 DE 2';
+  document.getElementById('onb-title').textContent='Tu carta subida';
+}
+function showOnbLoading(){
+  ['onb-manual','onb-subir','onb-loading'].forEach(id=>{
+    document.getElementById(id).style.display=id==='onb-loading'?'block':'none';
+  });
+  document.getElementById('onb-title').textContent='Calculando tu cielo…';
+  const fill=document.getElementById('prog-fill');
+  fill.style.width='0'; setTimeout(()=>{ fill.style.width='68%'; },50);
+}
+function enterApp(){
+  document.getElementById('puerta').style.display='none';
+  document.getElementById('app').classList.add('on');
+  applyModo(); buildAll();
+}
+
+// ── NAVIGATION ────────────────────────────────────────
+const TITLES={hoy:'Hoy',pendientes:'Pendientes',cielo:'El cielo',recompensas:'Recompensas',diagnostico:'Diagnóstico',plataformas:'Mis plataformas',perfil:'Mi perfil'};
+function go(view,el){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  document.getElementById('v-'+view).classList.add('on');
+  if(el)el.classList.add('on');
+  else{const m=document.querySelector('[data-v="'+view+'"]');if(m)m.classList.add('on');}
+}
+
+// ── MODO ──────────────────────────────────────────────
+function setModo(m){
+  MD=m; localStorage.setItem('ns_modo',m);
+  document.getElementById('app').setAttribute('data-modo',m);
+  document.getElementById('bcl').classList.toggle('on',m==='claro');
+  document.getElementById('bos').classList.toggle('on',m==='oscuro');
+}
+function applyModo(){
+  document.getElementById('app').setAttribute('data-modo',MD);
+  document.getElementById('bcl').classList.toggle('on',MD==='claro');
+  document.getElementById('bos').classList.toggle('on',MD==='oscuro');
+}
+
+// ── DATA BUILDERS ─────────────────────────────────────
+function buildAll(){
+  buildSidebar(); buildSemana(); buildHoy();
+  buildPendientes(); buildCielo(); buildRecompensas();
+  buildPlataformas();
+}
+
+function buildSidebar(){
+  const days=[1,2,3,4,5,6,7];
+  document.getElementById('sb-bars').innerHTML=days.map((d,i)=>`<div class="sb-rew-day${i===SEL_DIA?' hoy':''}" style="height:${[60,80,55,90,70,100,80][i]}%;"></div>`).join('');
+  const streak='✓✓✗✓✓●✗'.split('');
+  document.getElementById('sb-streak').innerHTML=streak.map(s=>`<span class="sb-streak-seg" style="background:${s==='✓'?'#8FA98A':s==='●'?'var(--acc)':'var(--line3)'};"></span>`).join('');
+}
+
+function buildSemana(){
+  const days=['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
+  const nums=[28,29,30,31,1,2,3];
+  document.getElementById('semana').innerHTML=days.map((d,i)=>`
+    <div class="sem-day${i===SEL_DIA?' on':''}" onclick="selDia(${i})">
+      <span class="sem-dow">${d}</span>
+      <span class="sem-num">${nums[i]}</span>
+    </div>`).join('');
+}
+function selDia(i){SEL_DIA=i;buildSemana();buildSidebar();}
+
+function buildHoy(){
+  // Pendientes hoy
+  const pHoy=[
+    {txt:'Responder propuesta de Camila',hecho:false,meta:'Nova · urgente'},
+    {txt:'Revisar flujo de Dropi',       hecho:false,meta:'Tienda · EC'},
+    {txt:'Llamar al proveedor de Omega',  hecho:true, meta:'Inventario'},
+    {txt:'Publicar story Colágeno',       hecho:true, meta:'Pauta'},
+    {txt:'Revisar novedades del día',     hecho:false,meta:'Pendiente'},
+  ];
+  document.getElementById('pend-hoy-list').innerHTML=pHoy.map((p,i)=>`
+    <div class="task-row">
+      <div class="task-box${p.hecho?' done':''}" onclick="toggleTask(this)">${p.hecho?'✓':''}</div>
+      <span class="task-lbl${p.hecho?' done':''}">${p.txt}</span>
+      <span class="task-meta">${p.meta}</span>
+    </div>`).join('');
+
+  // Pendientes tiendas
+  const pTienda=[
+    {txt:'Decidir renovación Dropi 6 meses',hecho:false,meta:'Vence 30 sep'},
+    {txt:'Presupuesto extra pauta · Colágeno',hecho:false,meta:'$500 pendiente'},
+    {txt:'Bonificación Camila agosto',        hecho:false,meta:'$120'},
+  ];
+  document.getElementById('pend-tienda-list').innerHTML=pTienda.map(p=>`
+    <div class="task-row">
+      <div class="task-box${p.hecho?' done':''}" onclick="toggleTask(this)">${p.hecho?'✓':''}</div>
+      <span class="task-lbl${p.hecho?' done':''}">${p.txt}</span>
+      <span class="task-meta">${p.meta}</span>
+    </div>`).join('');
+
+  // Comidas
+  const comidas=[
+    {nm:'Desayuno',  meta:'7:30 · proteína y fruta',     hecho:true},
+    {nm:'Merienda',  meta:'10:30 · frutos secos',         hecho:true},
+    {nm:'Almuerzo',  meta:'13:00 · carbohidratos + vegetal',hecho:false},
+    {nm:'Cena',      meta:'19:00 · ligero',               hecho:false},
+  ];
+  document.getElementById('comidas-list').innerHTML=comidas.map(c=>`
+    <div class="task-row">
+      <div class="task-box${c.hecho?' done':''}" onclick="toggleTask(this)">${c.hecho?'✓':''}</div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+        <span class="task-lbl${c.hecho?' done':''}">${c.nm}</span>
+        <span style="font:500 10.5px/1 'DM Sans';color:var(--mut4);">${c.meta}</span>
+      </div>
+    </div>`).join('');
+
+  // Movimiento dots
+  document.getElementById('mov-dots').innerHTML=['L','M','M','J'].map((d,i)=>`
+    <span style="flex:1;height:10px;border-radius:6px;background:${i<3?'#8FA98A':'var(--line3)'};"></span>`).join('');
+
+  // Temas de la semana
+  const temas=[
+    {k:'CASA 8 · PLUTÓN',tit:'Lo que sigues sosteniendo',nota:'Cierre y transformación profunda. Plutón toca tu Luna.',cta:'Por qué me toca →',pct:73,det:{porQue:'Plutón en oposición a tu Luna natal activa la Casa 8 por primera vez en 12 años. El patrón de resistencia de hoy no es nuevo: es el eco de lo que no cerraste en marzo.',cuando:'Pico: 3–4 sep · se libera el 9 sep',como:['Cierra algo incompleto hoy — conversación, archivo o hábito.','Mueve el cuerpo antes del mediodía. Luna en Cap necesita tierra.','Escribe lo que resististe. La escritura desactiva el patrón.'],sombra:'Si evitas la incomodidad hoy, Plutón la amplifica. El patrón vuelve más denso en el siguiente ciclo.',en:'what you still hold'}},
+    {k:'CASA 5 · VENUS',tit:'Creatividad que pide salida',nota:'Venus en tu Casa 5 trae impulso creativo. No lo racionalices.',cta:'Cómo aprovecharlo →',pct:45,det:{porQue:'Venus transita tu Casa 5 nativa, donde tienes Neptuno. La energía creativa que sientes no es distracción: es el canal que menos usas.',cuando:'Activo 28 ago – 11 sep',como:['Reserva 20 minutos sin agenda para crear sin propósito.','Propón algo fuera de lo cotidiano en el trabajo.','El miedo a hacer algo imperfecto es la señal de que hay que hacerlo.'],sombra:'Sin salida, Venus en Casa 5 se convierte en procrastinación disfrazada de preparación.',en:'creativity seeking release'}},
+    {k:'CASA 10 · MARTE',tit:'Ambición que no espera',nota:'Marte directo sobre tu MC. Visibilidad y acción pública.',cta:'Ver el momento →',pct:38,det:{porQue:'Marte directo sobre tu Medio Cielo amplifica todo lo que hagas en el ámbito público. Decisiones tomadas esta semana se consolidan.',cuando:'Activo 1–15 sep · pico el 7',como:['Lanza lo que tengas listo. El timing es inusual.','Evita defensividad en reuniones — Marte en MC exagera el ego.','Una decisión de carrera tomada hoy vale por tres en otra semana.'],sombra:'La inacción en semanas de Marte directo suele costar más que el error de acción.',en:'ambition that won\'t wait'}},
+  ];
+  document.getElementById('temas-grid').innerHTML=temas.map((t,i)=>`
+    <div class="tema-card${SEL_TEMA===i?' on':''}" onclick="selTema(${i})">
+      <div class="tema-kicker">${t.k}</div>
+      <div class="tema-h">${t.tit}</div>
+      <div class="tema-p">${t.nota}</div>
+      <div class="tema-bar"><div class="tema-fill" style="width:${t.pct}%;"></div></div>
+      <div class="tema-cta">${t.cta}</div>
+    </div>`).join('');
+  if(SEL_TEMA>=0) renderTemaDet(temas[SEL_TEMA]);
+}
+
+function selTema(i){
+  const temas=[
+    {k:'CASA 8 · PLUTÓN',tit:'Lo que sigues sosteniendo',det:{porQue:'Plutón en oposición a tu Luna natal activa la Casa 8 por primera vez en 12 años.',cuando:'Pico: 3–4 sep · se libera el 9 sep',como:['Cierra algo incompleto hoy.','Mueve el cuerpo antes del mediodía.','Escribe lo que resististe.'],sombra:'Si evitas la incomodidad hoy, Plutón la amplifica.',en:'what you still hold'}},
+    {k:'CASA 5 · VENUS',tit:'Creatividad que pide salida',det:{porQue:'Venus transita tu Casa 5 nativa, donde tienes Neptuno.',cuando:'Activo 28 ago – 11 sep',como:['Reserva 20 minutos para crear sin propósito.','Propón algo fuera de lo cotidiano.','El miedo a hacer algo imperfecto es la señal.'],sombra:'Sin salida, Venus en Casa 5 se convierte en procrastinación.',en:'creativity seeking release'}},
+    {k:'CASA 10 · MARTE',tit:'Ambición que no espera',det:{porQue:'Marte directo sobre tu Medio Cielo amplifica lo público.',cuando:'Activo 1–15 sep · pico el 7',como:['Lanza lo que tengas listo.','Evita defensividad en reuniones.','Una decisión de carrera vale por tres esta semana.'],sombra:'La inacción en semanas de Marte directo cuesta más que el error.',en:'ambition that won\'t wait'}},
+  ];
+  SEL_TEMA = SEL_TEMA===i ? -1 : i;
+  document.querySelectorAll('.tema-card').forEach((c,j)=>c.classList.toggle('on',j===SEL_TEMA));
+  const det = document.getElementById('tema-det');
+  if(SEL_TEMA<0){det.style.display='none';return;}
+  renderTemaDet(temas[SEL_TEMA]);
+  det.style.display='block';
+}
+
+function renderTemaDet(t){
+  const det=document.getElementById('tema-det');
+  det.innerHTML=`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:15px;">
+      <div>
+        <div style="font:600 9.5px/1 'DM Sans';letter-spacing:1.2px;color:var(--acc-d);margin-bottom:6px;">${t.k}</div>
+        <div style="font:600 25px/1.15 'Fraunces',serif;color:var(--ink);">${t.tit}</div>
+        <div style="font:400 14px/1.2 'Fraunces',serif;font-style:italic;color:var(--mut3);margin-top:4px;">${t.det.en}</div>
+      </div>
+      <span onclick="selTema(${SEL_TEMA})" style="font:600 11.5px/1 'DM Sans';color:var(--mut3);cursor:pointer;white-space:nowrap;padding:6px;">Cerrar ✕</span>
+    </div>
+    <div class="g2" style="margin-bottom:14px;">
+      <div class="det-why"><div class="slbl" style="color:var(--acc-d);margin-bottom:10px;">POR QUÉ TE TOCA</div><p style="font:500 13px/1.65 'DM Sans';color:var(--ink2);">${t.det.porQue}</p><p style="font:500 11px/1.5 'DM Sans';color:var(--mut3);border-top:1px solid var(--lila-line);padding-top:9px;margin-top:9px;">${t.det.cuando}</p></div>
+      <div class="det-how"><div class="slbl" style="color:var(--sage-d);margin-bottom:10px;">CÓMO TRABAJARLO</div>${t.det.como.map((p,i)=>`<div class="det-step" style="margin-bottom:10px;"><div class="det-num">${i+1}</div><span style="font:500 12.5px/1.55 'DM Sans';color:var(--ink2);">${p}</span></div>`).join('')}</div>
+    </div>
+    <div class="det-shadow"><div class="det-accent"></div><div><div class="slbl" style="color:var(--acc-d);margin-bottom:8px;">EL OTRO LADO</div><p style="font:500 12.5px/1.65 'DM Sans';color:var(--ink2);">${t.det.sombra}</p></div></div>`;
+}
+
+function buildPendientes(){
+  const pers=[
+    {txt:'Responder propuesta de Camila',hecho:false,meta:'urgente'},
+    {txt:'Agendar cita médica anual',     hecho:false,meta:'esta semana'},
+    {txt:'Comprar Omega 3 personal',      hecho:true, meta:'farmacia'},
+    {txt:'Revisión del contrato de arriendo',hecho:false,meta:'antes del 10'},
+    {txt:'Llamar a mamá',                 hecho:true, meta:'viernes'},
+  ];
+  document.getElementById('pend-pers-full').innerHTML=pers.map(p=>`
+    <div class="task-row">
+      <div class="task-box${p.hecho?' done':''}" onclick="toggleTask(this)">${p.hecho?'✓':''}</div>
+      <span class="task-lbl${p.hecho?' done':''}">${p.txt}</span>
+      <span class="task-meta">${p.meta}</span>
+    </div>`).join('');
+  const tienda=[
+    {txt:'Decidir renovación Dropi',hecho:false,meta:'Vence 30 sep'},
+    {txt:'Presupuesto extra Colágeno',hecho:false,meta:'$500'},
+    {txt:'Bonificación Camila',      hecho:false,meta:'$120'},
+  ];
+  document.getElementById('pend-tienda-full').innerHTML=tienda.map(p=>`
+    <div class="task-row">
+      <div class="task-box${p.hecho?' done':''}" onclick="toggleTask(this)">${p.hecho?'✓':''}</div>
+      <span class="task-lbl${p.hecho?' done':''}">${p.txt}</span>
+      <span class="task-meta">${p.meta}</span>
+    </div>`).join('');
+}
+
+function buildCielo(){
+  const transits=[
+    {k:'PLUTÓN ☍ LUNA NATAL',tit:'Lo que sigues sosteniendo',nota:'Casa 8 activa. Cierre y transformación.',int:73,cl:'lila'},
+    {k:'VENUS → CASA 5',    tit:'Creatividad que pide salida',nota:'Neptuno natal amplifica el impulso creativo.',int:45,cl:'amber'},
+    {k:'MARTE → MEDIO CIELO',tit:'Ambición que no espera',nota:'Visibilidad y acción pública amplificadas.',int:38,cl:'sage'},
+  ];
+  document.getElementById('cielo-list').innerHTML=transits.map(t=>`
+    <div class="card-${t.cl}" style="display:flex;flex-direction:column;gap:11px;cursor:pointer;" onclick="go('diagnostico',null)">
+      <div style="font:600 9px/1 'DM Sans';letter-spacing:1.2px;color:var(--${t.cl==='lila'?'acc-d':t.cl==='sage'?'sage-d':'acc-d'});">${t.k}</div>
+      <div style="font:600 20px/1.2 'Fraunces',serif;color:var(--ink);">${t.tit}</div>
+      <div style="font:500 12.5px/1.55 'DM Sans';color:var(--mut);">${t.nota}</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;height:8px;border-radius:5px;background:var(--line3);overflow:hidden;"><div style="height:100%;border-radius:5px;background:var(--acc);width:${t.int}%;"></div></div>
+        <span style="font:600 14px/1 'Fraunces',serif;color:var(--ink);">${t.int}%</span>
+      </div>
+    </div>`).join('');
+}
+
+function buildRecompensas(){
+  const reglas=[
+    {lbl:'Comidas del día',      val:'4 de 4',pts:'+4 pts', done:true},
+    {lbl:'Pendientes completados',val:'2 de 5',pts:'+2 pts', done:false},
+    {lbl:'Lo primero del día',   val:'Pendiente',pts:'+3 pts',done:false},
+    {lbl:'Movimiento',           val:'Sí',     pts:'+2 pts', done:true},
+    {lbl:'Cerrar el día a tiempo',val:'Sin cerrar',pts:'+4 pts',done:false},
+  ];
+  document.getElementById('rew-rows').innerHTML=reglas.map(r=>`
+    <div class="rew-row">
+      <div class="rew-dot${r.done?' done':' pend'}"></div>
+      <span class="rew-lbl">${r.lbl}</span>
+      <span class="rew-val">${r.val}</span>
+      <span class="rew-pts${r.done?' done':''}">${r.pts}</span>
+    </div>`).join('');
+
+  const dias=[{l:'L',p:8},{l:'M',p:13},{l:'M',p:9},{l:'J',p:12},{l:'V',p:0},{l:'S',p:0},{l:'D',p:0}];
+  const mx=13;
+  document.getElementById('rew-bars').innerHTML=dias.map((d,i)=>`
+    <div class="bcol">
+      <span class="bpts">${d.p||''}</span>
+      <div class="bfill" style="height:${d.p?Math.round(d.p/mx*100):2}%;background:${i===3?'var(--acc)':d.p?'var(--line4)':'var(--line2)'};"></div>
+      <span class="blbl${i===3?' hoy':''}">${d.l}</span>
+    </div>`).join('');
+
+  document.getElementById('cierre-items').innerHTML=[
+    {txt:'Pendiente principal · hecho',hecho:true},
+    {txt:'Comidas cerradas',hecho:true},
+    {txt:'Movimiento registrado',hecho:true},
+    {txt:'Novedades de tienda revisadas',hecho:false},
+    {txt:'Una reflexión del día',hecho:false},
+  ].map(c=>`
+    <div style="display:flex;align-items:center;gap:13px;padding:13px 16px;border-radius:13px;background:var(--soft);border:1px solid var(--soft2);cursor:pointer;">
+      <div class="task-box${c.hecho?' done':''}" onclick="toggleTask(this)">${c.hecho?'✓':''}</div>
+      <span class="task-lbl${c.hecho?' done':''}">${c.txt}</span>
+    </div>`).join('');
+}
+
+function buildPlataformas(){
+  const plats=[
+    {nm:'Nova Empresarial',sub:'Gestión de tus tiendas',ico:'NE',bg:'#5f7a3a',kpis:[{k:'VENTAS HOY',v:'$1,240'},{k:'PENDIENTES',v:'3'}]},
+    {nm:'Nova Central',   sub:'Administración de la plataforma',ico:'NC',bg:'#3C6684',kpis:[{k:'CLIENTES',v:'18'},{k:'TICKETS',v:'2'}]},
+    {nm:'novAcademy',     sub:'Tu equipo en formación',ico:'NA',bg:'#A85E3C',kpis:[{k:'ESTUDIANTES',v:'12'},{k:'PROGRESO',v:'68%'}]},
+  ];
+  document.getElementById('plat-grid').innerHTML=plats.map(p=>`
+    <div class="plat-card">
+      <div style="display:flex;align-items:center;gap:13px;">
+        <div class="plat-ico" style="background:${p.bg};">${p.ico}</div>
+        <div><div class="plat-h">${p.nm}</div><div class="plat-sub">${p.sub}</div></div>
+      </div>
+      <div class="plat-kpis">${p.kpis.map(k=>`<div><div class="plat-stat">${k.k}</div><div class="plat-val">${k.v}</div></div>`).join('')}</div>
+      <span class="link">Abrir →</span>
+    </div>`).join('');
+}
+
+// ── HELPERS ───────────────────────────────────────────
+function toggleTask(el){
+  const done=el.classList.toggle('done');
+  el.textContent=done?'✓':'';
+  const lbl=el.nextElementSibling;
+  if(lbl&&lbl.classList.contains('task-lbl'))lbl.classList.toggle('done',done);
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  // Init dark mode for puerta if needed
+  if(MD==='oscuro'){
+    document.getElementById('puerta').setAttribute('data-modo','oscuro');
+  }
+});
+</script>
+</body>
+</html>
