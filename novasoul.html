@@ -142,7 +142,7 @@ textarea,input,select,button{font-family:inherit;}
 .sb-streak-lbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--mut5);}
 .sb-streak-bar{display:flex;gap:5px;}
 .sb-streak-seg{flex:1;height:5px;border-radius:3px;}
-.sb-nova-btn{border-radius:14px;padding:13px 14px;background:var(--acc);display:flex;align-items:center;gap:11px;cursor:pointer;box-shadow:0 6px 16px rgba(221,164,60,.22);}
+.sb-nova-btn{border-radius:14px;padding:13px 14px;background:var(--acc);display:flex;align-items:center;gap:11px;cursor:pointer;box-shadow:0 6px 16px rgba(221,164,60,.22);text-decoration:none;color:inherit;}
 .sb-nova-tag{font:700 9px/1 'DM Sans';letter-spacing:1.5px;color:var(--acc-ink);background:rgba(255,255,255,.34);border-radius:9px;padding:9px 7px;flex:none;}
 .sb-nova-txt strong{display:block;font:600 13px/1 'DM Sans';color:var(--acc-ink);}
 .sb-nova-txt small{display:block;font:500 10px/1 'DM Sans';color:var(--acc-ink);}
@@ -252,8 +252,10 @@ textarea,input,select,button{font-family:inherit;}
 .bpts{font:500 9px/1 'DM Sans';color:var(--mut3);}
 
 /* plataformas */
-.plat-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;display:flex;flex-direction:column;gap:14px;cursor:pointer;transition:border-color .15s;}
+.plat-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;display:flex;flex-direction:column;gap:14px;cursor:pointer;transition:border-color .15s;text-decoration:none;color:inherit;position:relative;overflow:hidden;}
 .plat-card:hover{border-color:var(--acc);}
+.plat-pronto{opacity:.65;cursor:default;pointer-events:none;}
+.plat-chip{position:absolute;top:14px;right:14px;font:600 9px/1 'DM Sans';letter-spacing:1px;background:var(--soft2);color:var(--mut);border-radius:20px;padding:4px 9px;}
 .plat-ico{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font:700 14px/1 'DM Sans';color:#fff;}
 .plat-h{font:600 18px/1.15 'Fraunces',serif;color:var(--ink);}
 .plat-sub{font:500 12px/1.55 'DM Sans';color:var(--mut);}
@@ -419,11 +421,11 @@ textarea,input,select,button{font-family:inherit;}
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto;">
       <div style="display:flex;align-items:center;justify-content:space-between;"><span class="sb-streak-lbl">RACHA · 12 DÍAS</span><span style="font:600 9.5px/1 'DM Sans';color:var(--sage-d);">▲ 2 vs semana ant.</span></div>
       <div class="sb-streak-bar" id="sb-streak"></div>
-      <div class="sb-nova-btn" onclick="go('plataformas',null)">
+      <a class="sb-nova-btn" href="./empresarial.html">
         <span class="sb-nova-tag">NOVA</span>
         <div class="sb-nova-txt"><strong>Entrar a NOVA</strong><small>Tus dos tiendas</small></div>
         <span style="color:var(--acc-ink);">→</span>
-      </div>
+      </a>
     </div>
   </nav>
 
@@ -1033,19 +1035,20 @@ function buildRecompensas(){
 
 function buildPlataformas(){
   const plats=[
-    {nm:'Nova Empresarial',sub:'Gestión de tus tiendas',ico:'NE',bg:'#5f7a3a',kpis:[{k:'VENTAS HOY',v:'$1,240'},{k:'PENDIENTES',v:'3'}]},
-    {nm:'Nova Central',   sub:'Administración de la plataforma',ico:'NC',bg:'#3C6684',kpis:[{k:'CLIENTES',v:'18'},{k:'TICKETS',v:'2'}]},
-    {nm:'novAcademy',     sub:'Tu equipo en formación',ico:'NA',bg:'#A85E3C',kpis:[{k:'ESTUDIANTES',v:'12'},{k:'PROGRESO',v:'68%'}]},
+    {nm:'Nova Empresarial',sub:'Gestión de tus tiendas',    ico:'NE',bg:'#5f7a3a',href:'./empresarial.html', kpis:[{k:'VENTAS HOY',v:'$1,240'},{k:'PENDIENTES',v:'3'}]},
+    {nm:'novAcademy',     sub:'Tu equipo en formación',     ico:'NA',bg:'#A85E3C',href:'./novacademy.html',  kpis:[{k:'ESTUDIANTES',v:'12'}, {k:'PROGRESO',v:'68%'}], pronto:true},
+    {nm:'Nova Central',  sub:'Administración de plataforma',ico:'NC',bg:'#3C6684',href:'./novacentral.html', kpis:[{k:'CLIENTES',v:'18'},    {k:'TICKETS',v:'2'}],   pronto:true},
   ];
   document.getElementById('plat-grid').innerHTML=plats.map(p=>`
-    <div class="plat-card">
+    <${p.pronto?'div':'a'} class="plat-card${p.pronto?' plat-pronto':''}" ${p.pronto?'':'href="'+p.href+'"'}>
+      ${p.pronto?'<span class="plat-chip">Próximamente</span>':''}
       <div style="display:flex;align-items:center;gap:13px;">
         <div class="plat-ico" style="background:${p.bg};">${p.ico}</div>
         <div><div class="plat-h">${p.nm}</div><div class="plat-sub">${p.sub}</div></div>
       </div>
       <div class="plat-kpis">${p.kpis.map(k=>`<div><div class="plat-stat">${k.k}</div><div class="plat-val">${k.v}</div></div>`).join('')}</div>
-      <span class="link">Abrir →</span>
-    </div>`).join('');
+      ${p.pronto?'':'<span class="link">Abrir →</span>'}
+    </${p.pronto?'div':'a'}>`).join('');
 }
 
 // ── HELPERS ───────────────────────────────────────────
