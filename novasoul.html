@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NovaSoul</title>
+<script>(function(){var m=localStorage.getItem('ns_modo');if(m)document.documentElement.setAttribute('data-modo',m);})()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -817,12 +818,12 @@ function go(view,el){
 // ── MODO ──────────────────────────────────────────────
 function setModo(m){
   MD=m; localStorage.setItem('ns_modo',m);
-  document.getElementById('app').setAttribute('data-modo',m);
+  document.documentElement.setAttribute('data-modo',m);
   document.getElementById('bcl').classList.toggle('on',m==='claro');
   document.getElementById('bos').classList.toggle('on',m==='oscuro');
 }
 function applyModo(){
-  document.getElementById('app').setAttribute('data-modo',MD);
+  document.documentElement.setAttribute('data-modo',MD);
   document.getElementById('bcl').classList.toggle('on',MD==='claro');
   document.getElementById('bos').classList.toggle('on',MD==='oscuro');
 }
@@ -1060,10 +1061,7 @@ function toggleTask(el){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-  // Init dark mode for puerta if needed
-  if(MD==='oscuro'){
-    document.getElementById('puerta').setAttribute('data-modo','oscuro');
-  }
+  document.documentElement.setAttribute('data-modo', MD);
 });
 </script>
 </body>
