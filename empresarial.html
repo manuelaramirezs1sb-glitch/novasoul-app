@@ -307,6 +307,83 @@ input.li:focus{border-color:var(--acc-d);}
 .irow{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .inm{font:600 13px/1.3 'DM Sans';color:var(--t-ink);}
 .isub{font:500 11px/1.4 'DM Sans';color:var(--t-mut);margin-top:3px;}
+
+/* ─── PEDIDOS ROW (gestora) ──────────────────────────── */
+.ped-row{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:5px;}
+.ped-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.ped-nm{font:600 13px/1.3 'DM Sans';color:var(--t-ink);}
+.ped-sub{font:500 11px/1.4 'DM Sans';color:var(--t-mut);}
+/* ─── NOVEDAD CARD (gestora) ─────────────────────────── */
+.nov-card{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:6px;}
+.nov-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.nov-nm{font:600 13px/1.3 'DM Sans';color:var(--t-ink);}
+.nov-tipo{font:600 11px/1 'DM Sans';letter-spacing:.5px;color:var(--t-mut2);}
+.nov-nota{font:500 12px/1.55 'DM Sans';color:var(--t-mut);border-top:1px solid var(--s-line2);padding-top:8px;margin-top:2px;}
+/* ─── ROL: visibilidad por panel ─────────────────────── */
+[data-rol="admin"]   .ro-dueno,
+[data-rol="gestora"] .ro-dueno,
+[data-rol="gestora"] .ro-admin,
+[data-rol="dueno"]   .ro-gestora,
+[data-rol="admin"]   .ro-gestora,
+[data-rol="dueno"]   .v-gestora,
+[data-rol="admin"]   .v-gestora {display:none!important;}
+.view.v-gestora{display:none;}
+[data-rol="gestora"] .view.v-gestora.on{display:flex;}
+[data-rol="gestora"] #v-hoy,[data-rol="gestora"] #v-pedidos,
+[data-rol="gestora"] #v-novedades,[data-rol="gestora"] #v-oficina,
+[data-rol="gestora"] #v-gestoras,[data-rol="gestora"] #v-auditoria,
+[data-rol="gestora"] #v-pauta,[data-rol="gestora"] #v-inventario{display:none!important;}
+[data-rol="admin"] #v-pauta,[data-rol="admin"] #v-inventario{display:none!important;}
+
+/* ─── ONBOARDING ─────────────────────────────────────── */
+#onboarding{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;}
+#onboarding.on{display:flex;}
+.ob-box{background:var(--s-card);border-radius:20px;width:640px;max-width:100%;border:1px solid var(--s-line);box-shadow:0 20px 50px rgba(0,0,0,.25);overflow:hidden;}
+.ob-top{background:var(--s-dark2);padding:24px 28px;}
+.ob-top h2{font:600 22px/1.2 'Fraunces',serif;color:var(--t-ondark);margin-bottom:6px;}
+.ob-top p{font:500 12.5px/1.6 'DM Sans';color:var(--t-ondark-mut);}
+.ob-tabs{display:flex;gap:0;border-bottom:1px solid var(--s-line2);}
+.ob-tab{flex:1;padding:13px 14px;font:600 11px/1 'DM Sans';letter-spacing:.8px;color:var(--t-mut3);text-align:center;cursor:pointer;border-bottom:2px solid transparent;}
+.ob-tab.on{color:var(--acc-d);border-bottom-color:var(--acc-d);}
+.ob-body{padding:24px 28px;display:flex;flex-direction:column;gap:16px;}
+.ob-step{display:none;flex-direction:column;gap:14px;}
+.ob-step.on{display:flex;}
+.ob-field{display:flex;flex-direction:column;gap:6px;}
+.ob-field label{font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);}
+.ob-field input,.ob-field select{border:1px solid var(--s-line3);background:var(--s-card2);border-radius:11px;padding:12px 14px;font:500 13px/1 'DM Sans';color:var(--t-ink);outline:none;}
+.ob-field input:focus,.ob-field select:focus{border-color:var(--acc-d);}
+.ob-hint{font:500 11.5px/1.6 'DM Sans';color:var(--t-mut2);background:var(--s-bg);border-radius:10px;padding:11px 14px;}
+.ob-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--s-line2);}
+.ob-row:first-child{border-top:none;}
+.ob-perm{display:flex;gap:6px;}
+.ob-chip{font:600 10px/1 'DM Sans';padding:5px 9px;border-radius:20px;border:1px solid var(--s-line3);cursor:pointer;color:var(--t-mut2);}
+.ob-chip.on{background:var(--acc-d);color:#fff;border-color:var(--acc-d);}
+.ob-actions{display:flex;justify-content:flex-end;gap:10px;padding-top:4px;}
+.ob-btn{background:var(--acc-d);color:#f1f4e8;font:600 13px/1 'DM Sans';padding:13px 22px;border-radius:12px;cursor:pointer;border:none;}
+.ob-btn:hover{opacity:.88;}
+.ob-ghost{border:1px solid var(--s-line3);color:var(--t-ink3);font:600 12px/1 'DM Sans';padding:12px 18px;border-radius:12px;cursor:pointer;}
+
+/* ─── VISTA SOMBRA ───────────────────────────────────── */
+#sombra{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150;display:none;align-items:stretch;}
+#sombra.on{display:flex;}
+.som-panel{width:480px;max-width:100%;background:var(--s-card);border-left:1px solid var(--s-line);display:flex;flex-direction:column;margin-left:auto;overflow:hidden;}
+.som-head{padding:16px 20px;background:var(--s-dark2);display:flex;align-items:center;gap:14px;}
+.som-av{width:38px;height:38px;border-radius:50%;background:var(--s-deep);color:var(--t-ondark-mut);font:700 13px/38px 'DM Sans';text-align:center;flex:none;}
+.som-info{flex:1;}
+.som-info strong{font:600 14px/1 'DM Sans';color:var(--t-ondark);}
+.som-info small{display:block;font:500 11px/1.4 'DM Sans';color:var(--t-ondark-mut);margin-top:3px;}
+.som-close{font:600 20px/1 'DM Sans';color:var(--t-ondark-mut);cursor:pointer;padding:4px;}
+.som-body{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;}
+.som-section{font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut3);margin-bottom:4px;}
+.som-ped{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
+.som-ped-h{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.som-ped-nm{font:600 13px/1.3 'DM Sans';color:var(--t-ink);}
+.som-ped-sub{font:500 11px/1.35 'DM Sans';color:var(--t-mut);}
+.som-stat{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.som-kc{background:var(--s-card2);border-radius:10px;padding:10px 12px;}
+.som-kc .kk{font:600 10px/1 'DM Sans';letter-spacing:.8px;color:var(--t-mut3);margin-bottom:5px;}
+.som-kc .vv{font:700 18px/1 'Fraunces',serif;color:var(--t-ink);}
+.som-badge{display:inline-block;font:600 10px/1 'DM Sans';padding:4px 9px;border-radius:20px;}
 </style>
 </head>
 <body>
@@ -379,35 +456,39 @@ input.li:focus{border-color:var(--acc-d);}
   <nav class="sidebar" id="sidebar">
     <div class="brand">
       <div class="brand-ico">N</div>
-      <div class="brand-text"><strong>Nova · Dueña</strong><small id="bsub">Manuela · Nutrea EC</small></div>
+      <div class="brand-text"><strong id="brand-rol">Nova · Dueña</strong><small id="bsub">Manuela · Nutrea EC</small></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:14px;">
       <div class="navg">
         <div class="navg-lbl">PRINCIPAL</div>
-        <div class="ni on" data-v="hoy" onclick="go('hoy',this)">Hoy</div>
+        <div class="ni on" data-v="hoy" onclick="go('hoy',this)" id="nav-hoy">Hoy</div>
+        <div class="ni v-gestora" data-v="g-hoy" onclick="go('g-hoy',this)">Mis pedidos de hoy</div>
       </div>
       <div class="navg">
         <div class="navg-lbl">PEDIDOS</div>
-        <div class="ni" data-v="pedidos" onclick="go('pedidos',this)">Pedidos</div>
-        <div class="ni" data-v="novedades" onclick="go('novedades',this)">Novedades</div>
-        <div class="ni" data-v="oficina" onclick="go('oficina',this)">Oficina</div>
+        <div class="ni ro-admin" data-v="pedidos" onclick="go('pedidos',this)">Pedidos</div>
+        <div class="ni ro-admin" data-v="novedades" onclick="go('novedades',this)">Novedades</div>
+        <div class="ni ro-admin" data-v="oficina" onclick="go('oficina',this)">Oficina</div>
+        <div class="ni v-gestora" data-v="g-pedidos" onclick="go('g-pedidos',this)">Mis pedidos</div>
+        <div class="ni v-gestora" data-v="g-novedades" onclick="go('g-novedades',this)">Mis novedades</div>
       </div>
-      <div class="navg">
+      <div class="navg ro-admin">
         <div class="navg-lbl">EQUIPO</div>
         <div class="ni" data-v="gestoras" onclick="go('gestoras',this)">Gestoras</div>
-        <div class="ni" data-v="auditoria" onclick="go('auditoria',this)">Auditoría</div>
+        <div class="ni ro-admin" data-v="auditoria" onclick="go('auditoria',this)">Auditoría</div>
       </div>
-      <div class="navg">
+      <div class="navg ro-dueno">
         <div class="navg-lbl">DINERO</div>
         <div class="ni" data-v="pauta" onclick="go('pauta',this)">Pauta y ROAS</div>
         <div class="ni" data-v="inventario" onclick="go('inventario',this)">Inventario</div>
       </div>
     </div>
-    <div class="stores">
+    <div class="stores ro-admin">
       <div class="stores-lbl">TIENDA</div>
       <div class="schip on" id="cec" onclick="switchSt('ec')"><strong>Nutrea Ecuador</strong><small>Shopify + Dropi · USD</small></div>
       <div class="schip" id="cgt" onclick="switchSt('gt')"><strong>Nutrea GT</strong><small>Dropi · GTQ</small></div>
-      <div class="ubtn">Subir archivos</div>
+      <div class="ubtn ro-dueno" onclick="showOnboarding()">⚙ Configuración</div>
+      <div class="ubtn ro-admin" style="margin-top:4px;">Subir archivos</div>
     </div>
   </nav>
 
@@ -420,7 +501,7 @@ input.li:focus{border-color:var(--acc-d);}
         <div class="psub" id="psub"></div>
       </div>
       <div class="tbar-r">
-        <span class="uchip">Manuela · dueña</span>
+        <span class="uchip" id="toprol">Manuela · dueña</span>
         <div class="mtoggle">
           <div class="mbtn on" id="bcl" onclick="setModo('claro')">Claro</div>
           <div class="mbtn" id="bos" onclick="setModo('oscuro')">Oscuro</div>
@@ -521,7 +602,7 @@ input.li:focus{border-color:var(--acc-d);}
         </div>
 
         <!-- Permisos CTA -->
-        <div class="dcard" style="cursor:pointer;" onclick="go('gestoras',null)">
+        <div class="dcard ro-dueno" style="cursor:pointer;" onclick="go('gestoras',null)">
           <span style="font:600 14.5px/1.15 'Fraunces',serif;color:var(--t-ondark);">Tu equipo y sus permisos</span>
           <span style="font:500 12px/1.55 'DM Sans';color:var(--t-ondark-mut);">Cambias el rol, asignas tiendas, prendes o apagas cada permiso y entras a ver la pantalla de cada una.</span>
           <span style="font:600 11.5px/1 'DM Sans';color:#232c19;background:var(--a-chip);border-radius:20px;padding:9px 13px;align-self:flex-start;">Abrir permisos →</span>
@@ -596,6 +677,7 @@ input.li:focus{border-color:var(--acc-d);}
           <div style="font:600 16px/1.1 'Fraunces',serif;color:var(--t-ink);margin-bottom:10px;">Estado de cada integrante</div>
           <div style="display:flex;flex-direction:column;gap:10px;" id="tlist"></div>
         </div>
+        <p style="font:500 11.5px/1.5 'DM Sans';color:var(--t-mut2);padding-top:4px;">Toca <strong style="color:var(--acc-d);">Ver pantalla →</strong> en cualquier integrante para ver exactamente lo que ella ve (vista sombra).</p>
 
         <div>
           <div style="font:600 16px/1.1 'Fraunces',serif;color:var(--t-ink);margin-bottom:4px;">Comisiones del mes</div>
@@ -652,16 +734,179 @@ input.li:focus{border-color:var(--acc-d);}
         <div style="display:flex;flex-direction:column;gap:9px;" id="invlist"></div>
       </div>
 
+      <!-- ════ GESTORA · HOY ════ -->
+      <div class="view v-gestora" id="v-g-hoy">
+        <div>
+          <div style="font:600 21px/1 'Fraunces',serif;color:var(--t-ink);margin-bottom:6px;" id="g-saludo">Hola, Camila</div>
+          <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Esto es lo que tienes pendiente en tu jornada de hoy.</p>
+        </div>
+        <div class="kgrid" id="g-kpi"></div>
+        <div>
+          <div class="slbl" style="margin-bottom:9px;">MIS PENDIENTES URGENTES</div>
+          <div style="display:flex;flex-direction:column;gap:8px;" id="g-urgentes"></div>
+        </div>
+        <div class="dcard" style="cursor:pointer;" onclick="go('g-novedades',null)">
+          <span style="font:600 14px/1.15 'Fraunces',serif;color:var(--t-ondark);">Novedades sin resolver</span>
+          <span style="font:500 12px/1.6 'DM Sans';color:var(--t-ondark-mut);">Tienes novedades abiertas que necesitan contacto hoy. Cada día sin gestión cuenta en tu efectividad.</span>
+          <span style="font:600 11px/1 'DM Sans';color:#232c19;background:var(--a-chip);border-radius:20px;padding:9px 13px;align-self:flex-start;" id="g-novalert">Ver 3 novedades →</span>
+        </div>
+      </div>
+
+      <!-- ════ GESTORA · MIS PEDIDOS ════ -->
+      <div class="view v-gestora" id="v-g-pedidos">
+        <div>
+          <div style="font:600 21px/1 'Fraunces',serif;color:var(--t-ink);margin-bottom:6px;">Mis pedidos</div>
+          <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Solo los pedidos asignados a ti. Puedes actualizar el estado, agregar nota o marcar intento de contacto.</p>
+        </div>
+        <div class="kgrid" id="g-pedkpi"></div>
+        <div style="display:flex;flex-direction:column;gap:9px;" id="g-pedlist"></div>
+      </div>
+
+      <!-- ════ GESTORA · MIS NOVEDADES ════ -->
+      <div class="view v-gestora" id="v-g-novedades">
+        <div>
+          <div style="font:600 21px/1 'Fraunces',serif;color:var(--t-ink);margin-bottom:6px;">Mis novedades</div>
+          <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Cada novedad que tienes asignada. Registra el intento, deja nota y cambia el estado al resolver.</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px;" id="g-novlist"></div>
+      </div>
+
     </div><!-- /content -->
   </div><!-- /main -->
 </div><!-- /app -->
+
+<!-- ══════════════════ VISTA SOMBRA ══════════════════ -->
+<div id="sombra" onclick="if(event.target===this)closeSombra()">
+  <div class="som-panel">
+    <div class="som-head">
+      <div class="som-av" id="som-av">C</div>
+      <div class="som-info">
+        <strong id="som-nombre">Camila Restrepo</strong>
+        <small id="som-info">Gestora · Nutrea Ecuador · Jornada activa 6h 12m</small>
+      </div>
+      <span class="som-close" onclick="closeSombra()">×</span>
+    </div>
+    <div class="som-body">
+      <div>
+        <div class="som-section">KPIs DE HOY</div>
+        <div class="som-stat" id="som-stat"></div>
+      </div>
+      <div>
+        <div class="som-section">SUS PEDIDOS ACTIVOS</div>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="som-peds"></div>
+      </div>
+      <div>
+        <div class="som-section">NOVEDADES ABIERTAS</div>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="som-novs"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ ONBOARDING ══════════════════ -->
+<div id="onboarding">
+  <div class="ob-box">
+    <div class="ob-top">
+      <h2>Configuración inicial</h2>
+      <p>Solo la primera vez. Conectas las hojas, defines tu equipo y los permisos quedan guardados.</p>
+    </div>
+    <div class="ob-tabs">
+      <div class="ob-tab on" id="ot1" onclick="obTab(1)">1 · Conectar hojas</div>
+      <div class="ob-tab" id="ot2" onclick="obTab(2)">2 · Tiendas y equipo</div>
+      <div class="ob-tab" id="ot3" onclick="obTab(3)">3 · Permisos</div>
+    </div>
+    <div class="ob-body">
+      <!-- paso 1 -->
+      <div class="ob-step on" id="ob1">
+        <div class="ob-field">
+          <label>ID DEL SPREADSHEET (CENTRO DE COMANDO)</label>
+          <input type="text" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms">
+        </div>
+        <div class="ob-hint">Abre tu Google Sheet · en la URL copia el tramo entre /d/ y /edit · es el ID largo de letras y números.</div>
+        <div class="ob-field">
+          <label>ID DEL SPREADSHEET (GESTOR, si aplica)</label>
+          <input type="text" placeholder="Opcional">
+        </div>
+        <div class="ob-actions">
+          <button class="ob-btn" onclick="obTab(2)">Siguiente →</button>
+        </div>
+      </div>
+      <!-- paso 2 -->
+      <div class="ob-step" id="ob2">
+        <div class="ob-field">
+          <label>TIENDAS ACTIVAS</label>
+          <select><option>Nutrea Ecuador (Shopify + Dropi · USD)</option><option>Nutrea GT (Dropi · GTQ)</option></select>
+        </div>
+        <div>
+          <div class="slbl" style="margin-bottom:9px;">EQUIPO</div>
+          <div class="ob-row">
+            <span style="font:500 13px/1 'DM Sans';color:var(--t-ink);">Camila Restrepo</span>
+            <select style="font:500 12px/1 'DM Sans';border:1px solid var(--s-line3);background:var(--s-card2);border-radius:8px;padding:7px 10px;color:var(--t-ink);">
+              <option>Gestora</option><option>Admin</option><option>Dueña</option>
+            </select>
+          </div>
+          <div class="ob-row">
+            <span style="font:500 13px/1 'DM Sans';color:var(--t-ink);">Daniela Ríos</span>
+            <select style="font:500 12px/1 'DM Sans';border:1px solid var(--s-line3);background:var(--s-card2);border-radius:8px;padding:7px 10px;color:var(--t-ink);">
+              <option>Admin</option><option>Gestora</option><option>Dueña</option>
+            </select>
+          </div>
+          <div class="ob-row">
+            <span style="font:500 13px/1 'DM Sans';color:var(--t-ink);">Valentina Ospina</span>
+            <select style="font:500 12px/1 'DM Sans';border:1px solid var(--s-line3);background:var(--s-card2);border-radius:8px;padding:7px 10px;color:var(--t-ink);">
+              <option>Gestora</option><option>Admin</option><option>Dueña</option>
+            </select>
+          </div>
+        </div>
+        <div class="ob-actions">
+          <button class="ob-ghost" onclick="obTab(1)">← Atrás</button>
+          <button class="ob-btn" onclick="obTab(3)">Siguiente →</button>
+        </div>
+      </div>
+      <!-- paso 3 -->
+      <div class="ob-step" id="ob3">
+        <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut2);">Revisa qué puede hacer cada rol. Puedes cambiar estos permisos en cualquier momento desde la vista de Gestoras.</p>
+        <div>
+          <div class="ob-row" style="border-top:none;">
+            <span style="font:600 12px/1 'DM Sans';color:var(--t-ink);">Gestora</span>
+            <div class="ob-perm">
+              <span class="ob-chip on">Sus pedidos</span>
+              <span class="ob-chip on">Sus novedades</span>
+              <span class="ob-chip">Ver pauta</span>
+            </div>
+          </div>
+          <div class="ob-row">
+            <span style="font:600 12px/1 'DM Sans';color:var(--t-ink);">Admin</span>
+            <div class="ob-perm">
+              <span class="ob-chip on">Todos los pedidos</span>
+              <span class="ob-chip on">Auditoría</span>
+              <span class="ob-chip">Ver finanzas</span>
+            </div>
+          </div>
+        </div>
+        <div class="ob-actions">
+          <button class="ob-ghost" onclick="obTab(2)">← Atrás</button>
+          <button class="ob-btn" onclick="closeOnboarding()">Guardar y entrar →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 // ─── STATE ────────────────────────────────────────────
 let ST  = localStorage.getItem('ne_store') || 'ec';
 let TM  = localStorage.getItem('ne_tema')  || 'verde';
 let MD  = localStorage.getItem('ne_modo')  || 'claro';
+let ROL = 'dueno'; // dueno | admin | gestora
 let SEL_OFI = 0;
+
+const ROLES = {
+  'manuela@nutrea.co': {rol:'dueno',  nombre:'Manuela',  label:'dueña'},
+  'daniela@nutrea.co': {rol:'admin',  nombre:'Daniela',  label:'admin'},
+  'camila@nutrea.co':  {rol:'gestora',nombre:'Camila',   label:'gestora'},
+  'valentina@nutrea.co':{rol:'gestora',nombre:'Valentina',label:'gestora'},
+};
 
 const STORES = {
   ec: {name:'Nutrea Ecuador', sub:'Shopify + Dropi · USD', sym:'$',  f:1},
@@ -676,9 +921,61 @@ function C(usd) {
 
 // ─── DATA INIT ────────────────────────────────────────
 function buildAll() {
+  if (ROL === 'gestora') {
+    buildGestoraViews(); return;
+  }
   buildHoy(); buildPedidos(); buildNovedades();
   buildOficina(); buildGestoras(); buildAuditoria();
-  buildPauta(); buildInventario();
+  if (ROL === 'dueno') { buildPauta(); buildInventario(); }
+}
+
+function buildGestoraViews() {
+  const nombre = document.getElementById('g-saludo');
+  if (nombre) nombre.textContent = 'Hola, ' + (ROLES[localStorage.getItem('ne_email')||'']?.nombre || 'Camila');
+  document.getElementById('g-kpi').innerHTML = [
+    {lb:'MIS PEDIDOS HOY', v:'18', sub:'6 sin actualizar hoy', cl:'w'},
+    {lb:'EN TRÁNSITO',     v:'9',  sub:'Con transportadora',   cl:'a'},
+    {lb:'NOVEDADES',       v:'3',  sub:'2 sin primer contacto',cl:'r'},
+    {lb:'EFECTIVIDAD',     v:'91%',sub:'Este mes · meta 85%',  cl:'g'},
+  ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
+
+  document.getElementById('g-urgentes').innerHTML = [
+    {nm:'Carlos Mendoza · #PE-2041', sub:'Sin actualizar 28h · Ciudad de Guatemala', badge:'Llamar hoy', cl:'r'},
+    {nm:'Ana Ruiz · #PE-2038',       sub:'Novedad abierta 18h · Quito',              badge:'Novedad',   cl:'w'},
+    {nm:'Pedro Soto · #PE-2029',     sub:'Tercer intento mañana · Guayaquil',        badge:'Intento 3', cl:'w'},
+  ].map(r=>`<div class="ped-row">
+    <div class="ped-top"><span class="ped-nm">${r.nm}</span><span class="bd bd-${r.cl}">${r.badge}</span></div>
+    <span class="ped-sub">${r.sub}</span>
+  </div>`).join('');
+  document.getElementById('g-novalert').textContent = 'Ver 3 novedades →';
+
+  document.getElementById('g-pedkpi').innerHTML = [
+    {lb:'ASIGNADOS', v:'24', sub:'Esta semana',    cl:'a'},
+    {lb:'ENTREGADOS',v:'16', sub:'67% efectividad',cl:'g'},
+    {lb:'PENDIENTES',v:'5',  sub:'Sin mover hoy',  cl:'w'},
+    {lb:'DEVUELTOS', v:'3',  sub:'Este mes',       cl:'r'},
+  ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
+
+  document.getElementById('g-pedlist').innerHTML = [
+    {nm:'Carlos Mendoza',id:'PE-2041',est:'En tránsito',sub:'Proteína Vainilla 1kg · Guate city',cl:'a'},
+    {nm:'Ana Ruiz',      id:'PE-2038',est:'Novedad',    sub:'Colágeno 300g · Quito',            cl:'r'},
+    {nm:'Jorge Lima',    id:'PE-2035',est:'Entregado',  sub:'Omega 3 · Quito',                  cl:'g'},
+    {nm:'María Salazar', id:'PE-2031',est:'En tránsito',sub:'Multivitamínico · Guayaquil',      cl:'a'},
+    {nm:'Pedro Soto',    id:'PE-2029',est:'Novedad',    sub:'Proteína Chocolate · Guayaquil',   cl:'r'},
+  ].map(r=>`<div class="ped-row">
+    <div class="ped-top"><span class="ped-nm">${r.nm}</span><span class="bd bd-${r.cl}">${r.est}</span></div>
+    <span class="ped-sub">#${r.id} · ${r.sub}</span>
+  </div>`).join('');
+
+  document.getElementById('g-novlist').innerHTML = [
+    {nm:'Ana Ruiz · #PE-2038',  tipo:'Dirección incorrecta', nota:'Intenté 2 veces. No contesta. Próximo intento mañana 10am.', cl:'r', hrs:'18h abierta'},
+    {nm:'Pedro Soto · #PE-2029',tipo:'No había nadie',       nota:'Tercer intento coordinado. Vendré el viernes.',              cl:'w', hrs:'3d abierta'},
+    {nm:'Luis Torres · #PE-2021',tipo:'Producto dañado',     nota:'Enviando reposición. Cliente notificado.',                   cl:'g', hrs:'Resuelta'},
+  ].map(n=>`<div class="nov-card">
+    <div class="nov-top"><span class="nov-nm">${n.nm}</span><span class="bd bd-${n.cl}">${n.hrs}</span></div>
+    <span class="nov-tipo">${n.tipo}</span>
+    <span class="nov-nota">${n.nota}</span>
+  </div>`).join('');
 }
 
 function buildHoy() {
@@ -858,6 +1155,7 @@ function buildGestoras() {
       <div class="tav">${p.ini}</div>
       <div style="flex:1;min-width:130px;"><div style="font:600 14px/1.1 'Fraunces',serif;color:var(--t-ink);">${p.nm}</div><div style="font:500 11px/1.2 'DM Sans';color:var(--t-mut2);">${p.rol} · desde ${p.desde}</div></div>
       <span class="bd ${p.ecl}">${p.est}</span>
+      <span style="font:600 11px/1 'DM Sans';color:var(--acc-d);cursor:pointer;white-space:nowrap;" onclick="showSombra('${p.nm}')">Ver pantalla →</span>
     </div>
     <div class="tstats"><span>Jornada <b>${p.jornada}</b></span><span>Horas mes <b>${p.horas}</b></span><span>Entregas <b>${p.ent}</b></span><span>Efectividad <b>${p.ef}</b></span></div>
     <div class="effbar"><div class="efffill" style="width:${p.eff}%;background:${p.eff>=85?'#6d7d4a':p.eff>=75?'#8a6a13':'#b8322f'};"></div></div>
@@ -965,11 +1263,22 @@ function buildInventario() {
 }
 
 // ─── NAVIGATION ───────────────────────────────────────
-const TITLES = {hoy:'Hoy',pedidos:'Pedidos',novedades:'Novedades',oficina:'Oficina',gestoras:'Gestoras',auditoria:'Auditoría',pauta:'Pauta y ROAS',inventario:'Inventario'};
+const TITLES = {
+  hoy:'Hoy',pedidos:'Pedidos',novedades:'Novedades',oficina:'Oficina',
+  gestoras:'Gestoras',auditoria:'Auditoría',pauta:'Pauta y ROAS',inventario:'Inventario',
+  'g-hoy':'Mis pedidos de hoy','g-pedidos':'Mis pedidos','g-novedades':'Mis novedades',
+};
 function go(view, el) {
+  // Gestora: redirigir vistas estándar a las propias
+  if (ROL === 'gestora') {
+    if (view === 'hoy') view = 'g-hoy';
+    if (view === 'pedidos') view = 'g-pedidos';
+    if (view === 'novedades') view = 'g-novedades';
+  }
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
-  document.getElementById('v-'+view).classList.add('on');
+  const vEl = document.getElementById('v-'+view);
+  if (vEl) vEl.classList.add('on');
   if (el) el.classList.add('on');
   else { const m=document.querySelector('[data-v="'+view+'"]'); if(m) m.classList.add('on'); }
   document.getElementById('ptitle').textContent = TITLES[view]||view;
@@ -1008,10 +1317,27 @@ function step(n){
   document.getElementById('s'+n).classList.add('on');
   if(n===2) document.getElementById('em-show').textContent=document.getElementById('em').value||'tu@correo.co';
 }
-function enterApp(){
+function enterApp(forceRol){
+  const email = document.getElementById('em').value.toLowerCase().trim();
+  localStorage.setItem('ne_email', email);
+  const info = ROLES[email];
+  ROL = forceRol || (info ? info.rol : 'dueno');
+  const nombre = info ? info.nombre : 'Manuela';
+  const label  = info ? info.label  : 'dueña';
+
+  document.getElementById('app').setAttribute('data-rol', ROL);
+  document.getElementById('brand-rol').textContent = 'Nova · ' + label.charAt(0).toUpperCase() + label.slice(1);
+  document.getElementById('toprol').textContent = nombre + ' · ' + label;
+
+  // Gestoras no cambian de tienda; fijan la primera
+  if (ROL === 'gestora') ST = 'ec';
+
   document.getElementById('login').style.display='none';
   document.getElementById('app').classList.add('on');
   applyPrefs(); buildAll(); updateSub();
+
+  // Primera vez: mostrar onboarding solo al dueño
+  if (ROL === 'dueno' && !localStorage.getItem('ne_onboarded')) showOnboarding();
 }
 function logout(){
   document.getElementById('app').classList.remove('on');
@@ -1023,16 +1349,61 @@ function logout(){
 function openSb(){document.getElementById('sidebar').classList.add('open');document.getElementById('soblay').classList.add('open');}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('soblay').classList.remove('open');}
 
+// ─── VISTA SOMBRA ─────────────────────────────────────
+const SOMBRA_DATA = {
+  'Camila Restrepo':   {av:'CR', info:'Gestora · Nutrea Ecuador · 6h 12m activa', stat:[{k:'Pedidos',v:'18'},{k:'Entregados',v:'12'},{k:'Novedades',v:'3'},{k:'Efectividad',v:'91%'}]},
+  'Valentina Ospina':  {av:'VO', info:'Gestora · Nutrea Ecuador · 4h 30m activa', stat:[{k:'Pedidos',v:'14'},{k:'Entregados',v:'9'}, {k:'Novedades',v:'1'},{k:'Efectividad',v:'86%'}]},
+  'Daniela Ríos':      {av:'DR', info:'Admin · Nutrea · sin conexión hoy',         stat:[{k:'Pedidos',v:'—'}, {k:'Entregados',v:'—'},{k:'Novedades',v:'—'},{k:'Efectividad',v:'—'}]},
+};
+function showSombra(nombre) {
+  const d = SOMBRA_DATA[nombre] || {av:nombre[0], info:'Gestora', stat:[]};
+  document.getElementById('som-av').textContent = d.av;
+  document.getElementById('som-nombre').textContent = nombre;
+  document.getElementById('som-info').textContent = d.info;
+  document.getElementById('som-stat').innerHTML = d.stat.map(s=>`<div class="som-kc"><div class="kk">${s.k}</div><div class="vv">${s.v}</div></div>`).join('');
+  document.getElementById('som-peds').innerHTML = [
+    {nm:'Carlos Mendoza · #PE-2041', sub:'Proteína Vainilla · En tránsito', cl:'a'},
+    {nm:'Ana Ruiz · #PE-2038',       sub:'Colágeno · Novedad',             cl:'r'},
+    {nm:'María Salazar · #PE-2031',  sub:'Multivitamínico · En tránsito',  cl:'a'},
+  ].map(p=>`<div class="som-ped">
+    <div class="som-ped-h"><span class="som-ped-nm">${p.nm}</span><span class="bd bd-${p.cl}">${p.sub.split('·')[1].trim()}</span></div>
+    <span class="som-ped-sub">${p.sub.split('·')[0].trim()}</span>
+  </div>`).join('');
+  document.getElementById('som-novs').innerHTML = nombre === 'Camila Restrepo' ? [
+    {nm:'Ana Ruiz · Dirección incorrecta', cl:'r'},
+    {nm:'Pedro Soto · No había nadie', cl:'w'},
+  ].map(n=>`<div class="som-ped"><div class="som-ped-nm">${n.nm}</div></div>`).join('')
+  : '<div style="font:500 12px/1.4 \'DM Sans\';color:var(--t-mut2);">Sin novedades abiertas.</div>';
+  document.getElementById('sombra').classList.add('on');
+}
+function closeSombra(){document.getElementById('sombra').classList.remove('on');}
+
+// ─── ONBOARDING ───────────────────────────────────────
+function showOnboarding(){document.getElementById('onboarding').classList.add('on');}
+function closeOnboarding(){
+  document.getElementById('onboarding').classList.remove('on');
+  localStorage.setItem('ne_onboarded','1');
+}
+function obTab(n){
+  document.querySelectorAll('.ob-tab').forEach((t,i)=>t.classList.toggle('on',i===n-1));
+  document.querySelectorAll('.ob-step').forEach((s,i)=>s.classList.toggle('on',i===n-1));
+}
+
 // ─── UTILS ────────────────────────────────────────────
 function updateSub(){
   const d=new Date();
   const days=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
   const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  document.getElementById('psub').textContent=`${days[d.getDay()]} ${d.getDate()} de ${months[d.getMonth()]} · ${STORES[ST].name} · Manuela`;
+  const email = localStorage.getItem('ne_email') || '';
+  const info  = ROLES[email];
+  const nombre = info ? info.nombre : 'Manuela';
+  const tienda = ROL === 'gestora' ? 'Nutrea EC' : STORES[ST].name;
+  document.getElementById('psub').textContent=`${days[d.getDay()]} ${d.getDate()} de ${months[d.getMonth()]} · ${tienda} · ${nombre}`;
 }
 function applyPrefs(){
   const a=document.getElementById('app');
   a.setAttribute('data-tema',TM);
+  a.setAttribute('data-rol',ROL);
   if(MD==='oscuro'){a.setAttribute('data-modo','oscuro');document.getElementById('login').setAttribute('data-tema',TM);document.getElementById('login').setAttribute('data-modo','oscuro');}
   else{a.removeAttribute('data-modo');document.getElementById('login').setAttribute('data-tema',TM);document.getElementById('login').removeAttribute('data-modo');}
   document.getElementById('bcl').classList.toggle('on',MD==='claro');
@@ -1040,7 +1411,10 @@ function applyPrefs(){
   document.querySelectorAll('.cdot').forEach(d=>d.classList.toggle('on',d.dataset.t===TM));
   document.getElementById('cec').classList.toggle('on',ST==='ec');
   document.getElementById('cgt').classList.toggle('on',ST==='gt');
-  document.getElementById('bsub').textContent='Manuela · Nutrea '+(ST==='ec'?'EC':'GT');
+  const email=localStorage.getItem('ne_email')||'';
+  const info=ROLES[email];
+  const nombre=info?info.nombre:'Manuela';
+  document.getElementById('bsub').textContent=nombre+' · Nutrea '+(ST==='ec'?'EC':'GT');
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
