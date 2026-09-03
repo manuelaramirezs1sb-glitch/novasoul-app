@@ -36,6 +36,19 @@
 [data-tema="azul"]{--acc:#A8C2D8;--acc-d:#3C6684;--a-chip:#5C87A6;--s-dark:#dbe4ec;--s-dark2:#c8d7e4;--s-dark3:#adc3d6;--s-deep:#bfd1e0;}
 [data-tema="azul"][data-modo="oscuro"]{--acc-d:#A8C2D8;--a-chip:#A8C2D8;--s-dark:#1b242b;--s-dark2:#1e2830;--s-dark3:#2c3a44;--s-deep:#131b21;}
 
+@media(prefers-color-scheme:dark){
+  html:not([data-modo="claro"]) #app:not([data-modo="claro"]),
+  html:not([data-modo="claro"]) #login:not([data-modo="claro"]){
+    --s-bg:#1f241a;--s-card:#272d20;--s-card2:#2b3124;--s-card3:#2b3124;
+    --s-soft:#333a2b;--s-soft7:#434c37;
+    --s-line:#3c4433;--s-line2:#363d2d;--s-line3:#3c4433;--s-line4:#4a543a;--s-line5:#4a543a;
+    --s-dark:#242a1c;--s-dark2:#2b3124;--s-dark3:#3c4433;--s-deep:#1b2015;
+    --t-ink:#f1f4e8;--t-ink2:#e2e7d6;--t-ink3:#cbd2bd;
+    --t-mut:#a9b39a;--t-mut2:#b9c2a8;--t-mut3:#8b957c;--t-mut4:#7a8470;
+    --t-ondark:#f1f4e8;--t-ondark-mut:#b9c2a8;--a-chip:#b9cf8e;
+  }
+}
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;overflow:hidden;}
 body{font-family:'DM Sans',system-ui,sans-serif;background:var(--s-bg);color:var(--t-ink);}
@@ -332,9 +345,42 @@ input.li:focus{border-color:var(--acc-d);}
 [data-rol="gestora"] #v-hoy,[data-rol="gestora"] #v-pedidos,
 [data-rol="gestora"] #v-novedades,[data-rol="gestora"] #v-oficina,
 [data-rol="gestora"] #v-gestoras,[data-rol="gestora"] #v-auditoria,
-[data-rol="gestora"] #v-pauta,[data-rol="gestora"] #v-inventario{display:none!important;}
-[data-rol="admin"] #v-pauta,[data-rol="admin"] #v-inventario{display:none!important;}
+[data-rol="gestora"] #v-pauta,[data-rol="gestora"] #v-inventario,
+[data-rol="gestora"] #v-dinero,[data-rol="gestora"] #v-calc,
+[data-rol="gestora"] #v-permisos,[data-rol="gestora"] #v-config,
+[data-rol="gestora"] #v-productos{display:none!important;}
+[data-rol="admin"] #v-pauta,[data-rol="admin"] #v-inventario,
+[data-rol="admin"] #v-dinero,[data-rol="admin"] #v-calc,
+[data-rol="admin"] #v-permisos,[data-rol="admin"] #v-config{display:none!important;}
 
+/* ─── PERMISOS ───────────────────────────────────────── */
+.mtz-table{overflow-x:auto;}
+.mtz-grid{min-width:460px;display:flex;flex-direction:column;gap:8px;}
+.mtz-head{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,94px);gap:9px;align-items:end;padding-bottom:4px;}
+.mtz-row{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,94px);gap:9px;align-items:center;border-top:1px solid var(--s-line2);padding-top:9px;}
+.mtz-cell{display:flex;align-items:center;justify-content:center;height:38px;border-radius:10px;cursor:pointer;font:600 11px/1 'DM Sans';transition:background .12s;}
+.mtz-cell:hover{opacity:.85;}
+.mtz-off{background:var(--s-bg);border:1px solid var(--s-line2);color:var(--t-mut3);}
+.mtz-ver{background:#d3e0c2;color:#4c6236;}
+.mtz-ges{background:#b9cf8e;color:#2e4a1a;}
+.perm-tog{display:flex;align-items:center;justify-content:space-between;background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:12px 14px;cursor:pointer;gap:12px;}
+.perm-tog:hover{border-color:var(--s-line4);}
+.perm-tog-lbl{display:flex;flex-direction:column;gap:3px;flex:1;}
+.perm-tog-lbl strong{font:600 12.5px/1.3 'DM Sans';color:var(--t-ink);}
+.perm-tog-lbl span{font:500 11px/1.4 'DM Sans';color:var(--t-mut2);}
+.tog-sw{width:42px;height:24px;border-radius:99px;position:relative;flex:none;transition:background .15s;}
+.tog-sw::after{content:'';position:absolute;top:3px;width:18px;height:18px;border-radius:99px;background:var(--s-card);transition:left .15s;}
+.tog-sw.on{background:#6d7d4a;}.tog-sw.on::after{right:3px;left:auto;}
+.tog-sw.off{background:var(--s-line4);}.tog-sw.off::after{left:3px;}
+.eq-card-sel{background:var(--s-dark);border:1px solid var(--s-dark);border-radius:14px;padding:15px 17px;display:flex;flex-direction:column;gap:7px;cursor:pointer;}
+.eq-card{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:14px;padding:15px 17px;display:flex;flex-direction:column;gap:7px;cursor:pointer;}
+.eq-card:hover,.eq-card-sel:hover{opacity:.9;}
+.eq-av{width:34px;height:34px;border-radius:99px;font:700 12px/34px 'DM Sans';text-align:center;flex:none;}
+.suacceso-link{font:500 12.5px/1 'DM Sans';color:var(--t-ink);background:var(--s-bg);border:1px solid var(--s-line);border-radius:11px;padding:12px 15px;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+/* ─── CALCULADORAS ───────────────────────────────────── */
+.calc-input{border:1px solid var(--s-line3);background:var(--s-card2);border-radius:11px;padding:12px 14px;font:500 14px/1 'DM Sans';color:var(--t-ink);outline:none;width:100%;}
+.calc-input:focus{border-color:var(--acc-d);}
+.calc-result-big{font:700 36px/1 'Fraunces',serif;color:var(--t-ink);font-variant-numeric:tabular-nums;}
 /* ─── ONBOARDING ─────────────────────────────────────── */
 #onboarding{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;}
 #onboarding.on{display:flex;}
@@ -460,35 +506,39 @@ input.li:focus{border-color:var(--acc-d);}
     </div>
     <div style="display:flex;flex-direction:column;gap:14px;">
       <div class="navg">
-        <div class="navg-lbl">PRINCIPAL</div>
+        <div class="navg-lbl">OPERACIÓN</div>
         <div class="ni on" data-v="hoy" onclick="go('hoy',this)" id="nav-hoy">Hoy</div>
         <div class="ni v-gestora" data-v="g-hoy" onclick="go('g-hoy',this)">Mis pedidos de hoy</div>
-      </div>
-      <div class="navg">
-        <div class="navg-lbl">PEDIDOS</div>
         <div class="ni ro-admin" data-v="pedidos" onclick="go('pedidos',this)">Pedidos</div>
         <div class="ni ro-admin" data-v="novedades" onclick="go('novedades',this)">Novedades</div>
-        <div class="ni ro-admin" data-v="oficina" onclick="go('oficina',this)">Oficina</div>
+        <div class="ni ro-admin" data-v="oficina" onclick="go('oficina',this)">Seguimiento a oficina</div>
+        <div class="ni ro-admin" data-v="productos" onclick="go('productos',this)">Productos</div>
         <div class="ni v-gestora" data-v="g-pedidos" onclick="go('g-pedidos',this)">Mis pedidos</div>
         <div class="ni v-gestora" data-v="g-novedades" onclick="go('g-novedades',this)">Mis novedades</div>
       </div>
-      <div class="navg ro-admin">
-        <div class="navg-lbl">EQUIPO</div>
-        <div class="ni" data-v="gestoras" onclick="go('gestoras',this)">Gestoras</div>
-        <div class="ni ro-admin" data-v="auditoria" onclick="go('auditoria',this)">Auditoría</div>
-      </div>
       <div class="navg ro-dueno">
         <div class="navg-lbl">DINERO</div>
-        <div class="ni" data-v="pauta" onclick="go('pauta',this)">Pauta y ROAS</div>
-        <div class="ni" data-v="inventario" onclick="go('inventario',this)">Inventario</div>
+        <div class="ni" data-v="dinero" onclick="go('dinero',this)">Dinero</div>
+        <div class="ni" data-v="pauta" onclick="go('pauta',this)">Pauta y gastos</div>
+        <div class="ni" data-v="calc" onclick="go('calc',this)">Calculadoras</div>
+      </div>
+      <div class="navg">
+        <div class="navg-lbl">EQUIPO</div>
+        <div class="ni ro-admin" data-v="gestoras" onclick="go('gestoras',this)">Gestoras</div>
+        <div class="ni ro-admin" data-v="auditoria" onclick="go('auditoria',this)">Auditoría</div>
+        <div class="ni ro-dueno" data-v="permisos" onclick="go('permisos',this)">Permisos</div>
+      </div>
+      <div class="navg ro-dueno">
+        <div class="navg-lbl">NOVA</div>
+        <div class="ni ni-soon" style="opacity:.5;cursor:default;" title="Próximamente">NovaChat</div>
+        <div class="ni" data-v="config" onclick="go('config',this)">Configuración</div>
       </div>
     </div>
     <div class="stores ro-admin">
       <div class="stores-lbl">TIENDA</div>
-      <div class="schip on" id="cec" onclick="switchSt('ec')"><strong>Nutrea Ecuador</strong><small>Shopify + Dropi · USD</small></div>
+      <div class="schip on" id="cec" onclick="switchSt('ec')"><strong>Nutrea EC</strong><small>Shopify + Dropi · USD</small></div>
       <div class="schip" id="cgt" onclick="switchSt('gt')"><strong>Nutrea GT</strong><small>Dropi · GTQ</small></div>
-      <div class="ubtn ro-dueno" onclick="showOnboarding()">⚙ Configuración</div>
-      <div class="ubtn ro-admin" style="margin-top:4px;">Subir archivos</div>
+      <div class="ubtn">Subir archivos</div>
     </div>
   </nav>
 
@@ -734,6 +784,196 @@ input.li:focus{border-color:var(--acc-d);}
         <div style="display:flex;flex-direction:column;gap:9px;" id="invlist"></div>
       </div>
 
+      <!-- ════ PRODUCTOS ════ -->
+      <div class="view ro-admin" id="v-productos">
+        <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Qué escalar, qué frenar, qué revisar. Cada producto con su margen real calculado.</p>
+        <div class="kgrid" id="prodkpi"></div>
+        <div style="display:flex;flex-direction:column;gap:10px;" id="prodlist"></div>
+        <div class="card">
+          <div class="card-h"><span class="ct">Inventario</span></div>
+          <div style="display:flex;flex-direction:column;gap:9px;" id="prodinv"></div>
+        </div>
+      </div>
+
+      <!-- ════ DINERO ════ -->
+      <div class="view ro-dueno" id="v-dinero">
+        <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">De arriba hacia abajo: lo que entró, lo que se fue y lo que queda.</p>
+        <div class="kgrid" id="dinkpi2"></div>
+        <div class="card">
+          <div class="card-h"><span class="ct">Punto de equilibrio</span></div>
+          <div style="display:flex;flex-direction:column;gap:14px;" id="eq-det">
+            <div>
+              <div style="font:600 10px/1 'DM Sans';letter-spacing:1.2px;color:var(--t-mut2);margin-bottom:8px;">TE FALTAN</div>
+              <div style="display:flex;align-items:baseline;gap:10px;">
+                <span style="font:700 54px/1 'Fraunces',serif;color:var(--t-ink);" id="eq-faltan">31</span>
+                <span style="font:500 13px/1.4 'DM Sans';color:var(--t-mut);">entregas efectivas<br>para cubrir los gastos del mes</span>
+              </div>
+            </div>
+            <div class="pbar"><div class="pfill" id="eq-bar2" style="background:#6d7d4a;width:60%;"></div></div>
+            <div style="font:500 11.5px/1.4 'DM Sans';color:var(--t-mut2);" id="eq-sub2">47 entregadas · 60% del punto de equilibrio · meta: 78 entregas</div>
+            <div class="dline"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+              <div>
+                <div class="slbl" style="margin-bottom:8px;">LO QUE HAY QUE CUBRIR</div>
+                <div style="display:flex;flex-direction:column;gap:0;" id="eq-costos"></div>
+              </div>
+              <div style="background:#e6f0df;border:1px solid #d8e6cb;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+                <div class="slbl" style="color:#5f7a42;margin-bottom:4px;">CADA ENTREGA DEJA</div>
+                <div style="font:700 36px/1 'Fraunces',serif;color:var(--t-ink);" id="eq-contrib">$ 68.110</div>
+                <p style="font:500 12px/1.6 'DM Sans';color:#4e6636;margin:0;" id="eq-nota">Después de flete, costo de producto y devoluciones promedio.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ CALCULADORAS ════ -->
+      <div class="view ro-dueno" id="v-calc">
+        <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Dos calculadoras para decidir antes de mover presupuesto o lanzar un producto nuevo.</p>
+        <div class="g2">
+          <div class="card">
+            <div class="card-h"><span class="ct">ROI de campaña</span></div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">PAUTA INVERTIDA</span><input class="calc-input" id="calc-pauta" type="number" value="366041" oninput="calcROI()"></div>
+              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">PEDIDOS</span><input class="calc-input" id="calc-ped" type="number" value="11" oninput="calcROI()"></div>
+              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">% ENTREGA</span><input class="calc-input" id="calc-ent" type="number" value="74.6" oninput="calcROI()"></div>
+              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">MARGEN NETO POR ENTREGA</span><input class="calc-input" id="calc-mg" type="number" value="104020" oninput="calcROI()"></div>
+              <div class="dline"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">ROAS</span>
+                <span class="calc-result-big" id="calc-roas">2.1×</span>
+              </div>
+              <div style="font:500 11px/1.5 'DM Sans';color:var(--t-mut);" id="calc-roi-txt">Recuperas 2.1 veces lo que invertiste. CPA: $ 366.041 / 8.2 entregas.</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-h"><span class="ct">Precio de lanzamiento</span></div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">COSTO DEL PRODUCTO (unidad)</span><input class="calc-input" id="pre-costo" type="number" value="52000" oninput="calcPre()"></div>
+              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">FLETE PROMEDIO</span><input class="calc-input" id="pre-flete" type="number" value="35000" oninput="calcPre()"></div>
+              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">% ENTREGA ESPERADA</span><input class="calc-input" id="pre-ent" type="number" value="69.1" oninput="calcPre()"></div>
+              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">MARGEN DESEADO %</span><input class="calc-input" id="pre-margen" type="number" value="25" oninput="calcPre()"></div>
+              <div class="dline"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">PRECIO MÍNIMO</span>
+                <span class="calc-result-big" id="pre-result">$ 224.000</span>
+              </div>
+              <div style="font:500 11px/1.5 'DM Sans';color:var(--t-mut);" id="pre-txt">Por debajo de este precio pierdes plata con el 30.9% de devoluciones.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ PERMISOS ════ -->
+      <div class="view ro-dueno" id="v-permisos">
+        <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);max-width:78ch;">Toda la operación vive en tu panel. Lo que decides aquí es quién la controla: toca una casilla para cambiar el acceso. Lo que nadie gestiona, lo llevas tú.</p>
+
+        <!-- Matriz -->
+        <div class="card">
+          <div class="card-h">
+            <span class="ct">Quién controla cada operación</span>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">
+              <span style="font:600 10px/1 'DM Sans';padding:5px 9px;border-radius:20px;background:var(--s-bg);border:1px solid var(--s-line2);color:var(--t-mut2);">Sin acceso</span>
+              <span style="font:600 10px/1 'DM Sans';padding:5px 9px;border-radius:20px;background:#d3e0c2;color:#4c6236;">Ver</span>
+              <span style="font:600 10px/1 'DM Sans';padding:5px 9px;border-radius:20px;background:#b9cf8e;color:#2e4a1a;">Gestionar</span>
+              <span onclick="resetMatrix()" style="font:600 10px/1 'DM Sans';color:var(--t-mut2);cursor:pointer;padding:5px 4px;">Restablecer</span>
+            </div>
+          </div>
+          <div class="mtz-table">
+            <div class="mtz-grid" id="mtz-grid">
+              <div class="mtz-head">
+                <span style="font:600 9.5px/1 'DM Sans';letter-spacing:.9px;color:var(--t-mut2);">OPERACIÓN · Y QUIÉN LA CONTROLA</span>
+                <div style="display:flex;flex-direction:column;gap:2px;align-items:center;"><span style="font:600 11.5px/1.2 'DM Sans';color:var(--t-ink);text-align:center;">Daniela R.</span><span style="font:500 10px/1.2 'DM Sans';color:var(--t-mut2);">Admin</span></div>
+                <div style="display:flex;flex-direction:column;gap:2px;align-items:center;"><span style="font:600 11.5px/1.2 'DM Sans';color:var(--t-ink);text-align:center;">Katherin M.</span><span style="font:500 10px/1.2 'DM Sans';color:var(--t-mut2);">Gestora EC</span></div>
+                <div style="display:flex;flex-direction:column;gap:2px;align-items:center;"><span style="font:600 11.5px/1.2 'DM Sans';color:var(--t-ink);text-align:center;">Solange P.</span><span style="font:500 10px/1.2 'DM Sans';color:var(--t-mut2);">Gestora GT</span></div>
+              </div>
+              <!-- rows filled by JS -->
+            </div>
+          </div>
+          <p style="font:500 11.5px/1.5 'DM Sans';color:var(--t-mut2);border-top:1px solid var(--s-line2);padding-top:12px;margin:0;">La administradora ve y gestiona todo lo que la gestora no tenga asignado. Así la herramienta sirve igual el primer día, cuando no tienes equipo, que cuando ya tienes dos gestoras y una admin.</p>
+        </div>
+
+        <!-- Equipo selector -->
+        <div class="g3" id="perm-eq-cards"></div>
+
+        <!-- Detalle de persona -->
+        <div class="card" id="perm-det">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+            <span style="font:600 17px/1.1 'Fraunces',serif;color:var(--t-ink);" id="perm-nm">Daniela R.</span>
+            <span style="font:500 12px/1 'DM Sans';color:var(--t-mut2);" id="perm-correo">daniela@nutreashop.com</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div class="slbl">ROL</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;" id="perm-roles"></div>
+            <p style="font:500 11.5px/1.5 'DM Sans';color:var(--t-mut2);margin:0;">Cambiar el rol devuelve los permisos predeterminados de ese rol.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div class="slbl">TIENDAS ASIGNADAS</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;" id="perm-tiendas"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div class="slbl">PERMISOS</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:9px;" id="perm-lista"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--s-line2);padding-top:16px;">
+            <div class="slbl">SU ACCESO</div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <span class="suacceso-link" id="perm-link">nova.co/acceso/daniela-r-07f4a</span>
+              <span onclick="copyPermLink()" id="perm-copy-btn" style="font:600 12px/1 'DM Sans';color:var(--t-ondark);background:var(--s-deep);border-radius:20px;padding:12px 16px;cursor:pointer;white-space:nowrap;">Copiar link</span>
+              <span onclick="emailPermLink()" style="font:600 12px/1 'DM Sans';color:var(--t-ink);background:var(--s-bg);border:1px solid var(--s-line);border-radius:20px;padding:12px 16px;cursor:pointer;white-space:nowrap;">Mandar por correo</span>
+            </div>
+            <p style="font:500 11.5px/1.5 'DM Sans';color:var(--t-mut2);margin:0;">El link caduca a las 48 horas. Nova nunca guarda la contraseña de Dropi.</p>
+          </div>
+          <span onclick="enterAsSombra()" style="font:600 12.5px/1 'DM Sans';color:#232c19;background:var(--a-chip);border-radius:20px;padding:13px 18px;cursor:pointer;align-self:flex-start;" id="perm-entrar-btn">Entrar como Daniela R. →</span>
+        </div>
+      </div>
+
+      <!-- ════ CONFIGURACIÓN ════ -->
+      <div class="view ro-dueno" id="v-config">
+        <div class="g2">
+          <div class="card">
+            <div class="card-h"><span class="ct">Tu cuenta</span></div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">NOMBRE</span><input class="li" value="Manuela" style="background:var(--s-bg);"></div>
+              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">CORREO</span><input class="li" value="manuela@nutrea.co" style="background:var(--s-bg);" readonly></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-h"><span class="ct">Tiendas conectadas</span></div>
+            <div style="display:flex;flex-direction:column;gap:9px;">
+              <div class="jcard"><div class="jtop"><span style="font:600 13px/1.2 'DM Sans';color:var(--t-ink);">Nutrea EC</span><span class="bd bd-g">Activa</span></div><span style="font:500 11.5px/1 'DM Sans';color:var(--t-mut2);">Shopify + Dropi · USD</span></div>
+              <div class="jcard"><div class="jtop"><span style="font:600 13px/1.2 'DM Sans';color:var(--t-ink);">Nutrea GT</span><span class="bd bd-g">Activa</span></div><span style="font:500 11.5px/1 'DM Sans';color:var(--t-mut2);">Dropi · GTQ</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><span class="ct">Apariencia</span></div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font:500 12.5px/1 'DM Sans';color:var(--t-ink);flex:1;">Color del panel</span>
+              <div class="cdots">
+                <div class="cdot on" style="background:#7e9a52;" data-t="verde" onclick="setTema('verde',this)"></div>
+                <div class="cdot" style="background:#C9A63F;" data-t="amarillo" onclick="setTema('amarillo',this)"></div>
+                <div class="cdot" style="background:#C47B57;" data-t="terracota" onclick="setTema('terracota',this)"></div>
+                <div class="cdot" style="background:#5C87A6;" data-t="azul" onclick="setTema('azul',this)"></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font:500 12.5px/1 'DM Sans';color:var(--t-ink);flex:1;">Modo</span>
+              <div class="mtoggle">
+                <div class="mbtn on" id="bcl2" onclick="setModo('claro');document.getElementById('bcl2').classList.add('on');document.getElementById('bos2').classList.remove('on');">Claro</div>
+                <div class="mbtn" id="bos2" onclick="setModo('oscuro');document.getElementById('bos2').classList.add('on');document.getElementById('bcl2').classList.remove('on');">Oscuro</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><span class="ct">Conexión con onboarding</span></div>
+          <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);margin:0;">Conecta hojas de cálculo nuevas, agrega tiendas o reconfigura tu equipo.</p>
+          <span onclick="showOnboarding()" class="lbtn" style="align-self:flex-start;width:auto;padding:13px 20px;border-radius:12px;">Abrir configuración inicial</span>
+        </div>
+      </div>
+
       <!-- ════ GESTORA · HOY ════ -->
       <div class="view v-gestora" id="v-g-hoy">
         <div>
@@ -770,6 +1010,8 @@ input.li:focus{border-color:var(--acc-d);}
         </div>
         <div style="display:flex;flex-direction:column;gap:9px;" id="g-novlist"></div>
       </div>
+
+
 
     </div><!-- /content -->
   </div><!-- /main -->
@@ -901,16 +1143,184 @@ let MD  = localStorage.getItem('ne_modo')  || 'claro';
 let ROL = 'dueno'; // dueno | admin | gestora
 let SEL_OFI = 0;
 
+// Role detection: match by email substring
+const ROLE_MAP = [
+  {m:'daniela',  r:'admin',   nm:'Daniela R.',  lbl:'admin'},
+  {m:'katherin', r:'gestora', nm:'Katherin M.',  lbl:'gestora'},
+  {m:'solange',  r:'gestora', nm:'Solange P.',   lbl:'gestora'},
+  {m:'gestora',  r:'gestora', nm:'Gestora',      lbl:'gestora'},
+  {m:'admin',    r:'admin',   nm:'Admin',        lbl:'admin'},
+  // Legacy demo accounts
+  {m:'camila',   r:'gestora', nm:'Camila',       lbl:'gestora'},
+  {m:'valentina',r:'gestora', nm:'Valentina',    lbl:'gestora'},
+];
+// Also keep object for lookup
 const ROLES = {
-  'manuela@nutrea.co': {rol:'dueno',  nombre:'Manuela',  label:'dueña'},
-  'daniela@nutrea.co': {rol:'admin',  nombre:'Daniela',  label:'admin'},
-  'camila@nutrea.co':  {rol:'gestora',nombre:'Camila',   label:'gestora'},
-  'valentina@nutrea.co':{rol:'gestora',nombre:'Valentina',label:'gestora'},
+  'manuela@nutrea.co':   {rol:'dueno',  nombre:'Manuela',   label:'dueña'},
+  'manuela@nutreashop.com':{rol:'dueno',nombre:'Manuela',   label:'dueña'},
+  'daniela@nutrea.co':   {rol:'admin',  nombre:'Daniela R.',label:'admin'},
+  'daniela@nutreashop.com':{rol:'admin',nombre:'Daniela R.',label:'admin'},
+  'katherin@nutreashop.com':{rol:'gestora',nombre:'Katherin M.',label:'gestora'},
+  'solange@nutreashop.com': {rol:'gestora',nombre:'Solange P.', label:'gestora'},
+  'camila@nutrea.co':    {rol:'gestora',nombre:'Camila',    label:'gestora'},
+  'valentina@nutrea.co': {rol:'gestora',nombre:'Valentina', label:'gestora'},
 };
+function rolDe(correo){
+  if(!correo) return 'dueno';
+  const c = correo.toLowerCase();
+  if(ROLES[c]) return ROLES[c].rol;
+  const found = ROLE_MAP.find(x=>c.includes(x.m));
+  return found ? found.r : 'dueno';
+}
+function nombreDe(correo){
+  if(!correo) return 'Manuela';
+  const c = correo.toLowerCase();
+  if(ROLES[c]) return ROLES[c].nombre;
+  const found = ROLE_MAP.find(x=>c.includes(x.m));
+  return found ? found.nm : 'Manuela';
+}
+function labelDe(correo){
+  if(!correo) return 'dueña';
+  const c = correo.toLowerCase();
+  if(ROLES[c]) return ROLES[c].label;
+  const found = ROLE_MAP.find(x=>c.includes(x.m));
+  return found ? found.lbl : 'dueña';
+}
 
 const STORES = {
-  ec: {name:'Nutrea Ecuador', sub:'Shopify + Dropi · USD', sym:'$',  f:1},
-  gt: {name:'Nutrea GT',      sub:'Dropi · GTQ',           sym:'Q',  f:3.72}
+  ec: {name:'Nutrea EC', sub:'Shopify + Dropi · USD', sym:'$',  f:1},
+  gt: {name:'Nutrea GT', sub:'Dropi · GTQ',           sym:'Q',  f:3.72}
+};
+
+// ─── SAMPLE DATA (POR_TIENDA) ─────────────────────────
+const POR_TIENDA = {
+  ec: {
+    pedidos: [
+      {id:'6349174',cli:'Fausto Riofrío',   ges:'Katherin',ciu:'Guayaquil',prod:'TAG RECEDE 2u',    val:'$ 52,00', est:'Por confirmar',eBg:'#f7dedc',eInk:'#b8322f'},
+      {id:'6349298',cli:'Graciela Mejía',   ges:'Katherin',ciu:'Quito',    prod:'EVILGOODS 3u',     val:'$ 93,74', est:'En gestión',   eBg:'#fae3d6',eInk:'#A06A52'},
+      {id:'6333602',cli:'Ysamar Caldera',   ges:'Katherin',ciu:'Cuenca',   prod:'DR MELAXIN 1u',    val:'$ 58,94', est:'Novedad',      eBg:'#f6ecd0',eInk:'#8a6a13'},
+      {id:'6349313',cli:'Monserrath Cando', ges:'Solange', ciu:'Ambato',   prod:'TRULY ROSA 1u',    val:'$ 52,43', est:'Confirmado',   eBg:'#d3e0c2',eInk:'#4c6236'},
+      {id:'6349361',cli:'Melany Herrera',   ges:'Solange', ciu:'Guayaquil',prod:'EVILGOODS 1u',     val:'$ 38,02', est:'Confirmado',   eBg:'#d3e0c2',eInk:'#4c6236'},
+      {id:'6349402',cli:'Jonathan Piedra',  ges:'Katherin',ciu:'Quito',    prod:'TAG RECEDE 1u',    val:'$ 68,11', est:'Cancelado',    eBg:'#e4e8da',eInk:'#6f7a5f'},
+    ],
+    mes: [
+      {lb:'Recaudo del mes',  v:'$ 68.420.000', sub:'+11% contra julio',                     color:'#4c6236'},
+      {lb:'Pauta del mes',    v:'$ 21.180.000', sub:'31% del recaudo',                       color:'var(--acc-d)'},
+      {lb:'Margen',           v:'24,8%',        sub:'Julio cerró en 22,1%',                  color:'#4c6236'},
+      {lb:'Queda limpio',     v:'$ 16.960.000', sub:'Después de pauta, fletes y nómina',     color:'#6E7A55'},
+    ],
+    pendientes: [
+      {t:'Aprobar el pago de pauta de la semana',     s:'$ 5.240.000 · Meta corta mañana'},
+      {t:'Decidir si frenamos Dr. Melaxin',           s:'Pierde $ 23.440 por entrega desde el lunes'},
+      {t:'Autorizar el precio nuevo de Tag Recede',   s:'Daniela lo pidió ayer 18:40'},
+    ],
+    equilibrio:{faltan:'31 entregas',sub:'Para cubrir $ 1.842.000 de gastos fijos de hoy',hechas:'47 entregadas',pct:'60%'},
+    productos:[
+      {nm:'Tag Recede',       ver:'Escalar', por:'Cada entrega deja $ 68.110...', stock:'Stock 210 · alcanza 13 días', vBg:'#d3e0c2',vInk:'#4c6236',color:'#6d7d4a'},
+      {nm:'Dr. Melaxin Spray',ver:'Frenar',  por:'Cuesta $ 49.200 traer...',      stock:'Stock 78 · 60% de devolución', vBg:'#f7dedc',vInk:'#b8322f',color:'#b8322f'},
+      {nm:'Truly Rosa',       ver:'Escalar', por:'El más barato de traer...',     stock:'Stock 164 · sin quiebres',    vBg:'#d3e0c2',vInk:'#4c6236',color:'#6d7d4a'},
+      {nm:'Crema Evil Goods', ver:'Pausado', por:'Sin pauta este mes.',           stock:'Stock 42 · sin movimiento',   vBg:'#e4e8da',vInk:'#6f7a5f',color:'#97a184'},
+    ],
+    jornada:[
+      {nm:'Katherin M.',   rol:'Gestora · Nutrea EC',         ent:'07:52',sal:'En línea',tiempo:'6 h 18 min',hizo:'18 confirmados · 39 novedades tocadas · 553 llamadas',falto:'6 pedidos sin empezar',color:'#6d7d4a',est:'Trabajando'},
+      {nm:'Solange P.',    rol:'Gestora · Tienda Guatemala',   ent:'08:30',sal:'12:40',   tiempo:'4 h 10 min',hizo:'11 confirmados · 8 novedades cerradas',falto:'No cerró la tarde',color:'var(--acc-d)',est:'Salió temprano'},
+      {nm:'Daniela R.',    rol:'Admin · Las dos tiendas',      ent:'13:05',sal:'En línea',tiempo:'3 h 02 min',hizo:'12 auditados · 1 hallazgo',falto:'26 de la cola',color:'#8a6a13',est:'Trabajando'},
+    ],
+    kmes:[
+      {lb:'RECAUDO DEL MES',    v:'$ 68,4M',sub:'+11% contra julio',       cl:'g'},
+      {lb:'PEDIDOS HOY',        v:'47',     sub:'31 faltan para equilibrio', cl:'a'},
+      {lb:'ENTREGA EFECTIVA',   v:'71%',    sub:'Meta: 75% mensual',         cl:'w'},
+      {lb:'DEVOLUCIONES',       v:'8,4%',   sub:'Umbral: 12%',               cl:'g'},
+    ],
+    dinBarVals:[980,1800,1240,1560,1100,820,1240],
+    roas:[
+      {nm:'Tag Recede',       roas:'5.2×',cl:'bd-g'},
+      {nm:'Truly Rosa',       roas:'4.1×',cl:'bd-g'},
+      {nm:'Crema Evil Goods', roas:'3.8×',cl:'bd-g'},
+      {nm:'Dr. Melaxin',      roas:'2.1×',cl:'bd-w'},
+    ],
+    novedades:[
+      {id:'#6349298',cli:'Graciela Mejía',   zona:'Quito',    motivo:'Dirección incorrecta',transp:'Servientrega',prod:'EVILGOODS 3u',    val:'$ 93,74', dias:'36h sin resolver',est:'En gestión',eI:'#8a6a13',eB:'#f6ecd0',veces:'2ª novedad',detalle:'La clienta dio una dirección desactualizada. Katherin intentó entregar dos veces.',nota:'La señora dice que no vive allá. Me dio otra dirección en Urdesa. Voy a reprogramar.',aut:'Katherin · hace 3h'},
+      {id:'#6333602',cli:'Ysamar Caldera',   zona:'Cuenca',   motivo:'Rechazo en puerta',  transp:'Laar Courier', prod:'DR MELAXIN 1u',  val:'$ 58,94', dias:'8h sin resolver', est:'Pendiente',  eI:'#b8322f',eB:'#f7dedc',veces:'1ª novedad',detalle:'La cliente no abrió. Número no contesta. Solange esperando instrucciones.',nota:'Llamé 3 veces. WhatsApp enviado sin respuesta.',aut:'Solange · hace 1h'},
+    ],
+    cpa:[
+      {nm:'Tag Recede · conjunto principal', cpa:'$ 7,40',  cl:'bd-g', ok:true},
+      {nm:'Dr. Melaxin · frío',              cpa:'$ 14,80', cl:'bd-r', ok:false},
+      {nm:'Truly Rosa · remarketing',        cpa:'$ 9,20',  cl:'bd-w', ok:true},
+      {nm:'Evil Goods · lookalike',          cpa:'$ 8,40',  cl:'bd-g', ok:true},
+    ],
+  },
+  gt: {
+    pedidos: [
+      {id:'5291044',cli:'Mirna Chávez',    ges:'Solange',ciu:'Guatemala City',prod:'TAG RECEDE 1u',  val:'Q 195,00',est:'Por confirmar',eBg:'#f7dedc',eInk:'#b8322f'},
+      {id:'5291098',cli:'Rosa Acabal',     ges:'Solange',ciu:'Xela',          prod:'EVILGOODS 2u',   val:'Q 340,00',est:'En gestión',   eBg:'#fae3d6',eInk:'#A06A52'},
+      {id:'5291133',cli:'Lucia Alvarado',  ges:'Solange',ciu:'Antigua',       prod:'TRULY ROSA 1u',  val:'Q 210,00',est:'Confirmado',   eBg:'#d3e0c2',eInk:'#4c6236'},
+      {id:'5291201',cli:'Ana García',      ges:'Solange',ciu:'Cobán',         prod:'DR MELAXIN 1u',  val:'Q 225,00',est:'Novedad',      eBg:'#f6ecd0',eInk:'#8a6a13'},
+    ],
+    mes:[
+      {lb:'Recaudo del mes',  v:'Q 254.600', sub:'+8% contra julio',                 color:'#4c6236'},
+      {lb:'Pauta del mes',    v:'Q 78.900',  sub:'31% del recaudo',                  color:'var(--acc-d)'},
+      {lb:'Margen',           v:'22,1%',     sub:'Julio cerró en 20,3%',             color:'#4c6236'},
+      {lb:'Queda limpio',     v:'Q 56.260',  sub:'Después de pauta, fletes y nómina',color:'#6E7A55'},
+    ],
+    pendientes:[
+      {t:'Revisar la pauta de Evil Goods en Guatemala', s:'ROAS bajó a 1.9× esta semana'},
+      {t:'Confirmar stock de Tag Recede para Guatemala', s:'Solo quedan 24 unidades'},
+    ],
+    equilibrio:{faltan:'18 entregas',sub:'Para cubrir Q 12.800 de gastos fijos de hoy',hechas:'29 entregadas',pct:'61%'},
+    productos:[
+      {nm:'Tag Recede',       ver:'Escalar', por:'Cada entrega deja Q 48.000...', stock:'Stock 24 · solo 4 días',    vBg:'#f6ecd0',vInk:'#8a6a13',color:'#8a6a13'},
+      {nm:'Crema Evil Goods', ver:'Frenar',  por:'ROAS bajó a 1.9×.',             stock:'Stock 38 · alto remanente', vBg:'#f7dedc',vInk:'#b8322f',color:'#b8322f'},
+      {nm:'Truly Rosa',       ver:'Escalar', por:'El producto de mayor rotación.',stock:'Stock 71 · sin quiebres',   vBg:'#d3e0c2',vInk:'#4c6236',color:'#6d7d4a'},
+      {nm:'Dr. Melaxin',      ver:'Pausado', por:'Sin pauta en GT este mes.',     stock:'Stock 15 · sin movimiento', vBg:'#e4e8da',vInk:'#6f7a5f',color:'#97a184'},
+    ],
+    jornada:[
+      {nm:'Solange P.',  rol:'Gestora · Nutrea GT', ent:'08:00',sal:'En línea',tiempo:'8 h 01 min',hizo:'29 confirmados · 12 novedades tocadas',falto:'2 pedidos sin empezar',color:'#6d7d4a',est:'Trabajando'},
+      {nm:'Daniela R.',  rol:'Admin · Las dos tiendas',ent:'13:05',sal:'En línea',tiempo:'3 h 02 min',hizo:'8 auditados',falto:'22 de la cola',color:'#8a6a13',est:'Trabajando'},
+    ],
+    kmes:[
+      {lb:'RECAUDO DEL MES',    v:'Q 254.600',sub:'+8% contra julio',       cl:'g'},
+      {lb:'PEDIDOS HOY',        v:'29',       sub:'18 faltan para equilibrio',cl:'a'},
+      {lb:'ENTREGA EFECTIVA',   v:'68%',      sub:'Meta: 72% mensual',        cl:'w'},
+      {lb:'DEVOLUCIONES',       v:'9,2%',     sub:'Umbral: 12%',              cl:'g'},
+    ],
+    dinBarVals:[420,680,510,790,630,440,520],
+    roas:[
+      {nm:'Tag Recede',  roas:'4.8×',cl:'bd-g'},
+      {nm:'Truly Rosa',  roas:'3.9×',cl:'bd-g'},
+      {nm:'Dr. Melaxin', roas:'3.1×',cl:'bd-g'},
+      {nm:'Evil Goods',  roas:'1.9×',cl:'bd-r'},
+    ],
+    novedades:[
+      {id:'#5291201',cli:'Ana García',  zona:'Cobán',         motivo:'Dirección incorrecta',transp:'Guatex',prod:'DR MELAXIN 1u',val:'Q 225,00',dias:'12h sin resolver',est:'Pendiente',eI:'#8a6a13',eB:'#f6ecd0',veces:'1ª novedad',detalle:'La dirección está incompleta. No ubican el inmueble.',nota:'Intenté contactar sin éxito. Reprogramaré mañana.',aut:'Solange · hace 2h'},
+    ],
+    cpa:[
+      {nm:'Tag Recede · principal', cpa:'Q 25,40',cl:'bd-g',ok:true},
+      {nm:'Evil Goods · frío',      cpa:'Q 52,10',cl:'bd-r',ok:false},
+      {nm:'Truly Rosa · recall',    cpa:'Q 34,20',cl:'bd-w',ok:true},
+    ],
+  }
+};
+
+const EQUIPO = [
+  {id:'daniela', nm:'Daniela R.', correo:'daniela@nutreashop.com',  ini:'DR', rol:'Admin',   tiendas:['ec','gt']},
+  {id:'katherin',nm:'Katherin M.',correo:'katherin@nutreashop.com', ini:'KM', rol:'Gestora', tiendas:['ec']},
+  {id:'solange', nm:'Solange P.', correo:'solange@nutreashop.com',  ini:'SP', rol:'Gestora', tiendas:['gt']},
+];
+
+const PERMS = [
+  {id:'pedidos',    lbl:'Ver todos los pedidos',     sub:'No limitado a sus asignados'},
+  {id:'novedades',  lbl:'Gestionar novedades',       sub:'Registrar contactos y estados'},
+  {id:'oficina',    lbl:'Seguimiento a oficina',     sub:'Confirmar entregas y adelantos'},
+  {id:'dinero',     lbl:'Ver finanzas',              sub:'Recaudo, margen, queda limpio'},
+  {id:'pauta',      lbl:'Ver pauta',                 sub:'ROAS, CPA, presupuesto'},
+  {id:'auditoria',  lbl:'Hacer auditoría',           sub:'Cruzar contra IRIS'},
+  {id:'permisos',   lbl:'Gestionar permisos',        sub:'Solo dueña'},
+];
+const PERM_DEFAULTS = {
+  daniela:  {pedidos:true, novedades:true, oficina:true, dinero:true, pauta:true, auditoria:true, permisos:false},
+  katherin: {pedidos:false,novedades:true, oficina:true, dinero:false,pauta:false,auditoria:false,permisos:false},
+  solange:  {pedidos:false,novedades:true, oficina:true, dinero:false,pauta:false,auditoria:false,permisos:false},
 };
 function C(usd) {
   const {sym,f}=STORES[ST], v=usd*f;
@@ -926,7 +1336,8 @@ function buildAll() {
   }
   buildHoy(); buildPedidos(); buildNovedades();
   buildOficina(); buildGestoras(); buildAuditoria();
-  if (ROL === 'dueno') { buildPauta(); buildInventario(); }
+  buildProductos();
+  if (ROL === 'dueno') { buildPauta(); buildInventario(); buildDinero(); buildPermisos(); calcROI(); calcPre(); }
 }
 
 function buildGestoraViews() {
@@ -1262,10 +1673,256 @@ function buildInventario() {
   }).join('');
 }
 
+// ─── PRODUCTOS ────────────────────────────────────────
+const D_PRODS = {
+  ec:[
+    {nm:'Tag Recede',      ver:'Escalar', por:'Cada entrega deja $ 68.110 y la pauta cuesta $ 32.000. Aguanta el doble de presupuesto.', stock:'Stock 210 · alcanza 13 días', cl:'g'},
+    {nm:'Dr. Melaxin Spray',ver:'Frenar',  por:'Cuesta $ 49.200 traer una entrega que solo deja $ 25.760. Cada pedido nace perdiendo.',   stock:'Stock 78 · 60% de devolución',cl:'r'},
+    {nm:'Truly Rosa',      ver:'Escalar', por:'El más barato de traer: $ 16.800 por entrega. Está subvendido, casi no tiene pauta.',      stock:'Stock 164 · sin quiebres',   cl:'g'},
+    {nm:'Crema Evil Goods',ver:'Pausado', por:'Sin pauta este mes. Queda el inventario quieto.',                                           stock:'Stock 42 · sin movimiento',  cl:'m'},
+  ],
+  gt:[
+    {nm:'Tag Recede',      ver:'Escalar', por:'88% de entrega con solo 13 órdenes. Es el único donde Forza no falla. Doblarlo sale más barato que meter un producto nuevo.', stock:'Stock 178 · alcanza 10 días', cl:'g'},
+    {nm:'Truly Rosa',      ver:'Escalar', por:'Buena conversión en Quetzaltenango. Bajo costo de flete por zona.', stock:'Stock 89 · sin quiebres', cl:'g'},
+    {nm:'Evil Goods',      ver:'Revisar', por:'Devolución sube desde el viernes. Forza reporta 3 devoluciones en tránsito.', stock:'Stock 54 · alerta devoluciones', cl:'w'},
+  ]
+};
+function buildProductos(){
+  const prods = D_PRODS[ST]||[];
+  document.getElementById('prodkpi').innerHTML=[
+    {lb:'SKUs ACTIVOS',v:prods.length+'',sub:'Con pauta este mes',cl:'a'},
+    {lb:'PARA ESCALAR',v:prods.filter(p=>p.ver==='Escalar').length+'',sub:'Margen positivo',cl:'g'},
+    {lb:'PARA FRENAR', v:prods.filter(p=>p.ver==='Frenar'||p.ver==='Revisar').length+'',sub:'Revisar urgente',cl:'r'},
+  ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
+  const clMap={g:'bd-g',r:'bd-r',w:'bd-w',m:'bd-m'};
+  document.getElementById('prodlist').innerHTML=prods.map(p=>`
+    <div class="card" style="gap:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <span style="font:600 14px/1.2 'DM Sans';color:var(--t-ink);">${p.nm}</span>
+        <span class="bd ${clMap[p.cl]}">${p.ver}</span>
+      </div>
+      <p style="font:500 12px/1.5 'DM Sans';color:var(--t-mut);margin:0;">${p.por}</p>
+      <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">${p.stock}</span>
+    </div>`).join('');
+}
+
+// ─── DINERO ───────────────────────────────────────────
+function buildDinero(){
+  const ec=ST==='ec';
+  const kpis=[
+    {lb:'RECAUDO DEL MES', v:ec?'$ 68.420.000':'Q 280.900', sub:ec?'+11% vs. julio':'+8% vs. julio', color:'#4c6236'},
+    {lb:'PAUTA DEL MES',   v:ec?'$ 21.180.000':'Q 84.600',  sub:'31% del recaudo',                   color:'var(--acc-d)'},
+    {lb:'MARGEN',          v:'24,8%',                        sub:'Julio cerró en 22,1%',              color:'#4c6236'},
+    {lb:'QUEDA LIMPIO',    v:ec?'$ 16.960.000':'Q 67.200',  sub:'Después de pauta, fletes y nómina', color:'#6E7A55'},
+    {lb:'NÓMINA MES',      v:ec?'$ 8.400.000':'Q 32.000',   sub:'+5% vs. mes anterior',              color:'var(--acc-d)'},
+    {lb:'FLETES MES',      v:ec?'$ 4.200.000':'Q 18.400',   sub:'Por entregas efectivas',            color:'var(--t-mut)'},
+  ];
+  document.getElementById('dinkpi2').innerHTML=kpis.map(k=>`<div class="kc" style="border-left:4px solid ${k.color}"><div class="klbl">${k.lb}</div><div style="font:700 22px/1.1 'Fraunces',serif;color:${k.color};font-variant-numeric:tabular-nums;">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
+  document.getElementById('eq-faltan').textContent=ec?'31':'14';
+  document.getElementById('eq-sub2').textContent=ec?'47 entregadas · 60% del punto de equilibrio · meta: 78 entregas':'32 entregadas · 70% del punto de equilibrio · meta: 46 entregas';
+  document.getElementById('eq-bar2').style.width=ec?'60%':'70%';
+  document.getElementById('eq-contrib').textContent=ec?'$ 68.110':'Q 248';
+  document.getElementById('eq-nota').textContent='Después de flete, costo de producto y devoluciones promedio.';
+  document.getElementById('eq-costos').innerHTML=[
+    ['Pauta · promedio histórico', ec?'$ 21.180.000':'Q 84.600'],
+    ['Nómina', ec?'$ 8.400.000':'Q 32.000'],
+    ['Llamadas y recargas · Iris', ec?'$ 1.200.000':'Q 4.800'],
+  ].map((r,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;${i>0?'border-top:1px solid var(--s-line2)':''};"><span style="font:500 12px/1 'DM Sans';color:var(--t-ink2);">${r[0]}</span><span style="font:600 13px/1 'DM Sans';color:var(--t-ink);">${r[1]}</span></div>`).join('');
+}
+
+// ─── PERMISOS ─────────────────────────────────────────
+const PERM_DEF = {
+  admin:[
+    {id:'auditar',  label:'Auditar pedidos',       desc:'Revisar pedido por pedido y marcarlos'},
+    {id:'dinero',   label:'Ver el dinero',          desc:'Recaudo, gastos y utilidad del día'},
+    {id:'novedades',label:'Resolver novedades',     desc:'Cerrar novedades de transportadora'},
+    {id:'editar',   label:'Editar datos del pedido',desc:'Dirección, teléfono y valor a cobrar'},
+    {id:'pauta',    label:'Ver la pauta',           desc:'Cuánto se gastó en Meta por producto'},
+    {id:'exportar', label:'Descargar la base',      desc:'Bajar el Excel completo de pedidos'},
+    {id:'tiendas',  label:'Ver las otras tiendas',  desc:'Cambiar entre NutreaShop EC y Nutrea GT'},
+    {id:'chat',     label:'Usar NovaChat',          desc:'Preguntar por escrito sobre la operación'},
+  ],
+  gestora:[
+    {id:'pedidos',  label:'Ver sus pedidos asignados',   desc:'Solo los que están a su nombre'},
+    {id:'confirmar',label:'Confirmar y cancelar',        desc:'Marcar el resultado de cada llamada'},
+    {id:'novedades',label:'Resolver novedades',          desc:'Las novedades de sus propios pedidos'},
+    {id:'meta',     label:'Ver su meta y su desempeño',  desc:'Cuánto le falta para la meta del día'},
+    {id:'editar',   label:'Editar datos del pedido',     desc:'Corregir dirección y teléfono'},
+    {id:'dinero',   label:'Ver el dinero',               desc:'Recaudo y utilidad de la tienda'},
+    {id:'equipo',   label:'Ver a las otras gestoras',    desc:'El desempeño del resto del equipo'},
+    {id:'chat',     label:'Usar NovaChat',               desc:'Preguntar por escrito sobre sus pedidos'},
+  ]
+};
+const EQ_DATA = [
+  {id:'daniela', nm:'Daniela R.', ini:'DR', correo:'daniela@nutreashop.com', rol:'admin',   tiendas:['ec','gt'],  estado:'activa'},
+  {id:'katherin', nm:'Katherin M.',ini:'KM', correo:'katherin@nutreashop.com',rol:'gestora', tiendas:['ec'],       estado:'activa'},
+  {id:'solange',  nm:'Solange P.', ini:'SP', correo:'solange@nutreashop.com', rol:'gestora', tiendas:['gt'],       estado:'invitada'},
+];
+const PERMS_ST = {
+  admin:  {auditar:true,dinero:true,novedades:true,editar:true,pauta:false,exportar:false,tiendas:false,chat:true},
+  gestora:{pedidos:true,confirmar:true,novedades:true,meta:true,editar:false,dinero:false,equipo:false,chat:true}
+};
+let permsSt = JSON.parse(JSON.stringify(PERMS_ST));
+let selEq = 'daniela';
+
+const MTZ_FILAS = [
+  {t:'Pedidos y confirmaciones', s:'Ver y actualizar estado de cada pedido'},
+  {t:'Novedades y seguimiento',  s:'Cerrar novedades con transportadora'},
+  {t:'Auditoría',                s:'Revisar pedido por pedido contra IRIS'},
+  {t:'El dinero',                s:'Recaudo, gastos y utilidad'},
+  {t:'Pauta y ROAS',             s:'Inversión en Meta por producto'},
+  {t:'Gestoras y equipo',        s:'Ver el desempeño de todo el equipo'},
+  {t:'Configuración',            s:'Permisos, tiendas y hojas conectadas'},
+];
+const MTZ_DEFAULTS = [
+  ['ges','ver','no'],['ges','no','no'],['no','ver','no'],
+  ['no','ver','no'],['no','no','no'],['no','ver','no'],['no','no','no'],
+];
+
+let mtzState = MTZ_DEFAULTS.map(r=>[...r]);
+const MTZ_CYCLE = ['no','ver','ges'];
+const MTZ_CLS = {no:'mtz-cell mtz-off',ver:'mtz-cell mtz-ver',ges:'mtz-cell mtz-ges'};
+const MTZ_LBL = {no:'—','ver':'Ver','ges':'Gestionar'};
+
+function buildPermisos(){
+  buildMtzRows();
+  buildEqCards();
+  buildPermDet();
+}
+function buildMtzRows(){
+  const grid=document.getElementById('mtz-grid');
+  const existing=grid.querySelectorAll('.mtz-row');
+  existing.forEach(r=>r.remove());
+  MTZ_FILAS.forEach((f,ri)=>{
+    const row=document.createElement('div');
+    row.className='mtz-row';
+    row.innerHTML=`<div style="display:flex;flex-direction:column;gap:4px;min-width:0;align-items:flex-start;">
+      <span style="font:600 12.5px/1.2 'DM Sans';color:var(--t-ink);">${f.t}</span>
+      <span style="font:500 10.5px/1.35 'DM Sans';color:var(--t-mut2);">${f.s}</span>
+    </div>
+    ${mtzState[ri].map((v,ci)=>`<div class="${MTZ_CLS[v]}" onclick="mtzToggle(${ri},${ci})" title="${MTZ_LBL[v]}">${MTZ_LBL[v]}</div>`).join('')}`;
+    grid.appendChild(row);
+  });
+}
+function mtzToggle(ri,ci){
+  const cur=mtzState[ri][ci];
+  mtzState[ri][ci]=MTZ_CYCLE[(MTZ_CYCLE.indexOf(cur)+1)%3];
+  buildMtzRows();
+}
+function resetMatrix(){mtzState=MTZ_DEFAULTS.map(r=>[...r]);buildMtzRows();}
+
+function buildEqCards(){
+  document.getElementById('perm-eq-cards').innerHTML=EQ_DATA.map(p=>{
+    const sel=p.id===selEq;
+    return `<div onclick="selectEq('${p.id}')" class="${sel?'eq-card-sel':'eq-card'}">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="eq-av" style="background:${sel?'var(--a-chip)':'var(--s-soft7)'};color:${sel?'#232c19':'var(--t-mut)'};">${p.ini}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font:600 14px/1.1 'Fraunces',serif;color:${sel?'var(--t-ondark)':'var(--t-ink)'};">${p.nm}</div>
+          <div style="font:500 11px/1 'DM Sans';color:var(--t-mut2);margin-top:2px;">${p.rol==='admin'?'Administradora':'Gestora'}</div>
+        </div>
+        ${!sel?`<span style="font:700 9.5px/1 'DM Sans';color:${p.estado==='activa'?'#4c6236':'#8a6a13'};background:${p.estado==='activa'?'#d3e0c2':'#f6ecd0'};border-radius:99px;padding:5px 9px;">${p.estado==='activa'?'Activa':'Invitada'}</span>`:''}
+      </div>
+      <div style="font:500 11.5px/1.4 'DM Sans';color:${sel?'var(--t-ondark-mut)':'var(--t-mut)'};margin-top:2px;">
+        ${Object.values(permsSt[p.rol]).filter(Boolean).length} de ${PERM_DEF[p.rol].length} permisos · ${p.tiendas.length} tienda${p.tiendas.length>1?'s':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function selectEq(id){selEq=id;buildEqCards();buildPermDet();}
+function buildPermDet(){
+  const p=EQ_DATA.find(x=>x.id===selEq);
+  if(!p) return;
+  document.getElementById('perm-nm').textContent=p.nm;
+  document.getElementById('perm-correo').textContent=p.correo;
+  document.getElementById('perm-link').textContent=`nova.co/acceso/${p.id}-${Math.random().toString(36).slice(2,6)}`;
+  document.getElementById('perm-entrar-btn').textContent=`Entrar como ${p.nm} →`;
+  const perms=PERM_DEF[p.rol];
+  const st=permsSt[p.rol];
+  document.getElementById('perm-roles').innerHTML=['Administradora','Gestora'].map(r=>{
+    const rid=r==='Administradora'?'admin':'gestora';
+    const on=p.rol===rid;
+    return `<span onclick="setEqRol('${rid}')" style="font:600 12px/1 'DM Sans';color:${on?'var(--t-ondark)':'var(--t-mut)'};background:${on?'var(--s-deep)':'var(--s-bg)'};border:1px solid ${on?'transparent':'var(--s-line)'};border-radius:20px;padding:10px 16px;cursor:pointer;display:inline-block;">${r}</span>`;
+  }).join('');
+  document.getElementById('perm-tiendas').innerHTML=[
+    {id:'ec',nm:'Nutrea EC'},{id:'gt',nm:'Nutrea GT'}
+  ].map(t=>{
+    const on=p.tiendas.includes(t.id);
+    return `<span onclick="toggleEqTienda('${t.id}')" style="font:600 12px/1 'DM Sans';color:${on?'#4c6236':'var(--t-mut2)'};background:${on?'#d3e0c2':'var(--s-bg)'};border:1px solid ${on?'#c3d3ae':'var(--s-line)'};border-radius:20px;padding:10px 15px;cursor:pointer;display:inline-block;">${t.nm}${on?' · asignada':' · sin acceso'}</span>`;
+  }).join('');
+  document.getElementById('perm-lista').innerHTML=perms.map(x=>`
+    <div class="perm-tog" onclick="togglePerm('${x.id}')">
+      <div class="perm-tog-lbl"><strong>${x.label}</strong><span>${x.desc}</span></div>
+      <div class="tog-sw ${st[x.id]?'on':'off'}"></div>
+    </div>`).join('');
+}
+function setEqRol(rid){
+  const p=EQ_DATA.find(x=>x.id===selEq);
+  if(p){p.rol=rid;permsSt=JSON.parse(JSON.stringify(PERMS_ST));}
+  buildEqCards();buildPermDet();
+}
+function toggleEqTienda(tid){
+  const p=EQ_DATA.find(x=>x.id===selEq);
+  if(!p) return;
+  const i=p.tiendas.indexOf(tid);
+  if(i>-1)p.tiendas.splice(i,1);else p.tiendas.push(tid);
+  buildPermDet();buildEqCards();
+}
+function togglePerm(pid){
+  const p=EQ_DATA.find(x=>x.id===selEq);
+  if(!p) return;
+  permsSt[p.rol][pid]=!permsSt[p.rol][pid];
+  buildPermDet();buildEqCards();
+}
+function copyPermLink(){
+  const link=document.getElementById('perm-link').textContent;
+  navigator.clipboard.writeText(link).catch(()=>{});
+  const btn=document.getElementById('perm-copy-btn');
+  btn.textContent='Copiado · mándalo por WhatsApp';
+  btn.style.background='#d3e0c2';btn.style.color='#4c6236';
+  setTimeout(()=>{btn.textContent='Copiar link';btn.style.background='';btn.style.color='';},2500);
+}
+function emailPermLink(){alert('En la versión con datos reales esto abre tu cliente de correo con el link listo para enviar.');}
+function enterAsSombra(){
+  const p=EQ_DATA.find(x=>x.id===selEq);
+  if(p){
+    document.getElementById('som-av').textContent=p.ini;
+    document.getElementById('som-nombre').textContent=p.nm;
+    document.getElementById('som-info').textContent=(p.rol==='admin'?'Administradora':'Gestora')+' · '+p.tiendas.map(t=>t==='ec'?'Nutrea EC':'Nutrea GT').join(' + ');
+    document.getElementById('sombra').classList.add('on');
+  }
+}
+
+// ─── CALCULADORAS ─────────────────────────────────────
+function calcROI(){
+  const pauta=+document.getElementById('calc-pauta')?.value||366041;
+  const ped  =+document.getElementById('calc-ped')?.value||11;
+  const ent  =+document.getElementById('calc-ent')?.value||74.6;
+  const mg   =+document.getElementById('calc-mg')?.value||104020;
+  const entregadas=ped*(ent/100);
+  const ingresos=entregadas*mg;
+  const roas=ingresos/pauta;
+  const cpa=pauta/(entregadas||1);
+  document.getElementById('calc-roas').textContent=roas.toFixed(1)+'×';
+  document.getElementById('calc-roi-txt').textContent=`Recuperas ${roas.toFixed(1)} veces lo que invertiste. CPA: ${C(cpa)} por entrega · ${entregadas.toFixed(1)} entregas efectivas.`;
+}
+function calcPre(){
+  const costo= +document.getElementById('pre-costo')?.value||52000;
+  const flete= +document.getElementById('pre-flete')?.value||35000;
+  const ent=   +document.getElementById('pre-ent')?.value||69.1;
+  const margen=+document.getElementById('pre-margen')?.value||25;
+  const dev=100-ent;
+  const costoDev=flete*(dev/100);
+  const costoTotal=(costo+flete+(costoDev/((ent/100)||1)))/(1-(margen/100));
+  document.getElementById('pre-result').textContent=C(costoTotal);
+  document.getElementById('pre-txt').textContent=`Por debajo de este precio pierdes plata con el ${dev.toFixed(1)}% de devoluciones estimadas.`;
+}
+
 // ─── NAVIGATION ───────────────────────────────────────
 const TITLES = {
-  hoy:'Hoy',pedidos:'Pedidos',novedades:'Novedades',oficina:'Oficina',
-  gestoras:'Gestoras',auditoria:'Auditoría',pauta:'Pauta y ROAS',inventario:'Inventario',
+  hoy:'Hoy',pedidos:'Pedidos',novedades:'Novedades',oficina:'Seguimiento a oficina',
+  gestoras:'Gestoras',auditoria:'Auditoría',pauta:'Pauta y gastos',inventario:'Inventario',
+  dinero:'Dinero',calc:'Calculadoras',permisos:'Permisos',productos:'Productos',config:'Configuración',
   'g-hoy':'Mis pedidos de hoy','g-pedidos':'Mis pedidos','g-novedades':'Mis novedades',
 };
 function go(view, el) {
