@@ -59,8 +59,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   background:radial-gradient(ellipse at 55% 25%,#172d52 0%,#07101e 70%);
 }
 .lgn-logo{text-align:center;}
-.lgn-wordmark{font-family:'Playfair Display',Georgia,serif;font-size:40px;color:var(--gold);letter-spacing:-1.5px;}
-.lgn-sub{font:300 10.5px/1 'DM Sans';letter-spacing:3.5px;color:var(--ink3);margin-top:7px;text-transform:uppercase;}
+.lgn-logo-img{max-width:220px;height:auto;}
+.lgn-logo-light,.sb-logo-light{display:none!important;}
+.lgn-logo-dark,.sb-logo-dark{display:block!important;}
+[data-modo="claro"] .lgn-logo-dark,[data-modo="claro"] .sb-logo-dark{display:none!important;}
+[data-modo="claro"] .lgn-logo-light,[data-modo="claro"] .sb-logo-light{display:block!important;}
+@media(prefers-color-scheme:light){:root:not([data-modo="oscuro"]) .lgn-logo-dark,:root:not([data-modo="oscuro"]) .sb-logo-dark{display:none!important;}:root:not([data-modo="oscuro"]) .lgn-logo-light,:root:not([data-modo="oscuro"]) .sb-logo-light{display:block!important;}}
 .lgn-card{
   background:rgba(18,35,61,.85);border:1px solid var(--line);border-radius:20px;
   backdrop-filter:blur(12px);padding:36px 40px;width:340px;
@@ -89,8 +93,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;
 }
 .sb-logo{padding:22px 18px 18px;border-bottom:1px solid var(--line);}
-.sb-wordmark{font-family:'Playfair Display',serif;font-size:20px;color:var(--gold);letter-spacing:-.5px;}
-.sb-tag{font:300 9px/1 'DM Sans';letter-spacing:3px;color:var(--ink3);margin-top:5px;text-transform:uppercase;}
+.sb-logo-img{max-width:150px;height:auto;}
 .sb-nav{flex:1;padding:14px 8px;display:flex;flex-direction:column;gap:2px;}
 .ni{
   display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;
@@ -271,8 +274,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 <!-- ─── LOGIN ─── -->
 <div id="login-screen">
   <div class="lgn-logo">
-    <div class="lgn-wordmark">Nova Central</div>
-    <div class="lgn-sub">Hub de plataforma</div>
+    <img src="logo-nova-central.png" alt="Nova Central" class="lgn-logo-img lgn-logo-dark">
+    <img src="logo-nova-central-claro.png" alt="Nova Central" class="lgn-logo-img lgn-logo-light">
   </div>
   <div class="lgn-card">
     <div>
@@ -291,8 +294,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   <!-- Sidebar -->
   <div class="sidebar">
     <div class="sb-logo">
-      <div class="sb-wordmark">Nova Central</div>
-      <div class="sb-tag">Hub de plataforma</div>
+      <img src="logo-nova-central.png" alt="Nova Central" class="sb-logo-img sb-logo-dark">
+      <img src="logo-nova-central-claro.png" alt="Nova Central" class="sb-logo-img sb-logo-light">
     </div>
     <nav class="sb-nav">
       <div class="ni on" data-v="dashboard" onclick="go('dashboard',this)">

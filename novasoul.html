@@ -120,8 +120,12 @@ textarea,input,select,button{font-family:inherit;}
 /* sidebar */
 .sidebar{width:230px;flex:0 0 230px;background:var(--panel);border-right:1px solid var(--panel-line);padding:22px 15px 18px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;}
 .sb-brand{display:flex;align-items:center;gap:9px;padding:0 9px 4px;}
-.sb-ico{width:28px;height:28px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font:700 13px/1 'Fraunces',serif;color:var(--acc-ink);}
-.sb-name{font:600 20px/1 'Fraunces',serif;color:var(--ink);}
+/* Logo modo */
+.ns-logo-light{display:none!important;}
+.ns-logo-dark{display:block!important;}
+[data-modo="claro"] .ns-logo-dark{display:none!important;}
+[data-modo="claro"] .ns-logo-light{display:block!important;}
+@media(prefers-color-scheme:light){:root:not([data-modo="oscuro"]) .ns-logo-dark{display:none!important;}:root:not([data-modo="oscuro"]) .ns-logo-light{display:block!important;}}
 .sb-section{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--mut5);padding:0 10px 6px;}
 .ni{padding:9px 11px;border-radius:11px;font:500 13px/1.2 'DM Sans';color:var(--mut);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:background .12s;}
 .ni:hover{background:var(--soft);color:var(--ink);}
@@ -297,7 +301,7 @@ textarea,input,select,button{font-family:inherit;}
 <!-- ════════════ PUERTA ════════════ -->
 <div id="puerta">
   <div class="pt-left">
-    <div style="font:700 13px/1 'DM Sans';letter-spacing:1.2px;color:var(--mut4);">NOVA SOUL</div>
+    <img src="logo-novasoul.png" alt="NovaSoul" style="max-width:160px;height:auto;margin-bottom:4px;filter:brightness(1.1);">
     <div class="pt-orbs"><span></span><span></span></div>
     <div>
       <div style="font:600 9.5px/1 'DM Sans';letter-spacing:1.3px;color:var(--mut3);margin-bottom:8px;">ENERGÍA · PLUTÓN EN CAPRICORNIO</div>
@@ -396,9 +400,9 @@ textarea,input,select,button{font-family:inherit;}
 
   <!-- SIDEBAR -->
   <nav class="sidebar">
-    <div class="sb-brand">
-      <div class="sb-ico">S</div>
-      <div class="sb-name">NovaSoul</div>
+    <div class="sb-brand" style="padding:0 4px 4px;">
+      <img src="logo-novasoul.png" alt="NovaSoul" class="ns-logo-dark" style="max-width:130px;height:auto;">
+      <img src="logo-novasoul-claro.png" alt="NovaSoul" class="ns-logo-light" style="max-width:130px;height:auto;display:none;">
     </div>
 
     <div style="display:flex;flex-direction:column;gap:3px;">
