@@ -12,7 +12,15 @@
  * nuevo nacería con las tiendas de Nutrea adentro.
  */
 
-const CARPETA_NOVA = '1lxpyEhj3dfdwgdpotL7e8G8gCd_EaB7o';
+// La carpeta sale de las propiedades del script, no de una constante:
+// así el mismo código sirve en cualquier cuenta.
+function carpetaNova() {
+  const id = IDS_().carpeta;
+  if (id) return DriveApp.getFolderById(id);
+  const its = DriveApp.getFoldersByName('Nova');
+  if (its.hasNext()) return its.next();
+  throw new Error('No encuentro la carpeta Nova. Corre instalarNova() primero.');
+}
 
 /**
  * Crea la hoja de un cliente y lo registra en Nova_Central.
@@ -37,7 +45,7 @@ function crearCliente(empresa, pais, tiendas, fuentes, plan) {
     vistos[t.id] = 1;
   });
 
-  const central = SpreadsheetApp.openById(IDS.central);
+  const central = SpreadsheetApp.openById(IDS_().central);
   const shClientes = central.getSheetByName('Clientes');
   if (!shClientes) throw new Error('Corre bootstrapTodo() primero: falta la hoja Clientes.');
 
@@ -50,8 +58,8 @@ function crearCliente(empresa, pais, tiendas, fuentes, plan) {
   }
 
   // ── 1. Copiar el template ──
-  const carpeta = DriveApp.getFolderById(CARPETA_NOVA);
-  const copia = DriveApp.getFileById(IDS.empresarial)
+  const carpeta = carpetaNova();
+  const copia = DriveApp.getFileById(IDS_().empresarial)
     .makeCopy('Nova_Empresarial_' + empresa, carpeta);
   const sheetId = copia.getId();
   const ss = SpreadsheetApp.openById(sheetId);
@@ -148,9 +156,47 @@ function crearNutrea() {
   );
 }
 
+/**
+ * Resuelve a qué hoja de cliente hay que trabajar.
+ *
+ * Las funciones de diagnóstico apuntaban al TEMPLATE, que está vacío por
+ * diseño — no sirve para revisar nada. Esto resuelve la hoja real:
+ *
+ *   · sin argumento y hay un solo cliente  -> ese
+ *   · con el nombre del cliente            -> el suyo
+ *   · con un ID de hoja                    -> ese
+ *   · con 'template'                       -> el template, si de verdad lo quieres
+ */
+function hojaCliente(ref) {
+  if (ref === 'template') return IDS_().empresarial;
+  if (ref && String(ref).length > 30) return ref; // ya es un ID
+
+  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const filas = (sh && sh.getLastRow() > 1)
+    ? sh.getDataRange().getValues().slice(1).filter(function (f) { return f[0]; })
+    : [];
+
+  if (!filas.length) {
+    throw new Error('No hay clientes todavía. Corre crearNutrea() primero, ' +
+                    'o pasa "template" si de verdad quieres el template vacío.');
+  }
+  if (ref) {
+    const m = filas.filter(function (f) { return norm(f[1]) === norm(ref); });
+    if (!m.length) {
+      throw new Error('No existe el cliente "' + ref + '". Hay: ' +
+                      filas.map(function (f) { return f[1]; }).join(', '));
+    }
+    return m[0][13];
+  }
+  if (filas.length === 1) return filas[0][13];
+
+  throw new Error('Hay ' + filas.length + ' clientes, dime cuál: ' +
+                  filas.map(function (f) { return '"' + f[1] + '"'; }).join(', '));
+}
+
 /** Lista los clientes registrados y a qué hoja apunta cada uno. */
 function listarClientes() {
-  const sh = SpreadsheetApp.openById(IDS.central).getSheetByName('Clientes');
+  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
   if (!sh || sh.getLastRow() < 2) { Logger.log('Sin clientes todavía.'); return []; }
   const filas = sh.getDataRange().getValues().slice(1);
   const out = filas.map(function (f) {

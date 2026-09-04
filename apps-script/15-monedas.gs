@@ -179,8 +179,8 @@ function convertir(ss, monto, fecha, origen, destino) {
  * Revisa qué tasas hacen falta para poder convertir todo lo que ya está
  * cargado. Córrela antes de confiar en cualquier número de dinero.
  */
-function tasasFaltantes(fileId, monedaDestino) {
-  const ss = SpreadsheetApp.openById(fileId || IDS.empresarial);
+function tasasFaltantes(cliente, monedaDestino) {
+  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
   const destino = String(monedaDestino || 'COP').toUpperCase();
   const faltan = {};
 

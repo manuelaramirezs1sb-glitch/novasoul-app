@@ -3,27 +3,36 @@
  * ─────────────────────────────────────────────────────────────
  * Archivo único. Pégalo completo en Código.gs y listo.
  *
+ * ┌─ PARA INSTALAR EN UNA CUENTA NUEVA ────────────────────────┐
+ * │                                                            │
+ * │   1) Ejecutar → instalarNova()                             │
+ * │        crea la carpeta, los 4 workbooks y todas las        │
+ * │        pestañas. Guarda los IDs solo: no hay que copiar    │
+ * │        ni pegar ningún ID a mano.                          │
+ * │                                                            │
+ * │   2) Ejecutar → crearNutrea()                              │
+ * │        crea TU hoja de operación, copiando el template.    │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * IMPORTANTE: corre esto en la cuenta de Nova, no en una personal.
+ * El Web App se ejecuta con los permisos de quien es dueño del script,
+ * así que el script y las hojas tienen que vivir en la misma cuenta.
+ *
  * Contiene, en este orden:
- *   1. Bootstrap ....... crea las pestañas y encabezados de los 4 workbooks
- *   2. Estados ......... traduce los estados de cada plataforma al canónico
- *                        + normalización de teléfono (24 países)
- *   3. Monedas ......... catálogo de 35 monedas y conversión con tasa del día
- *   4. Importadores .... convierte las pestañas _Import_* en filas normalizadas
+ *   1. Bootstrap ....... instalación y estructura de los 4 workbooks
+ *   2. Estados ......... estados canónicos + teléfonos de 24 países
+ *   3. Monedas ......... 35 monedas y conversión con la tasa del día
+ *   4. Importadores .... convierte las pestañas _Import_* en filas limpias
  *   5. Auto-mapeo ...... detecta columnas de fuentes sin export de muestra
  *   6. Provisionar ..... crea la hoja de un cliente copiando el template
  *
- * ORDEN PARA ARRANCAR (una sola vez, solo en la cuenta de Nova):
- *   1) Ejecutar → bootstrapTodo()   crea la estructura de los 4 workbooks
- *   2) Ejecutar → crearNutrea()     crea TU hoja, copiando el template
- *
- * De ahí en adelante cada cliente nuevo sale de crearCliente(), que es lo
- * que llama Nova Central. Ningún cliente entra nunca a Apps Script.
- *
  * ÚTILES:
- *   tasasFaltantes()          qué tasas hacen falta para convertir dinero
+ *   verInstalacion()          a qué hojas apunta el script en esta cuenta
+ *   listarClientes()          qué clientes hay y a qué hoja apunta cada uno
+ *   tasasFaltantes()          qué tasas faltan para poder convertir dinero
  *   proponerMapeo(fuente,td)  mapea una fuente nueva sin export de muestra
  *   diagnosticar(fuente,td)   revisa el mapeo de una fuente ya configurada
- *   listarClientes()          qué clientes hay y a qué hoja apunta cada uno
  *
  * Esquemas tomados de design_handoff_nova/DATOS-Y-ALARMAS.md y verificados
  * contra los exports reales de la carpeta QKF + NOVA.
@@ -32,17 +41,110 @@
 
 
 /* ═══════════════════════════════════════════════════════════════
-   1 · BOOTSTRAP
+   1 · INSTALACIÓN Y BOOTSTRAP
    ═══════════════════════════════════════════════════════════════ */
 
 
 // ─── IDs de los workbooks ────────────────────────────────────
-const IDS = {
+/**
+ * Los IDs NO se escriben a mano. Se guardan en las propiedades del
+ * script cuando corres instalarNova(), y de ahí los lee todo lo demás.
+ *
+ * Así el mismo código funciona en cualquier cuenta de Google sin editar
+ * una sola línea: si mañana esto se mueve de un correo a otro, se corre
+ * instalarNova() allá y listo.
+ *
+ * Los valores de abajo son solo el respaldo de la instalación original.
+ */
+const IDS_DEFAULT = {
   empresarial: '1MEzF8O2qDHuBTU2jsGER5Q9MZx8o5jexdSB0RL8-2iQ', // Nova_Empresarial_TEMPLATE
   central:     '1IDfY-zoc5lyPJWgqLGWWk_1CvFeedD_mVuauTvQ6FWM', // Nova_Central
   soul:        '1xY3v7Fv5KPsZfj-Y8Ud2jpo8LbJg3oQOuGl6yOgLf1M', // Nova_Soul
   academy:     '1KgMBwFFdiPbE4M18tP91iFSgSgi4lTt7_L62_BOdCNo', // Nova_Academy
 };
+
+function IDS_() {
+  const p = PropertiesService.getScriptProperties().getProperties();
+  return {
+    empresarial: p.ID_EMPRESARIAL || IDS_DEFAULT.empresarial,
+    central:     p.ID_CENTRAL     || IDS_DEFAULT.central,
+    soul:        p.ID_SOUL        || IDS_DEFAULT.soul,
+    academy:     p.ID_ACADEMY     || IDS_DEFAULT.academy,
+    carpeta:     p.ID_CARPETA     || '',
+  };
+}
+
+/**
+ * ★ INSTALACIÓN DESDE CERO ★
+ *
+ * Crea la carpeta Nova, los 4 workbooks, guarda sus IDs y construye
+ * todas las pestañas. Es lo ÚNICO que hay que correr en una cuenta nueva.
+ *
+ * Corre esto en la cuenta de Nova — no en una personal. El Web App se
+ * ejecuta con los permisos de quien es dueño del script, así que el
+ * script y las hojas tienen que vivir en la misma cuenta.
+ *
+ * Es seguro correrlo dos veces: si ya hay IDs guardados, no crea nada
+ * nuevo, solo completa las pestañas que falten.
+ */
+function instalarNova() {
+  const props = PropertiesService.getScriptProperties();
+  const ya = props.getProperties();
+  const log = [];
+
+  // 1. Carpeta
+  let carpeta;
+  if (ya.ID_CARPETA) {
+    carpeta = DriveApp.getFolderById(ya.ID_CARPETA);
+    log.push('Carpeta existente: ' + carpeta.getName());
+  } else {
+    carpeta = DriveApp.createFolder('Nova');
+    props.setProperty('ID_CARPETA', carpeta.getId());
+    log.push('Carpeta creada: Nova');
+  }
+
+  // 2. Los 4 workbooks
+  const aCrear = [
+    { clave: 'ID_EMPRESARIAL', nombre: 'Nova_Empresarial_TEMPLATE' },
+    { clave: 'ID_CENTRAL',     nombre: 'Nova_Central' },
+    { clave: 'ID_SOUL',        nombre: 'Nova_Soul' },
+    { clave: 'ID_ACADEMY',     nombre: 'Nova_Academy' },
+  ];
+
+  aCrear.forEach(function (w) {
+    if (ya[w.clave]) {
+      log.push('Ya existía: ' + w.nombre);
+      return;
+    }
+    const ss = SpreadsheetApp.create(w.nombre);
+    // create() lo deja en la raíz del Drive; hay que moverlo a la carpeta
+    DriveApp.getFileById(ss.getId()).moveTo(carpeta);
+    props.setProperty(w.clave, ss.getId());
+    log.push('Creado: ' + w.nombre);
+  });
+
+  // 3. Construir todas las pestañas
+  log.push('');
+  log.push(bootstrapTodo());
+  log.push('');
+  log.push('Carpeta: ' + carpeta.getUrl());
+  log.push('');
+  log.push('LISTO. Ahora corre crearNutrea() para crear tu operación.');
+
+  const salida = log.join('\n');
+  Logger.log(salida);
+  return salida;
+}
+
+/** Muestra a qué hojas está apuntando el script en esta cuenta. */
+function verInstalacion() {
+  const i = IDS_();
+  const msg = Object.keys(i).map(function (k) {
+    return pad(k, 14) + (i[k] || '(sin configurar)');
+  }).join('\n');
+  Logger.log(msg);
+  return msg;
+}
 
 // Las dos hojas obligatorias que van en TODOS los workbooks
 const COMUNES = {
@@ -182,11 +284,11 @@ const PARAMETROS_DEFAULT = [
 
 function bootstrapTodo() {
   const log = [];
-  log.push(construir(IDS.empresarial, 'Nova_Empresarial_TEMPLATE',
+  log.push(construir(IDS_().empresarial, 'Nova_Empresarial_TEMPLATE',
                      ESQUEMA_EMPRESARIAL, IMPORTS_EMPRESARIAL));
-  log.push(construir(IDS.central,  'Nova_Central', ESQUEMA_CENTRAL));
-  log.push(construir(IDS.soul,     'Nova_Soul',    ESQUEMA_SOUL));
-  log.push(construir(IDS.academy,  'Nova_Academy', ESQUEMA_ACADEMY));
+  log.push(construir(IDS_().central,  'Nova_Central', ESQUEMA_CENTRAL));
+  log.push(construir(IDS_().soul,     'Nova_Soul',    ESQUEMA_SOUL));
+  log.push(construir(IDS_().academy,  'Nova_Academy', ESQUEMA_ACADEMY));
 
   sembrarParametros();
   Logger.log(log.join('\n'));
@@ -251,7 +353,7 @@ function limpiarHojaPorDefecto(ss) {
 }
 
 function sembrarParametros() {
-  const sh = SpreadsheetApp.openById(IDS.empresarial).getSheetByName('Parametros');
+  const sh = SpreadsheetApp.openById(IDS_().empresarial).getSheetByName('Parametros');
   if (!sh || sh.getLastRow() > 1) return; // ya sembrado
   sh.getRange(2, 1, PARAMETROS_DEFAULT.length, 5).setValues(PARAMETROS_DEFAULT);
 }
@@ -801,8 +903,8 @@ function convertir(ss, monto, fecha, origen, destino) {
  * Revisa qué tasas hacen falta para poder convertir todo lo que ya está
  * cargado. Córrela antes de confiar en cualquier número de dinero.
  */
-function tasasFaltantes(fileId, monedaDestino) {
-  const ss = SpreadsheetApp.openById(fileId || IDS.empresarial);
+function tasasFaltantes(cliente, monedaDestino) {
+  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
   const destino = String(monedaDestino || 'COP').toUpperCase();
   const faltan = {};
 
@@ -1316,8 +1418,8 @@ function zonaHorariaDe(ss, tienda) {
  * Diagnóstico. Córrelo con un export pegado en la pestaña y te dice
  * exactamente qué columnas no encontró, para completar el mapeo.
  */
-function diagnosticar(fuenteId, tienda) {
-  const ss = SpreadsheetApp.openById(IDS.empresarial);
+function diagnosticar(fuenteId, tienda, cliente) {
+  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
   const r = leerCrudo(ss, fuenteId, tienda || 'gt');
   const msg = [
     'Fuente: ' + fuenteId + '  (' + r.tipo + ')',
@@ -1567,8 +1669,8 @@ function analizarFuente(ss, fuenteId, campos) {
  * Corre el análisis y escribe las propuestas en la hoja `Mapeos`
  * para que las revises. Lo que quede en `Mapeos` manda sobre el código.
  */
-function proponerMapeo(fuenteId, tienda) {
-  const ss = SpreadsheetApp.openById(IDS.empresarial);
+function proponerMapeo(fuenteId, tienda, cliente) {
+  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
   const r = analizarFuente(ss, fuenteId);
 
   let sh = ss.getSheetByName('Mapeos');
@@ -1654,7 +1756,15 @@ function aliasDesdeMapeos(ss, fuenteId) {
    ═══════════════════════════════════════════════════════════════ */
 
 
-const CARPETA_NOVA = '1lxpyEhj3dfdwgdpotL7e8G8gCd_EaB7o';
+// La carpeta sale de las propiedades del script, no de una constante:
+// así el mismo código sirve en cualquier cuenta.
+function carpetaNova() {
+  const id = IDS_().carpeta;
+  if (id) return DriveApp.getFolderById(id);
+  const its = DriveApp.getFoldersByName('Nova');
+  if (its.hasNext()) return its.next();
+  throw new Error('No encuentro la carpeta Nova. Corre instalarNova() primero.');
+}
 
 /**
  * Crea la hoja de un cliente y lo registra en Nova_Central.
@@ -1679,7 +1789,7 @@ function crearCliente(empresa, pais, tiendas, fuentes, plan) {
     vistos[t.id] = 1;
   });
 
-  const central = SpreadsheetApp.openById(IDS.central);
+  const central = SpreadsheetApp.openById(IDS_().central);
   const shClientes = central.getSheetByName('Clientes');
   if (!shClientes) throw new Error('Corre bootstrapTodo() primero: falta la hoja Clientes.');
 
@@ -1692,8 +1802,8 @@ function crearCliente(empresa, pais, tiendas, fuentes, plan) {
   }
 
   // ── 1. Copiar el template ──
-  const carpeta = DriveApp.getFolderById(CARPETA_NOVA);
-  const copia = DriveApp.getFileById(IDS.empresarial)
+  const carpeta = carpetaNova();
+  const copia = DriveApp.getFileById(IDS_().empresarial)
     .makeCopy('Nova_Empresarial_' + empresa, carpeta);
   const sheetId = copia.getId();
   const ss = SpreadsheetApp.openById(sheetId);
@@ -1790,9 +1900,47 @@ function crearNutrea() {
   );
 }
 
+/**
+ * Resuelve a qué hoja de cliente hay que trabajar.
+ *
+ * Las funciones de diagnóstico apuntaban al TEMPLATE, que está vacío por
+ * diseño — no sirve para revisar nada. Esto resuelve la hoja real:
+ *
+ *   · sin argumento y hay un solo cliente  -> ese
+ *   · con el nombre del cliente            -> el suyo
+ *   · con un ID de hoja                    -> ese
+ *   · con 'template'                       -> el template, si de verdad lo quieres
+ */
+function hojaCliente(ref) {
+  if (ref === 'template') return IDS_().empresarial;
+  if (ref && String(ref).length > 30) return ref; // ya es un ID
+
+  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const filas = (sh && sh.getLastRow() > 1)
+    ? sh.getDataRange().getValues().slice(1).filter(function (f) { return f[0]; })
+    : [];
+
+  if (!filas.length) {
+    throw new Error('No hay clientes todavía. Corre crearNutrea() primero, ' +
+                    'o pasa "template" si de verdad quieres el template vacío.');
+  }
+  if (ref) {
+    const m = filas.filter(function (f) { return norm(f[1]) === norm(ref); });
+    if (!m.length) {
+      throw new Error('No existe el cliente "' + ref + '". Hay: ' +
+                      filas.map(function (f) { return f[1]; }).join(', '));
+    }
+    return m[0][13];
+  }
+  if (filas.length === 1) return filas[0][13];
+
+  throw new Error('Hay ' + filas.length + ' clientes, dime cuál: ' +
+                  filas.map(function (f) { return '"' + f[1] + '"'; }).join(', '));
+}
+
 /** Lista los clientes registrados y a qué hoja apunta cada uno. */
 function listarClientes() {
-  const sh = SpreadsheetApp.openById(IDS.central).getSheetByName('Clientes');
+  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
   if (!sh || sh.getLastRow() < 2) { Logger.log('Sin clientes todavía.'); return []; }
   const filas = sh.getDataRange().getValues().slice(1);
   const out = filas.map(function (f) {

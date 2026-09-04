@@ -491,8 +491,8 @@ function zonaHorariaDe(ss, tienda) {
  * Diagnóstico. Córrelo con un export pegado en la pestaña y te dice
  * exactamente qué columnas no encontró, para completar el mapeo.
  */
-function diagnosticar(fuenteId, tienda) {
-  const ss = SpreadsheetApp.openById(IDS.empresarial);
+function diagnosticar(fuenteId, tienda, cliente) {
+  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
   const r = leerCrudo(ss, fuenteId, tienda || 'gt');
   const msg = [
     'Fuente: ' + fuenteId + '  (' + r.tipo + ')',

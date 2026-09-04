@@ -13,12 +13,105 @@
  */
 
 // ─── IDs de los workbooks ────────────────────────────────────
-const IDS = {
+/**
+ * Los IDs NO se escriben a mano. Se guardan en las propiedades del
+ * script cuando corres instalarNova(), y de ahí los lee todo lo demás.
+ *
+ * Así el mismo código funciona en cualquier cuenta de Google sin editar
+ * una sola línea: si mañana esto se mueve de un correo a otro, se corre
+ * instalarNova() allá y listo.
+ *
+ * Los valores de abajo son solo el respaldo de la instalación original.
+ */
+const IDS_DEFAULT = {
   empresarial: '1MEzF8O2qDHuBTU2jsGER5Q9MZx8o5jexdSB0RL8-2iQ', // Nova_Empresarial_TEMPLATE
   central:     '1IDfY-zoc5lyPJWgqLGWWk_1CvFeedD_mVuauTvQ6FWM', // Nova_Central
   soul:        '1xY3v7Fv5KPsZfj-Y8Ud2jpo8LbJg3oQOuGl6yOgLf1M', // Nova_Soul
   academy:     '1KgMBwFFdiPbE4M18tP91iFSgSgi4lTt7_L62_BOdCNo', // Nova_Academy
 };
+
+function IDS_() {
+  const p = PropertiesService.getScriptProperties().getProperties();
+  return {
+    empresarial: p.ID_EMPRESARIAL || IDS_DEFAULT.empresarial,
+    central:     p.ID_CENTRAL     || IDS_DEFAULT.central,
+    soul:        p.ID_SOUL        || IDS_DEFAULT.soul,
+    academy:     p.ID_ACADEMY     || IDS_DEFAULT.academy,
+    carpeta:     p.ID_CARPETA     || '',
+  };
+}
+
+/**
+ * ★ INSTALACIÓN DESDE CERO ★
+ *
+ * Crea la carpeta Nova, los 4 workbooks, guarda sus IDs y construye
+ * todas las pestañas. Es lo ÚNICO que hay que correr en una cuenta nueva.
+ *
+ * Corre esto en la cuenta de Nova — no en una personal. El Web App se
+ * ejecuta con los permisos de quien es dueño del script, así que el
+ * script y las hojas tienen que vivir en la misma cuenta.
+ *
+ * Es seguro correrlo dos veces: si ya hay IDs guardados, no crea nada
+ * nuevo, solo completa las pestañas que falten.
+ */
+function instalarNova() {
+  const props = PropertiesService.getScriptProperties();
+  const ya = props.getProperties();
+  const log = [];
+
+  // 1. Carpeta
+  let carpeta;
+  if (ya.ID_CARPETA) {
+    carpeta = DriveApp.getFolderById(ya.ID_CARPETA);
+    log.push('Carpeta existente: ' + carpeta.getName());
+  } else {
+    carpeta = DriveApp.createFolder('Nova');
+    props.setProperty('ID_CARPETA', carpeta.getId());
+    log.push('Carpeta creada: Nova');
+  }
+
+  // 2. Los 4 workbooks
+  const aCrear = [
+    { clave: 'ID_EMPRESARIAL', nombre: 'Nova_Empresarial_TEMPLATE' },
+    { clave: 'ID_CENTRAL',     nombre: 'Nova_Central' },
+    { clave: 'ID_SOUL',        nombre: 'Nova_Soul' },
+    { clave: 'ID_ACADEMY',     nombre: 'Nova_Academy' },
+  ];
+
+  aCrear.forEach(function (w) {
+    if (ya[w.clave]) {
+      log.push('Ya existía: ' + w.nombre);
+      return;
+    }
+    const ss = SpreadsheetApp.create(w.nombre);
+    // create() lo deja en la raíz del Drive; hay que moverlo a la carpeta
+    DriveApp.getFileById(ss.getId()).moveTo(carpeta);
+    props.setProperty(w.clave, ss.getId());
+    log.push('Creado: ' + w.nombre);
+  });
+
+  // 3. Construir todas las pestañas
+  log.push('');
+  log.push(bootstrapTodo());
+  log.push('');
+  log.push('Carpeta: ' + carpeta.getUrl());
+  log.push('');
+  log.push('LISTO. Ahora corre crearNutrea() para crear tu operación.');
+
+  const salida = log.join('\n');
+  Logger.log(salida);
+  return salida;
+}
+
+/** Muestra a qué hojas está apuntando el script en esta cuenta. */
+function verInstalacion() {
+  const i = IDS_();
+  const msg = Object.keys(i).map(function (k) {
+    return pad(k, 14) + (i[k] || '(sin configurar)');
+  }).join('\n');
+  Logger.log(msg);
+  return msg;
+}
 
 // Las dos hojas obligatorias que van en TODOS los workbooks
 const COMUNES = {
@@ -158,11 +251,11 @@ const PARAMETROS_DEFAULT = [
 
 function bootstrapTodo() {
   const log = [];
-  log.push(construir(IDS.empresarial, 'Nova_Empresarial_TEMPLATE',
+  log.push(construir(IDS_().empresarial, 'Nova_Empresarial_TEMPLATE',
                      ESQUEMA_EMPRESARIAL, IMPORTS_EMPRESARIAL));
-  log.push(construir(IDS.central,  'Nova_Central', ESQUEMA_CENTRAL));
-  log.push(construir(IDS.soul,     'Nova_Soul',    ESQUEMA_SOUL));
-  log.push(construir(IDS.academy,  'Nova_Academy', ESQUEMA_ACADEMY));
+  log.push(construir(IDS_().central,  'Nova_Central', ESQUEMA_CENTRAL));
+  log.push(construir(IDS_().soul,     'Nova_Soul',    ESQUEMA_SOUL));
+  log.push(construir(IDS_().academy,  'Nova_Academy', ESQUEMA_ACADEMY));
 
   sembrarParametros();
   Logger.log(log.join('\n'));
@@ -227,7 +320,7 @@ function limpiarHojaPorDefecto(ss) {
 }
 
 function sembrarParametros() {
-  const sh = SpreadsheetApp.openById(IDS.empresarial).getSheetByName('Parametros');
+  const sh = SpreadsheetApp.openById(IDS_().empresarial).getSheetByName('Parametros');
   if (!sh || sh.getLastRow() > 1) return; // ya sembrado
   sh.getRange(2, 1, PARAMETROS_DEFAULT.length, 5).setValues(PARAMETROS_DEFAULT);
 }

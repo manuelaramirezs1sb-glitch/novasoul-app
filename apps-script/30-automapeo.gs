@@ -248,8 +248,8 @@ function analizarFuente(ss, fuenteId, campos) {
  * Corre el análisis y escribe las propuestas en la hoja `Mapeos`
  * para que las revises. Lo que quede en `Mapeos` manda sobre el código.
  */
-function proponerMapeo(fuenteId, tienda) {
-  const ss = SpreadsheetApp.openById(IDS.empresarial);
+function proponerMapeo(fuenteId, tienda, cliente) {
+  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
   const r = analizarFuente(ss, fuenteId);
 
   let sh = ss.getSheetByName('Mapeos');
