@@ -138,6 +138,7 @@ function crearNutrea() {
     [
       { tienda: 'gt', fuente: 'dropi',   tipo: 'pedidos'  },
       { tienda: 'gt', fuente: 'meta',    tipo: 'pauta'    },
+      { tienda: 'gt', fuente: 'iris',    tipo: 'llamadas' },
       { tienda: 'ec', fuente: 'dropi',   tipo: 'pedidos'  },
       { tienda: 'ec', fuente: 'shopify', tipo: 'pedidos_secundario' },
       { tienda: 'ec', fuente: 'meta',    tipo: 'pauta'    },

@@ -258,13 +258,49 @@ function partirDocumento(raw) {
  */
 
 const PREFIJOS = {
-  CO: { cod: '57',  largo: 10, movil: /^3/ },      // Colombia
-  EC: { cod: '593', largo: 9,  movil: /^9/ },      // Ecuador
-  GT: { cod: '502', largo: 8,  movil: /^[3-5]/ },  // Guatemala
-  MX: { cod: '52',  largo: 10, movil: /^[1-9]/ },  // México
-  PE: { cod: '51',  largo: 9,  movil: /^9/ },      // Perú
-  CL: { cod: '56',  largo: 9,  movil: /^9/ },      // Chile
-  ES: { cod: '34',  largo: 9,  movil: /^[67]/ },   // España
+  // Sudamérica
+  AR: { cod: '54',  largo: 10, movil: /^9?[1-9]/ },  // Argentina
+  BO: { cod: '591', largo: 8,  movil: /^[67]/ },     // Bolivia
+  BR: { cod: '55',  largo: 11, movil: /^[1-9]/ },    // Brasil
+  CL: { cod: '56',  largo: 9,  movil: /^9/ },        // Chile
+  CO: { cod: '57',  largo: 10, movil: /^3/ },        // Colombia
+  EC: { cod: '593', largo: 9,  movil: /^9/ },        // Ecuador
+  GY: { cod: '592', largo: 7,  movil: /^6/ },        // Guyana
+  PE: { cod: '51',  largo: 9,  movil: /^9/ },        // Perú
+  PY: { cod: '595', largo: 9,  movil: /^9/ },        // Paraguay
+  SR: { cod: '597', largo: 7,  movil: /^[78]/ },     // Surinam
+  UY: { cod: '598', largo: 8,  movil: /^9/ },        // Uruguay
+  VE: { cod: '58',  largo: 10, movil: /^4/ },        // Venezuela
+  // Centroamérica y México
+  BZ: { cod: '501', largo: 7,  movil: /^6/ },        // Belice
+  CR: { cod: '506', largo: 8,  movil: /^[678]/ },    // Costa Rica
+  GT: { cod: '502', largo: 8,  movil: /^[3-5]/ },    // Guatemala
+  HN: { cod: '504', largo: 8,  movil: /^[389]/ },    // Honduras
+  MX: { cod: '52',  largo: 10, movil: /^[1-9]/ },    // México
+  NI: { cod: '505', largo: 8,  movil: /^[578]/ },    // Nicaragua
+  PA: { cod: '507', largo: 8,  movil: /^6/ },        // Panamá
+  SV: { cod: '503', largo: 8,  movil: /^[67]/ },     // El Salvador
+  // Caribe
+  CU: { cod: '53',  largo: 8,  movil: /^5/ },        // Cuba
+  HT: { cod: '509', largo: 8,  movil: /^[34]/ },     // Haití
+  // Europa / Norteamérica
+  ES: { cod: '34',  largo: 9,  movil: /^[67]/ },     // España
+  US: { cod: '1',   largo: 10, movil: /^[2-9]/ },    // EE.UU. y Canadá
+};
+
+/**
+ * Países del plan NANP (+1). Comparten código con EE.UU., así que un
+ * número dominicano y uno estadounidense son indistinguibles por el
+ * prefijo: se separan por el código de área. Se listan para que un
+ * número de RD no se marque como raro.
+ */
+const AREAS_NANP = {
+  DO: ['809', '829', '849'],   // República Dominicana
+  PR: ['787', '939'],          // Puerto Rico
+  JM: ['876', '658'],          // Jamaica
+  TT: ['868'],                 // Trinidad y Tobago
+  BB: ['246'],                 // Barbados
+  BS: ['242'],                 // Bahamas
 };
 
 // Códigos ordenados de más largo a más corto: '593' tiene que

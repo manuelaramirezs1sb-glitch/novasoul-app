@@ -164,10 +164,18 @@ const FUENTES = {
 
   // IRIS NO es una plataforma de pedidos: es la central telefónica.
   // VERIFICADO contra IRIS (1).csv — 2.782 llamadas salientes.
-  // Alimenta la entidad Llamadas y cruza con Pedidos por telefono_norm.
+  // Se usa en TODAS las tiendas, no solo en una.
+  //
+  // Ojo: el export de IRIS no trae columna de tienda. La llamada se
+  // asigna cruzando `telefono_norm` contra Pedidos: la tienda sale del
+  // pedido que coincide. Una llamada sin pedido que la reciba queda con
+  // tienda vacía y `pedido_id` vacío — visible, no descartada. Eso es
+  // justamente lo que hay que revisar: son llamadas a números que no
+  // están en ningún pedido.
   iris: {
     tipo: 'llamadas',
     verificado: true,
+    multi_tienda: true,      // se reparte por cruce, no por configuración
     alias: {
       id_externo:     ['id'],
       uid:            ['uniqueid'],

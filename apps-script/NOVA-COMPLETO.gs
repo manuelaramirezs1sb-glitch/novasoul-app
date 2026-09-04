@@ -6,10 +6,11 @@
  * Contiene, en este orden:
  *   1. Bootstrap ....... crea las pestañas y encabezados de los 4 workbooks
  *   2. Estados ......... traduce los estados de cada plataforma al canónico
- *                        + normalización de teléfono (prefijos)
- *   3. Importadores .... convierte las pestañas _Import_* en filas normalizadas
- *   4. Auto-mapeo ...... detecta columnas de fuentes sin export de muestra
- *   5. Provisionar ..... crea la hoja de un cliente copiando el template
+ *                        + normalización de teléfono (24 países)
+ *   3. Monedas ......... catálogo de 35 monedas y conversión con tasa del día
+ *   4. Importadores .... convierte las pestañas _Import_* en filas normalizadas
+ *   5. Auto-mapeo ...... detecta columnas de fuentes sin export de muestra
+ *   6. Provisionar ..... crea la hoja de un cliente copiando el template
  *
  * ORDEN PARA ARRANCAR (una sola vez, solo en la cuenta de Nova):
  *   1) Ejecutar → bootstrapTodo()   crea la estructura de los 4 workbooks
@@ -18,14 +19,21 @@
  * De ahí en adelante cada cliente nuevo sale de crearCliente(), que es lo
  * que llama Nova Central. Ningún cliente entra nunca a Apps Script.
  *
+ * ÚTILES:
+ *   tasasFaltantes()          qué tasas hacen falta para convertir dinero
+ *   proponerMapeo(fuente,td)  mapea una fuente nueva sin export de muestra
+ *   diagnosticar(fuente,td)   revisa el mapeo de una fuente ya configurada
+ *   listarClientes()          qué clientes hay y a qué hoja apunta cada uno
+ *
  * Esquemas tomados de design_handoff_nova/DATOS-Y-ALARMAS.md y verificados
  * contra los exports reales de la carpeta QKF + NOVA.
  */
 
 
-/* ═══════════════════════════════════════════════════════════════════
+
+/* ═══════════════════════════════════════════════════════════════
    1 · BOOTSTRAP
-   ═══════════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════ */
 
 
 // ─── IDs de los workbooks ────────────────────────────────────
@@ -506,13 +514,49 @@ function partirDocumento(raw) {
  */
 
 const PREFIJOS = {
-  CO: { cod: '57',  largo: 10, movil: /^3/ },      // Colombia
-  EC: { cod: '593', largo: 9,  movil: /^9/ },      // Ecuador
-  GT: { cod: '502', largo: 8,  movil: /^[3-5]/ },  // Guatemala
-  MX: { cod: '52',  largo: 10, movil: /^[1-9]/ },  // México
-  PE: { cod: '51',  largo: 9,  movil: /^9/ },      // Perú
-  CL: { cod: '56',  largo: 9,  movil: /^9/ },      // Chile
-  ES: { cod: '34',  largo: 9,  movil: /^[67]/ },   // España
+  // Sudamérica
+  AR: { cod: '54',  largo: 10, movil: /^9?[1-9]/ },  // Argentina
+  BO: { cod: '591', largo: 8,  movil: /^[67]/ },     // Bolivia
+  BR: { cod: '55',  largo: 11, movil: /^[1-9]/ },    // Brasil
+  CL: { cod: '56',  largo: 9,  movil: /^9/ },        // Chile
+  CO: { cod: '57',  largo: 10, movil: /^3/ },        // Colombia
+  EC: { cod: '593', largo: 9,  movil: /^9/ },        // Ecuador
+  GY: { cod: '592', largo: 7,  movil: /^6/ },        // Guyana
+  PE: { cod: '51',  largo: 9,  movil: /^9/ },        // Perú
+  PY: { cod: '595', largo: 9,  movil: /^9/ },        // Paraguay
+  SR: { cod: '597', largo: 7,  movil: /^[78]/ },     // Surinam
+  UY: { cod: '598', largo: 8,  movil: /^9/ },        // Uruguay
+  VE: { cod: '58',  largo: 10, movil: /^4/ },        // Venezuela
+  // Centroamérica y México
+  BZ: { cod: '501', largo: 7,  movil: /^6/ },        // Belice
+  CR: { cod: '506', largo: 8,  movil: /^[678]/ },    // Costa Rica
+  GT: { cod: '502', largo: 8,  movil: /^[3-5]/ },    // Guatemala
+  HN: { cod: '504', largo: 8,  movil: /^[389]/ },    // Honduras
+  MX: { cod: '52',  largo: 10, movil: /^[1-9]/ },    // México
+  NI: { cod: '505', largo: 8,  movil: /^[578]/ },    // Nicaragua
+  PA: { cod: '507', largo: 8,  movil: /^6/ },        // Panamá
+  SV: { cod: '503', largo: 8,  movil: /^[67]/ },     // El Salvador
+  // Caribe
+  CU: { cod: '53',  largo: 8,  movil: /^5/ },        // Cuba
+  HT: { cod: '509', largo: 8,  movil: /^[34]/ },     // Haití
+  // Europa / Norteamérica
+  ES: { cod: '34',  largo: 9,  movil: /^[67]/ },     // España
+  US: { cod: '1',   largo: 10, movil: /^[2-9]/ },    // EE.UU. y Canadá
+};
+
+/**
+ * Países del plan NANP (+1). Comparten código con EE.UU., así que un
+ * número dominicano y uno estadounidense son indistinguibles por el
+ * prefijo: se separan por el código de área. Se listan para que un
+ * número de RD no se marque como raro.
+ */
+const AREAS_NANP = {
+  DO: ['809', '829', '849'],   // República Dominicana
+  PR: ['787', '939'],          // Puerto Rico
+  JM: ['876', '658'],          // Jamaica
+  TT: ['868'],                 // Trinidad y Tobago
+  BB: ['246'],                 // Barbados
+  BS: ['242'],                 // Bahamas
 };
 
 // Códigos ordenados de más largo a más corto: '593' tiene que
@@ -593,7 +637,207 @@ function extraerTelefonos(campoTelefono, textoLibre, paisDefault) {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   3 · IMPORTADORES
+   3 · MONEDAS Y CONVERSIÓN
+   ═══════════════════════════════════════════════════════════════ */
+
+
+// ─── CATÁLOGO ────────────────────────────────────────────────
+// dec: decimales que usa la moneda en la práctica.
+// CLP y PYG son 0: tratarlas con centavos infla los montos por 100.
+
+const MONEDAS = {
+  // Latinoamérica
+  ARS: { nom: 'Peso argentino',        sim: '$',    dec: 2, pais: 'Argentina' },
+  BOB: { nom: 'Boliviano',             sim: 'Bs',   dec: 2, pais: 'Bolivia' },
+  BRL: { nom: 'Real brasileño',        sim: 'R$',   dec: 2, pais: 'Brasil' },
+  CLP: { nom: 'Peso chileno',          sim: '$',    dec: 0, pais: 'Chile' },
+  COP: { nom: 'Peso colombiano',       sim: '$',    dec: 0, pais: 'Colombia' },
+  CRC: { nom: 'Colón costarricense',   sim: '₡',    dec: 2, pais: 'Costa Rica' },
+  CUP: { nom: 'Peso cubano',           sim: '$',    dec: 2, pais: 'Cuba' },
+  DOP: { nom: 'Peso dominicano',       sim: 'RD$',  dec: 2, pais: 'República Dominicana' },
+  GTQ: { nom: 'Quetzal',               sim: 'Q',    dec: 2, pais: 'Guatemala' },
+  HNL: { nom: 'Lempira',               sim: 'L',    dec: 2, pais: 'Honduras' },
+  MXN: { nom: 'Peso mexicano',         sim: '$',    dec: 2, pais: 'México' },
+  NIO: { nom: 'Córdoba',               sim: 'C$',   dec: 2, pais: 'Nicaragua' },
+  PAB: { nom: 'Balboa',                sim: 'B/.',  dec: 2, pais: 'Panamá' },
+  PEN: { nom: 'Sol',                   sim: 'S/',   dec: 2, pais: 'Perú' },
+  PYG: { nom: 'Guaraní',               sim: '₲',    dec: 0, pais: 'Paraguay' },
+  UYU: { nom: 'Peso uruguayo',         sim: '$U',   dec: 2, pais: 'Uruguay' },
+  VES: { nom: 'Bolívar',               sim: 'Bs.',  dec: 2, pais: 'Venezuela' },
+  // Caribe y Centroamérica
+  BZD: { nom: 'Dólar beliceño',        sim: 'BZ$',  dec: 2, pais: 'Belice' },
+  GYD: { nom: 'Dólar guyanés',         sim: 'G$',   dec: 2, pais: 'Guyana' },
+  SRD: { nom: 'Dólar surinamés',       sim: '$',    dec: 2, pais: 'Surinam' },
+  TTD: { nom: 'Dólar trinitense',      sim: 'TT$',  dec: 2, pais: 'Trinidad y Tobago' },
+  JMD: { nom: 'Dólar jamaiquino',      sim: 'J$',   dec: 2, pais: 'Jamaica' },
+  HTG: { nom: 'Gourde',                sim: 'G',    dec: 2, pais: 'Haití' },
+  BSD: { nom: 'Dólar bahameño',        sim: '$',    dec: 2, pais: 'Bahamas' },
+  BBD: { nom: 'Dólar barbadense',      sim: '$',    dec: 2, pais: 'Barbados' },
+  AWG: { nom: 'Florín arubeño',        sim: 'ƒ',    dec: 2, pais: 'Aruba' },
+  XCD: { nom: 'Dólar del Caribe Or.',  sim: '$',    dec: 2, pais: 'Caribe Oriental' },
+  // Usadas en la región
+  USD: { nom: 'Dólar estadounidense',  sim: '$',    dec: 2, pais: 'Ecuador · Panamá · El Salvador' },
+  // Resto del mundo
+  EUR: { nom: 'Euro',                  sim: '€',    dec: 2, pais: 'Zona euro' },
+  GBP: { nom: 'Libra esterlina',       sim: '£',    dec: 2, pais: 'Reino Unido' },
+  CAD: { nom: 'Dólar canadiense',      sim: 'C$',   dec: 2, pais: 'Canadá' },
+  CHF: { nom: 'Franco suizo',          sim: 'CHF',  dec: 2, pais: 'Suiza' },
+  JPY: { nom: 'Yen',                   sim: '¥',    dec: 0, pais: 'Japón' },
+  CNY: { nom: 'Yuan',                  sim: '¥',    dec: 2, pais: 'China' },
+  AUD: { nom: 'Dólar australiano',     sim: 'A$',   dec: 2, pais: 'Australia' },
+};
+
+/**
+ * Devuelve la ficha de una moneda. Una moneda desconocida no rompe nada:
+ * cae en 2 decimales y usa su propio código como símbolo.
+ */
+function moneda(cod) {
+  const c = String(cod || '').trim().toUpperCase();
+  return MONEDAS[c] || { nom: c || 'desconocida', sim: c, dec: 2, pais: '', desconocida: true };
+}
+
+/**
+ * Formatea un monto en su moneda, con convención latinoamericana:
+ * punto para miles, coma para decimales. Ej: Q 1.250,50
+ *
+ * El separador de miles se aplica SOLO a la parte entera; aplicarlo a
+ * la cadena completa produce "1.250.50", que ya no es un número.
+ */
+function fmtMoneda(monto, cod) {
+  const m = moneda(cod);
+  const n = aNumero(monto);
+  if (n === '') return '';
+
+  const signo = n < 0 ? '-' : '';
+  const partes = Math.abs(n).toFixed(m.dec).split('.');
+  const entera = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const dec = partes.length > 1 ? ',' + partes[1] : '';
+
+  return signo + m.sim + ' ' + entera + dec;
+}
+
+// ─── TASAS ───────────────────────────────────────────────────
+
+/**
+ * Busca la tasa de un día concreto en la hoja `Tasas`.
+ *
+ * Si no hay tasa exacta para esa fecha, usa la más reciente ANTERIOR
+ * (nunca una posterior: sería usar información del futuro). Si tampoco
+ * hay ninguna anterior, devuelve null.
+ *
+ * @return {Object|null} { tasa, fecha_usada, exacta }
+ */
+function buscarTasa(ss, fecha, origen, destino) {
+  origen = String(origen || '').toUpperCase();
+  destino = String(destino || '').toUpperCase();
+  if (!origen || !destino) return null;
+  if (origen === destino) return { tasa: 1, fecha_usada: fecha, exacta: true };
+
+  const sh = ss.getSheetByName('Tasas');
+  if (!sh || sh.getLastRow() < 2) return null;
+
+  const filas = sh.getDataRange().getValues().slice(1);
+  let mejor = null;
+
+  for (let i = 0; i < filas.length; i++) {
+    const f = filas[i];
+    const fFecha = aISO(f[0], 'UTC');
+    const fOri = String(f[1] || '').toUpperCase();
+    const fDes = String(f[2] || '').toUpperCase();
+    const fTasa = aNumero(f[3]);
+    if (!fFecha || fTasa === '' || fTasa <= 0) continue;
+
+    let tasa = null;
+    if (fOri === origen && fDes === destino) tasa = fTasa;
+    else if (fOri === destino && fDes === origen) tasa = 1 / fTasa; // el par inverso sirve igual
+    if (tasa === null) continue;
+
+    if (fFecha === fecha) return { tasa: tasa, fecha_usada: fFecha, exacta: true };
+    if (fFecha < fecha && (!mejor || fFecha > mejor.fecha_usada)) {
+      mejor = { tasa: tasa, fecha_usada: fFecha, exacta: false };
+    }
+  }
+  return mejor;
+}
+
+/**
+ * Convierte un monto usando la tasa del día de la transacción.
+ *
+ * NO inventa un número cuando falta la tasa: devuelve valor null y un
+ * motivo. Quien llama decide qué hacer, pero nunca recibe una cifra
+ * inventada que se vea como buena.
+ *
+ * @return {Object} { valor, tasa, fecha_usada, exacta, motivo }
+ */
+function convertir(ss, monto, fecha, origen, destino) {
+  const n = aNumero(monto);
+  if (n === '') return { valor: null, motivo: 'monto no numérico' };
+
+  const o = String(origen || '').toUpperCase();
+  const d = String(destino || '').toUpperCase();
+  if (!o || !d) return { valor: null, motivo: 'falta moneda origen o destino' };
+  if (o === d) return { valor: n, tasa: 1, fecha_usada: fecha, exacta: true };
+
+  const t = buscarTasa(ss, fecha, o, d);
+  if (!t) {
+    return {
+      valor: null,
+      motivo: 'sin tasa ' + o + '->' + d + ' para ' + fecha +
+              ' ni ninguna anterior. Agrega la fila en la hoja Tasas.',
+    };
+  }
+
+  const dec = moneda(d).dec;
+  return {
+    valor: Number((n * t.tasa).toFixed(dec)),
+    tasa: t.tasa,
+    fecha_usada: t.fecha_usada,
+    exacta: t.exacta,
+    motivo: t.exacta ? '' : 'tasa del ' + t.fecha_usada + ', no había del ' + fecha,
+  };
+}
+
+/**
+ * Revisa qué tasas hacen falta para poder convertir todo lo que ya está
+ * cargado. Córrela antes de confiar en cualquier número de dinero.
+ */
+function tasasFaltantes(fileId, monedaDestino) {
+  const ss = SpreadsheetApp.openById(fileId || IDS.empresarial);
+  const destino = String(monedaDestino || 'COP').toUpperCase();
+  const faltan = {};
+
+  ['Pedidos', 'Pauta'].forEach(function (tab) {
+    const sh = ss.getSheetByName(tab);
+    if (!sh || sh.getLastRow() < 2) return;
+    const datos = sh.getDataRange().getValues();
+    const enc = datos[0].map(norm);
+    const cFecha = enc.indexOf('fecha');
+    const cMon = enc.indexOf('moneda_gasto') !== -1
+      ? enc.indexOf('moneda_gasto') : enc.indexOf('moneda');
+    if (cFecha === -1 || cMon === -1) return;
+
+    datos.slice(1).forEach(function (f) {
+      const fecha = aISO(f[cFecha], 'UTC');
+      const mon = String(f[cMon] || '').toUpperCase();
+      if (!fecha || !mon || mon === destino) return;
+      if (!buscarTasa(ss, fecha, mon, destino)) {
+        faltan[mon + ' -> ' + destino + '  desde ' + fecha] = true;
+      }
+    });
+  });
+
+  const lista = Object.keys(faltan).sort();
+  const msg = lista.length
+    ? 'FALTAN TASAS (' + lista.length + '):\n  ' + lista.join('\n  ') +
+      '\n\nAgrégalas en la hoja Tasas: fecha · moneda_origen · moneda_destino · tasa'
+    : 'No falta ninguna tasa para convertir a ' + destino + '. ✓';
+  Logger.log(msg);
+  return msg;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   4 · IMPORTADORES
    ═══════════════════════════════════════════════════════════════ */
 
 
@@ -745,10 +989,18 @@ const FUENTES = {
 
   // IRIS NO es una plataforma de pedidos: es la central telefónica.
   // VERIFICADO contra IRIS (1).csv — 2.782 llamadas salientes.
-  // Alimenta la entidad Llamadas y cruza con Pedidos por telefono_norm.
+  // Se usa en TODAS las tiendas, no solo en una.
+  //
+  // Ojo: el export de IRIS no trae columna de tienda. La llamada se
+  // asigna cruzando `telefono_norm` contra Pedidos: la tienda sale del
+  // pedido que coincide. Una llamada sin pedido que la reciba queda con
+  // tienda vacía y `pedido_id` vacío — visible, no descartada. Eso es
+  // justamente lo que hay que revisar: son llamadas a números que no
+  // están en ningún pedido.
   iris: {
     tipo: 'llamadas',
     verificado: true,
+    multi_tienda: true,      // se reparte por cruce, no por configuración
     alias: {
       id_externo:     ['id'],
       uid:            ['uniqueid'],
@@ -1082,7 +1334,7 @@ function diagnosticar(fuenteId, tienda) {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   4 · AUTO-MAPEO
+   5 · AUTO-MAPEO
    ═══════════════════════════════════════════════════════════════ */
 
 
@@ -1398,7 +1650,7 @@ function aliasDesdeMapeos(ss, fuenteId) {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   5 · PROVISIONAR CLIENTES
+   6 · PROVISIONAR CLIENTES
    ═══════════════════════════════════════════════════════════════ */
 
 
@@ -1528,6 +1780,7 @@ function crearNutrea() {
     [
       { tienda: 'gt', fuente: 'dropi',   tipo: 'pedidos'  },
       { tienda: 'gt', fuente: 'meta',    tipo: 'pauta'    },
+      { tienda: 'gt', fuente: 'iris',    tipo: 'llamadas' },
       { tienda: 'ec', fuente: 'dropi',   tipo: 'pedidos'  },
       { tienda: 'ec', fuente: 'shopify', tipo: 'pedidos_secundario' },
       { tienda: 'ec', fuente: 'meta',    tipo: 'pauta'    },
