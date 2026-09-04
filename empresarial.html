@@ -254,11 +254,17 @@ input.li:focus{border-color:var(--acc-d);}
 /* ─── PEDIDOS ────────────────────────────────────────── */
 .orow{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:7px;transition:border-color .12s;}
 .orow:hover{border-color:var(--s-line4);}
+.orow.open{border-color:var(--acc-d);}
 .otop{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .onm{font:600 13.5px/1.2 'DM Sans';color:var(--t-ink);}
 .oid{font:500 11.5px/1 'DM Sans';color:var(--t-mut2);font-variant-numeric:tabular-nums;}
 .ometa{display:flex;gap:16px;flex-wrap:wrap;font:500 12px/1.4 'DM Sans';color:var(--t-mut);}
 .ometa b{font-weight:600;color:var(--t-ink);}
+.ptog{color:var(--acc-d);cursor:pointer;font-weight:600;}
+.ped-dtl{border-top:1px solid var(--s-line2);margin-top:4px;padding-top:4px;}
+/* ─── TOAST ──────────────────────────────────────────── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--t-ink);color:var(--s-bg);font:600 13px/1 'DM Sans';padding:10px 18px;border-radius:20px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:999;white-space:nowrap;}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
 
 /* ─── NOVEDADES ──────────────────────────────────────── */
 .nrow{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:13px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
@@ -1019,6 +1025,7 @@ input.li:focus{border-color:var(--acc-d);}
     </div><!-- /content -->
   </div><!-- /main -->
 </div><!-- /app -->
+<div id="toast"></div>
 
 <!-- ══════════════════ VISTA SOMBRA ══════════════════ -->
 <div id="sombra" onclick="if(event.target===this)closeSombra()">
@@ -1199,12 +1206,12 @@ const STORES = {
 const POR_TIENDA = {
   ec: {
     pedidos: [
-      {id:'6349174',cli:'Fausto Riofrío',   ges:'Katherin',ciu:'Guayaquil',prod:'TAG RECEDE 2u',    val:'$ 52,00', est:'Por confirmar',eBg:'#f7dedc',eInk:'#b8322f'},
-      {id:'6349298',cli:'Graciela Mejía',   ges:'Katherin',ciu:'Quito',    prod:'EVILGOODS 3u',     val:'$ 93,74', est:'En gestión',   eBg:'#fae3d6',eInk:'#A06A52'},
-      {id:'6333602',cli:'Ysamar Caldera',   ges:'Katherin',ciu:'Cuenca',   prod:'DR MELAXIN 1u',    val:'$ 58,94', est:'Novedad',      eBg:'#f6ecd0',eInk:'#8a6a13'},
-      {id:'6349313',cli:'Monserrath Cando', ges:'Solange', ciu:'Ambato',   prod:'TRULY ROSA 1u',    val:'$ 52,43', est:'Confirmado',   eBg:'#d3e0c2',eInk:'#4c6236'},
-      {id:'6349361',cli:'Melany Herrera',   ges:'Solange', ciu:'Guayaquil',prod:'EVILGOODS 1u',     val:'$ 38,02', est:'Confirmado',   eBg:'#d3e0c2',eInk:'#4c6236'},
-      {id:'6349402',cli:'Jonathan Piedra',  ges:'Katherin',ciu:'Quito',    prod:'TAG RECEDE 1u',    val:'$ 68,11', est:'Cancelado',    eBg:'#e4e8da',eInk:'#6f7a5f'},
+      {id:'6349174',cli:'Fausto Riofrío',   ges:'Katherin',ciu:'Guayaquil',prod:'TAG RECEDE 2u',    val:'$ 52,00', est:'Por confirmar',eBg:'#f7dedc',eInk:'#b8322f',tel:'+593 99 123 4567',dir:'Cdla. Kennedy Norte, Av. San Jorge 201'},
+      {id:'6349298',cli:'Graciela Mejía',   ges:'Katherin',ciu:'Quito',    prod:'EVILGOODS 3u',     val:'$ 93,74', est:'En gestión',   eBg:'#fae3d6',eInk:'#A06A52',tel:'+593 98 765 4321',dir:'Av. 10 de Agosto N37-182, La Mariscal'},
+      {id:'6333602',cli:'Ysamar Caldera',   ges:'Katherin',ciu:'Cuenca',   prod:'DR MELAXIN 1u',    val:'$ 58,94', est:'Novedad',      eBg:'#f6ecd0',eInk:'#8a6a13',tel:'+593 97 456 7890',dir:'Av. Solano 12-44, Av. Remigio Tamariz'},
+      {id:'6349313',cli:'Monserrath Cando', ges:'Solange', ciu:'Ambato',   prod:'TRULY ROSA 1u',    val:'$ 52,43', est:'Confirmado',   eBg:'#d3e0c2',eInk:'#4c6236',tel:'+593 96 234 5678',dir:'Av. Cevallos 07-15, Centro'},
+      {id:'6349361',cli:'Melany Herrera',   ges:'Solange', ciu:'Guayaquil',prod:'EVILGOODS 1u',     val:'$ 38,02', est:'Confirmado',   eBg:'#d3e0c2',eInk:'#4c6236',tel:'+593 99 876 5432',dir:'Urdesa Central, Víctor Emilio 605'},
+      {id:'6349402',cli:'Jonathan Piedra',  ges:'Katherin',ciu:'Quito',    prod:'TAG RECEDE 1u',    val:'$ 68,11', est:'Cancelado',    eBg:'#e4e8da',eInk:'#6f7a5f',tel:'+593 98 345 6789',dir:'El Batán, Av. de los Shyris N36-81'},
     ],
     mes: [
       {lb:'Recaudo del mes',  v:'$ 68.420.000', sub:'+11% contra julio',                     color:'#4c6236'},
@@ -1255,10 +1262,10 @@ const POR_TIENDA = {
   },
   gt: {
     pedidos: [
-      {id:'5291044',cli:'Mirna Chávez',    ges:'Solange',ciu:'Guatemala City',prod:'TAG RECEDE 1u',  val:'Q 195,00',est:'Por confirmar',eBg:'#f7dedc',eInk:'#b8322f'},
-      {id:'5291098',cli:'Rosa Acabal',     ges:'Solange',ciu:'Xela',          prod:'EVILGOODS 2u',   val:'Q 340,00',est:'En gestión',   eBg:'#fae3d6',eInk:'#A06A52'},
-      {id:'5291133',cli:'Lucia Alvarado',  ges:'Solange',ciu:'Antigua',       prod:'TRULY ROSA 1u',  val:'Q 210,00',est:'Confirmado',   eBg:'#d3e0c2',eInk:'#4c6236'},
-      {id:'5291201',cli:'Ana García',      ges:'Solange',ciu:'Cobán',         prod:'DR MELAXIN 1u',  val:'Q 225,00',est:'Novedad',      eBg:'#f6ecd0',eInk:'#8a6a13'},
+      {id:'5291044',cli:'Mirna Chávez',    ges:'Solange',ciu:'Guatemala City',prod:'TAG RECEDE 1u',  val:'Q 195,00',est:'Por confirmar',eBg:'#f7dedc',eInk:'#b8322f',tel:'+502 5678 9012',dir:'Zona 10, Av. Reforma 9-55'},
+      {id:'5291098',cli:'Rosa Acabal',     ges:'Solange',ciu:'Xela',          prod:'EVILGOODS 2u',   val:'Q 340,00',est:'En gestión',   eBg:'#fae3d6',eInk:'#A06A52',tel:'+502 4567 8901',dir:'7a Av. 3-67, Zona 1'},
+      {id:'5291133',cli:'Lucia Alvarado',  ges:'Solange',ciu:'Antigua',       prod:'TRULY ROSA 1u',  val:'Q 210,00',est:'Confirmado',   eBg:'#d3e0c2',eInk:'#4c6236',tel:'+502 3456 7890',dir:'4a Calle Ote. 22, La Antigua'},
+      {id:'5291201',cli:'Ana García',      ges:'Solange',ciu:'Cobán',         prod:'DR MELAXIN 1u',  val:'Q 225,00',est:'Novedad',      eBg:'#f6ecd0',eInk:'#8a6a13',tel:'+502 2345 6789',dir:'6a Av. 1-53, Zona 2'},
     ],
     mes:[
       {lb:'Recaudo del mes',  v:'Q 254.600', sub:'+8% contra julio',                 color:'#4c6236'},
@@ -1453,7 +1460,33 @@ function buildHoy() {
 
 function buildPedidos() {
   const rows = POR_TIENDA[ST].pedidos;
-  document.getElementById('pedlist').innerHTML = rows.map(p=>`<div class="orow"><div class="otop"><div><span class="onm">${p.cli}</span>&ensp;<span class="oid">#${p.id}</span></div><span class="bd" style="color:${p.eInk};background:${p.eBg};">${p.est}</span></div><div class="ometa"><span>${p.prod}</span><span>${p.ciu}</span><b>${p.val}</b><span>Gestiona ${p.ges}</span></div></div>`).join('');
+  const ests = ['Por confirmar','En gestión','Confirmado','En tránsito','Novedad','Devuelto','Entregado'];
+  let h = '';
+  rows.forEach((p,i)=>{
+    h += `<div class="orow" id="prow${i}" onclick="togPed(${i})" style="cursor:pointer;">
+      <div class="otop"><div><span class="onm">${p.cli}</span>&ensp;<span class="oid">#${p.id}</span></div><span class="bd" style="color:${p.eInk};background:${p.eBg};">${p.est}</span></div>
+      <div class="ometa"><span>${p.prod}</span><span>${p.ciu}</span><b>${p.val}</b><span>Gestiona ${p.ges}</span><span class="ntog ptog">Ver detalle ▾</span></div>
+      <div class="ped-dtl" id="pd${i}" style="display:none;flex-direction:column;gap:10px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;border-top:1px solid var(--s-line2);padding-top:10px;">
+          <div><div class="dlbl">TELÉFONO</div><div class="dtxt">${p.tel}</div></div>
+          <div><div class="dlbl">DIRECCIÓN</div><div class="dtxt">${p.dir}</div></div>
+        </div>
+        <div><div class="dlbl">CAMBIAR ESTADO</div><div class="nstates">${ests.map(e=>`<div class="nst${e===p.est?' on':''}" onclick="event.stopPropagation();this.closest('.nstates').querySelectorAll('.nst').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${e}</div>`).join('')}</div></div>
+        <textarea class="narea" placeholder="Nota sobre este pedido…" onclick="event.stopPropagation()"></textarea>
+        <div class="nsavebtn" onclick="event.stopPropagation();showToast('Cambios guardados')">Guardar</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('pedlist').innerHTML = h;
+}
+function togPed(i){
+  const d=document.getElementById('pd'+i), t=document.querySelector(`#prow${i} .ptog`);
+  const open=d.style.display!=='none';
+  const n=POR_TIENDA[ST].pedidos.length;
+  for(let j=0;j<n;j++){if(j!==i){const dj=document.getElementById('pd'+j),tj=document.querySelector(`#prow${j} .ptog`);if(dj)dj.style.display='none';if(tj)tj.textContent='Ver detalle ▾';document.getElementById('prow'+j)?.classList.remove('open');}}
+  d.style.display=open?'none':'flex';
+  t.textContent=open?'Ver detalle ▾':'Cerrar ▴';
+  document.getElementById('prow'+i).classList.toggle('open',!open);
 }
 
 function buildNovedades() {
@@ -1478,13 +1511,14 @@ function buildNovedades() {
         <div class="gnote"><div class="dlbl">NOTA DE LA GESTORA</div><div class="dtxt" style="margin-top:4px;">${n.nota}</div><div style="font:500 10.5px/1 'DM Sans';color:var(--t-mut2);margin-top:4px;">${n.aut}</div></div>
         <div><div class="dlbl">CAMBIAR ESTADO</div><div class="nstates">${['En gestión','Esperando clienta','Reprogramar','Reenviar','Devolver','Resuelto'].map(e=>`<div class="nst${e===n.est?' on':''}" onclick="this.closest('.nstates').querySelectorAll('.nst').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${e}</div>`).join('')}</div></div>
         <textarea class="narea" placeholder="Qué pasó, qué acordaste con la clienta y qué sigue."></textarea>
-        <div class="nsavebtn">Guardar</div>
+        <div class="nsavebtn" onclick="event.stopPropagation();showToast('Cambios guardados')">Guardar</div>
       </div>
     </div>`;
   });
   document.getElementById('novlist').innerHTML = h;
 }
 function togNov(i){const d=document.getElementById('nd'+i),t=document.querySelector(`#nrow${i} .ntog`),op=d.style.display!=='none';d.style.display=op?'none':'flex';if(!op){d.style.flexDirection='column';d.style.gap='10px';}t.textContent=op?'Ver detalle ▾':'Cerrar ▴';}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2200);}
 
 function buildOficina() {
   document.getElementById('ofikpi').innerHTML = [
