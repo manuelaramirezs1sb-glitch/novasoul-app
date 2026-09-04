@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nova Central</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap">
+<script>
+(function(){
+  const m = localStorage.getItem('nc_modo');
+  if(m === 'claro') document.documentElement.setAttribute('data-modo','claro');
+})();
+</script>
+<style>
+/* ─── TOKENS ─── */
+:root {
+  --bg:    #09121f;
+  --bg2:   #0d1b2e;
+  --bg3:   #12233d;
+  --card:  #152340;
+  --line:  #1d2f4a;
+  --line2: #223454;
+  --ink:   #e6edf7;
+  --ink2:  #a0b2ca;
+  --ink3:  #607090;
+  --gold:  #c9a84c;
+  --gold2: #a8872b;
+  --glow:  rgba(201,168,76,.13);
+  --green: #3ecf8e;
+  --red:   #ef5a6f;
+  --amber: #f5a623;
+  --r:     14px;
+  --rsm:   9px;
+  --sb:    210px;
+}
+[data-modo="claro"] {
+  --bg:   #edf1f8;
+  --bg2:  #e2e8f2;
+  --bg3:  #d6dde9;
+  --card: #ffffff;
+  --line: #c5cfde;
+  --line2:#d8e0eb;
+  --ink:  #0f1928;
+  --ink2: #374d68;
+  --ink3: #7a8fa8;
+  --gold: #9a6f20;
+  --gold2:#7a5510;
+  --glow: rgba(154,111,32,.1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;}
+
+/* ─── LOGIN ─── */
+#login-screen{
+  display:flex;align-items:center;justify-content:center;min-height:100vh;
+  flex-direction:column;gap:32px;
+  background:radial-gradient(ellipse at 55% 25%,#172d52 0%,#07101e 70%);
+}
+.lgn-logo{text-align:center;}
+.lgn-wordmark{font-family:'Playfair Display',Georgia,serif;font-size:40px;color:var(--gold);letter-spacing:-1.5px;}
+.lgn-sub{font:300 10.5px/1 'DM Sans';letter-spacing:3.5px;color:var(--ink3);margin-top:7px;text-transform:uppercase;}
+.lgn-card{
+  background:rgba(18,35,61,.85);border:1px solid var(--line);border-radius:20px;
+  backdrop-filter:blur(12px);padding:36px 40px;width:340px;
+  display:flex;flex-direction:column;gap:18px;
+}
+.lgn-ttl{font:600 17px/1.2 'Playfair Display',serif;color:var(--ink);}
+.lgn-note{font:400 12px/1.5 'DM Sans';color:var(--ink3);}
+.f-inp{
+  background:rgba(255,255,255,.05);border:1px solid var(--line2);border-radius:var(--rsm);
+  padding:11px 14px;font:400 13.5px 'DM Sans';color:var(--ink);width:100%;
+  outline:none;transition:border-color .15s;
+}
+.f-inp:focus{border-color:var(--gold);}
+.lgn-btn{
+  background:var(--gold);color:#09121f;border:none;border-radius:var(--rsm);
+  padding:12px;font:600 14px 'DM Sans';cursor:pointer;transition:opacity .15s;
+}
+.lgn-btn:hover{opacity:.85;}
+
+/* ─── SHELL ─── */
+#app{display:none;flex-direction:row;min-height:100vh;}
+
+/* ─── SIDEBAR ─── */
+.sidebar{
+  width:var(--sb);flex-shrink:0;background:var(--bg2);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.sb-logo{padding:22px 18px 18px;border-bottom:1px solid var(--line);}
+.sb-wordmark{font-family:'Playfair Display',serif;font-size:20px;color:var(--gold);letter-spacing:-.5px;}
+.sb-tag{font:300 9px/1 'DM Sans';letter-spacing:3px;color:var(--ink3);margin-top:5px;text-transform:uppercase;}
+.sb-nav{flex:1;padding:14px 8px;display:flex;flex-direction:column;gap:2px;}
+.ni{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;
+  font:500 13px/1 'DM Sans';color:var(--ink2);cursor:pointer;transition:all .15s;user-select:none;
+}
+.ni:hover{background:var(--bg3);color:var(--ink);}
+.ni.on{background:var(--glow);color:var(--gold);}
+.ni-ico{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+.sb-div{height:1px;background:var(--line);margin:6px 12px;}
+.sb-modo{display:flex;align-items:center;gap:8px;padding:8px 14px;}
+.sb-modo-lbl{font:400 11.5px 'DM Sans';color:var(--ink3);flex:1;}
+.tog-wrap{
+  width:38px;height:22px;border-radius:11px;background:var(--bg3);border:1px solid var(--line2);
+  cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;
+}
+.tog-wrap::after{
+  content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;
+  border-radius:50%;background:var(--gold);transition:left .2s;
+}
+[data-modo="claro"] .tog-wrap::after{left:19px;}
+.sb-foot{padding:14px 16px 18px;border-top:1px solid var(--line);}
+.sb-user{display:flex;align-items:center;gap:10px;}
+.sb-ava{width:34px;height:34px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font:700 14px 'DM Sans';color:#09121f;flex-shrink:0;}
+.sb-nm{font:600 12.5px/1.2 'DM Sans';color:var(--ink);}
+.sb-rol{font:400 10px/1 'DM Sans';color:var(--gold);letter-spacing:.5px;margin-top:3px;}
+.sb-out{font:500 11.5px 'DM Sans';color:var(--ink3);cursor:pointer;margin-top:10px;}
+.sb-out:hover{color:var(--red);}
+
+/* ─── MAIN ─── */
+.main-area{flex:1;display:flex;flex-direction:column;min-width:0;}
+.topbar{
+  background:var(--bg2);border-bottom:1px solid var(--line);
+  padding:13px 26px;display:flex;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:10;
+}
+.topbar-ttl{font:700 15.5px/1 'Playfair Display',serif;color:var(--ink);flex:1;}
+.topbar-badge{
+  font:600 10px/1 'DM Sans';background:var(--glow);color:var(--gold);
+  border:1px solid var(--gold2);border-radius:20px;padding:3px 10px;
+  letter-spacing:.8px;text-transform:uppercase;
+}
+.content{padding:26px;display:flex;flex-direction:column;gap:18px;flex:1;}
+.view{display:none;}
+.view.on{display:flex;flex-direction:column;gap:18px;}
+
+/* ─── CARDS ─── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px 22px;}
+.card-ttl{font:600 10.5px/1 'DM Sans';letter-spacing:1.3px;color:var(--ink3);text-transform:uppercase;margin-bottom:14px;}
+.card-row{display:flex;gap:14px;flex-wrap:wrap;}
+.card-row>.card{flex:1;min-width:240px;}
+
+/* KPIs */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;}
+.kpi{background:var(--bg3);border-radius:var(--rsm);padding:14px 16px;border:1px solid var(--line);}
+.kpi-lbl{font:500 9.5px/1 'DM Sans';letter-spacing:1px;color:var(--ink3);text-transform:uppercase;}
+.kpi-val{font:700 22px/1 'Playfair Display',serif;color:var(--ink);margin-top:7px;font-variant-numeric:tabular-nums;}
+.kpi-val.gold{color:var(--gold);}
+.kpi-sub{font:400 10.5px/1 'DM Sans';color:var(--ink3);margin-top:5px;}
+
+/* Badges */
+.bd{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font:600 10px/1 'DM Sans';letter-spacing:.4px;}
+.bd-g{background:rgba(62,207,142,.12);color:var(--green);}
+.bd-a{background:rgba(245,166,35,.12);color:var(--amber);}
+.bd-r{background:rgba(239,90,111,.12);color:var(--red);}
+.bd-b{background:var(--glow);color:var(--gold);}
+
+/* Action buttons */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;background:var(--gold);color:#09121f;
+  border:none;border-radius:var(--rsm);padding:9px 18px;font:600 12.5px 'DM Sans';
+  cursor:pointer;transition:opacity .15s;white-space:nowrap;
+}
+.btn:hover{opacity:.86;}
+.btn-ghost{
+  display:inline-flex;align-items:center;gap:7px;background:transparent;
+  border:1px solid var(--line2);border-radius:var(--rsm);padding:9px 18px;
+  font:600 12.5px 'DM Sans';color:var(--ink2);cursor:pointer;transition:all .15s;
+}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+
+/* Rows */
+.row-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);}
+.row-item:last-child{border-bottom:none;}
+.ava{display:flex;align-items:center;justify-content:center;font:600 13px 'DM Sans';flex-shrink:0;border-radius:50%;}
+.ava-gold{background:var(--glow);border:1px solid var(--gold2);color:var(--gold);}
+.ava-muted{background:var(--bg3);border:1px solid var(--line);color:var(--ink2);}
+.row-nm{font:600 13px/1.2 'DM Sans';color:var(--ink);}
+.row-sub{font:400 11.5px/1 'DM Sans';color:var(--ink3);margin-top:3px;}
+
+/* Store switcher tabs */
+.store-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+.stab{
+  padding:6px 14px;border-radius:20px;font:500 12px/1 'DM Sans';cursor:pointer;
+  border:1px solid var(--line2);color:var(--ink3);transition:all .15s;
+}
+.stab.on{background:var(--glow);color:var(--gold);border-color:var(--gold2);}
+
+/* Upload zone */
+.upload-zone{
+  border:2px dashed var(--line2);border-radius:var(--r);padding:34px 24px;
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  cursor:pointer;transition:border-color .2s;
+}
+.upload-zone:hover{border-color:var(--gold);}
+.upload-ico{font-size:38px;}
+.upload-ttl{font:600 14.5px/1 'DM Sans';color:var(--ink);}
+.upload-note{font:400 12px/1.6 'DM Sans';color:var(--ink3);text-align:center;}
+.parsed-prev{display:none;flex-direction:column;gap:14px;}
+.parsed-prev.on{display:flex;}
+.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.pf-f{display:flex;flex-direction:column;gap:4px;}
+.pf-lbl{font:600 9px/1 'DM Sans';letter-spacing:1.1px;color:var(--ink3);text-transform:uppercase;}
+.pf-val{font:500 13px/1.3 'DM Sans';color:var(--ink);}
+
+/* Demo section */
+.demo-hero{
+  background:var(--glow);border:1px solid var(--gold2);border-radius:var(--r);
+  padding:22px 24px;
+}
+.demo-status-row{display:flex;align-items:center;gap:12px;}
+.demo-dot{width:10px;height:10px;border-radius:50%;background:var(--red);flex-shrink:0;}
+.demo-dot.on{background:var(--green);box-shadow:0 0 8px rgba(62,207,142,.45);}
+.demo-ttl{font:600 15px/1.2 'DM Sans';color:var(--ink);}
+.demo-desc{font:400 12px/1.55 'DM Sans';color:var(--ink3);margin-top:5px;}
+.demo-tog{
+  margin-left:auto;background:var(--card);border:1px solid var(--line2);border-radius:var(--rsm);
+  padding:8px 16px;font:600 12px 'DM Sans';color:var(--ink2);cursor:pointer;flex-shrink:0;
+}
+.demo-tog.on{background:var(--green);color:#09121f;border-color:transparent;}
+.demo-access-row{display:flex;align-items:center;gap:8px;}
+.demo-email-item{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  background:var(--bg3);border:1px solid var(--line);border-radius:var(--rsm);
+}
+.demo-email-txt{font:400 12.5px 'DM Sans';color:var(--ink2);flex:1;}
+.demo-email-rem{font:500 11px 'DM Sans';color:var(--red);cursor:pointer;}
+
+/* Meta upload */
+.meta-up{
+  display:flex;align-items:center;gap:14px;background:var(--bg3);border:1px solid var(--line2);
+  border-radius:var(--rsm);padding:14px 16px;cursor:pointer;transition:border-color .15s;
+}
+.meta-up:hover{border-color:var(--gold);}
+.meta-fb-ico{width:42px;height:42px;border-radius:9px;background:#1877f2;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.meta-fb-ico svg{fill:#fff;}
+.meta-lbl{font:600 12px/1 'DM Sans';color:var(--gold);margin-left:auto;flex-shrink:0;}
+
+/* Pipeline row */
+.pipe-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line);}
+.pipe-row:last-child{border-bottom:none;}
+.pipe-nota{font:600 13px/1 'DM Sans';color:var(--green);font-variant-numeric:tabular-nums;flex-shrink:0;}
+
+/* Stats row in tiendas */
+.t-stats{display:flex;gap:18px;margin-left:auto;flex-shrink:0;}
+.t-stat{text-align:right;}
+.t-stat-v{font:600 13.5px/1 'DM Sans';color:var(--ink);font-variant-numeric:tabular-nums;}
+.t-stat-l{font:400 10px/1 'DM Sans';color:var(--ink3);margin-top:3px;}
+
+/* Toast */
+#toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(70px);
+  background:var(--card);border:1px solid var(--line2);border-radius:40px;
+  padding:10px 22px;font:500 13px 'DM Sans';color:var(--ink);
+  z-index:999;transition:transform .28s;pointer-events:none;white-space:nowrap;
+}
+#toast.show{transform:translateX(-50%) translateY(0);}
+
+@media(max-width:700px){
+  .sidebar{display:none;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .t-stats{display:none;}
+  .card-row>.card{min-width:0;}
+}
+</style>
+</head>
+<body>
+
+<!-- ─── LOGIN ─── -->
+<div id="login-screen">
+  <div class="lgn-logo">
+    <div class="lgn-wordmark">Nova Central</div>
+    <div class="lgn-sub">Hub de plataforma</div>
+  </div>
+  <div class="lgn-card">
+    <div>
+      <div class="lgn-ttl">Acceso al panel</div>
+      <div class="lgn-note" style="margin-top:5px">Solo para la administradora de plataforma</div>
+    </div>
+    <input class="f-inp" id="lgn-email" type="email" placeholder="correo@nova.co" value="manuela@nova.co">
+    <input class="f-inp" type="password" placeholder="••••••••" value="••••••••">
+    <button class="lgn-btn" onclick="enterApp()">Entrar a Nova Central</button>
+  </div>
+</div>
+
+<!-- ─── APP ─── -->
+<div id="app">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-wordmark">Nova Central</div>
+      <div class="sb-tag">Hub de plataforma</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="ni on" data-v="dashboard" onclick="go('dashboard',this)">
+        <span class="ni-ico">⬡</span> Dashboard
+      </div>
+      <div class="ni" data-v="tiendas" onclick="go('tiendas',this)">
+        <span class="ni-ico">🏪</span> Tiendas
+      </div>
+      <div class="ni" data-v="equipo" onclick="go('equipo',this)">
+        <span class="ni-ico">👥</span> Equipo
+      </div>
+      <div class="ni" data-v="pipeline" onclick="go('pipeline',this)">
+        <span class="ni-ico">🎓</span> Pipeline novAcademy
+      </div>
+      <div class="sb-div"></div>
+      <div class="ni" data-v="onboarding" onclick="go('onboarding',this)">
+        <span class="ni-ico">📁</span> Onboarding
+      </div>
+      <div class="ni" data-v="meta" onclick="go('meta',this)">
+        <span class="ni-ico">📊</span> Meta Ads
+      </div>
+      <div class="ni" data-v="demo" onclick="go('demo',this)">
+        <span class="ni-ico">🔐</span> Demo
+      </div>
+    </nav>
+    <div class="sb-modo">
+      <span class="sb-modo-lbl" id="modo-lbl">Modo oscuro</span>
+      <div class="tog-wrap" onclick="toggleModo()"></div>
+    </div>
+    <div class="sb-foot">
+      <div class="sb-user">
+        <div class="sb-ava">M</div>
+        <div>
+          <div class="sb-nm">Manuela R.</div>
+          <div class="sb-rol">CEO · Plataforma</div>
+        </div>
+      </div>
+      <div class="sb-out" onclick="logout()">Cerrar sesión</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main-area">
+    <div class="topbar">
+      <div class="topbar-ttl" id="ptitle">Dashboard</div>
+      <div class="topbar-badge">CEO</div>
+    </div>
+    <div class="content">
+
+      <!-- ─── DASHBOARD ─── -->
+      <div class="view on" id="v-dashboard">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font:500 11.5px 'DM Sans';color:var(--ink3)">Vista activa:</span>
+          <div class="store-tabs" id="store-tabs"></div>
+        </div>
+        <div class="kpi-grid" id="dash-kpis"></div>
+        <div class="card-row" id="dash-bottom"></div>
+      </div>
+
+      <!-- ─── TIENDAS ─── -->
+      <div class="view" id="v-tiendas">
+        <div class="card">
+          <div class="card-ttl">Tiendas en plataforma</div>
+          <div id="tiendas-list"></div>
+        </div>
+        <button class="btn" onclick="showToast('Funcionalidad de nueva tienda próximamente')">+ Agregar tienda</button>
+      </div>
+
+      <!-- ─── EQUIPO ─── -->
+      <div class="view" id="v-equipo">
+        <div class="card-row">
+          <div class="card">
+            <div class="card-ttl">Nutrea GT — Equipo</div>
+            <div id="team-gt"></div>
+          </div>
+          <div class="card">
+            <div class="card-ttl">Nutrea EC — Equipo</div>
+            <div id="team-ec"></div>
+          </div>
+        </div>
+        <div class="card" style="max-width:480px">
+          <div class="card-ttl">Invitar usuario</div>
+          <div style="display:flex;flex-direction:column;gap:11px">
+            <input class="f-inp" id="inv-email" placeholder="correo@ejemplo.com">
+            <select class="f-inp" id="inv-rol">
+              <option value="">Rol…</option>
+              <option value="admin">Administradora</option>
+              <option value="gestora">Gestora</option>
+            </select>
+            <select class="f-inp" id="inv-tienda">
+              <option value="">Tienda…</option>
+              <option value="gt">Nutrea GT</option>
+              <option value="ec">Nutrea EC</option>
+            </select>
+            <button class="btn" onclick="inviteUser()">Enviar invitación</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── PIPELINE novAcademy ─── -->
+      <div class="view" id="v-pipeline">
+        <div class="card">
+          <div class="card-ttl">Graduadas disponibles · novAcademy</div>
+          <div id="pipe-grads"></div>
+        </div>
+        <div class="card">
+          <div class="card-ttl">Posiciones abiertas en equipos</div>
+          <div id="pipe-pos"></div>
+        </div>
+        <button class="btn-ghost" onclick="go('onboarding',document.querySelector('[data-v=onboarding]'))">→ Ir a Onboarding para agregar tienda nueva</button>
+      </div>
+
+      <!-- ─── ONBOARDING ─── -->
+      <div class="view" id="v-onboarding">
+        <div class="card">
+          <div class="card-ttl">Leer archivo de negocio</div>
+          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('biz-file').click()">
+            <div class="upload-ico">📂</div>
+            <div class="upload-ttl">Subir archivo del cliente</div>
+            <div class="upload-note">Sube el CSV o Excel con la información del negocio.<br>Se usará para crear su cuenta y permisos en Nova Empresarial.</div>
+            <button class="btn" onclick="event.stopPropagation()">Seleccionar archivo</button>
+          </div>
+          <input type="file" id="biz-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="onBizFile(this)">
+          <div class="parsed-prev" id="parsed-prev">
+            <div style="height:1px;background:var(--line);margin:6px 0"></div>
+            <div style="font:600 14px/1 'DM Sans';color:var(--ink)">Datos detectados del archivo</div>
+            <div class="pf-grid" id="pf-fields"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+              <button class="btn" onclick="createAccount()">Crear cuenta en Nova Empresarial</button>
+              <button class="btn-ghost" onclick="resetUpload()">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── META ADS ─── -->
+      <div class="view" id="v-meta">
+        <div class="card">
+          <div class="card-ttl">Subir reporte Meta Ads</div>
+          <div style="display:flex;flex-direction:column;gap:13px">
+            <select class="f-inp" id="meta-tienda" style="max-width:240px">
+              <option value="gt">Nutrea GT</option>
+              <option value="ec">Nutrea EC</option>
+            </select>
+            <div class="meta-up" onclick="document.getElementById('meta-file-inp').click()">
+              <div class="meta-fb-ico">
+                <svg width="22" height="22" viewBox="0 0 24 24">
+                  <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.93 7.44-1.73 8.15c-.13.58-.47.72-.95.45l-2.62-1.93-1.27 1.22c-.14.14-.26.26-.53.26l.19-2.67 4.87-4.4c.21-.19-.05-.29-.32-.1L7.28 15.37l-2.56-.8c-.56-.17-.57-.56.12-.83l10-3.86c.47-.17.88.11.73.82z"/>
+                </svg>
+              </div>
+              <div>
+                <div style="font:600 13.5px/1 'DM Sans';color:var(--ink)">Exportar CSV de Meta Ads Manager</div>
+                <div style="font:400 11px/1.5 'DM Sans';color:var(--ink3);margin-top:4px">Sube el reporte de campañas del período activo</div>
+              </div>
+              <div class="meta-lbl" id="meta-lbl-c">Subir ↑</div>
+            </div>
+            <input type="file" id="meta-file-inp" accept=".csv,.xlsx" style="display:none" onchange="onMetaFileC(this)">
+          </div>
+        </div>
+        <div class="card" id="meta-summary" style="display:none">
+          <div class="card-ttl">Resumen importado</div>
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-lbl">Inversión total</div><div class="kpi-val gold" id="meta-inv">—</div><div class="kpi-sub">Meta Ads</div></div>
+            <div class="kpi"><div class="kpi-lbl">Alcance</div><div class="kpi-val">184K</div><div class="kpi-sub">impresiones</div></div>
+            <div class="kpi"><div class="kpi-lbl">CPA promedio</div><div class="kpi-val">$ 9.80</div><div class="kpi-sub">por pedido</div></div>
+            <div class="kpi"><div class="kpi-lbl">ROAS</div><div class="kpi-val">3.2×</div><div class="kpi-sub">retorno</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── DEMO ─── -->
+      <div class="view" id="v-demo">
+        <div class="demo-hero">
+          <div class="demo-status-row">
+            <div class="demo-dot" id="demo-dot"></div>
+            <div>
+              <div class="demo-ttl">Demo Nova Empresarial</div>
+              <div class="demo-desc" id="demo-desc-txt">Demo desactivado · Nadie puede acceder en este momento</div>
+            </div>
+            <button class="demo-tog" id="demo-tog-btn" onclick="toggleDemo()">Activar demo</button>
+          </div>
+          <div style="font:400 12px/1.6 'DM Sans';color:var(--ink3);margin-top:14px;border-top:1px solid rgba(201,168,76,.2);padding-top:14px">
+            Activa el demo cuando vayas a mostrar la plataforma a un cliente potencial o a una estudiante de
+            novAcademy en capacitación. Solo tú puedes activarlo o desactivarlo desde Nova Central o desde novAcademy.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-ttl">Enlace de demo</div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font:500 12.5px 'DM Sans';color:var(--gold);font-family:monospace">empresarial.html?demo=1</span>
+            <button class="btn-ghost" onclick="copyDemo()">Copiar enlace</button>
+            <button class="btn" onclick="window.open('empresarial.html?demo=1','_blank')">Abrir demo</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-ttl">Personas con acceso al demo</div>
+          <div style="display:flex;flex-direction:column;gap:11px">
+            <div class="demo-access-row">
+              <input class="f-inp" id="demo-email-inp" placeholder="correo@ejemplo.com" style="flex:1">
+              <button class="btn" onclick="addDemoAccess()">Agregar</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px" id="demo-accs-list"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main-area -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script>
+/* ─── DATA ─── */
+const TIENDAS = [
+  {
+    nm:'Nutrea GT', ini:'GT', id:'gt', mon:'GTQ', sym:'Q ', pais:'Guatemala',
+    ventas:284500, pedidos:342, efectividad:88, novedades:5,
+    team:[
+      {nm:'Daniela R.',  ini:'DR', rol:'admin',   email:'daniela@nutreagt.com'},
+      {nm:'Camila R.',   ini:'CR', rol:'gestora',  email:'camila@nutreagt.com'},
+      {nm:'Katherin P.', ini:'KP', rol:'gestora',  email:'katherin@nutreagt.com'},
+    ]
+  },
+  {
+    nm:'Nutrea EC', ini:'EC', id:'ec', mon:'USD', sym:'$ ', pais:'Ecuador',
+    ventas:11240, pedidos:189, efectividad:91, novedades:2,
+    team:[
+      {nm:'María L.',    ini:'ML', rol:'admin',   email:'maria@nutreaec.com'},
+      {nm:'Ana P.',      ini:'AP', rol:'gestora',  email:'ana@nutreaec.com'},
+    ]
+  }
+];
+
+const GRADS = [
+  {nm:'Camila Estrada', ini:'CE', est:'Certificada', nota:'89%', disp:true,  pref:'Gestora de pedidos'},
+  {nm:'Laura Moreno',   ini:'LM', est:'Aprobada',    nota:'91%', disp:true,  pref:'Administradora'},
+  {nm:'Valentina Ríos', ini:'VR', est:'En curso',    nota:'-',   disp:false, pref:'Gestora de novedades'},
+];
+const POSICIONES = [
+  {tienda:'Nutrea GT', rol:'Gestora de pedidos', urg:'alta'},
+  {tienda:'Nutrea EC', rol:'Administradora',     urg:'media'},
+];
+
+const BIZ_SAMPLE = {
+  'Empresa':    'Dilore CO',
+  'País':       'Colombia',
+  'Contacto':   'Valentina Torres',
+  'Email':      'valentina@diloreco.com',
+  'Teléfono':   '+57 300 456 7890',
+  'Productos':  'Ropa deportiva femenina, Accesorios fitness',
+  'Empleados':  '8 personas',
+};
+
+let demoOn  = false;
+let demoAccess = ['manuela@nova.co', 'laura@novacademy.co', 'camila@novacademy.co'];
+let activeSt = 'gt';
+
+/* ─── BOOT ─── */
+function enterApp(){
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  buildDashboard();
+  buildTiendas();
+  buildEquipo();
+  buildPipeline();
+  renderDemoAccess();
+  const m = localStorage.getItem('nc_modo');
+  document.getElementById('modo-lbl').textContent = m === 'claro' ? 'Modo claro' : 'Modo oscuro';
+}
+function logout(){
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+/* ─── NAV ─── */
+const TITLES = {
+  dashboard:'Dashboard', tiendas:'Tiendas', equipo:'Equipo',
+  pipeline:'Pipeline novAcademy', onboarding:'Onboarding de clientes',
+  meta:'Meta Ads', demo:'Gestión de demo'
+};
+function go(v, el){
+  document.querySelectorAll('.view').forEach(x => x.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(x => x.classList.remove('on'));
+  document.getElementById('v-'+v).classList.add('on');
+  if(el) el.classList.add('on');
+  document.getElementById('ptitle').textContent = TITLES[v] || v;
+}
+
+/* ─── DASHBOARD ─── */
+function buildDashboard(){
+  const tabs = document.getElementById('store-tabs');
+  tabs.innerHTML = TIENDAS.map(t =>
+    `<div class="stab" id="stab-${t.id}" onclick="switchStore('${t.id}')">${t.nm}</div>`
+  ).join('');
+  switchStore('gt');
+}
+function switchStore(id){
+  activeSt = id;
+  const t = TIENDAS.find(x => x.id === id);
+  document.querySelectorAll('.stab').forEach(el => el.classList.remove('on'));
+  document.getElementById('stab-'+id).classList.add('on');
+
+  document.getElementById('dash-kpis').innerHTML = `
+    <div class="kpi"><div class="kpi-lbl">Ventas del mes</div><div class="kpi-val gold">${t.sym}${t.ventas.toLocaleString('es')}</div><div class="kpi-sub">${t.mon}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Pedidos</div><div class="kpi-val">${t.pedidos}</div><div class="kpi-sub">este mes</div></div>
+    <div class="kpi"><div class="kpi-lbl">Efectividad</div><div class="kpi-val">${t.efectividad}%</div><div class="kpi-sub">entregas exitosas</div></div>
+    <div class="kpi"><div class="kpi-lbl">Novedades activas</div><div class="kpi-val">${t.novedades}</div><div class="kpi-sub">en gestión</div></div>
+  `;
+
+  document.getElementById('dash-bottom').innerHTML = `
+    <div class="card">
+      <div class="card-ttl">Equipo · ${t.nm}</div>
+      ${t.team.map(u => `
+        <div class="row-item">
+          <div class="ava ava-muted" style="width:34px;height:34px">${u.ini}</div>
+          <div style="flex:1"><div class="row-nm">${u.nm}</div><div class="row-sub">${u.rol === 'admin' ? 'Administradora' : 'Gestora'}</div></div>
+          <span class="bd ${u.rol==='admin'?'bd-b':'bd-a'}">${u.rol === 'admin' ? 'Admin' : 'Gestora'}</span>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-ttl">Acceso rápido</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn" onclick="go('pipeline',document.querySelector('[data-v=pipeline]'))">Pipeline novAcademy</button>
+        <button class="btn-ghost" onclick="go('onboarding',document.querySelector('[data-v=onboarding]'))">Onboarding nuevo cliente</button>
+        <button class="btn-ghost" onclick="go('demo',document.querySelector('[data-v=demo]'))">Gestionar demo</button>
+      </div>
+    </div>
+  `;
+}
+
+/* ─── TIENDAS ─── */
+function buildTiendas(){
+  document.getElementById('tiendas-list').innerHTML = TIENDAS.map(t => `
+    <div class="row-item">
+      <div class="ava ava-gold" style="width:40px;height:40px;border-radius:10px;font-family:'Playfair Display',serif;font-size:15px">${t.ini}</div>
+      <div style="flex:1">
+        <div class="row-nm">${t.nm}</div>
+        <div class="row-sub">${t.pais} · ${t.mon}</div>
+      </div>
+      <div class="t-stats">
+        <div class="t-stat"><div class="t-stat-v">${t.sym}${t.ventas.toLocaleString('es')}</div><div class="t-stat-l">Ventas</div></div>
+        <div class="t-stat"><div class="t-stat-v">${t.pedidos}</div><div class="t-stat-l">Pedidos</div></div>
+        <div class="t-stat"><div class="t-stat-v">${t.efectividad}%</div><div class="t-stat-l">Efectividad</div></div>
+      </div>
+      <span class="bd bd-g" style="margin-left:12px">Activa</span>
+    </div>
+  `).join('');
+}
+
+/* ─── EQUIPO ─── */
+function buildEquipo(){
+  TIENDAS.forEach(t => {
+    document.getElementById('team-'+t.id).innerHTML = t.team.map(u => `
+      <div class="row-item">
+        <div class="ava ava-muted" style="width:34px;height:34px">${u.ini}</div>
+        <div style="flex:1"><div class="row-nm">${u.nm}</div><div class="row-sub">${u.email}</div></div>
+        <span class="bd ${u.rol==='admin'?'bd-b':'bd-a'}">${u.rol==='admin'?'Admin':'Gestora'}</span>
+      </div>`).join('');
+  });
+}
+function inviteUser(){
+  const email  = document.getElementById('inv-email').value.trim();
+  const rol    = document.getElementById('inv-rol').value;
+  const tienda = document.getElementById('inv-tienda').value;
+  if(!email || !rol || !tienda){ showToast('Completa todos los campos'); return; }
+  const tnm = tienda === 'gt' ? 'Nutrea GT' : 'Nutrea EC';
+  const rnm = rol === 'admin' ? 'administradora' : 'gestora';
+  showToast(`Invitación enviada a ${email} como ${rnm} en ${tnm}`);
+  document.getElementById('inv-email').value = '';
+}
+
+/* ─── PIPELINE ─── */
+function buildPipeline(){
+  document.getElementById('pipe-grads').innerHTML = GRADS.map((g,i) => `
+    <div class="pipe-row">
+      <div class="ava ava-gold" style="width:36px;height:36px">${g.ini}</div>
+      <div style="flex:1">
+        <div class="row-nm">${g.nm}</div>
+        <div class="row-sub">${g.pref}</div>
+      </div>
+      ${g.nota !== '-' ? `<span class="pipe-nota">${g.nota}</span>` : ''}
+      <span class="bd ${g.est==='Certificada'?'bd-g':g.est==='Aprobada'?'bd-b':'bd-a'}">${g.est}</span>
+      ${g.disp
+        ? `<button class="btn" style="padding:7px 14px;font-size:11.5px" onclick="matchGrad(${i})">Acomodar</button>`
+        : `<span style="font:400 11px 'DM Sans';color:var(--ink3);white-space:nowrap">En formación</span>`
+      }
+    </div>`).join('');
+
+  document.getElementById('pipe-pos').innerHTML = POSICIONES.map(p => `
+    <div class="pipe-row">
+      <div style="flex:1">
+        <div class="row-nm">${p.tienda}</div>
+        <div class="row-sub">${p.rol}</div>
+      </div>
+      <span class="bd ${p.urg==='alta'?'bd-r':'bd-a'}">${p.urg==='alta'?'Urgente':'Media'}</span>
+    </div>`).join('');
+}
+function matchGrad(i){
+  showToast(`Proceso de colocación iniciado para ${GRADS[i].nm}`);
+}
+
+/* ─── ONBOARDING ─── */
+function onBizFile(inp){
+  if(!inp.files.length) return;
+  setTimeout(()=>{
+    document.getElementById('upload-zone').style.display = 'none';
+    const prev = document.getElementById('parsed-prev');
+    prev.classList.add('on');
+    document.getElementById('pf-fields').innerHTML = Object.entries(BIZ_SAMPLE).map(([k,v]) =>
+      `<div class="pf-f"><div class="pf-lbl">${k}</div><div class="pf-val">${v}</div></div>`
+    ).join('');
+  }, 950);
+}
+function createAccount(){
+  showToast('Cuenta creada en Nova Empresarial para Dilore CO ✓');
+  resetUpload();
+}
+function resetUpload(){
+  document.getElementById('upload-zone').style.display = 'flex';
+  document.getElementById('parsed-prev').classList.remove('on');
+  document.getElementById('biz-file').value = '';
+}
+
+/* ─── META ─── */
+function onMetaFileC(inp){
+  if(!inp.files.length) return;
+  const st = TIENDAS.find(t => t.id === document.getElementById('meta-tienda').value);
+  setTimeout(()=>{
+    document.getElementById('meta-lbl-c').textContent = '✓ Cargado';
+    const sumEl = document.getElementById('meta-summary');
+    sumEl.style.display = 'block';
+    document.getElementById('meta-inv').textContent = st.id==='gt' ? 'Q 21,180' : '$ 4,280';
+    showToast('Reporte Meta cargado para ' + st.nm + ' ✓');
+  }, 1100);
+}
+
+/* ─── DEMO ─── */
+function toggleDemo(){
+  demoOn = !demoOn;
+  document.getElementById('demo-dot').className     = 'demo-dot' + (demoOn ? ' on' : '');
+  document.getElementById('demo-tog-btn').textContent = demoOn ? 'Desactivar demo' : 'Activar demo';
+  document.getElementById('demo-tog-btn').className   = 'demo-tog' + (demoOn ? ' on' : '');
+  document.getElementById('demo-desc-txt').textContent = demoOn
+    ? 'Demo activo · Las personas autorizadas pueden acceder ahora'
+    : 'Demo desactivado · Nadie puede acceder en este momento';
+  showToast(demoOn ? 'Demo activado ✓' : 'Demo desactivado');
+}
+function renderDemoAccess(){
+  document.getElementById('demo-accs-list').innerHTML = demoAccess.map((email,i) => `
+    <div class="demo-email-item">
+      <span class="demo-email-txt">${email}</span>
+      ${email === 'manuela@nova.co'
+        ? '<span style="font:400 10.5px \'DM Sans\';color:var(--ink3)">Propietaria</span>'
+        : `<span class="demo-email-rem" onclick="removeDemoAccess(${i})">Eliminar</span>`
+      }
+    </div>`).join('');
+}
+function addDemoAccess(){
+  const inp = document.getElementById('demo-email-inp');
+  const email = inp.value.trim();
+  if(!email){ showToast('Ingresa un correo'); return; }
+  if(demoAccess.includes(email)){ showToast('Este correo ya tiene acceso'); return; }
+  demoAccess.push(email);
+  renderDemoAccess();
+  inp.value = '';
+  showToast('Acceso de demo otorgado a ' + email);
+}
+function removeDemoAccess(i){
+  const email = demoAccess[i];
+  demoAccess.splice(i,1);
+  renderDemoAccess();
+  showToast('Acceso eliminado para ' + email);
+}
+function copyDemo(){
+  const url = location.origin + '/empresarial.html?demo=1';
+  navigator.clipboard.writeText(url)
+    .then(()=> showToast('Enlace copiado ✓'))
+    .catch(()=> showToast('empresarial.html?demo=1'));
+}
+
+/* ─── MODO ─── */
+function toggleModo(){
+  const curr = document.documentElement.getAttribute('data-modo');
+  const next  = curr === 'claro' ? null : 'claro';
+  if(next) document.documentElement.setAttribute('data-modo', 'claro');
+  else     document.documentElement.removeAttribute('data-modo');
+  localStorage.setItem('nc_modo', next ? 'claro' : 'oscuro');
+  document.getElementById('modo-lbl').textContent = next === 'claro' ? 'Modo claro' : 'Modo oscuro';
+}
+
+/* ─── TOAST ─── */
+let _toast;
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toast);
+  _toast = setTimeout(()=> el.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
