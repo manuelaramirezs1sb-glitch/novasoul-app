@@ -26,15 +26,21 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-modo="claro"]) {
-    --bg: #17171A; --card: #222228; --ink: #F0EDE8; --ink2: #C8C4BC;
-    --mut: #8A8880; --line: #32323A;
-    --emp-bg: #162219; --soul-bg: #221D0E; --acad-bg: #192212; --cent-bg: #0F1A22;
+    --bg: #09121f; --card: #0f1e30; --ink: #E8DFC0; --ink2: #C4B88E;
+    --mut: #6A7A8E; --line: #1A2D42;
+    --emp-acc: #6ea870; --emp-bg: #0e2018;
+    --soul-acc: #c9a84c; --soul-bg: #1a1608;
+    --acad-acc: #7A9DD8; --acad-bg: #0d1828;
+    --cent-acc: #c9a84c; --cent-bg: #0c1a28;
   }
 }
 :root[data-modo="oscuro"] {
-  --bg: #17171A; --card: #222228; --ink: #F0EDE8; --ink2: #C8C4BC;
-  --mut: #8A8880; --line: #32323A;
-  --emp-bg: #162219; --soul-bg: #221D0E; --acad-bg: #192212; --cent-bg: #0F1A22;
+  --bg: #09121f; --card: #0f1e30; --ink: #E8DFC0; --ink2: #C4B88E;
+  --mut: #6A7A8E; --line: #1A2D42;
+  --emp-acc: #6ea870; --emp-bg: #0e2018;
+  --soul-acc: #c9a84c; --soul-bg: #1a1608;
+  --acad-acc: #7A9DD8; --acad-bg: #0d1828;
+  --cent-acc: #c9a84c; --cent-bg: #0c1a28;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -161,6 +167,16 @@ body { margin: 0; background: var(--bg); font-family: 'DM Sans', sans-serif; min
   font: 600 11px/1 'DM Sans'; color: var(--mut);
   cursor: pointer; display: flex; align-items: center; gap: 6px;
 }
+
+/* Nova brand harmony — dark mode upgrades */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-modo="claro"]) .hub-brand { color: #c9a84c; }
+  :root:not([data-modo="claro"]) .card { border-color: #1a2d42; }
+  :root:not([data-modo="claro"]) .card:hover { box-shadow: 0 12px 40px -8px rgba(0,0,0,.6), 0 0 0 1px rgba(201,168,76,.12); }
+}
+:root[data-modo="oscuro"] .hub-brand { color: #c9a84c; }
+:root[data-modo="oscuro"] .card { border-color: #1a2d42; }
+:root[data-modo="oscuro"] .card:hover { box-shadow: 0 12px 40px -8px rgba(0,0,0,.6), 0 0 0 1px rgba(201,168,76,.12); }
 </style>
 </head>
 <body>
