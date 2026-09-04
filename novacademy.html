@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>novAcademy</title>
+<script>(function(){var m=localStorage.getItem('na_modo');var t=localStorage.getItem('na_tema');if(m)document.documentElement.setAttribute('data-modo',m);if(t)document.documentElement.setAttribute('data-tema',t);})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS BASE ─────────────────────────────────────── */
+:root{
+  --acc:#3A5FAD;--acc-d:#2A4680;--acc-lo:#d4dff5;--acc-hi:#6a8fd6;--acc-ink:#f0f4ff;
+  --s-bg:#f8f7f5;--s-card:#ffffff;--s-dark:#f0ede8;--s-dark2:#e8e3dc;--s-dark3:#ddd7ce;
+  --s-line:#e4dfd8;--s-line2:#ede9e3;--s-deep:#ece7e0;
+  --t-ink:#1c1a18;--t-ink2:#3a3630;--t-mut:#7a7068;--t-mut2:#a8a098;--t-ondark:#f7f3ee;--t-ondark-mut:#ccc4ba;
+  --amber:#fef3e2;--amber-line:#f5d99a;
+}
+@media(prefers-color-scheme:dark){
+  :root:not([data-modo="claro"]){
+    --acc:#7A9DD8;--acc-d:#7A9DD8;--acc-lo:#1c2d4d;--acc-hi:#9bb5e8;--acc-ink:#0e1826;
+    --s-bg:#181714;--s-card:#1f1e1b;--s-dark:#252320;--s-dark2:#2b2926;--s-dark3:#312f2b;
+    --s-line:#302d29;--s-line2:#272420;--s-deep:#1a1917;
+    --t-ink:#f2ede8;--t-ink2:#d4cfc8;--t-mut:#8a8278;--t-mut2:#5e584f;--t-ondark:#f7f3ee;--t-ondark-mut:#9a938a;
+    --amber:#1f1a0d;--amber-line:#3a2f0a;
+  }
+}
+:root[data-modo="oscuro"]{
+  --acc:#7A9DD8;--acc-d:#7A9DD8;--acc-lo:#1c2d4d;--acc-hi:#9bb5e8;--acc-ink:#0e1826;
+  --s-bg:#181714;--s-card:#1f1e1b;--s-dark:#252320;--s-dark2:#2b2926;--s-dark3:#312f2b;
+  --s-line:#302d29;--s-line2:#272420;--s-deep:#1a1917;
+  --t-ink:#f2ede8;--t-ink2:#d4cfc8;--t-mut:#8a8278;--t-mut2:#5e584f;--t-ondark:#f7f3ee;--t-ondark-mut:#9a938a;
+  --amber:#1f1a0d;--amber-line:#3a2f0a;
+}
+:root[data-tema="verde"]{--acc:#4e7c40;--acc-d:#3a6030;--acc-lo:#daebd4;--acc-hi:#7aad6a;--acc-ink:#112008;}
+:root[data-tema="verde"][data-modo="oscuro"]{--acc:#82c070;--acc-d:#82c070;--acc-lo:#162010;--acc-hi:#9dd48a;}
+:root[data-tema="terracota"]{--acc:#b8603a;--acc-d:#8e4228;--acc-lo:#f5ddd2;--acc-hi:#d68a68;--acc-ink:#2a1108;}
+:root[data-tema="terracota"][data-modo="oscuro"]{--acc:#d98f72;--acc-d:#d98f72;--acc-lo:#2a1108;--acc-hi:#e8a888;}
+:root[data-tema="amarillo"]{--acc:#9a7a20;--acc-d:#7a5e10;--acc-lo:#f6eacf;--acc-hi:#c8a84a;--acc-ink:#251900;}
+:root[data-tema="amarillo"][data-modo="oscuro"]{--acc:#d4b060;--acc-d:#d4b060;--acc-lo:#1e1600;--acc-hi:#e0c878;}
+
+/* ─── RESET ───────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font:400 14px/1.5 'DM Sans',sans-serif;background:var(--s-bg);color:var(--t-ink);-webkit-font-smoothing:antialiased;min-height:100vh;}
+button{border:none;background:none;cursor:pointer;font:inherit;color:inherit;}
+input,textarea,select{font:inherit;color:inherit;}
+a{color:inherit;text-decoration:none;}
+
+/* ─── LOGIN ───────────────────────────────────────────── */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--s-bg);}
+.lcard{background:var(--s-card);border:1px solid var(--s-line2);border-radius:24px;padding:36px 32px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:24px;box-shadow:0 8px 40px rgba(0,0,0,.07);}
+.lbrand{display:flex;align-items:baseline;gap:6px;}
+.lbrand-mark{font:700 18px/1 'DM Sans';letter-spacing:3px;color:var(--acc-d);}
+.lbrand-sub{font:500 11px/1 'DM Sans';color:var(--t-mut2);}
+.lstep{display:none;flex-direction:column;gap:16px;}
+.lstep.on{display:flex;}
+.lh{font:600 22px/1.1 'Fraunces',serif;color:var(--t-ink);}
+.ls{font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);}
+.linp{background:var(--s-dark);border:1px solid var(--s-line);border-radius:11px;padding:12px 14px;font:500 14px/1 'DM Sans';color:var(--t-ink);outline:none;width:100%;}
+.linp:focus{border-color:var(--acc);}
+.lbtn{background:var(--acc-d);color:var(--acc-ink);font:600 13px/1 'DM Sans';padding:13px 20px;border-radius:11px;cursor:pointer;text-align:center;}
+.lbtn:hover{opacity:.9;}
+.lbtn.sec{background:var(--s-dark);color:var(--t-mut2);}
+.lqlogin{display:flex;flex-direction:column;gap:8px;}
+.lqlbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--t-mut2);}
+.lqrow{display:flex;gap:7px;flex-wrap:wrap;}
+.lqbtn{background:var(--s-dark);border:1px solid var(--s-line);border-radius:9px;padding:8px 13px;font:500 11.5px/1.2 'DM Sans';color:var(--t-mut2);cursor:pointer;display:flex;flex-direction:column;gap:3px;}
+.lqbtn:hover{border-color:var(--acc);color:var(--acc-d);}
+.lqbtn b{font:600 11.5px/1 'DM Sans';color:var(--t-ink);}
+.lrol-sel{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.lrol{background:var(--s-dark);border:2px solid var(--s-line);border-radius:13px;padding:14px 12px;cursor:pointer;display:flex;flex-direction:column;gap:5px;transition:border-color .15s;}
+.lrol.on{border-color:var(--acc-d);background:var(--acc-lo);}
+.lrol-nm{font:600 13px/1.1 'DM Sans';color:var(--t-ink);}
+.lrol-sub{font:500 10.5px/1.3 'DM Sans';color:var(--t-mut);}
+
+/* ─── APP SHELL ───────────────────────────────────────── */
+#app{display:none;min-height:100vh;}
+#app.on{display:grid;grid-template-columns:220px 1fr;}
+@media(max-width:720px){#app.on{grid-template-columns:1fr;}}
+
+/* ─── SIDEBAR ─────────────────────────────────────────── */
+#sidebar{background:var(--s-card);border-right:1px solid var(--s-line2);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto;z-index:10;}
+.sb-brand{padding:22px 18px 16px;border-bottom:1px solid var(--s-line2);}
+.sb-mark{font:700 14px/1 'DM Sans';letter-spacing:3px;color:var(--acc-d);}
+.sb-rol{font:500 10.5px/1 'DM Sans';color:var(--t-mut2);margin-top:5px;}
+.sb-user{display:flex;align-items:center;gap:9px;padding:13px 18px;border-bottom:1px solid var(--s-line2);}
+.sb-av{width:32px;height:32px;border-radius:50%;background:var(--acc-lo);color:var(--acc-d);font:600 12px/32px 'DM Sans';text-align:center;flex-shrink:0;}
+.sb-uname{font:600 12.5px/1.2 'DM Sans';color:var(--t-ink);}
+.sb-urole{font:500 10px/1 'DM Sans';color:var(--t-mut2);}
+.sb-nav{flex:1;padding:10px 8px;}
+.navg{padding:10px 0 4px;}
+.navg-lbl{font:600 9px/1 'DM Sans';letter-spacing:1.3px;color:var(--t-mut2);padding:6px 10px 4px;}
+.ni{font:500 12.5px/1 'DM Sans';color:var(--t-mut2);padding:9px 11px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:8px;}
+.ni:hover{background:var(--s-dark);color:var(--t-ink);}
+.ni.on{background:var(--acc-lo);color:var(--acc-d);font-weight:600;}
+.ni-ico{width:16px;height:16px;opacity:.6;}
+.ni.on .ni-ico{opacity:1;}
+.sb-foot{padding:12px 18px;border-top:1px solid var(--s-line2);}
+.sb-logout{font:500 11.5px/1 'DM Sans';color:var(--t-mut2);cursor:pointer;padding:6px 0;}
+.sb-logout:hover{color:var(--t-ink);}
+.sb-modo{display:flex;align-items:center;gap:5px;padding-top:8px;}
+.sb-mbtn{font:600 10px/1 'DM Sans';padding:5px 9px;border-radius:7px;background:var(--s-dark);color:var(--t-mut2);cursor:pointer;}
+.sb-mbtn.on{background:var(--acc-d);color:var(--acc-ink);}
+.sb-cdots{display:flex;gap:5px;margin-top:8px;align-items:center;}
+.sb-cdot{width:14px;height:14px;border-radius:50%;cursor:pointer;transition:transform .15s;border:2.5px solid transparent;}
+.sb-cdot.on{border-color:var(--t-mut2);transform:scale(1.2);}
+
+/* ─── MAIN ────────────────────────────────────────────── */
+#main{min-width:0;display:flex;flex-direction:column;}
+#topbar{display:flex;align-items:center;gap:12px;padding:16px 24px;border-bottom:1px solid var(--s-line2);background:var(--s-card);position:sticky;top:0;z-index:5;}
+#ptitle{font:600 16px/1 'Fraunces',serif;color:var(--t-ink);flex:1;}
+#content{padding:20px 24px;display:flex;flex-direction:column;gap:20px;max-width:900px;}
+
+/* ─── VIEWS ───────────────────────────────────────────── */
+.view{display:none;flex-direction:column;gap:16px;}
+.view.on{display:flex;}
+
+/* ─── COMMON ──────────────────────────────────────────── */
+.card{background:var(--s-card);border:1px solid var(--s-line2);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.ct{font:600 13px/1 'Fraunces',serif;color:var(--t-ink);}
+.cl{font:500 11.5px/1 'DM Sans';color:var(--acc-d);cursor:pointer;}
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+.kc{background:var(--s-card);border:1px solid var(--s-line2);border-radius:13px;padding:13px 14px;display:flex;flex-direction:column;gap:5px;}
+.kc.a{border-left:4px solid var(--acc-d);}
+.kc.g{border-left:4px solid #4e7c40;}
+.kc.r{border-left:4px solid #b24c3c;}
+.kc.w{border-left:4px solid #b89040;}
+.klbl{font:600 9px/1 'DM Sans';letter-spacing:1.2px;color:var(--t-mut2);}
+.kval{font:700 24px/1 'Fraunces',serif;color:var(--t-ink);}
+.ksub{font:500 10.5px/1.3 'DM Sans';color:var(--t-mut);}
+.slbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--t-mut2);}
+.dline{height:1px;background:var(--s-line2);}
+.bd{font:600 10px/1 'DM Sans';letter-spacing:.4px;padding:4px 9px;border-radius:20px;white-space:nowrap;}
+.bd-g{background:#d6e8cd;color:#3a5e2f;}
+.bd-r{background:#f5d9d6;color:#8f2f28;}
+.bd-w{background:#f5e9c8;color:#7a5c18;}
+.bd-a{background:var(--acc-lo);color:var(--acc-d);}
+.bd-m{background:#e8e0d5;color:#5a5048;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:600px){.g2{grid-template-columns:1fr;}}
+.nsavebtn{background:var(--acc-d);color:var(--acc-ink);font:600 12px/1 'DM Sans';padding:11px 16px;border-radius:11px;cursor:pointer;align-self:flex-start;}
+.nsavebtn:hover{opacity:.9;}
+.narea{width:100%;min-height:60px;resize:vertical;background:var(--s-bg);border:1px solid var(--s-line);border-radius:11px;padding:10px 12px;font:500 12.5px/1.6 'DM Sans';color:var(--t-ink);outline:none;}
+.narea:focus{border-color:var(--acc);}
+.ninp{background:var(--s-bg);border:1px solid var(--s-line);border-radius:10px;padding:9px 12px;font:500 13px/1 'DM Sans';color:var(--t-ink);outline:none;width:100%;}
+.ninp:focus{border-color:var(--acc);}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--t-ink);color:var(--s-bg);font:600 13px/1 'DM Sans';padding:10px 18px;border-radius:20px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:999;white-space:nowrap;}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ─── PROGRESS BAR ────────────────────────────────────── */
+.pbar{height:7px;border-radius:20px;background:var(--s-dark2);overflow:hidden;}
+.pfill{height:100%;border-radius:20px;background:var(--acc-d);transition:width .4s;}
+.pfill.g{background:#4e7c40;}
+.pfill.w{background:#b89040;}
+
+/* ─── MÓDULO CARD ─────────────────────────────────────── */
+.mod-card{background:var(--s-card);border:1px solid var(--s-line2);border-radius:14px;padding:15px;display:flex;gap:14px;align-items:flex-start;cursor:pointer;transition:border-color .15s;}
+.mod-card:hover{border-color:var(--s-line);}
+.mod-card.lock{opacity:.55;cursor:default;}
+.mod-num{width:36px;height:36px;border-radius:10px;background:var(--acc-lo);color:var(--acc-d);font:700 14px/36px 'Fraunces',serif;text-align:center;flex-shrink:0;}
+.mod-card.done .mod-num{background:#d6e8cd;color:#3a5e2f;}
+.mod-card.lock .mod-num{background:var(--s-dark2);color:var(--t-mut2);}
+.mod-info{flex:1;min-width:0;}
+.mod-nm{font:600 13.5px/1.2 'DM Sans';color:var(--t-ink);}
+.mod-sub{font:500 11px/1.4 'DM Sans';color:var(--t-mut);margin-top:4px;}
+.mod-meta{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap;}
+.mod-dur{font:500 10.5px/1 'DM Sans';color:var(--t-mut2);}
+.mod-badge{font:600 9px/1 'DM Sans';letter-spacing:.6px;padding:3px 8px;border-radius:10px;}
+.mod-badge.done{background:#d6e8cd;color:#3a5e2f;}
+.mod-badge.active{background:var(--acc-lo);color:var(--acc-d);}
+.mod-badge.lock{background:var(--s-dark2);color:var(--t-mut2);}
+.mod-detail{display:none;flex-direction:column;gap:12px;border-top:1px solid var(--s-line2);margin-top:12px;padding-top:12px;}
+.mod-card.open .mod-detail{display:flex;}
+
+/* ─── ESTUDIANTE ROW ──────────────────────────────────── */
+.est-row{background:var(--s-card);border:1px solid var(--s-line2);border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.est-av{width:34px;height:34px;border-radius:50%;background:var(--acc-lo);color:var(--acc-d);font:600 12px/34px 'DM Sans';text-align:center;flex-shrink:0;}
+.est-info{flex:1;min-width:100px;}
+.est-nm{font:600 13px/1.2 'DM Sans';color:var(--t-ink);}
+.est-sub{font:500 10.5px/1.3 'DM Sans';color:var(--t-mut);margin-top:3px;}
+.est-prog{display:flex;flex-direction:column;gap:4px;min-width:110px;}
+.est-pct{font:600 11px/1 'DM Sans';color:var(--acc-d);text-align:right;}
+
+/* ─── EVALUACIÓN ──────────────────────────────────────── */
+.eval-q{background:var(--s-card);border:1px solid var(--s-line2);border-radius:13px;padding:16px;display:flex;flex-direction:column;gap:12px;}
+.eval-qn{font:600 13px/1.4 'DM Sans';color:var(--t-ink);}
+.eval-ops{display:flex;flex-direction:column;gap:7px;}
+.eval-op{display:flex;align-items:center;gap:9px;background:var(--s-dark);border:1px solid var(--s-line);border-radius:9px;padding:10px 12px;cursor:pointer;}
+.eval-op:hover{border-color:var(--acc);}
+.eval-op.sel{border-color:var(--acc-d);background:var(--acc-lo);}
+.eval-op.correct{border-color:#4e7c40;background:#d6e8cd;}
+.eval-op.wrong{border-color:#b24c3c;background:#f5d9d6;}
+.eval-radio{width:14px;height:14px;border-radius:50%;border:2px solid var(--s-line);flex-shrink:0;}
+.eval-op.sel .eval-radio{background:var(--acc-d);border-color:var(--acc-d);}
+.eval-opt{font:500 12.5px/1.4 'DM Sans';color:var(--t-ink2);}
+
+/* ─── OPORTUNIDAD CARD ────────────────────────────────── */
+.opp-card{background:var(--s-card);border:1px solid var(--s-line2);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;}
+.opp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.opp-nm{font:600 14px/1.2 'Fraunces',serif;color:var(--t-ink);}
+.opp-sub{font:500 11.5px/1.4 'DM Sans';color:var(--t-mut);margin-top:3px;}
+.opp-req{display:flex;flex-wrap:wrap;gap:6px;}
+.opp-tag{background:var(--s-dark2);color:var(--t-mut2);font:500 10.5px/1 'DM Sans';padding:4px 9px;border-radius:10px;}
+.opp-apply{background:var(--acc-d);color:var(--acc-ink);font:600 11.5px/1 'DM Sans';padding:10px 16px;border-radius:10px;cursor:pointer;text-align:center;}
+.opp-apply:hover{opacity:.9;}
+.opp-locked{background:var(--s-dark2);color:var(--t-mut2);font:600 11.5px/1 'DM Sans';padding:10px 16px;border-radius:10px;text-align:center;opacity:.6;}
+
+/* ─── PRÁCTICA DEMO ───────────────────────────────────── */
+.demo-banner{background:linear-gradient(135deg,var(--acc-d),var(--acc));color:var(--acc-ink);border-radius:16px;padding:22px 20px;display:flex;flex-direction:column;gap:10px;}
+.demo-lbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.3px;opacity:.75;}
+.demo-h{font:600 22px/1.1 'Fraunces',serif;}
+.demo-sub{font:500 12px/1.6 'DM Sans';opacity:.8;}
+.demo-btn{background:rgba(255,255,255,.18);backdrop-filter:blur(6px);color:var(--acc-ink);font:600 12px/1 'DM Sans';padding:11px 18px;border-radius:11px;cursor:pointer;align-self:flex-start;border:1px solid rgba(255,255,255,.25);}
+.demo-btn:hover{background:rgba(255,255,255,.26);}
+
+/* ─── DCARD ───────────────────────────────────────────── */
+.dcard{background:var(--acc-d);color:var(--acc-ink);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px;}
+
+/* ─── CALIFICACIÓN ────────────────────────────────────── */
+.nota-ring{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.nota-ring.g{background:#d6e8cd;color:#3a5e2f;}
+.nota-ring.r{background:#f5d9d6;color:#8f2f28;}
+.nota-ring.w{background:#f5e9c8;color:#7a5c18;}
+.nota-val{font:700 26px/1 'Fraunces',serif;}
+.nota-sub{font:600 9px/1 'DM Sans';letter-spacing:.8px;}
+
+/* ─── CHAT FAB ────────────────────────────────────────── */
+.chat-fab{position:fixed;bottom:24px;right:22px;width:50px;height:50px;border-radius:50%;background:var(--acc-d);color:var(--acc-ink);display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.2);z-index:500;transition:transform .15s;}
+.chat-fab:hover{transform:scale(1.07);}
+.chat-panel{position:fixed;bottom:0;right:0;width:340px;max-width:100vw;height:480px;max-height:88vh;background:var(--s-card);border:1px solid var(--s-line2);border-radius:20px 20px 0 0;box-shadow:0 -6px 36px rgba(0,0,0,.15);z-index:600;display:none;flex-direction:column;overflow:hidden;}
+.chat-panel.on{display:flex;}
+.chat-head{display:flex;align-items:center;gap:9px;padding:13px 15px 11px;border-bottom:1px solid var(--s-line2);flex-shrink:0;}
+.chat-lbl{font:600 13px/1 'Fraunces',serif;color:var(--t-ink);flex:1;}
+.chat-close{font:600 18px/1 'DM Sans';color:var(--t-mut2);cursor:pointer;padding:2px 6px;}
+.bot-msgs{flex:1;overflow-y:auto;padding:12px 12px 8px;display:flex;flex-direction:column;gap:9px;}
+.bot-msg{max-width:84%;padding:10px 12px;border-radius:14px;font:500 12.5px/1.55 'DM Sans';}
+.bot-msg.bot{background:var(--s-dark);color:var(--t-ink2);align-self:flex-start;border-bottom-left-radius:4px;}
+.bot-msg.user{background:var(--acc-d);color:var(--acc-ink);align-self:flex-end;border-bottom-right-radius:4px;}
+.bot-who{font:600 9.5px/1 'DM Sans';letter-spacing:1px;color:var(--acc-d);margin-bottom:4px;}
+.bot-foot{padding:9px 11px;border-top:1px solid var(--s-line2);display:flex;gap:7px;flex-shrink:0;}
+.bot-inp{flex:1;background:var(--s-bg);border:1px solid var(--s-line);border-radius:20px;padding:8px 13px;font:500 12px/1 'DM Sans';color:var(--t-ink);outline:none;}
+.bot-inp:focus{border-color:var(--acc);}
+.bot-send{background:var(--acc-d);color:var(--acc-ink);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.bot-qs{padding:0 10px 8px;display:flex;flex-wrap:wrap;gap:5px;}
+.bot-q{background:var(--s-dark);border:1px solid var(--s-line);border-radius:14px;padding:5px 11px;font:500 10.5px/1 'DM Sans';color:var(--t-mut2);cursor:pointer;}
+.bot-q:hover{border-color:var(--acc);color:var(--acc-d);}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ LOGIN ══════════════════ -->
+<div id="login">
+  <div class="lcard">
+    <div class="lbrand">
+      <span class="lbrand-mark">novAcademy</span>
+      <span class="lbrand-sub">by Nova</span>
+    </div>
+
+    <!-- Step 1: email -->
+    <div class="lstep on" id="s1">
+      <div>
+        <div class="lh">Bienvenida</div>
+        <div class="ls" style="margin-top:6px;">Tu plataforma de formación en e-commerce y gestión de tiendas.</div>
+      </div>
+      <div class="lqlogin">
+        <div class="lqlbl">ACCESO RÁPIDO</div>
+        <div class="lqrow">
+          <div class="lqbtn" onclick="quickLogin('manuela@nova.co','profesor')"><b>Manuela</b>Profesora</div>
+          <div class="lqbtn" onclick="quickLogin('laura@novacademy.co','estudiante')"><b>Laura</b>Estudiante · Avanzada</div>
+          <div class="lqbtn" onclick="quickLogin('sofia@novacademy.co','estudiante')"><b>Sofía</b>Estudiante · Módulo 2</div>
+        </div>
+      </div>
+      <div class="dline"></div>
+      <input class="linp" id="em" type="email" placeholder="tu@correo.co" oninput="inferRol()">
+      <div class="lrol-sel" id="rol-sel">
+        <div class="lrol" id="rl-p" onclick="selRol('profesor')"><div class="lrol-nm">Profesora</div><div class="lrol-sub">Crear cursos · evaluar · asignar</div></div>
+        <div class="lrol" id="rl-e" onclick="selRol('estudiante')"><div class="lrol-nm">Estudiante</div><div class="lrol-sub">Aprender · practicar · postularme</div></div>
+      </div>
+      <div class="lbtn" onclick="enterApp()">Entrar</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ APP ══════════════════ -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-mark">novAcademy</div>
+      <div class="sb-rol" id="sb-rol">Profesora · Formación</div>
+    </div>
+    <div class="sb-user">
+      <div class="sb-av" id="sb-av">M</div>
+      <div><div class="sb-uname" id="sb-uname">Manuela</div><div class="sb-urole" id="sb-urole">Profesora</div></div>
+    </div>
+    <nav class="sb-nav" id="sb-nav">
+      <!-- rendered by buildNav() -->
+    </nav>
+    <div class="sb-foot">
+      <div class="sb-modo">
+        <div class="sb-mbtn" id="bcl" onclick="setModo('claro')">Claro</div>
+        <div class="sb-mbtn on" id="bos" onclick="setModo('oscuro')">Oscuro</div>
+      </div>
+      <div class="sb-cdots">
+        <div class="sb-cdot" data-t="azul"   style="background:#3A5FAD;" onclick="setTema('azul')"></div>
+        <div class="sb-cdot" data-t="verde"   style="background:#4e7c40;" onclick="setTema('verde')"></div>
+        <div class="sb-cdot" data-t="terracota" style="background:#b8603a;" onclick="setTema('terracota')"></div>
+        <div class="sb-cdot" data-t="amarillo"  style="background:#9a7a20;" onclick="setTema('amarillo')"></div>
+      </div>
+      <div class="sb-logout" onclick="logout()">Cerrar sesión</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="topbar">
+      <div id="ptitle">Dashboard</div>
+      <span class="bd bd-a" id="toprol">Profesora</span>
+    </div>
+    <div id="content">
+
+      <!-- ══════════════════ PROFESOR: DASHBOARD ══════════════════ -->
+      <div class="view" id="v-dashboard">
+        <div class="kgrid" id="dash-kpi"></div>
+        <div class="g2">
+          <div class="card">
+            <div class="card-h"><span class="ct">Estudiantes activas</span><span class="cl" onclick="go('estudiantes',null)">Ver todas →</span></div>
+            <div style="display:flex;flex-direction:column;gap:9px;" id="dash-ests"></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><span class="ct">Evaluaciones recientes</span></div>
+            <div style="display:flex;flex-direction:column;gap:9px;" id="dash-evals"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><span class="ct">Oportunidades activas</span><span class="cl" onclick="go('oportunidades',null)">Gestionar →</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;" id="dash-opps"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════ PROFESOR: CURSOS ══════════════════ -->
+      <div class="view" id="v-cursos">
+        <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Los módulos del programa. Toca uno para ver el contenido, editarlo o ver quién lo ha completado.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;" id="cursos-list"></div>
+        <div class="card" style="border:2px dashed var(--s-line);background:var(--s-dark);cursor:pointer;" onclick="showToast('Módulo nuevo creado — comienza a editarlo')">
+          <div style="text-align:center;color:var(--t-mut2);font:600 13px/1 'DM Sans';">+ Nuevo módulo</div>
+        </div>
+      </div>
+
+      <!-- ══════════════════ PROFESOR: ESTUDIANTES ══════════════════ -->
+      <div class="view" id="v-estudiantes">
+        <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Todas las estudiantes inscritas. Toca una para ver su progreso detallado, sus evaluaciones y dejarle una nota.</p>
+        <div class="kgrid" id="est-kpi"></div>
+        <div style="display:flex;flex-direction:column;gap:9px;" id="est-list"></div>
+      </div>
+
+      <!-- ══════════════════ PROFESOR: EVALUACIONES ══════════════════ -->
+      <div class="view" id="v-evaluaciones">
+        <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Evaluaciones entregadas. Revisa cada una, ajusta el puntaje si necesario y deja retroalimentación.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;" id="eval-list-prof"></div>
+      </div>
+
+      <!-- ══════════════════ PROFESOR: OPORTUNIDADES ══════════════════ -->
+      <div class="view" id="v-oportunidades">
+        <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Vacantes de los clientes de Nova Empresarial que buscan gestoras o admins. Las estudiantes aprobadas las ven y se postulan.</p>
+        <div style="display:flex;flex-direction:column;gap:12px;" id="opp-list-prof"></div>
+        <div class="card" style="border:2px dashed var(--s-line);background:var(--s-dark);cursor:pointer;" onclick="showNuevaOpp()">
+          <div style="text-align:center;color:var(--t-mut2);font:600 13px/1 'DM Sans';">+ Nueva oportunidad de empleo</div>
+        </div>
+        <div id="nueva-opp-form" class="card" style="display:none;border-color:var(--acc);">
+          <div class="card-h"><span class="ct">Nueva oportunidad</span><span class="cl" onclick="showNuevaOpp()">Cancelar</span></div>
+          <div class="g2">
+            <div style="display:flex;flex-direction:column;gap:5px;"><div class="slbl" style="margin-bottom:4px;">NOMBRE DE LA EMPRESA / TIENDA</div><input class="ninp" placeholder="Ej: NutreaShop EC"></div>
+            <div style="display:flex;flex-direction:column;gap:5px;"><div class="slbl" style="margin-bottom:4px;">ROL BUSCADO</div><select class="ninp"><option>Gestora de pedidos</option><option>Administradora</option><option>Gestora de novedades</option></select></div>
+            <div style="display:flex;flex-direction:column;gap:5px;"><div class="slbl" style="margin-bottom:4px;">PUNTAJE MÍNIMO</div><input class="ninp" type="number" placeholder="70" value="75"></div>
+            <div style="display:flex;flex-direction:column;gap:5px;"><div class="slbl" style="margin-bottom:4px;">MODALIDAD</div><select class="ninp"><option>Remoto</option><option>Presencial</option><option>Híbrido</option></select></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;"><div class="slbl" style="margin-bottom:4px;">DESCRIPCIÓN DEL PUESTO</div><textarea class="narea" style="min-height:56px;" placeholder="Qué hace, qué se espera, condiciones…"></textarea></div>
+          <div class="nsavebtn" onclick="showToast('Oportunidad publicada ✓');showNuevaOpp()">Publicar vacante</div>
+        </div>
+      </div>
+
+      <!-- ══════════════════ ESTUDIANTE: HOY ══════════════════ -->
+      <div class="view" id="v-e-hoy">
+        <div class="dcard" id="e-bienvenida">
+          <div style="font:600 10px/1 'DM Sans';letter-spacing:1.3px;opacity:.7;">TU RUTA DE HOY</div>
+          <div style="font:600 20px/1.15 'Fraunces',serif;" id="e-saludo">Hola, Laura</div>
+          <div style="font:500 12px/1.6 'DM Sans';opacity:.82;" id="e-hint">Continúa donde lo dejaste. Tienes 1 evaluación pendiente este módulo.</div>
+        </div>
+        <div class="kgrid" id="e-kpi"></div>
+        <div class="card">
+          <div class="card-h"><span class="ct">Mi progreso por módulo</span></div>
+          <div style="display:flex;flex-direction:column;gap:10px;" id="e-proglist"></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><span class="ct">Lo que sigue</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;" id="e-sigue"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════ ESTUDIANTE: MI RUTA ══════════════════ -->
+      <div class="view" id="v-e-ruta">
+        <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Tu programa completo. Completa los módulos en orden para desbloquear la evaluación final y las oportunidades de trabajo.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;" id="e-ruta-list"></div>
+      </div>
+
+      <!-- ══════════════════ ESTUDIANTE: PRÁCTICA ══════════════════ -->
+      <div class="view" id="v-e-practica">
+        <div class="demo-banner">
+          <div class="demo-lbl">PRÁCTICA CON EL SISTEMA REAL</div>
+          <div class="demo-h">Nova Empresarial · Demo</div>
+          <div class="demo-sub">Aquí practicas con la misma pantalla que usarás en el trabajo. Entra como gestora para hacer el ejercicio del módulo activo.</div>
+          <div class="demo-btn" onclick="abrirDemo()">Abrir demo de Nova Empresarial →</div>
+        </div>
+        <div class="card">
+          <div class="card-h"><span class="ct">Ejercicio de práctica · Módulo activo</span></div>
+          <div id="practica-ejs" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
+        <div class="card" style="background:var(--amber);border-color:var(--amber-line);">
+          <div class="slbl" style="color:var(--t-mut2);">NOTA IMPORTANTE</div>
+          <p style="font:500 12px/1.6 'DM Sans';color:var(--t-mut);">El demo que abres aquí es una versión de entrenamiento con datos de ejemplo. No afecta tiendas reales. Todo lo que hagas en el demo cuenta para tu evaluación práctica.</p>
+        </div>
+      </div>
+
+      <!-- ══════════════════ ESTUDIANTE: EVALUACIÓN ══════════════════ -->
+      <div class="view" id="v-e-eval">
+        <div id="eval-estado"></div>
+        <div style="display:flex;flex-direction:column;gap:12px;" id="eval-qs"></div>
+        <div id="eval-actions"></div>
+      </div>
+
+      <!-- ══════════════════ ESTUDIANTE: OPORTUNIDADES ══════════════════ -->
+      <div class="view" id="v-e-opps">
+        <div id="opps-lock-msg"></div>
+        <div style="display:flex;flex-direction:column;gap:12px;" id="e-opp-list"></div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<!-- NOVA BOT FAB -->
+<button class="chat-fab" id="chat-fab" onclick="toggleBot()" title="Nova Bot">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2a10 10 0 0 1 0 20"/><path d="M12 2a10 10 0 0 0 0 20"/></svg>
+</button>
+<div class="chat-panel" id="chat-panel">
+  <div class="chat-head">
+    <div style="width:28px;height:28px;border-radius:50%;background:var(--acc-lo);display:flex;align-items:center;justify-content:center;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--acc-d)" stroke-width="2.5"><circle cx="12" cy="12" r="4"/><path d="M12 2a10 10 0 0 1 0 20"/><path d="M12 2a10 10 0 0 0 0 20"/></svg>
+    </div>
+    <span class="chat-lbl">Nova Bot · Academia</span>
+    <div class="chat-close" onclick="toggleBot()">×</div>
+  </div>
+  <div class="bot-msgs" id="bot-msgs"></div>
+  <div class="bot-qs" id="bot-qs"></div>
+  <div class="bot-foot">
+    <input class="bot-inp" id="bot-inp" placeholder="Pregunta sobre el programa…" onkeydown="if(event.key==='Enter')sendBot()">
+    <div class="bot-send" onclick="sendBot()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────
+let ROL = 'profesor';
+let NOMBRE = 'Manuela';
+let TM = localStorage.getItem('na_tema') || 'azul';
+let MD = localStorage.getItem('na_modo') || 'oscuro';
+let evalSubmitted = false;
+let botOpen = false;
+
+// ─── DATA ─────────────────────────────────────────────
+const MODULOS = [
+  {n:1, nm:'Introducción al e-commerce y Nova',        dur:'45 min', temas:['Qué es Dropi y Shopify','Cómo funciona el modelo dropshipping','Por qué existe Nova y qué problema resuelve'], eval:'Quiz de 10 preguntas sobre el modelo de negocio'},
+  {n:2, nm:'Gestión de pedidos desde el panel',        dur:'60 min', temas:['Cómo leer un pedido en Nova Empresarial','Estados del pedido: de confirmar a entregado','Cómo actualizar el estado y dejar nota'], eval:'Práctica guiada en el demo: actualizar 5 pedidos reales de ejemplo'},
+  {n:3, nm:'Novedades y manejo de transportadora',     dur:'50 min', temas:['Qué es una novedad y por qué sucede','Tipos: dirección incorrecta, no había nadie, producto dañado','Cómo registrar intentos de contacto'], eval:'Simulación: resolver 3 novedades distintas en el demo'},
+  {n:4, nm:'Comunicación con clientes · Scripts',      dur:'40 min', temas:['Tono y lenguaje adecuado por canal','Scripts para confirmar, reagendar y manejar quejas','Qué nunca decirle a un cliente'], eval:'Grabación de audio de 2 min con el script de confirmación'},
+  {n:5, nm:'Metas, efectividad y comisiones',          dur:'35 min', temas:['Cómo se calcula la efectividad','Qué cuenta en la comisión variable','Cómo leer tu propio panel en Nova'], eval:'Ejercicio de cálculo: ¿cuánto ganas este mes con estos datos?'},
+  {n:6, nm:'Evaluación final · Certificación',         dur:'90 min', temas:['Repaso de todos los módulos','Caso práctico real en el demo de Nova','Entrevista de simulación grabada'], eval:'Evaluación de 40 preguntas + caso práctico + nota mínima 75%'},
+];
+const ESTUDIANTES = [
+  {nm:'Laura Moreno',    ini:'LM', email:'laura@novacademy.co',   mod:5, pct:88, nota:'91%', est:'Aprobada',  cl:'g', prog:[100,100,100,100,80,0]},
+  {nm:'Sofía Salcedo',   ini:'SS', email:'sofia@novacademy.co',   mod:2, pct:35, nota:'—',   est:'En curso',  cl:'a', prog:[100,65,0,0,0,0]},
+  {nm:'Valentina Ríos',  ini:'VR', email:'valentina@novacademy.co',mod:3, pct:52, nota:'78%', est:'En curso',  cl:'a', prog:[100,100,40,0,0,0]},
+  {nm:'Daniela Parra',   ini:'DP', email:'daniela@novacademy.co', mod:1, pct:12, nota:'—',   est:'Iniciando', cl:'w', prog:[25,0,0,0,0,0]},
+  {nm:'Camila Estrada',  ini:'CE', email:'camila@novacademy.co',  mod:6, pct:100,nota:'89%', est:'Certificada',cl:'g', prog:[100,100,100,100,100,100]},
+];
+const OPORTUNIDADES = [
+  {nm:'NutreaShop EC', rol:'Gestora de pedidos', mod:'Remoto', req:'Módulo 5 completo · nota ≥75%', desc:'Gestión de pedidos Dropi en Ecuador. Turnos de 8h. Comisión por entrega + base fija.', pct:75, activa:true},
+  {nm:'Dilore GT',     rol:'Gestora de novedades', mod:'Remoto', req:'Módulo 3 completo · nota ≥70%', desc:'Seguimiento de novedades en Guatemala. 30 pedidos/día promedio. Bono por resolución rápida.', pct:70, activa:true},
+  {nm:'EcoFit CO',     rol:'Administradora', mod:'Híbrido', req:'Módulo 6 completo · nota ≥85%', desc:'Admin de operación en Colombia. Requiere manejo de equipo de 3 gestoras. Salario fijo más participación.', pct:85, activa:false},
+];
+const EVAL_QS = [
+  {q:'¿Qué estado sigue cuando un pedido acaba de ser asignado a tu gestora?', ops:['Entregado','Por confirmar','En tránsito','Devuelto'], resp:1},
+  {q:'Una clienta dice que no estaba en casa. ¿Qué estado asignas al pedido?', ops:['Devuelto','Entregado','Novedad','Cancelado'], resp:2},
+  {q:'¿Cuántos intentos de contacto máximo se hacen antes de cerrar una novedad?', ops:['1 intento','2 intentos','3 intentos','4 intentos'], resp:2},
+  {q:'¿Qué campo es OBLIGATORIO al cambiar el estado de un pedido?', ops:['El valor a cobrar','La nota de gestión','El número de tracking','La dirección exacta'], resp:1},
+  {q:'¿Qué métrica te dice si estás cumpliendo tu meta mensual?', ops:['Pedidos asignados','% de efectividad','Valor total cobrado','Número de novedades'], resp:1},
+];
+let evalAnswers = new Array(EVAL_QS.length).fill(-1);
+
+// ─── ROLES ────────────────────────────────────────────
+const ROLES_MAP = {
+  'manuela@nova.co':'profesor',
+  'laura@novacademy.co':'estudiante',
+  'sofia@novacademy.co':'estudiante',
+  'valentina@novacademy.co':'estudiante',
+  'daniela@novacademy.co':'estudiante',
+  'camila@novacademy.co':'estudiante',
+};
+const NOMBRES_MAP = {
+  'manuela@nova.co':'Manuela',
+  'laura@novacademy.co':'Laura',
+  'sofia@novacademy.co':'Sofía',
+  'valentina@novacademy.co':'Valentina',
+  'daniela@novacademy.co':'Daniela',
+  'camila@novacademy.co':'Camila',
+};
+
+// ─── SELECTED ROL IN LOGIN ─────────────────────────────
+let loginRol = 'estudiante';
+function selRol(r){
+  loginRol=r;
+  document.getElementById('rl-p').classList.toggle('on',r==='profesor');
+  document.getElementById('rl-e').classList.toggle('on',r==='estudiante');
+}
+function inferRol(){
+  const em=(document.getElementById('em')?.value||'').toLowerCase().trim();
+  const r=ROLES_MAP[em];
+  if(r) selRol(r);
+}
+function quickLogin(email,rol){
+  document.getElementById('em').value=email;
+  selRol(rol);
+  enterApp();
+}
+
+// ─── ENTER APP ─────────────────────────────────────────
+function enterApp(){
+  const email=(document.getElementById('em')?.value||'').toLowerCase().trim();
+  localStorage.setItem('na_email',email);
+  ROL = ROLES_MAP[email] || loginRol;
+  NOMBRE = NOMBRES_MAP[email] || 'Estudiante';
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').classList.add('on');
+  document.getElementById('sb-uname').textContent=NOMBRE;
+  document.getElementById('sb-urole').textContent=ROL==='profesor'?'Profesora':'Estudiante';
+  document.getElementById('sb-av').textContent=NOMBRE[0];
+  document.getElementById('sb-rol').textContent=ROL==='profesor'?'Profesora · Formación':'Estudiante · Operación';
+  document.getElementById('toprol').textContent=ROL==='profesor'?'Profesora':'Estudiante';
+  applyPrefs();
+  buildNav();
+  buildAll();
+  document.getElementById('chat-fab').style.display='flex';
+  initBot();
+}
+function logout(){
+  document.getElementById('app').classList.remove('on');
+  document.getElementById('login').style.display='flex';
+  document.getElementById('chat-fab').style.display='none';
+  document.getElementById('chat-panel').classList.remove('on');
+  botOpen=false;
+}
+
+// ─── NAV ──────────────────────────────────────────────
+const NAV_PROF = [
+  {group:'ACADEMIA',items:[
+    {id:'dashboard', label:'Dashboard'},
+    {id:'cursos',    label:'Cursos y módulos'},
+    {id:'estudiantes',label:'Estudiantes'},
+    {id:'evaluaciones',label:'Evaluaciones'},
+    {id:'oportunidades',label:'Oportunidades de trabajo'},
+  ]}
+];
+const NAV_EST = [
+  {group:'MI FORMACIÓN',items:[
+    {id:'e-hoy',    label:'Mi jornada de hoy'},
+    {id:'e-ruta',   label:'Mi ruta de aprendizaje'},
+    {id:'e-practica',label:'Práctica con Nova'},
+    {id:'e-eval',   label:'Mi evaluación'},
+    {id:'e-opps',   label:'Oportunidades'},
+  ]}
+];
+function buildNav(){
+  const nav = ROL==='profesor'?NAV_PROF:NAV_EST;
+  let h='';
+  nav.forEach(g=>{
+    h+=`<div class="navg"><div class="navg-lbl">${g.group}</div>`;
+    g.items.forEach(it=>{
+      h+=`<div class="ni" data-v="${it.id}" onclick="go('${it.id}',this)">${it.label}</div>`;
+    });
+    h+='</div>';
+  });
+  document.getElementById('sb-nav').innerHTML=h;
+}
+function go(view,el){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  const vEl=document.getElementById('v-'+view);
+  if(vEl) vEl.classList.add('on');
+  if(el) el.classList.add('on');
+  else{const m=document.querySelector('[data-v="'+view+'"]');if(m)m.classList.add('on');}
+  const titles={dashboard:'Dashboard',cursos:'Cursos y módulos',estudiantes:'Estudiantes',evaluaciones:'Evaluaciones',oportunidades:'Oportunidades de trabajo','e-hoy':'Mi jornada de hoy','e-ruta':'Mi ruta de aprendizaje','e-practica':'Práctica con Nova','e-eval':'Mi evaluación','e-opps':'Oportunidades'};
+  document.getElementById('ptitle').textContent=titles[view]||view;
+}
+
+// ─── BUILD ALL ─────────────────────────────────────────
+function buildAll(){
+  if(ROL==='profesor'){
+    buildDashboard(); buildCursos(); buildEstudiantes(); buildEvaluaciones(); buildOportunidadesProf();
+    go('dashboard',null);
+  } else {
+    const est=ESTUDIANTES.find(e=>e.nm===NOMBRE)||ESTUDIANTES[1];
+    buildEHoy(est); buildERuta(est); buildEPractica(est); buildEEval(est); buildEOpps(est);
+    go('e-hoy',null);
+  }
+}
+
+// ─── PROFESOR: DASHBOARD ───────────────────────────────
+function buildDashboard(){
+  document.getElementById('dash-kpi').innerHTML=[
+    {lb:'ESTUDIANTES',v:ESTUDIANTES.length+'',sub:'3 activas esta semana',cl:'a'},
+    {lb:'COMPLETARON',v:'1',sub:'Módulo 6 certificado',cl:'g'},
+    {lb:'EVALUACIONES',v:'3',sub:'Pendientes de revisión',cl:'w'},
+    {lb:'VACANTES',v:'2',sub:'Publicadas y activas',cl:'a'},
+  ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
+  document.getElementById('dash-ests').innerHTML=ESTUDIANTES.slice(0,3).map(e=>`
+    <div class="est-row">
+      <div class="est-av">${e.ini}</div>
+      <div class="est-info"><div class="est-nm">${e.nm}</div><div class="est-sub">Módulo ${e.mod} · ${e.est}</div></div>
+      <div class="est-prog"><div class="est-pct">${e.pct}%</div><div class="pbar"><div class="pfill" style="width:${e.pct}%;"></div></div></div>
+    </div>`).join('');
+  document.getElementById('dash-evals').innerHTML=[
+    {nm:'Laura Moreno', mod:'Módulo 5', nota:'91%', cl:'g'},
+    {nm:'Valentina Ríos',mod:'Módulo 3', nota:'78%', cl:'g'},
+    {nm:'Sofía Salcedo', mod:'Módulo 2', nota:'Pendiente', cl:'w'},
+  ].map(e=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--s-line2);"><div><div style="font:600 12.5px/1.2 'DM Sans';color:var(--t-ink);">${e.nm}</div><div style="font:500 10.5px/1 'DM Sans';color:var(--t-mut);margin-top:3px;">${e.mod}</div></div><span class="bd bd-${e.cl}">${e.nota}</span></div>`).join('');
+  document.getElementById('dash-opps').innerHTML=OPORTUNIDADES.map(o=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--s-line2);">
+      <div><div style="font:600 12.5px/1.2 'DM Sans';color:var(--t-ink);">${o.nm} · ${o.rol}</div><div style="font:500 10.5px/1.3 'DM Sans';color:var(--t-mut);margin-top:4px;">${o.req}</div></div>
+      <span class="bd ${o.activa?'bd-g':'bd-m'}">${o.activa?'Activa':'Pausada'}</span>
+    </div>`).join('');
+}
+
+// ─── PROFESOR: CURSOS ──────────────────────────────────
+function buildCursos(){
+  document.getElementById('cursos-list').innerHTML=MODULOS.map((m,i)=>`
+    <div class="mod-card" id="mc${i}" onclick="togModCurso(${i})">
+      <div class="mod-num">${m.n}</div>
+      <div class="mod-info">
+        <div class="mod-nm">${m.nm}</div>
+        <div class="mod-meta"><span class="mod-dur">${m.dur}</span><span class="mod-badge active">Activo</span></div>
+        <div class="mod-detail" id="mcd${i}">
+          <div><div class="slbl" style="margin-bottom:6px;">TEMAS</div>${m.temas.map(t=>`<div style="font:500 12px/1.5 'DM Sans';color:var(--t-ink2);padding:4px 0;border-bottom:1px solid var(--s-line2);">· ${t}</div>`).join('')}</div>
+          <div><div class="slbl" style="margin-bottom:5px;">EVALUACIÓN</div><div style="font:500 12px/1.5 'DM Sans';color:var(--t-mut2);">${m.eval}</div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div class="nsavebtn" style="font-size:11px;padding:9px 13px;" onclick="event.stopPropagation();showToast('Módulo guardado ✓')">Guardar cambios</div>
+            <div class="nsavebtn" style="background:var(--s-dark);color:var(--t-mut2);font-size:11px;padding:9px 13px;" onclick="event.stopPropagation()">Ver estudiantes →</div>
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+function togModCurso(i){
+  const card=document.getElementById('mc'+i),dtl=document.getElementById('mcd'+i);
+  const open=card.classList.contains('open');
+  document.querySelectorAll('[id^="mc"]').forEach((c,j)=>{c.classList.remove('open');const d=document.getElementById('mcd'+j);if(d)d.style.display='';});
+  if(!open){card.classList.add('open');if(dtl)dtl.style.display='flex';}
+}
+
+// ─── PROFESOR: ESTUDIANTES ────────────────────────────
+function buildEstudiantes(){
+  document.getElementById('est-kpi').innerHTML=[
+    {lb:'INSCRITAS',v:ESTUDIANTES.length+'',sub:'Total del programa',cl:'a'},
+    {lb:'APROBADAS',v:ESTUDIANTES.filter(e=>e.est==='Aprobada'||e.est==='Certificada').length+'',sub:'Nota ≥75%',cl:'g'},
+    {lb:'EN PROCESO',v:ESTUDIANTES.filter(e=>e.est==='En curso'||e.est==='Iniciando').length+'',sub:'Módulos activos',cl:'w'},
+  ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
+  document.getElementById('est-list').innerHTML=ESTUDIANTES.map((e,i)=>`
+    <div class="card" style="gap:10px;cursor:pointer;" onclick="togEst(${i})" id="estc${i}">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div class="est-av">${e.ini}</div>
+        <div style="flex:1;min-width:100px;">
+          <div style="font:600 14px/1.2 'DM Sans';color:var(--t-ink);">${e.nm}</div>
+          <div style="font:500 10.5px/1.3 'DM Sans';color:var(--t-mut);margin-top:3px;">${e.email} · Módulo ${e.mod}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="bd bd-${e.cl}">${e.est}</span>
+          <span style="font:700 18px/1 'Fraunces',serif;color:var(--acc-d);">${e.nota}</span>
+        </div>
+      </div>
+      <div class="pbar"><div class="pfill" style="width:${e.pct}%;"></div></div>
+      <div id="estd${i}" style="display:none;flex-direction:column;gap:10px;border-top:1px solid var(--s-line2);padding-top:12px;">
+        <div>
+          <div class="slbl" style="margin-bottom:7px;">PROGRESO POR MÓDULO</div>
+          ${MODULOS.map((m,j)=>`<div style="display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid var(--s-line2);">
+            <div class="mod-num" style="width:24px;height:24px;font-size:10px;line-height:24px;border-radius:6px;">${m.n}</div>
+            <div style="flex:1;font:500 11.5px/1 'DM Sans';color:var(--t-ink2);">${m.nm}</div>
+            <div style="min-width:80px;"><div class="pbar"><div class="pfill" style="width:${e.prog[j]||0}%;"></div></div></div>
+            <span style="font:600 10.5px/1 'DM Sans';color:var(--t-mut2);min-width:30px;text-align:right;">${e.prog[j]||0}%</span>
+          </div>`).join('')}
+        </div>
+        <div>
+          <div class="slbl" style="margin-bottom:6px;">NOTA PARA LA ESTUDIANTE</div>
+          <textarea class="narea" style="min-height:52px;" placeholder="Retroalimentación, correcciones, felicitación…" onclick="event.stopPropagation()"></textarea>
+        </div>
+        <div class="nsavebtn" style="font-size:11px;padding:9px 13px;" onclick="event.stopPropagation();showToast('Nota enviada a '+e.nm+' ✓')">Enviar nota</div>
+      </div>
+    </div>`).join('');
+}
+function togEst(i){
+  const card=document.getElementById('estc'+i),dtl=document.getElementById('estd'+i);
+  const open=card.classList.contains('open');
+  ESTUDIANTES.forEach((_,j)=>{const c=document.getElementById('estc'+j);if(c)c.classList.remove('open');const d=document.getElementById('estd'+j);if(d)d.style.display='';});
+  if(!open){card.classList.add('open');if(dtl)dtl.style.display='flex';}
+}
+
+// ─── PROFESOR: EVALUACIONES ────────────────────────────
+function buildEvaluaciones(){
+  document.getElementById('eval-list-prof').innerHTML=[
+    {nm:'Laura Moreno',  mod:'Módulo 5 · Metas y comisiones', nota:91, subm:'Hace 2 días', cl:'g'},
+    {nm:'Valentina Ríos',mod:'Módulo 3 · Novedades',           nota:78, subm:'Hace 3 días', cl:'g'},
+    {nm:'Sofía Salcedo', mod:'Módulo 2 · Gestión de pedidos',  nota:null,subm:'Pendiente',   cl:'w'},
+  ].map((e,i)=>`
+    <div class="card" style="gap:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div><div style="font:600 14px/1.2 'DM Sans';color:var(--t-ink);">${e.nm}</div><div style="font:500 11px/1.3 'DM Sans';color:var(--t-mut);margin-top:4px;">${e.mod} · ${e.subm}</div></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${e.nota?`<div class="nota-ring ${e.nota>=80?'g':'w'}"><div style="text-align:center;"><div class="nota-val">${e.nota}</div><div class="nota-sub">/ 100</div></div></div>`:'<span class="bd bd-w">Sin enviar</span>'}
+        </div>
+      </div>
+      ${e.nota?`<div><div class="slbl" style="margin-bottom:6px;">RETROALIMENTACIÓN</div><textarea class="narea" style="min-height:52px;" placeholder="Qué hizo bien, qué puede mejorar…"></textarea></div><div style="display:flex;gap:8px;"><div class="nsavebtn" style="font-size:11px;padding:9px 13px;" onclick="showToast('Retroalimentación enviada ✓')">Enviar retroalimentación</div></div>`:'<p style="font:500 12px/1.5 \'DM Sans\';color:var(--t-mut2);">Esperando entrega de la estudiante.</p>'}
+    </div>`).join('');
+}
+
+// ─── PROFESOR: OPORTUNIDADES ────────────────────────────
+function buildOportunidadesProf(){
+  document.getElementById('opp-list-prof').innerHTML=OPORTUNIDADES.map((o,i)=>`
+    <div class="opp-card">
+      <div class="opp-head">
+        <div><div class="opp-nm">${o.nm}</div><div class="opp-sub">${o.rol} · ${o.mod}</div></div>
+        <span class="bd ${o.activa?'bd-g':'bd-m'}">${o.activa?'Activa':'Pausada'}</span>
+      </div>
+      <p style="font:500 12px/1.55 'DM Sans';color:var(--t-mut);margin:0;">${o.desc}</p>
+      <div class="opp-req"><span class="opp-tag">${o.req}</span><span class="opp-tag">${o.mod}</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="nsavebtn" style="font-size:11px;padding:9px 13px;" onclick="showToast('Vacante '+(${o.activa}?'pausada':'activada')+' ✓')">${o.activa?'Pausar vacante':'Activar vacante'}</div>
+        <div class="nsavebtn" style="background:var(--s-dark);color:var(--t-mut2);font-size:11px;padding:9px 13px;" onclick="showToast('Ver postulantes próximamente')">Ver postulantes</div>
+      </div>
+    </div>`).join('');
+}
+function showNuevaOpp(){
+  const f=document.getElementById('nueva-opp-form');
+  f.style.display=f.style.display==='none'?'flex':'none';
+}
+
+// ─── ESTUDIANTE: HOY ───────────────────────────────────
+function buildEHoy(e){
+  document.getElementById('e-saludo').textContent='Hola, '+e.nm.split(' ')[0];
+  document.getElementById('e-hint').textContent=e.pct>=80?'Estás en el '+e.pct+'% del programa. Vas muy bien — sigue así.':'Llevas el '+e.pct+'% del programa. Tu próxima evaluación es del módulo '+(e.mod)+'.';
+  document.getElementById('e-kpi').innerHTML=[
+    {lb:'MÓDULO ACTUAL',  v:e.mod+'',    sub:MODULOS[e.mod-1]?.nm.split(' ').slice(0,3).join(' ')+'…'||'',cl:'a'},
+    {lb:'MI PROGRESO',    v:e.pct+'%',   sub:'Del programa completo',cl:e.pct>=80?'g':'w'},
+    {lb:'MI NOTA',        v:e.nota,       sub:'Última evaluación',   cl:e.nota==='—'?'m':e.nota>='90%'?'g':'a'},
+    {lb:'ESTADO',         v:e.est,        sub:e.est==='Aprobada'?'Lista para postularse':e.est==='Certificada'?'¡Certificada!':'Sigue avanzando',cl:e.cl},
+  ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval" style="font-size:${k.v.length>5?'16px':'24px'};margin-top:2px;">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
+  document.getElementById('e-proglist').innerHTML=MODULOS.map((m,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="mod-num" style="width:24px;height:24px;font-size:10px;line-height:24px;border-radius:6px;${e.prog[i]>=100?'background:#d6e8cd;color:#3a5e2f;':''}">${m.n}</div>
+      <div style="flex:1;min-width:0;"><div style="font:500 11.5px/1 'DM Sans';color:var(--t-ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.nm}</div></div>
+      <div style="min-width:80px;"><div class="pbar"><div class="pfill${e.prog[i]>=100?' g':''}" style="width:${e.prog[i]||0}%;"></div></div></div>
+      <span style="font:600 10px/1 'DM Sans';color:var(--t-mut2);min-width:28px;text-align:right;">${e.prog[i]||0}%</span>
+    </div>`).join('');
+  const mod=MODULOS[e.mod-1];
+  document.getElementById('e-sigue').innerHTML=[
+    {ico:'📖', nm:'Leer: '+mod.nm, sub:'Módulo '+mod.n+' · '+mod.dur, btn:'Empezar', fn:"go('e-ruta',null)"},
+    {ico:'💻', nm:'Práctica en el demo de Nova', sub:'Ejercicio del módulo '+mod.n, btn:'Practicar', fn:"go('e-practica',null)"},
+    {ico:'📝', nm:'Evaluación del módulo '+mod.n, sub:'Disponible al completar el módulo', btn:'Evaluar', fn:"go('e-eval',null)"},
+  ].map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--s-line2);">
+    <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;"><span style="font-size:18px;line-height:1;">${s.ico}</span><div><div style="font:600 12.5px/1.2 'DM Sans';color:var(--t-ink);">${s.nm}</div><div style="font:500 10.5px/1.2 'DM Sans';color:var(--t-mut);margin-top:3px;">${s.sub}</div></div></div>
+    <div class="nsavebtn" style="font-size:11px;padding:9px 13px;white-space:nowrap;" onclick="${s.fn}">${s.btn}</div>
+  </div>`).join('');
+}
+
+// ─── ESTUDIANTE: RUTA ──────────────────────────────────
+function buildERuta(e){
+  document.getElementById('e-ruta-list').innerHTML=MODULOS.map((m,i)=>{
+    const pct=e.prog[i]||0;
+    const done=pct>=100;
+    const active=i===e.mod-1;
+    const locked=!done&&!active;
+    return `<div class="mod-card${done?' done':active?' ':locked?' lock':''}" id="er${i}" onclick="${locked?'':('togModEst('+i+')')}">
+      <div class="mod-num">${done?'✓':m.n}</div>
+      <div class="mod-info">
+        <div class="mod-nm">${m.nm}</div>
+        <div class="mod-sub">${m.temas[0]} y más</div>
+        <div class="mod-meta">
+          <span class="mod-dur">${m.dur}</span>
+          <span class="mod-badge ${done?'done':active?'active':'lock'}">${done?'Completado':active?'Activo':'Bloqueado'}</span>
+          ${pct>0&&!done?`<span style="font:600 10.5px/1 'DM Sans';color:var(--acc-d);">${pct}% hecho</span>`:''}
+        </div>
+        <div class="mod-detail" id="erd${i}">
+          <div><div class="slbl" style="margin-bottom:6px;">TEMAS DE ESTE MÓDULO</div>${m.temas.map(t=>`<div style="font:500 12px/1.5 'DM Sans';color:var(--t-ink2);padding:4px 0;border-bottom:1px solid var(--s-line2);">· ${t}</div>`).join('')}</div>
+          <div><div class="slbl" style="margin-bottom:5px;">EVALUACIÓN</div><div style="font:500 12px/1.5 'DM Sans';color:var(--t-mut2);">${m.eval}</div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${!done?`<div class="nsavebtn" style="font-size:11px;padding:9px 13px;" onclick="event.stopPropagation();showToast('Módulo marcado como completado ✓')">Marcar completado</div>`:''}
+            <div class="nsavebtn" style="background:var(--s-dark);color:var(--t-mut2);font-size:11px;padding:9px 13px;" onclick="event.stopPropagation();go('e-eval',null)">Ir a la evaluación</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function togModEst(i){
+  const card=document.getElementById('er'+i),dtl=document.getElementById('erd'+i);
+  const open=card.classList.contains('open');
+  MODULOS.forEach((_,j)=>{const c=document.getElementById('er'+j);if(c)c.classList.remove('open');const d=document.getElementById('erd'+j);if(d)d.style.display='';});
+  if(!open){card.classList.add('open');if(dtl)dtl.style.display='flex';}
+}
+
+// ─── ESTUDIANTE: PRÁCTICA ──────────────────────────────
+function buildEPractica(e){
+  const mod=MODULOS[e.mod-1];
+  const EJS=[
+    {nm:'Actualiza el estado de 3 pedidos "Por confirmar" a "En gestión"', check:'Hacerlo en el demo y tomar captura'},
+    {nm:'Registra una novedad de tipo "Dirección incorrecta" con nota', check:'Incluir intento de contacto y fecha de próximo intento'},
+    {nm:'Calcula cuántas entregas necesitas para llegar al 85% de efectividad', check:'Anota el resultado en la evaluación del módulo'},
+  ];
+  document.getElementById('practica-ejs').innerHTML=EJS.map((ej,i)=>`
+    <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--s-line2);">
+      <div style="width:22px;height:22px;border-radius:6px;background:var(--acc-lo);color:var(--acc-d);font:700 11px/22px 'DM Sans';text-align:center;flex-shrink:0;">${i+1}</div>
+      <div style="flex:1;"><div style="font:600 12.5px/1.3 'DM Sans';color:var(--t-ink);">${ej.nm}</div><div style="font:500 11px/1.4 'DM Sans';color:var(--t-mut);margin-top:4px;">✓ ${ej.check}</div></div>
+    </div>`).join('');
+}
+function abrirDemo(){
+  window.open('empresarial.html?demo=1','_blank');
+}
+
+// ─── ESTUDIANTE: EVALUACIÓN ────────────────────────────
+function buildEEval(e){
+  if(evalSubmitted){
+    renderEvalResult();return;
+  }
+  document.getElementById('eval-estado').innerHTML=`
+    <div class="card" style="background:var(--amber);border-color:var(--amber-line);">
+      <div class="card-h"><span class="ct">Evaluación · Módulo ${e.mod}</span><span class="bd bd-w">Pendiente</span></div>
+      <p style="font:500 12px/1.5 'DM Sans';color:var(--t-mut);">${MODULOS[e.mod-1]?.eval||'Evaluación del módulo activo'}. Tienes tiempo ilimitado. Al enviar no podrás cambiar tus respuestas.</p>
+    </div>`;
+  document.getElementById('eval-qs').innerHTML=EVAL_QS.map((q,qi)=>`
+    <div class="eval-q">
+      <div class="eval-qn">${qi+1}. ${q.q}</div>
+      <div class="eval-ops">${q.ops.map((op,oi)=>`<div class="eval-op" id="eo${qi}_${oi}" onclick="selOp(${qi},${oi})"><div class="eval-radio"></div><div class="eval-opt">${op}</div></div>`).join('')}</div>
+    </div>`).join('');
+  document.getElementById('eval-actions').innerHTML=`<div class="nsavebtn" onclick="submitEval()">Enviar evaluación</div>`;
+}
+function selOp(qi,oi){
+  evalAnswers[qi]=oi;
+  EVAL_QS[qi].ops.forEach((_,j)=>document.getElementById('eo'+qi+'_'+j)?.classList.remove('sel'));
+  document.getElementById('eo'+qi+'_'+oi)?.classList.add('sel');
+}
+function submitEval(){
+  const unanswered=evalAnswers.filter(a=>a===-1).length;
+  if(unanswered>0){showToast('Responde todas las preguntas primero ('+unanswered+' sin responder)');return;}
+  evalSubmitted=true;
+  let correct=0;
+  EVAL_QS.forEach((q,qi)=>{
+    const isOk=evalAnswers[qi]===q.resp;
+    if(isOk) correct++;
+    q.ops.forEach((_,oi)=>{
+      const el=document.getElementById('eo'+qi+'_'+oi);
+      if(!el)return;
+      el.classList.remove('sel');
+      if(oi===q.resp) el.classList.add('correct');
+      else if(oi===evalAnswers[qi]) el.classList.add('wrong');
+    });
+  });
+  const pct=Math.round(correct/EVAL_QS.length*100);
+  document.getElementById('eval-actions').innerHTML='';
+  document.getElementById('eval-estado').innerHTML+=`
+    <div class="card" style="border-color:${pct>=75?'#4e7c40':'#b24c3c'};">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div class="nota-ring ${pct>=75?'g':'r'}"><div style="text-align:center;"><div class="nota-val">${pct}</div><div class="nota-sub">/ 100</div></div></div>
+        <div><div style="font:600 18px/1.15 'Fraunces',serif;color:var(--t-ink);">${pct>=75?'¡Aprobaste! 🎉':'Sigue estudiando'}</div><div style="font:500 12px/1.5 'DM Sans';color:var(--t-mut);margin-top:5px;">${correct} de ${EVAL_QS.length} respuestas correctas. ${pct>=75?'Puedes avanzar al siguiente módulo.':'Nota mínima: 75. Revisa el material y vuelve a intentarlo.'}</div></div>
+      </div>
+    </div>`;
+  showToast(pct>=75?'¡Módulo aprobado con '+pct+'%!':'Nota: '+pct+'% — necesitas 75% para aprobar');
+}
+function renderEvalResult(){
+  document.getElementById('eval-estado').innerHTML='<div class="card"><p style="font:500 12.5px/1.5 \'DM Sans\';color:var(--t-mut);">Ya enviaste esta evaluación. La profesora revisará tu resultado pronto.</p></div>';
+  document.getElementById('eval-qs').innerHTML='';
+  document.getElementById('eval-actions').innerHTML='';
+}
+
+// ─── ESTUDIANTE: OPORTUNIDADES ─────────────────────────
+function buildEOpps(e){
+  const aprobada=e.est==='Aprobada'||e.est==='Certificada';
+  if(!aprobada){
+    document.getElementById('opps-lock-msg').innerHTML=`
+      <div class="card" style="background:var(--amber);border-color:var(--amber-line);">
+        <div class="ct">Las oportunidades se desbloquean al aprobar</div>
+        <p style="font:500 12px/1.6 'DM Sans';color:var(--t-mut);">Cuando alcances el módulo 5 completo con nota ≥75%, podrás ver y postularte a los equipos de trabajo de las tiendas clientes de Nova. Vas en el ${e.pct}% del programa.</p>
+        <div class="pbar"><div class="pfill" style="width:${e.pct}%;"></div></div>
+      </div>`;
+  } else {
+    document.getElementById('opps-lock-msg').innerHTML=`
+      <div class="dcard">
+        <div style="font:600 10px/1 'DM Sans';letter-spacing:1.2px;opacity:.75;">ESTÁS LISTA</div>
+        <div style="font:600 18px/1.15 'Fraunces',serif;">Puedes postularte</div>
+        <div style="font:500 12px/1.6 'DM Sans';opacity:.82;">Completaste el programa con ${e.nota}. Toca una vacante y envía tu postulación. La profesora gestiona el proceso.</div>
+      </div>`;
+  }
+  document.getElementById('e-opp-list').innerHTML=OPORTUNIDADES.filter(o=>o.activa).map(o=>`
+    <div class="opp-card">
+      <div class="opp-head">
+        <div><div class="opp-nm">${o.nm}</div><div class="opp-sub">${o.rol} · ${o.mod}</div></div>
+        <span class="bd bd-g">Activa</span>
+      </div>
+      <p style="font:500 12px/1.55 'DM Sans';color:var(--t-mut);margin:0;">${o.desc}</p>
+      <div class="opp-req"><span class="opp-tag">${o.req}</span></div>
+      ${aprobada?`<div class="opp-apply" onclick="showToast('Postulación enviada a ${o.nm} ✓ — la profesora te confirma en 24h')">Postularme a esta vacante</div>`:`<div class="opp-locked">Completa el programa para postularte</div>`}
+    </div>`).join('');
+}
+
+// ─── NOVA BOT ACADEMIA ─────────────────────────────────
+const BOT_QS = {
+  profesor:['¿Quién va más adelantada?','¿Hay evaluaciones pendientes?','¿Qué vacante tiene más interés?'],
+  estudiante:['¿Qué hago hoy?','¿Cómo funciona la evaluación?','¿Cuándo puedo postularme?','¿Para qué sirve el demo?'],
+};
+const BOT_R = {
+  profesor:{
+    'adelantada':'Laura Moreno va en el módulo 5 con 88% del programa completado. Nota acumulada 91%.',
+    'evaluaciones':'Sofía Salcedo tiene una evaluación del módulo 2 sin enviar. Valentina entregó la del módulo 3 con 78%.',
+    'vacante':'NutreaShop EC tiene la vacante más reciente. 2 graduadas ya aprobaron el requisito de acceso.',
+    'default':'Puedo decirte sobre el progreso de las estudiantes, evaluaciones pendientes u oportunidades de empleo activas.',
+  },
+  estudiante:{
+    'hoy':'Hoy toca continuar tu módulo activo, hacer el ejercicio en el demo de Nova y dejar lista la evaluación.',
+    'evaluación':'La evaluación tiene 5 preguntas de selección múltiple. Necesitas 75% para aprobar. La profesora la revisa y te da retroalimentación.',
+    'postular':'Cuando completes el módulo 5 con nota ≥75% se desbloquean las oportunidades de trabajo. Puedes ver los equipos que buscan gestoras.',
+    'demo':'El demo de Nova Empresarial te deja practicar con la pantalla real que usarás de gestora. Entra en "Práctica con Nova" → Abrir demo.',
+    'default':'Hola. Puedo ayudarte con tu ruta de aprendizaje, la evaluación, el demo de práctica o las oportunidades de empleo.',
+  }
+};
+function initBot(){
+  const qs=BOT_QS[ROL]||BOT_QS.estudiante;
+  document.getElementById('bot-qs').innerHTML=qs.map(q=>`<div class="bot-q" onclick="askBot('${q}')">${q}</div>`).join('');
+  document.getElementById('bot-msgs').innerHTML='<div class="bot-msg bot"><div class="bot-who">NOVA BOT</div>Hola'+' '+NOMBRE+'. Soy el asistente de novAcademy. ¿En qué te ayudo?</div>';
+}
+function toggleBot(){
+  botOpen=!botOpen;
+  document.getElementById('chat-panel').classList.toggle('on',botOpen);
+  if(botOpen){const b=document.getElementById('bot-msgs');if(b)b.scrollTop=b.scrollHeight;}
+}
+function askBot(q){
+  const repo=BOT_R[ROL]||BOT_R.estudiante;
+  const key=Object.keys(repo).find(k=>q.toLowerCase().includes(k))||'default';
+  addBotMsg(q,'user');
+  setTimeout(()=>addBotMsg(repo[key],'bot'),380);
+}
+function sendBot(){const inp=document.getElementById('bot-inp');const t=(inp.value||'').trim();if(!t)return;inp.value='';askBot(t);}
+function addBotMsg(txt,who){
+  const d=document.createElement('div');d.className='bot-msg '+who;
+  if(who==='bot')d.innerHTML='<div class="bot-who">NOVA BOT</div>'+txt;
+  else d.textContent=txt;
+  const c=document.getElementById('bot-msgs');c.appendChild(d);c.scrollTop=c.scrollHeight;
+}
+
+// ─── TEMA / MODO ──────────────────────────────────────
+function setTema(t){
+  TM=t;localStorage.setItem('na_tema',t);
+  if(t==='azul') document.documentElement.removeAttribute('data-tema');
+  else document.documentElement.setAttribute('data-tema',t);
+  document.querySelectorAll('.sb-cdot').forEach(d=>d.classList.toggle('on',d.dataset.t===t));
+}
+function setModo(m){
+  MD=m;localStorage.setItem('na_modo',m);
+  if(m==='oscuro') document.documentElement.setAttribute('data-modo','oscuro');
+  else document.documentElement.setAttribute('data-modo','claro');
+  document.getElementById('bcl').classList.toggle('on',m==='claro');
+  document.getElementById('bos').classList.toggle('on',m==='oscuro');
+}
+function applyPrefs(){
+  setModo(MD);setTema(TM);
+}
+
+// ─── TOAST ────────────────────────────────────────────
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2400);}
+
+// ─── INIT ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  applyPrefs();
+  selRol('estudiante');
+  document.getElementById('bcl').classList.toggle('on',MD==='claro');
+  document.getElementById('bos').classList.toggle('on',MD==='oscuro');
+  document.querySelectorAll('.sb-cdot').forEach(d=>d.classList.toggle('on',d.dataset.t===TM));
+});
+</script>
+</body>
+</html>
