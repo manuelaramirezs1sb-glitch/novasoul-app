@@ -232,33 +232,6 @@ function sembrarParametros() {
   sh.getRange(2, 1, PARAMETROS_DEFAULT.length, 5).setValues(PARAMETROS_DEFAULT);
 }
 
-// ─── SEMILLA DE TUS DOS TIENDAS ──────────────────────────────
-// Corre esto aparte, solo para el workbook que vayas a usar tú.
-// El template se queda sin filas para que las copias nazcan limpias.
-
-function sembrarTiendasNutrea(fileId) {
-  const ss = SpreadsheetApp.openById(fileId || IDS.empresarial);
-
-  const shT = ss.getSheetByName('Tiendas');
-  if (shT && shT.getLastRow() <= 1) {
-    shT.getRange(2, 1, 2, 10).setValues([
-      ['gt', 'Nutrea GT', 'Nutrea', 'Guatemala', '', '', 'GTQ',
-       'America/Guatemala', '16:00', 'activa'],
-      ['ec', 'Nutrea EC', 'Nutrea', 'Ecuador',   '', '', 'USD',
-       'America/Guayaquil', '16:00', 'activa'],
-    ]);
-    Logger.log('Tiendas: Nutrea GT y Nutrea EC sembradas.');
-  }
-
-  // Ajusta estas filas a las fuentes que uses de verdad en cada tienda.
-  const shF = ss.getSheetByName('Fuentes');
-  if (shF && shF.getLastRow() <= 1) {
-    shF.getRange(2, 1, 4, 8).setValues([
-      ['gt', 'dropi',   'pedidos', '', 'si', '', '', ''],
-      ['gt', 'meta',    'pauta',   '', 'si', '', '', ''],
-      ['ec', 'shopify', 'pedidos', '', 'si', '', '', ''],
-      ['ec', 'meta',    'pauta',   '', 'si', '', '', ''],
-    ]);
-    Logger.log('Fuentes sembradas (ajústalas a tu operación real).');
-  }
-}
+// La siembra de tiendas NO va aquí: vive en crearCliente(), porque la
+// operación de Nova también es una copia del template. Si se sembrara
+// aquí, cada cliente nuevo nacería con las tiendas de Nutrea adentro.
