@@ -326,21 +326,127 @@ input.li:focus{border-color:var(--acc-d);}
 .roas-nm{font:600 12.5px/1.3 'DM Sans';color:var(--t-ink);}
 
 /* ─── INVENTARIO ─────────────────────────────────────── */
-.irow{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.irow{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:0;cursor:pointer;transition:border-color .15s;}
+.irow:hover{border-color:var(--s-line);}
+.irow.open{border-color:var(--acc-d);}
+.irow-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .inm{font:600 13px/1.3 'DM Sans';color:var(--t-ink);}
 .isub{font:500 11px/1.4 'DM Sans';color:var(--t-mut);margin-top:3px;}
+.itog{font:500 11px/1 'DM Sans';color:var(--acc-d);white-space:nowrap;}
+.inv-dtl{display:none;flex-direction:column;gap:11px;border-top:1px solid var(--s-line2);margin-top:12px;padding-top:12px;}
+.irow.open .inv-dtl{display:flex;}
+.inv-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.inv-field{display:flex;flex-direction:column;gap:5px;}
+.inv-lbl{font:600 10px/1 'DM Sans';letter-spacing:1.1px;color:var(--t-mut2);}
+.inv-inp{background:var(--s-bg);border:1px solid var(--s-line);border-radius:9px;padding:8px 11px;font:500 12.5px/1 'DM Sans';color:var(--t-ink);outline:none;width:100%;box-sizing:border-box;}
+.inv-inp:focus{border-color:var(--acc-d);}
+.sku-form{background:var(--s-dark);border:1px dashed var(--s-line);border-radius:14px;padding:16px;display:none;flex-direction:column;gap:11px;}
+.sku-form.on{display:flex;}
+.sku-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.inv-addbtn{display:flex;align-items:center;gap:7px;background:var(--acc-d);color:#f1f4e8;font:600 12px/1 'DM Sans';padding:10px 15px;border-radius:11px;cursor:pointer;align-self:flex-start;}
+.inv-addbtn svg{opacity:.85;}
+/* ─── GASTOS (Dinero) ───────────────────────────────── */
+.gasto-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--s-line2);}
+.gasto-row:last-child{border-bottom:none;}
+.gasto-nm{flex:1;font:500 12.5px/1.3 'DM Sans';color:var(--t-ink2);}
+.gasto-val{font:600 13px/1 'DM Sans';color:var(--t-ink);font-variant-numeric:tabular-nums;}
+.gasto-del{font:600 13px/1 'DM Sans';color:var(--t-mut2);cursor:pointer;padding:2px 6px;border-radius:6px;}
+.gasto-del:hover{background:var(--s-line2);color:#b85c50;}
+.add-gasto-form{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:8px;}
+.add-gasto-inp{flex:1;min-width:120px;background:var(--s-bg);border:1px solid var(--s-line);border-radius:9px;padding:8px 11px;font:500 12px/1 'DM Sans';color:var(--t-ink);outline:none;}
+.add-gasto-inp:focus{border-color:var(--acc-d);}
+.add-gasto-btn{background:var(--acc-d);color:#f1f4e8;font:600 11.5px/1 'DM Sans';padding:9px 14px;border-radius:9px;cursor:pointer;white-space:nowrap;}
+.meta-upload{display:flex;align-items:center;gap:10px;background:var(--s-dark);border:1px solid var(--s-line);border-radius:12px;padding:13px 15px;cursor:pointer;transition:border-color .15s;}
+.meta-upload:hover{border-color:var(--acc-d);}
+.meta-upload-ico{width:36px;height:36px;border-radius:8px;background:#1877f2;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.meta-upload-txt{flex:1;}
+.meta-upload-nm{font:600 13px/1.2 'DM Sans';color:var(--t-ink);}
+.meta-upload-sub{font:500 11px/1.3 'DM Sans';color:var(--t-mut);margin-top:3px;}
+.meta-upload-lbl{font:600 11px/1 'DM Sans';color:var(--acc-d);}
+/* ─── PRODUCTOS ficha ────────────────────────────────── */
+.prod-card{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:14px;padding:15px;display:flex;flex-direction:column;gap:0;cursor:pointer;transition:border-color .15s;}
+.prod-card:hover{border-color:var(--s-line);}
+.prod-card.open{border-color:var(--acc-d);}
+.prod-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.prod-nm{font:600 14px/1.2 'DM Sans';color:var(--t-ink);}
+.prod-dtl{display:none;flex-direction:column;gap:13px;border-top:1px solid var(--s-line2);margin-top:13px;padding-top:13px;}
+.prod-card.open .prod-dtl{display:flex;}
+.prod-sec{display:flex;flex-direction:column;gap:5px;}
+.prod-sec-lbl{font:600 10px/1 'DM Sans';letter-spacing:1.2px;color:var(--t-mut2);}
+.prod-sec-txt{font:500 12.5px/1.55 'DM Sans';color:var(--t-ink2);}
+.prod-url{font:500 12px/1 'DM Sans';color:var(--acc-d);text-decoration:none;word-break:break-all;}
+.prod-url:hover{text-decoration:underline;}
+.prod-promo{background:var(--amber,#fef7e5);border:1px solid var(--amber-line,#f0d98a);border-radius:9px;padding:10px 12px;font:500 12px/1.5 'DM Sans';color:var(--t-ink2);}
+.prod-edit-row{display:flex;gap:8px;flex-wrap:wrap;}
+.prod-edit-inp{flex:1;min-width:140px;background:var(--s-bg);border:1px solid var(--s-line);border-radius:9px;padding:8px 11px;font:500 12px/1 'DM Sans';color:var(--t-ink);outline:none;}
+.prod-edit-inp:focus{border-color:var(--acc-d);}
 
 /* ─── PEDIDOS ROW (gestora) ──────────────────────────── */
-.ped-row{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:5px;}
+.ped-row{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:5px;cursor:pointer;transition:border-color .15s;}
+.ped-row:hover{border-color:var(--s-line);}
+.ped-row.open{border-color:var(--acc-d);}
 .ped-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
 .ped-nm{font:600 13px/1.3 'DM Sans';color:var(--t-ink);}
 .ped-sub{font:500 11px/1.4 'DM Sans';color:var(--t-mut);}
+.ped-dtl{display:none;flex-direction:column;gap:11px;border-top:1px solid var(--s-line2);margin-top:10px;padding-top:10px;}
+.ped-row.open .ped-dtl{display:flex;}
+.ped-intentos{display:flex;gap:6px;flex-wrap:wrap;}
+.ped-int{background:var(--s-dark);border:1px solid var(--s-line);border-radius:8px;padding:7px 11px;font:600 11px/1 'DM Sans';color:var(--t-mut2);cursor:pointer;}
+.ped-int.on{background:var(--acc-d);color:#f1f4e8;border-color:var(--acc-d);}
+.ped-int:hover:not(.on){background:var(--s-line2);}
 /* ─── NOVEDAD CARD (gestora) ─────────────────────────── */
-.nov-card{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:6px;}
+.nov-card{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:border-color .15s;}
+.nov-card:hover{border-color:var(--s-line);}
+.nov-card.open{border-color:var(--acc-d);}
 .nov-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
 .nov-nm{font:600 13px/1.3 'DM Sans';color:var(--t-ink);}
 .nov-tipo{font:600 11px/1 'DM Sans';letter-spacing:.5px;color:var(--t-mut2);}
 .nov-nota{font:500 12px/1.55 'DM Sans';color:var(--t-mut);border-top:1px solid var(--s-line2);padding-top:8px;margin-top:2px;}
+.nov-dtl{display:none;flex-direction:column;gap:10px;border-top:1px solid var(--s-line2);margin-top:8px;padding-top:10px;}
+.nov-card.open .nov-dtl{display:flex;}
+.nov-resolve{background:var(--acc-d);color:#f1f4e8;font:600 12px/1 'DM Sans';padding:11px 16px;border-radius:11px;cursor:pointer;text-align:center;}
+/* ─── NOVA CHAT / BOT ────────────────────────────────── */
+.chat-fab{position:fixed;bottom:24px;right:22px;width:52px;height:52px;border-radius:50%;background:var(--acc-d);color:#f1f4e8;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.22);z-index:500;transition:transform .15s;}
+.chat-fab:hover{transform:scale(1.07);}
+.chat-fab svg{width:22px;height:22px;}
+.chat-panel{position:fixed;bottom:0;right:0;width:360px;max-width:100vw;height:540px;max-height:90vh;background:var(--s-card);border:1px solid var(--s-line2);border-radius:22px 22px 0 0;box-shadow:0 -6px 40px rgba(0,0,0,.18);z-index:600;display:none;flex-direction:column;overflow:hidden;}
+.chat-panel.on{display:flex;}
+.chat-head{display:flex;align-items:center;gap:10px;padding:14px 16px 12px;border-bottom:1px solid var(--s-line2);flex-shrink:0;}
+.chat-tabs{display:flex;gap:6px;flex:1;}
+.chat-tab{font:600 12px/1 'DM Sans';padding:7px 14px;border-radius:20px;cursor:pointer;color:var(--t-mut2);background:transparent;}
+.chat-tab.on{background:var(--acc-d);color:#f1f4e8;}
+.chat-close{font:600 18px/1 'DM Sans';color:var(--t-mut2);cursor:pointer;padding:2px 6px;}
+.chat-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:0;}
+.chat-pane{display:none;flex-direction:column;height:100%;}
+.chat-pane.on{display:flex;}
+/* Nova Bot */
+.bot-msgs{flex:1;overflow-y:auto;padding:14px 14px 8px;display:flex;flex-direction:column;gap:10px;}
+.bot-msg{max-width:82%;padding:10px 13px;border-radius:14px;font:500 12.5px/1.55 'DM Sans';}
+.bot-msg.bot{background:var(--s-dark);color:var(--t-ink2);align-self:flex-start;border-bottom-left-radius:4px;}
+.bot-msg.user{background:var(--acc-d);color:#f1f4e8;align-self:flex-end;border-bottom-right-radius:4px;}
+.bot-who{font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--acc-d);margin-bottom:4px;}
+.bot-foot{padding:10px 12px;border-top:1px solid var(--s-line2);display:flex;gap:8px;flex-shrink:0;}
+.bot-inp{flex:1;background:var(--s-bg);border:1px solid var(--s-line);border-radius:20px;padding:9px 14px;font:500 12.5px/1 'DM Sans';color:var(--t-ink);outline:none;}
+.bot-inp:focus{border-color:var(--acc-d);}
+.bot-send{background:var(--acc-d);color:#f1f4e8;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.bot-qs{padding:0 12px 10px;display:flex;flex-wrap:wrap;gap:6px;}
+.bot-q{background:var(--s-dark);border:1px solid var(--s-line);border-radius:16px;padding:6px 12px;font:500 11px/1 'DM Sans';color:var(--t-mut2);cursor:pointer;}
+.bot-q:hover{border-color:var(--acc-d);color:var(--acc-d);}
+/* Nova Chat */
+.nc-msgs{flex:1;overflow-y:auto;padding:12px 12px 6px;display:flex;flex-direction:column;gap:8px;}
+.nc-msg{display:flex;flex-direction:column;gap:3px;}
+.nc-msg-head{display:flex;align-items:baseline;gap:7px;}
+.nc-who{font:600 11.5px/1 'DM Sans';color:var(--t-ink);}
+.nc-time{font:500 10px/1 'DM Sans';color:var(--t-mut2);}
+.nc-role{font:600 9px/1 'DM Sans';letter-spacing:.8px;color:var(--acc-d);background:var(--s-dark);border-radius:10px;padding:2px 7px;}
+.nc-txt{font:500 12px/1.55 'DM Sans';color:var(--t-ink2);padding-left:2px;}
+.nc-div{display:flex;align-items:center;gap:8px;margin:4px 0;}
+.nc-div-line{flex:1;height:1px;background:var(--s-line2);}
+.nc-div-lbl{font:500 10px/1 'DM Sans';color:var(--t-mut2);white-space:nowrap;}
+.nc-foot{padding:10px 12px;border-top:1px solid var(--s-line2);display:flex;gap:8px;flex-shrink:0;}
+.nc-inp{flex:1;background:var(--s-bg);border:1px solid var(--s-line);border-radius:20px;padding:9px 14px;font:500 12.5px/1 'DM Sans';color:var(--t-ink);outline:none;}
+.nc-inp:focus{border-color:var(--acc-d);}
+.nc-send{background:var(--acc-d);color:#f1f4e8;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
 /* ─── ROL: visibilidad por panel ─────────────────────── */
 [data-rol="admin"]   .ro-dueno,
 [data-rol="gestora"] .ro-dueno,
@@ -834,6 +940,45 @@ input.li:focus{border-color:var(--acc-d);}
             </div>
           </div>
         </div>
+        <!-- Subir reporte Meta -->
+        <div class="card">
+          <div class="card-h"><span class="ct">Reporte de Meta Ads</span></div>
+          <div class="meta-upload" onclick="document.getElementById('meta-file-inp').click()">
+            <div class="meta-upload-ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+            </div>
+            <div class="meta-upload-txt">
+              <div class="meta-upload-nm">Subir reporte de Meta Ads</div>
+              <div class="meta-upload-sub">Sube el CSV exportado de Meta. Nova lo lee y actualiza la pauta, el CPA y el ROAS automáticamente.</div>
+            </div>
+            <div class="meta-upload-lbl" id="meta-lbl">Subir ↑</div>
+          </div>
+          <input type="file" id="meta-file-inp" accept=".csv,.xlsx" style="display:none" onchange="onMetaFile(this)">
+          <p style="font:500 11px/1.5 'DM Sans';color:var(--t-mut2);margin:10px 0 0;">Formato: exportación estándar de Meta Ads Manager en CSV. Solo se leen las columnas normalizadas de campaña, gasto, resultados e impresiones.</p>
+        </div>
+        <!-- Gastos del mes -->
+        <div class="card">
+          <div class="card-h"><span class="ct">Gastos del mes</span><span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">Fijos + Variables</span></div>
+          <div>
+            <div class="slbl" style="margin-bottom:8px;">GASTOS FIJOS</div>
+            <div id="gastos-fijos"></div>
+            <div class="add-gasto-form">
+              <input class="add-gasto-inp" id="gf-nm" placeholder="Nombre del gasto (ej: Nómina)">
+              <input class="add-gasto-inp" id="gf-val" placeholder="Valor" type="number" style="max-width:110px;">
+              <div class="add-gasto-btn" onclick="addGasto('fijo')">+ Agregar</div>
+            </div>
+          </div>
+          <div class="dline"></div>
+          <div>
+            <div class="slbl" style="margin-bottom:8px;">GASTOS VARIABLES</div>
+            <div id="gastos-variables"></div>
+            <div class="add-gasto-form">
+              <input class="add-gasto-inp" id="gv-nm" placeholder="Nombre del gasto (ej: Pauta extra)">
+              <input class="add-gasto-inp" id="gv-val" placeholder="Valor" type="number" style="max-width:110px;">
+              <div class="add-gasto-btn" onclick="addGasto('variable')">+ Agregar</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ════ CALCULADORAS ════ -->
@@ -1026,6 +1171,45 @@ input.li:focus{border-color:var(--acc-d);}
   </div><!-- /main -->
 </div><!-- /app -->
 <div id="toast"></div>
+
+<!-- ══════════════════ NOVA CHAT / BOT ══════════════════ -->
+<button class="chat-fab" onclick="toggleChat()" id="chat-fab" title="Nova Chat · Nova Bot" style="display:none;">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+</button>
+<div class="chat-panel" id="chat-panel">
+  <div class="chat-head">
+    <div class="chat-tabs">
+      <div class="chat-tab on" onclick="chatTab('bot',this)">Nova Bot</div>
+      <div class="chat-tab" onclick="chatTab('chat',this)">Nova Chat</div>
+    </div>
+    <div class="chat-close" onclick="toggleChat()">×</div>
+  </div>
+  <div class="chat-body">
+    <!-- BOT PANE -->
+    <div class="chat-pane on" id="cp-bot">
+      <div class="bot-msgs" id="bot-msgs">
+        <div class="bot-msg bot"><div class="bot-who">NOVA BOT</div>Hola. Soy Nova, el asistente de tu tienda. Puedo responderte sobre pedidos, novedades, equipo, pauta y resultados.<br><br>¿En qué te ayudo?</div>
+      </div>
+      <div class="bot-qs" id="bot-qs"></div>
+      <div class="bot-foot">
+        <input class="bot-inp" id="bot-inp" placeholder="Escribe tu pregunta…" onkeydown="if(event.key==='Enter')sendBot()">
+        <div class="bot-send" onclick="sendBot()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </div>
+      </div>
+    </div>
+    <!-- CHAT PANE -->
+    <div class="chat-pane" id="cp-chat">
+      <div class="nc-msgs" id="nc-msgs"></div>
+      <div class="nc-foot">
+        <input class="nc-inp" id="nc-inp" placeholder="Mensaje al equipo…" onkeydown="if(event.key==='Enter')sendChat()">
+        <div class="nc-send" onclick="sendChat()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════ VISTA SOMBRA ══════════════════ -->
 <div id="sombra" onclick="if(event.target===this)closeSombra()">
@@ -1364,7 +1548,7 @@ function buildGestoraViews() {
     {nm:'Carlos Mendoza · #PE-2041', sub:'Sin actualizar 28h · Ciudad de Guatemala', badge:'Llamar hoy', cl:'r'},
     {nm:'Ana Ruiz · #PE-2038',       sub:'Novedad abierta 18h · Quito',              badge:'Novedad',   cl:'w'},
     {nm:'Pedro Soto · #PE-2029',     sub:'Tercer intento mañana · Guayaquil',        badge:'Intento 3', cl:'w'},
-  ].map(r=>`<div class="ped-row">
+  ].map(r=>`<div class="ped-row" onclick="go('g-pedidos',null)" style="cursor:pointer;">
     <div class="ped-top"><span class="ped-nm">${r.nm}</span><span class="bd bd-${r.cl}">${r.badge}</span></div>
     <span class="ped-sub">${r.sub}</span>
   </div>`).join('');
@@ -1377,26 +1561,100 @@ function buildGestoraViews() {
     {lb:'DEVUELTOS', v:'3',  sub:'Este mes',       cl:'r'},
   ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
 
-  document.getElementById('g-pedlist').innerHTML = [
-    {nm:'Carlos Mendoza',id:'PE-2041',est:'En tránsito',sub:'Proteína Vainilla 1kg · Guate city',cl:'a'},
-    {nm:'Ana Ruiz',      id:'PE-2038',est:'Novedad',    sub:'Colágeno 300g · Quito',            cl:'r'},
-    {nm:'Jorge Lima',    id:'PE-2035',est:'Entregado',  sub:'Omega 3 · Quito',                  cl:'g'},
-    {nm:'María Salazar', id:'PE-2031',est:'En tránsito',sub:'Multivitamínico · Guayaquil',      cl:'a'},
-    {nm:'Pedro Soto',    id:'PE-2029',est:'Novedad',    sub:'Proteína Chocolate · Guayaquil',   cl:'r'},
-  ].map(r=>`<div class="ped-row">
-    <div class="ped-top"><span class="ped-nm">${r.nm}</span><span class="bd bd-${r.cl}">${r.est}</span></div>
-    <span class="ped-sub">#${r.id} · ${r.sub}</span>
-  </div>`).join('');
+  const G_PEDS = [
+    {nm:'Carlos Mendoza',id:'PE-2041',est:'En tránsito',sub:'Proteína Vainilla 1kg · Guatemala City',  cl:'a', tel:'+502 4567 8910', dir:'Zona 10, Ciudad de Guatemala', intento:1},
+    {nm:'Ana Ruiz',      id:'PE-2038',est:'Novedad',    sub:'Colágeno 300g · Quito',                   cl:'r', tel:'+593 98 234 5678',dir:'Av. Amazonas 123, Quito',       intento:2},
+    {nm:'Jorge Lima',    id:'PE-2035',est:'Entregado',  sub:'Omega 3 120caps · Quito',                 cl:'g', tel:'+593 99 345 6789',dir:'Cdla. Bellavista, Quito',        intento:3},
+    {nm:'María Salazar', id:'PE-2031',est:'En tránsito',sub:'Multivitamínico 60cap · Guayaquil',       cl:'a', tel:'+593 98 456 7890',dir:'Urdesa Norte, Guayaquil',        intento:1},
+    {nm:'Pedro Soto',    id:'PE-2029',est:'Novedad',    sub:'Proteína Chocolate 1kg · Guayaquil',      cl:'r', tel:'+593 97 567 8901',dir:'Los Ceibos, Guayaquil',           intento:3},
+  ];
+  const GEST_ESTS = ['Por confirmar','En gestión','Confirmado','En tránsito','Novedad','Devuelto','Entregado'];
+  document.getElementById('g-pedlist').innerHTML = G_PEDS.map((r,i)=>`
+    <div class="ped-row" id="gprow${i}" onclick="togGPed(${i})">
+      <div class="ped-top">
+        <div><span class="ped-nm">${r.nm}</span><span class="oid" style="margin-left:6px;">#${r.id}</span></div>
+        <span class="bd bd-${r.cl}">${r.est}</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+        <span class="ped-sub">${r.sub}</span>
+        <span class="ntog" id="gptog${i}" style="font:500 11px/1 'DM Sans';color:var(--acc-d);">Ver detalle ▾</span>
+      </div>
+      <div class="ped-dtl" id="gpd${i}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><div class="dlbl">TELÉFONO</div><div class="dtxt">${r.tel}</div></div>
+          <div><div class="dlbl">DIRECCIÓN</div><div class="dtxt">${r.dir}</div></div>
+        </div>
+        <div>
+          <div class="dlbl" style="margin-bottom:6px;">INTENTOS DE CONTACTO</div>
+          <div class="ped-intentos">
+            <div class="ped-int${r.intento>=1?' on':''}">1er intento</div>
+            <div class="ped-int${r.intento>=2?' on':''}">2do intento</div>
+            <div class="ped-int${r.intento>=3?' on':''}">3er intento</div>
+          </div>
+        </div>
+        <div><div class="dlbl" style="margin-bottom:6px;">CAMBIAR ESTADO</div>
+          <div class="nstates">${GEST_ESTS.map(e=>`<div class="nst${e===r.est?' on':''}" onclick="event.stopPropagation();this.closest('.nstates').querySelectorAll('.nst').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${e}</div>`).join('')}</div>
+        </div>
+        <textarea class="narea" placeholder="Nota sobre este pedido…" onclick="event.stopPropagation()"></textarea>
+        <div class="nsavebtn" onclick="event.stopPropagation();showToast('Cambios guardados ✓')">Guardar</div>
+      </div>
+    </div>`).join('');
 
-  document.getElementById('g-novlist').innerHTML = [
-    {nm:'Ana Ruiz · #PE-2038',  tipo:'Dirección incorrecta', nota:'Intenté 2 veces. No contesta. Próximo intento mañana 10am.', cl:'r', hrs:'18h abierta'},
-    {nm:'Pedro Soto · #PE-2029',tipo:'No había nadie',       nota:'Tercer intento coordinado. Vendré el viernes.',              cl:'w', hrs:'3d abierta'},
-    {nm:'Luis Torres · #PE-2021',tipo:'Producto dañado',     nota:'Enviando reposición. Cliente notificado.',                   cl:'g', hrs:'Resuelta'},
-  ].map(n=>`<div class="nov-card">
-    <div class="nov-top"><span class="nov-nm">${n.nm}</span><span class="bd bd-${n.cl}">${n.hrs}</span></div>
-    <span class="nov-tipo">${n.tipo}</span>
-    <span class="nov-nota">${n.nota}</span>
-  </div>`).join('');
+  const G_NOVS = [
+    {nm:'Ana Ruiz',   id:'PE-2038', tipo:'Dirección incorrecta', nota:'Intenté 2 veces. No contesta. Próximo intento mañana 10am.', cl:'r', hrs:'18h abierta', resuelta:false},
+    {nm:'Pedro Soto', id:'PE-2029', tipo:'No había nadie',        nota:'Tercer intento coordinado. Vendré el viernes.',              cl:'w', hrs:'3d abierta',  resuelta:false},
+    {nm:'Luis Torres',id:'PE-2021', tipo:'Producto dañado',       nota:'Enviando reposición. Cliente notificado.',                   cl:'g', hrs:'Resuelta',    resuelta:true},
+  ];
+  const NOV_ESTS = ['Sin gestión','Primer contacto','Sin respuesta','Reprogramado','Resuelta'];
+  document.getElementById('g-novlist').innerHTML = G_NOVS.map((n,i)=>`
+    <div class="nov-card" id="gncrow${i}" onclick="togGNov(${i})">
+      <div class="nov-top"><span class="nov-nm">${n.nm} · #${n.id}</span><span class="bd bd-${n.cl}">${n.hrs}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="nov-tipo">${n.tipo}</span>
+        <span style="font:500 11px/1 'DM Sans';color:var(--acc-d);" id="gntog${i}">Ver ▾</span>
+      </div>
+      <span class="nov-nota">${n.nota}</span>
+      <div class="nov-dtl" id="gnd${i}">
+        <div><div class="dlbl" style="margin-bottom:6px;">ACTUALIZAR ESTADO</div>
+          <div class="nstates">${NOV_ESTS.map(e=>`<div class="nst${e===n.hrs||(n.resuelta&&e==='Resuelta')?' on':''}" onclick="event.stopPropagation();this.closest('.nstates').querySelectorAll('.nst').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${e}</div>`).join('')}</div>
+        </div>
+        <textarea class="narea" placeholder="Nota de gestión (se guarda con marca de tiempo)…" onclick="event.stopPropagation()"></textarea>
+        <div${n.resuelta?' style="opacity:.5;pointer-events:none;"':''} class="nov-resolve" onclick="event.stopPropagation();markNovResuelta(${i})">${n.resuelta?'Ya resuelta':'Marcar como resuelta'}</div>
+      </div>
+    </div>`).join('');
+
+  // Aplicar permisos al nav gestora
+  applyGestoraPerms();
+}
+function togGPed(i){
+  const d=document.getElementById('gpd'+i),t=document.getElementById('gptog'+i),row=document.getElementById('gprow'+i);
+  const open=row.classList.contains('open');
+  document.querySelectorAll('[id^="gprow"]').forEach((r,j)=>{r.classList.remove('open');const dj=document.getElementById('gpd'+j);if(dj)dj.style.display='';const tj=document.getElementById('gptog'+j);if(tj)tj.textContent='Ver detalle ▾';});
+  if(!open){row.classList.add('open');d.style.display='flex';t.textContent='Cerrar ▴';event.stopPropagation();}
+}
+function togGNov(i){
+  const d=document.getElementById('gnd'+i),t=document.getElementById('gntog'+i),row=document.getElementById('gncrow'+i);
+  const open=row.classList.contains('open');
+  document.querySelectorAll('[id^="gncrow"]').forEach((r,j)=>{r.classList.remove('open');const dj=document.getElementById('gnd'+j);if(dj)dj.style.display='';const tj=document.getElementById('gntog'+j);if(tj)tj.textContent='Ver ▾';});
+  if(!open){row.classList.add('open');d.style.display='flex';t.textContent='Cerrar ▴';}
+}
+function markNovResuelta(i){
+  const row=document.getElementById('gncrow'+i);
+  if(!row) return;
+  row.querySelector('.bd').textContent='Resuelta';
+  row.querySelector('.bd').className='bd bd-g';
+  row.querySelector('.nov-resolve').textContent='Ya resuelta';
+  row.querySelector('.nov-resolve').style.cssText='opacity:.5;pointer-events:none;';
+  togGNov(-1);
+  showToast('Novedad marcada como resuelta ✓');
+}
+function applyGestoraPerms(){
+  const P = permsSt.gestora || {};
+  // Ocultar novedades del nav si no tiene permiso
+  const navNov = document.querySelector('.ni[data-v="g-novedades"]');
+  if(navNov) navNov.style.display = P.novedades===false?'none':'';
+  const navDin = document.querySelector('.ni[data-v="dinero"]');
+  if(navDin) navDin.style.display = P.dinero===false?'none':'';
 }
 
 function buildHoy() {
@@ -1659,6 +1917,16 @@ function buildPauta() {
   document.getElementById('cpalist').innerHTML = POR_TIENDA[ST].cpa.map(c=>`<div class="roas-row"><div class="roas-nm">${c.nm}</div><span class="bd ${c.cl}">CPA ${c.cpa}</span></div>`).join('');
 }
 
+const INV_DATA = [
+  {nm:'Colágeno Premium 300g', sku:'NE-001',stock:18, dias:3,  rep:8,  cl:'r', a:'Pedir hoy',       costo:38,    prov:'NutraSource',  desc:'Base del portafolio. Mayor margen neto del catálogo. Se vende solo con pauta mínima.'},
+  {nm:'Proteína Vainilla 1kg', sku:'NE-002',stock:142,dias:28, rep:10, cl:'g', a:'OK',               costo:62,    prov:'ProteinLab',   desc:'Sabor que más convierte. 3 tallas disponibles. Menor devolución del portafolio.'},
+  {nm:'Omega 3 120 caps',      sku:'NE-003',stock:48, dias:34, rep:12, cl:'w', a:'Sin rotación 31d', costo:22,    prov:'OmegaCo',      desc:'Sin pauta activa desde agosto. El stock no rota. Revisar si merece presupuesto.'},
+  {nm:'Multivitamínico 60cap', sku:'NE-004',stock:76, dias:19, rep:10, cl:'g', a:'OK',               costo:18,    prov:'VitaPlus',     desc:'Complemento recurrente. Bajo costo de traída. Cliente repite en el 34% de los casos.'},
+  {nm:'Proteína Chocolate 1kg',sku:'NE-005',stock:94, dias:22, rep:10, cl:'g', a:'OK',               costo:60,    prov:'ProteinLab',   desc:'Segunda más vendida. Funciona bien en EC. En GT no convierte igual.'},
+  {nm:'Vitamina C 1000mg',     sku:'NE-006',stock:210,dias:42, rep:14, cl:'g', a:'OK',               costo:14,    prov:'VitaPlus',     desc:'Producto de bajo precio que sube el ticket promedio. Muy bajo costo de holding.'},
+  {nm:'Zinc + Selenio',        sku:'NE-007',stock:32, dias:8,  rep:10, cl:'w', a:'Revisar pedido',   costo:20,    prov:'VitaPlus',     desc:'Poca rotación histórica. Evaluar si conviene seguir pidiendo o liquidar stock.'},
+];
+let skuFormOpen = false;
 function buildInventario() {
   document.getElementById('invkpi').innerHTML = [
     {lb:'SKUs ACTIVOS',     v:'12', sub:'4 estrella · 8 complementos', cl:'a'},
@@ -1667,50 +1935,138 @@ function buildInventario() {
     {lb:'VALOR INVENTARIO', v:C(28400), sub:'Precio de costo total',   cl:'a'},
   ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
 
-  document.getElementById('invlist').innerHTML = [
-    {nm:'Colágeno Premium 300g', sku:'NE-001',stock:18, dias:3,  rep:8,  cl:'r', a:'Pedir hoy'},
-    {nm:'Proteína Vainilla 1kg', sku:'NE-002',stock:142,dias:28, rep:10, cl:'g', a:'OK'},
-    {nm:'Omega 3 120 caps',      sku:'NE-003',stock:48, dias:34, rep:12, cl:'w', a:'Sin rotación 31d'},
-    {nm:'Multivitamínico 60cap', sku:'NE-004',stock:76, dias:19, rep:10, cl:'g', a:'OK'},
-    {nm:'Proteína Chocolate 1kg',sku:'NE-005',stock:94, dias:22, rep:10, cl:'g', a:'OK'},
-    {nm:'Vitamina C 1000mg',     sku:'NE-006',stock:210,dias:42, rep:14, cl:'g', a:'OK'},
-    {nm:'Zinc + Selenio',        sku:'NE-007',stock:32, dias:8,  rep:10, cl:'w', a:'Revisar pedido'},
-  ].map(r=>{
-    const bc=r.cl==='r'?'bd-r':r.cl==='w'?'bd-w':'bd-g';
-    return `<div class="irow"><div><div class="inm">${r.nm}</div><div class="isub">${r.sku} · ${r.stock} unid. · ${r.dias}d de cobertura · reposición ${r.rep}d</div></div><span class="bd ${bc}">${r.a}</span></div>`;
-  }).join('');
+  const bc=r=>r.cl==='r'?'bd-r':r.cl==='w'?'bd-w':'bd-g';
+  document.getElementById('invlist').innerHTML = INV_DATA.map((r,i)=>`
+    <div class="irow" id="irow${i}" onclick="togInv(${i})">
+      <div class="irow-top">
+        <div><div class="inm">${r.nm}</div><div class="isub">${r.sku} · ${r.stock} unid. · ${r.dias}d cobertura</div></div>
+        <div style="display:flex;align-items:center;gap:8px;"><span class="bd ${bc(r)}">${r.a}</span><span class="itog" id="itog${i}">Editar ▾</span></div>
+      </div>
+      <div class="inv-dtl" id="idtl${i}">
+        <p style="font:500 12px/1.5 'DM Sans';color:var(--t-mut2);margin:0;">${r.desc}</p>
+        <div class="inv-grid">
+          <div class="inv-field"><div class="inv-lbl">STOCK ACTUAL</div><input class="inv-inp" value="${r.stock}" type="number" onclick="event.stopPropagation()"></div>
+          <div class="inv-field"><div class="inv-lbl">PUNTO DE REPOSICIÓN (días)</div><input class="inv-inp" value="${r.rep}" type="number" onclick="event.stopPropagation()"></div>
+          <div class="inv-field"><div class="inv-lbl">COSTO UNITARIO (${ST==='ec'?'$':'Q'})</div><input class="inv-inp" value="${r.costo}" type="number" onclick="event.stopPropagation()"></div>
+          <div class="inv-field"><div class="inv-lbl">PROVEEDOR</div><input class="inv-inp" value="${r.prov}" onclick="event.stopPropagation()"></div>
+        </div>
+        <div class="nsavebtn" style="align-self:flex-start;" onclick="event.stopPropagation();showToast('SKU actualizado ✓')">Guardar cambios</div>
+      </div>
+    </div>`).join('');
+
+  // Nuevo SKU form
+  document.getElementById('invlist').innerHTML += `
+    <div class="inv-addbtn" onclick="togNuevoSku()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nuevo SKU
+    </div>
+    <div class="sku-form" id="sku-form">
+      <div style="font:600 13px/1 'DM Sans';color:var(--t-ink);">Agregar producto al inventario</div>
+      <div class="sku-form-grid">
+        <div class="inv-field"><div class="inv-lbl">NOMBRE DEL PRODUCTO</div><input class="inv-inp" placeholder="Ej: Colágeno Marino 250g"></div>
+        <div class="inv-field"><div class="inv-lbl">SKU / CÓDIGO</div><input class="inv-inp" placeholder="Ej: NE-008"></div>
+        <div class="inv-field"><div class="inv-lbl">STOCK INICIAL</div><input class="inv-inp" type="number" placeholder="0"></div>
+        <div class="inv-field"><div class="inv-lbl">COSTO UNITARIO</div><input class="inv-inp" type="number" placeholder="0"></div>
+        <div class="inv-field"><div class="inv-lbl">PROVEEDOR</div><input class="inv-inp" placeholder="Nombre del proveedor"></div>
+        <div class="inv-field"><div class="inv-lbl">DÍAS DE REPOSICIÓN</div><input class="inv-inp" type="number" placeholder="10"></div>
+      </div>
+      <div class="inv-field" style="grid-column:span 2;"><div class="inv-lbl">DESCRIPCIÓN / PARA QUÉ SIRVE</div><textarea class="narea" style="min-height:54px;" placeholder="Descripción del producto, público objetivo, beneficio principal…"></textarea></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="nsavebtn" onclick="showToast('Producto agregado al inventario ✓');togNuevoSku()">Guardar SKU</div>
+        <div class="nsavebtn" style="background:var(--s-dark);color:var(--t-mut2);" onclick="togNuevoSku()">Cancelar</div>
+      </div>
+    </div>`;
+}
+function togInv(i){
+  const dtl=document.getElementById('idtl'+i),tog=document.getElementById('itog'+i),row=document.getElementById('irow'+i);
+  const open=row.classList.contains('open');
+  INV_DATA.forEach((_,j)=>{const r2=document.getElementById('irow'+j);if(r2)r2.classList.remove('open');const t2=document.getElementById('itog'+j);if(t2)t2.textContent='Editar ▾';});
+  if(!open){row.classList.add('open');if(tog)tog.textContent='Cerrar ▴';}
+}
+function togNuevoSku(){
+  skuFormOpen=!skuFormOpen;
+  const f=document.getElementById('sku-form');
+  if(f) f.classList.toggle('on',skuFormOpen);
 }
 
 // ─── PRODUCTOS ────────────────────────────────────────
 const D_PRODS = {
   ec:[
-    {nm:'Tag Recede',      ver:'Escalar', por:'Cada entrega deja $ 68.110 y la pauta cuesta $ 32.000. Aguanta el doble de presupuesto.', stock:'Stock 210 · alcanza 13 días', cl:'g'},
-    {nm:'Dr. Melaxin Spray',ver:'Frenar',  por:'Cuesta $ 49.200 traer una entrega que solo deja $ 25.760. Cada pedido nace perdiendo.',   stock:'Stock 78 · 60% de devolución',cl:'r'},
-    {nm:'Truly Rosa',      ver:'Escalar', por:'El más barato de traer: $ 16.800 por entrega. Está subvendido, casi no tiene pauta.',      stock:'Stock 164 · sin quiebres',   cl:'g'},
-    {nm:'Crema Evil Goods',ver:'Pausado', por:'Sin pauta este mes. Queda el inventario quieto.',                                           stock:'Stock 42 · sin movimiento',  cl:'m'},
+    {nm:'Tag Recede',       ver:'Escalar', por:'Cada entrega deja $ 68.110 y la pauta cuesta $ 32.000. Aguanta el doble de presupuesto.', stock:'Stock 210 · alcanza 13 días', cl:'g',
+     desc:'Suero facial anti-envejecimiento. Actúa sobre manchas, arrugas finas y poros. Ideal para mujeres 30-55. El más recurrente del portafolio.',
+     beneficios:'Reduce manchas en 4 semanas · Hidratación profunda sin grasa · Sin fragancia · Para todo tipo de piel',
+     landing:'https://nutreashop.com/tag-recede',promo:'2×1 en la segunda unidad · válido hasta el 15 de sep.',
+     aud:'Mujeres 30-55, piel mixta-grasa, ciudades medianas'},
+    {nm:'Dr. Melaxin Spray', ver:'Frenar',  por:'Cuesta $ 49.200 traer una entrega que solo deja $ 25.760. Cada pedido nace perdiendo.', stock:'Stock 78 · 60% de devolución', cl:'r',
+     desc:'Spray despigmentante con ácido kójico. Prometía alto margen pero la tasa de devolución lo destruye.',
+     beneficios:'Reduce hiperpigmentación · Resultado visible en 6 semanas · Sin hidroquinona',
+     landing:'https://nutreashop.com/dr-melaxin',promo:'Sin promoción activa — pauta pausada',
+     aud:'Mujeres 25-45 con manchas solares'},
+    {nm:'Truly Rosa',       ver:'Escalar', por:'El más barato de traer: $ 16.800 por entrega. Está subvendido, casi no tiene pauta.', stock:'Stock 164 · sin quiebres', cl:'g',
+     desc:'Crema facial con rosa mosqueta y vitamina C. Bajo costo de adquisición, alto margen. Oportunidad desaprovechada.',
+     beneficios:'Cicatrización leve · Luminosidad · Hidratación 24h · Apto embarazo',
+     landing:'https://nutreashop.com/truly-rosa',promo:'Envío gratis por compra de 2 unidades',
+     aud:'Mujeres 20-40, piel seca-normal'},
+    {nm:'Crema Evil Goods', ver:'Pausado', por:'Sin pauta este mes. Queda el inventario quieto.', stock:'Stock 42 · sin movimiento', cl:'m',
+     desc:'Crema multiusos con extracto de carbón activado. Sin tracción en anuncios. Evaluar si vale la pena relanzar.',
+     beneficios:'Control de grasa · Poros menos visibles · Textura ligera',
+     landing:'https://nutreashop.com/evil-goods',promo:'Sin promoción activa',
+     aud:'Piel grasa, hombres y mujeres 18-35'},
   ],
   gt:[
-    {nm:'Tag Recede',      ver:'Escalar', por:'88% de entrega con solo 13 órdenes. Es el único donde Forza no falla. Doblarlo sale más barato que meter un producto nuevo.', stock:'Stock 178 · alcanza 10 días', cl:'g'},
-    {nm:'Truly Rosa',      ver:'Escalar', por:'Buena conversión en Quetzaltenango. Bajo costo de flete por zona.', stock:'Stock 89 · sin quiebres', cl:'g'},
-    {nm:'Evil Goods',      ver:'Revisar', por:'Devolución sube desde el viernes. Forza reporta 3 devoluciones en tránsito.', stock:'Stock 54 · alerta devoluciones', cl:'w'},
+    {nm:'Tag Recede',      ver:'Escalar', por:'88% de entrega con solo 13 órdenes. Es el único donde Forza no falla.', stock:'Stock 178 · alcanza 10 días', cl:'g',
+     desc:'Suero facial anti-envejecimiento. Funciona perfectamente en GT. Forza tiene excelente cobertura en zona.',
+     beneficios:'Reduce manchas en 4 semanas · Hidratación profunda · Sin fragancia',
+     landing:'https://nutreashop.com.gt/tag-recede',promo:'Combos de 3 con descuento del 10%',
+     aud:'Mujeres 30-55, Ciudad de Guatemala y Xela'},
+    {nm:'Truly Rosa',      ver:'Escalar', por:'Buena conversión en Quetzaltenango. Bajo costo de flete por zona.', stock:'Stock 89 · sin quiebres', cl:'g',
+     desc:'Crema rosa mosqueta. Ideal para el perfil de cliente GT. Costo de traída bajo con proveedor local.',
+     beneficios:'Cicatrización · Luminosidad · Hidratación 24h',
+     landing:'https://nutreashop.com.gt/truly-rosa',promo:'Sin promoción activa · oportunidad de lanzar combo',
+     aud:'Mujeres 20-40, Quetzaltenango y Quiché'},
+    {nm:'Evil Goods',      ver:'Revisar', por:'Devolución sube desde el viernes. Forza reporta 3 devoluciones en tránsito.', stock:'Stock 54 · alerta devoluciones', cl:'w',
+     desc:'Crema carbón activado. Empezó bien pero las devoluciones de esta semana encienden la alarma.',
+     beneficios:'Control de grasa · Poros menos visibles',
+     landing:'https://nutreashop.com.gt/evil-goods',promo:'Sin promoción activa — revisar primero',
+     aud:'Piel grasa, ambos géneros 18-35'},
   ]
 };
 function buildProductos(){
   const prods = POR_TIENDA[ST].productos||[];
+  const ficha = D_PRODS[ST]||[];
   document.getElementById('prodkpi').innerHTML=[
     {lb:'SKUs ACTIVOS',v:prods.length+'',sub:'Con pauta este mes',cl:'a'},
     {lb:'PARA ESCALAR',v:prods.filter(p=>p.ver==='Escalar').length+'',sub:'Margen positivo',cl:'g'},
     {lb:'PARA FRENAR', v:prods.filter(p=>p.ver==='Frenar'||p.ver==='Revisar').length+'',sub:'Revisar urgente',cl:'r'},
   ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
-  document.getElementById('prodlist').innerHTML=prods.map(p=>`
-    <div class="card" style="gap:10px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-        <span style="font:600 14px/1.2 'DM Sans';color:var(--t-ink);">${p.nm}</span>
-        <span class="bd" style="background:${p.vBg};color:${p.vInk};">${p.ver}</span>
+  document.getElementById('prodlist').innerHTML=ficha.map((p,i)=>`
+    <div class="prod-card" id="pcard${i}" onclick="togProd(${i})">
+      <div class="prod-head">
+        <span class="prod-nm">${p.nm}</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="bd" style="background:${prods[i]?.vBg||'var(--s-dark)'};color:${prods[i]?.vInk||'var(--t-mut2)'};">${p.ver}</span>
+          <span style="font:500 11px/1 'DM Sans';color:var(--acc-d);" id="ptog${i}">Ver ficha ▾</span>
+        </div>
       </div>
-      <p style="font:500 12px/1.5 'DM Sans';color:var(--t-mut);margin:0;">${p.por}</p>
-      <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">${p.stock}</span>
+      <p style="font:500 12px/1.5 'DM Sans';color:var(--t-mut);margin:8px 0 0;">${p.por}</p>
+      <div class="prod-dtl" id="pdtl${i}">
+        <div class="prod-sec"><div class="prod-sec-lbl">DESCRIPCIÓN DEL PRODUCTO</div><div class="prod-sec-txt">${p.desc}</div></div>
+        <div class="prod-sec"><div class="prod-sec-lbl">BENEFICIOS CLAVE</div><div class="prod-sec-txt">${p.beneficios}</div></div>
+        <div class="prod-sec"><div class="prod-sec-lbl">AUDIENCIA OBJETIVO</div><div class="prod-sec-txt">${p.aud}</div></div>
+        <div class="prod-sec"><div class="prod-sec-lbl">LANDING PAGE</div><a class="prod-url" href="${p.landing}" target="_blank" onclick="event.stopPropagation()">${p.landing}</a></div>
+        <div class="prod-sec"><div class="prod-sec-lbl">PROMOCIÓN ACTIVA</div><div class="prod-promo">${p.promo}</div></div>
+        <div class="prod-sec"><div class="prod-sec-lbl">STOCK · ${prods[i]?.stock||''}</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div class="nsavebtn" style="font-size:11px;padding:10px 14px;" onclick="event.stopPropagation();showToast('Ficha de producto actualizada ✓')">Guardar cambios</div>
+        </div>
+      </div>
     </div>`).join('');
+}
+function togProd(i){
+  const dtl=document.getElementById('pdtl'+i),tog=document.getElementById('ptog'+i),card=document.getElementById('pcard'+i);
+  const open=card.classList.contains('open');
+  document.querySelectorAll('[id^="pcard"]').forEach((_,j)=>{const c2=document.getElementById('pcard'+j);if(c2)c2.classList.remove('open');const t2=document.getElementById('ptog'+j);if(t2)t2.textContent='Ver ficha ▾';});
+  if(!open){card.classList.add('open');if(tog)tog.textContent='Cerrar ▴';}
 }
 
 // ─── DINERO ───────────────────────────────────────────
@@ -1735,6 +2091,63 @@ function buildDinero(){
     ['Nómina', ec?'$ 8.400.000':'Q 32.000'],
     ['Llamadas y recargas · Iris', ec?'$ 1.200.000':'Q 4.800'],
   ].map((r,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;${i>0?'border-top:1px solid var(--s-line2)':''};"><span style="font:500 12px/1 'DM Sans';color:var(--t-ink2);">${r[0]}</span><span style="font:600 13px/1 'DM Sans';color:var(--t-ink);">${r[1]}</span></div>`).join('');
+  // Inicializar gastos
+  renderGastos();
+}
+
+// Gastos del mes
+const GASTOS = {
+  fijo:[
+    {nm:'Nómina',                   ec:8400000, gt:32000},
+    {nm:'Llamadas y recargas Iris', ec:1200000, gt:4800},
+    {nm:'Suscripción Nova',         ec:280000,  gt:1080},
+  ],
+  variable:[
+    {nm:'Pauta Meta',               ec:21180000, gt:84600},
+    {nm:'Fletes del mes',           ec:4200000,  gt:18400},
+  ]
+};
+function renderGastos(){
+  const isEc=ST==='ec';
+  const sym=isEc?'$ ':'Q ';
+  const fmt=g=>sym+Math.round(g[isEc?'ec':'gt']||g.custom||0).toLocaleString('es');
+  ['fijo','variable'].forEach(tipo=>{
+    const id='gastos-'+tipo+'s';
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.innerHTML=GASTOS[tipo].map((g,i)=>`<div class="gasto-row">
+      <span class="gasto-nm">${g.nm}</span>
+      <span class="gasto-val">${fmt(g)}</span>
+      <span class="gasto-del" onclick="delGasto('${tipo}',${i})" title="Eliminar">×</span>
+    </div>`).join('');
+  });
+}
+function addGasto(tipo){
+  const nmId=tipo==='fijo'?'gf-nm':'gv-nm', valId=tipo==='fijo'?'gf-val':'gv-val';
+  const nm=(document.getElementById(nmId)?.value||'').trim();
+  const val=parseFloat(document.getElementById(valId)?.value||0);
+  if(!nm||!val){showToast('Completa nombre y valor');return;}
+  const isEc=ST==='ec';
+  const entry={nm, ec:isEc?val:0, gt:!isEc?val:0, custom:val};
+  GASTOS[tipo].push(entry);
+  document.getElementById(nmId).value='';
+  document.getElementById(valId).value='';
+  renderGastos();
+  showToast('Gasto agregado ✓');
+}
+function delGasto(tipo,i){
+  GASTOS[tipo].splice(i,1);
+  renderGastos();
+  showToast('Gasto eliminado');
+}
+function onMetaFile(inp){
+  if(!inp.files||!inp.files[0]) return;
+  const lbl=document.getElementById('meta-lbl');
+  lbl.textContent='Procesando…';
+  setTimeout(()=>{
+    lbl.textContent='✓ Cargado';
+    showToast('Reporte Meta cargado · ROAS y CPA actualizados ✓');
+  },1200);
 }
 
 // ─── PERMISOS ─────────────────────────────────────────
@@ -1900,6 +2313,102 @@ function enterAsSombra(){
   }
 }
 
+// ─── NOVA CHAT / NOVA BOT ─────────────────────────────
+const BOT_RESP = {
+  dueno:{
+    'pedidos de hoy':'Hoy entraron <b>24 pedidos</b> en Nutrea EC y <b>13</b> en Nutrea GT. 8 siguen sin gestión en EC. ¿Ves el panel de pedidos?',
+    'novedades':'Hay <b>5 novedades</b> activas. 2 sin primer contacto de gestora. La más antigua lleva 3 días.',
+    'cpa':'El CPA de hoy en Tag Recede está en <b>$ 9.80</b> — por debajo del techo de $ 10. Dr. Melaxin subió a <b>$ 14.20</b> y está quemando pauta.',
+    'equipo':'Camila: 91% efectividad · Katherin: 86%. Las dos están activas. Camila es la que más cierra esta semana.',
+    'inventario':'Colágeno Premium tiene cobertura para <b>3 días</b>. Hay que pedir hoy. Vitamina C alcanza para 42 días sin rotación.',
+    'default':'Puedo contarte sobre: pedidos de hoy, novedades, CPA de la pauta, tu equipo o el inventario. ¿Qué necesitas?'
+  },
+  admin:{
+    'pedidos':'Tienes 24 pedidos asignados. 6 sin actualizar en las últimas 4 horas. Camila tiene los más urgentes.',
+    'novedades':'5 novedades activas. La de Ana Ruiz lleva 18h sin contacto. ¿Quieres ver el detalle?',
+    'gestoras':'Camila R.: 91% efectividad. Katherin M.: 86%. El equipo está dentro de meta.',
+    'pauta':'ROAS general: 2.1×. Tag Recede aguanta más presupuesto. Dr. Melaxin está por encima del CPA techo.',
+    'default':'Soy Nova. Puedo contarte sobre pedidos, novedades, gestoras o resultados de pauta.'
+  },
+  gestora:{
+    'mis pedidos':'Tienes 18 pedidos asignados hoy. 3 novedades activas, 2 sin primer contacto. Empieza por Carlos Mendoza — lleva 28h sin actualizar.',
+    'novedad':'Ana Ruiz lleva 18h abierta. Pedro Soto va en el tercer intento. ¿Los ves en Mis novedades?',
+    'meta':'Tu meta del mes es 85% de efectividad. Vas en 91%. Llevas 16 entregas de 24 asignados esta semana. Excelente.',
+    'siguiente':'El siguiente urgente es Carlos Mendoza · #PE-2041. Sin actualizar 28h. Zona 10, Guatemala City.',
+    'default':'Hola. Soy Nova. Puedo decirte qué pedido atender primero, cómo va tu meta o el estado de tus novedades.'
+  }
+};
+const NC_SEED = [
+  {who:'Daniela R.',rol:'ADMIN',time:'9:02 am',txt:'Buenos días. Revisen los pedidos de ayer que quedaron en tránsito — hay 4 sin actualizar en EC.'},
+  {who:'Camila R.',rol:'GESTORA',time:'9:08 am',txt:'Visto. Los tomo ahora. Ana Ruiz no contesta desde ayer, voy al tercer intento.'},
+  {who:'Manuela', rol:'DUEÑA',time:'9:15 am',txt:'Gracias Camila. Tag Recede tiene 3 días de stock — Daniela confirma el pedido a proveedor hoy.'},
+  {who:'Daniela R.',rol:'ADMIN',time:'9:17 am',txt:'Confirmo. Pedido programado para hoy al mediodía.'},
+];
+let chatOpen = false;
+let chatActiveTab = 'bot';
+
+function initChat(){
+  const qs = {
+    dueno:['Pedidos de hoy','Novedades','CPA de la pauta','Mi equipo','Inventario urgente'],
+    admin:['Pedidos','Novedades','Gestoras hoy','Pauta y ROAS'],
+    gestora:['Mis pedidos','Mi novedad urgente','Mi meta','¿Qué sigo primero?']
+  };
+  const q = (qs[ROL]||qs.dueno);
+  document.getElementById('bot-qs').innerHTML = q.map(t=>`<div class="bot-q" onclick="askBot('${t}')">${t}</div>`).join('');
+  document.getElementById('nc-msgs').innerHTML = NC_SEED.map(m=>`
+    <div class="nc-msg">
+      <div class="nc-msg-head"><span class="nc-who">${m.who}</span><span class="nc-role">${m.rol}</span><span class="nc-time">${m.time}</span></div>
+      <div class="nc-txt">${m.txt}</div>
+    </div>`).join('');
+  const nc=document.getElementById('nc-msgs');if(nc)nc.scrollTop=nc.scrollHeight;
+}
+function toggleChat(){
+  chatOpen=!chatOpen;
+  document.getElementById('chat-panel').classList.toggle('on',chatOpen);
+  if(chatOpen){const b=document.getElementById('bot-msgs');if(b)b.scrollTop=b.scrollHeight;}
+}
+function chatTab(tab,el){
+  chatActiveTab=tab;
+  document.querySelectorAll('.chat-tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  document.querySelectorAll('.chat-pane').forEach(p=>p.classList.remove('on'));
+  document.getElementById('cp-'+tab).classList.add('on');
+}
+function askBot(q){
+  const resp = BOT_RESP[ROL]||BOT_RESP.dueno;
+  const key = Object.keys(resp).find(k=>q.toLowerCase().includes(k))||'default';
+  addBotMsg(q,'user');
+  setTimeout(()=>addBotMsg(resp[key],'bot'),420);
+}
+function sendBot(){
+  const inp=document.getElementById('bot-inp');
+  const txt=(inp.value||'').trim(); if(!txt) return;
+  inp.value='';
+  askBot(txt);
+}
+function addBotMsg(txt,who){
+  const div=document.createElement('div');
+  div.className='bot-msg '+who;
+  if(who==='bot') div.innerHTML='<div class="bot-who">NOVA BOT</div>'+txt;
+  else div.textContent=txt;
+  const c=document.getElementById('bot-msgs');
+  c.appendChild(div);c.scrollTop=c.scrollHeight;
+}
+function sendChat(){
+  const inp=document.getElementById('nc-inp');
+  const txt=(inp.value||'').trim(); if(!txt) return;
+  inp.value='';
+  const nombre=nombreDe(localStorage.getItem('ne_email')||'');
+  const rolLbl={'dueno':'DUEÑA','admin':'ADMIN','gestora':'GESTORA'}[ROL]||'NOVA';
+  const now=new Date();
+  const time=(now.getHours()%12||12)+':'+(now.getMinutes()+'').padStart(2,'0')+' '+(now.getHours()<12?'am':'pm');
+  const div=document.createElement('div');
+  div.className='nc-msg';
+  div.innerHTML=`<div class="nc-msg-head"><span class="nc-who">${nombre||'Tú'}</span><span class="nc-role">${rolLbl}</span><span class="nc-time">${time}</span></div><div class="nc-txt">${txt}</div>`;
+  const c=document.getElementById('nc-msgs');
+  c.appendChild(div);c.scrollTop=c.scrollHeight;
+}
+
 // ─── CALCULADORAS ─────────────────────────────────────
 function calcROI(){
   const pauta=+document.getElementById('calc-pauta')?.value||366041;
@@ -2005,12 +2514,18 @@ function enterApp(forceRol){
   document.getElementById('app').classList.add('on');
   applyPrefs(); buildAll(); updateSub();
 
+  // Mostrar chat FAB
+  document.getElementById('chat-fab').style.display='flex';
+  initChat();
+
   // Primera vez: mostrar onboarding solo al dueño
   if (ROL === 'dueno' && !localStorage.getItem('ne_onboarded')) showOnboarding();
 }
 function logout(){
   document.getElementById('app').classList.remove('on');
   document.getElementById('login').style.display='flex';
+  document.getElementById('chat-fab').style.display='none';
+  document.getElementById('chat-panel').classList.remove('on');
   step(1);
 }
 
