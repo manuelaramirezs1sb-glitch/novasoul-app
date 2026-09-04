@@ -187,24 +187,57 @@ const FUENTES = {
     },
   },
 
+  // Shopify — VERIFICADO (orders_export_1.csv, 729 pedidos, 79 columnas).
+  //
+  // SECUNDARIA, no principal. La verdad operativa vive en Dropi/Effi/Mastershop:
+  // Shopify solo sabe si despachó o no (`fulfilled`/`unfulfilled`), y su
+  // `Financial Status` es "pending" en las 729 filas porque todo es contraentrega.
+  // Contra los 17 estados de Dropi, no sirve para operar.
+  //
+  // Sirve para tres cosas que ninguna otra fuente tiene:
+  //   · el correo del cliente
+  //   · descuentos, impuestos y código de cupón
+  //   · la conciliación de fuga: pedidos que entraron a la tienda y nunca
+  //     llegaron a tener guía. Sin cruzar Shopify contra la plataforma de
+  //     fulfillment, esos pedidos no aparecen en ningún lado.
   shopify: {
-    tipo: 'pedidos',
-    verificado: false, // POR VERIFICAR — Shopify sí está documentado,
-                       // pero el export cambia según las columnas que marques
+    tipo: 'pedidos_secundario',
+    verificado: true,
+    moneda_default: 'USD',
     alias: {
-      id_externo:   ['name', 'id', 'order'],
-      fecha:        ['created at', 'paid at', 'fecha'],
-      cliente:      ['billing name', 'shipping name', 'customer name'],
-      telefono:     ['phone', 'billing phone', 'shipping phone'],
-      ciudad:       ['shipping city', 'billing city'],
-      direccion:    ['shipping address1', 'billing address1'],
-      producto:     ['lineitem name'],
-      sku:          ['lineitem sku'],
-      cantidad:     ['lineitem quantity'],
-      valor:        ['total', 'subtotal'],
-      costo_envio:  ['shipping'],
-      estado:       ['fulfillment status', 'financial status'],
-      guia:         ['tracking number'],
+      id_externo:      ['name'],              // "#1729"
+      id_interno:      ['id'],
+      correo:          ['email'],
+      fecha:           ['created at'],
+      fecha_pago:      ['paid at'],
+      fecha_despacho:  ['fulfilled at'],
+      fecha_cancelado: ['cancelled at'],
+      estado:          ['fulfillment status'],
+      estado_pago:     ['financial status'],
+      moneda_gasto:    ['currency'],
+      subtotal:        ['subtotal'],
+      costo_envio:     ['shipping'],
+      impuestos:       ['taxes'],
+      valor:           ['total'],
+      cupon:           ['discount code'],
+      descuento:       ['discount amount'],
+      metodo_envio:    ['shipping method'],
+      metodo_pago:     ['payment method'],
+      cantidad:        ['lineitem quantity'],
+      producto:        ['lineitem name'],
+      precio_unitario: ['lineitem price'],
+      sku:             ['lineitem sku'],
+      cliente:         ['shipping name', 'billing name'],
+      telefono:        ['shipping phone', 'billing phone'],
+      direccion:       ['shipping address1', 'billing address1'],
+      direccion_2:     ['shipping address2'],
+      ciudad:          ['shipping city', 'billing city'],
+      departamento:    ['shipping province', 'billing province'],
+      pais:            ['shipping country', 'billing country'],
+      nota:            ['notes'],
+      etiquetas:       ['tags'],
+      riesgo:          ['risk level'],
+      origen:          ['source'],
     },
   },
 

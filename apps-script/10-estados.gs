@@ -282,9 +282,27 @@ function telefonoNorm(raw, paisDefault) {
   let s = String(raw).replace(/[^\d]/g, '');
   if (!s) return '';
 
-  s = s.replace(/^0+/, ''); // ceros de marcación nacional
+  s = s.replace(/^0+/, '');       // ceros de marcación nacional al inicio
+  s = s.replace(/^00/, '');       // prefijo internacional 00
 
   const def = PREFIJOS[paisDefault];
+
+  /**
+   * Cero de troncal DESPUÉS del código de país.
+   * Shopify Ecuador exporta "+5930984635105": 593 + 0 + 984635105.
+   * Sin quitar ese cero quedan 13 dígitos, no cuadra con ningún patrón
+   * y el cruce con las llamadas de IRIS se rompe sin avisar.
+   */
+  function sinTroncal(num, cod, largo) {
+    if (num.indexOf(cod) !== 0) return num;
+    const resto = num.slice(cod.length);
+    if (resto.length === largo + 1 && resto.charAt(0) === '0') {
+      return cod + resto.slice(1);
+    }
+    return num;
+  }
+
+  if (def) s = sinTroncal(s, def.cod, def.largo);
 
   // Ya viene con el prefijo del país de la tienda y el largo cuadra
   if (def && s.indexOf(def.cod) === 0 && s.length === def.cod.length + def.largo) {
@@ -297,7 +315,8 @@ function telefonoNorm(raw, paisDefault) {
   // Trae el prefijo de otro país
   for (let i = 0; i < CODIGOS.length; i++) {
     const c = CODIGOS[i];
-    if (s.indexOf(c.cod) === 0 && s.length === c.cod.length + c.largo) return s;
+    const limpio = sinTroncal(s, c.cod, c.largo);
+    if (limpio.indexOf(c.cod) === 0 && limpio.length === c.cod.length + c.largo) return limpio;
   }
   // No cuadra con ningún patrón: se devuelve tal cual, en dígitos.
   // Queda visible como número raro en vez de romper el cruce en silencio.
