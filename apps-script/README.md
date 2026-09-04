@@ -108,16 +108,54 @@ E.164 (`telefono_norm`), que es la única que se usa para cruzar. Está en `10-e
 | Fuente | Estado | Cotejado contra |
 |---|---|---|
 | Dropi | ✅ verificado | `Dropi-Pedidos-NutreaShop.xlsx` (Maestro EC, 569 pedidos) |
-| Mastershop | ✅ verificado | `reporte-historial-de-pedidos-*.xlsx` |
+| Mastershop | ✅ verificado | `reporte-historial-de-pedidos-*.xlsx` (30 col) |
+| Effi guías | ✅ verificado | `Reporte de Guías de transporte.xlsx` (57 col, 231 guías) |
+| Effi novedades | ✅ verificado | `Reporte de Novedades de guías.xlsx` (41 col, 66 novedades) |
+| Meta campañas | ✅ verificado | `CP-Nutrea-Ecuador-Campañas.csv` (35 col) |
+| Meta facturación | ✅ verificado | `Resumen_Facturación.csv` |
 | IRIS | ✅ verificado | `IRIS (1).csv` (2.782 llamadas) |
-| Effi | ⚠️ hereda Mastershop | falta un export real |
-| Shopify | ⚠️ por verificar | falta `orders_export.csv` cotejado |
-| Meta | ⚠️ por verificar | falta cotejar el informe de facturación |
+| Shopify | ⚠️ por verificar | falta cotejar `orders_export.csv` |
 | TikTok | ⚠️ por verificar | falta un export real |
 
 Para cerrar las que faltan: pega un export en su pestaña `_Import_*` y corre
-`diagnosticar('effi', 'gt')`. Devuelve qué columnas no encontró y cómo quedó la
+`diagnosticar('shopify', 'ec')`. Devuelve qué columnas no encontró y cómo quedó la
 primera fila normalizada.
+
+### Effi no se parece a Mastershop
+
+Había asumido que Effi usaba el formato de Mastershop. **No.** Effi es un sistema de
+**guías de transporte**, no de pedidos: habla de `Remitente` y `Destinatario`, no de
+`Cliente`; y emite **dos reportes separados** que se cruzan por número de guía.
+
+| | Mastershop | Effi |
+|---|---|---|
+| Unidad | Pedido | Guía de transporte |
+| Reportes | 1 (30 columnas) | 2 — guías (57) + novedades (41) |
+| Cliente | `Cliente` | `Destinatario` |
+| Documento | `Cédula` | `ID. destinatario` = `"CC: 3223665889"` |
+| Novedad | flag `Presento Novedad` Si/No | reporte aparte con **código numérico** |
+
+Effi trae dos ventajas que las otras no:
+
+- **`Cód. Novedad`** — 701, 828, 699… El código es más estable que el texto: Effi puede
+  reescribir la descripción, el número no cambia. Están mapeados los 13 códigos reales.
+- **`Estado global guía inicial`** — 7 valores limpios, frente a los 12 sucios de
+  `Estado guía inicial` que traen la ciudad pegada (`DEVUELTA DESDE TUNJA`,
+  `ENTREGADA DIGITALIZADA EN MEDELLIN`). Se usa el global; el otro queda como detalle.
+  Los sucios se resuelven por prefijo, porque la ciudad es dinámica y no se enumera.
+
+### Meta emite dos reportes con formatos incompatibles
+
+- **Campañas** — CSV normal, encabezado en la línea 1, fechas ISO. Trae **CPA y ROAS ya
+  calculados** (`Coste por compra`, `ROAS de compras`), mejor usarlos que recalcularlos.
+  Ojo: dice *"coste"*, no *"costo"* — el alias que tenía escrito no habría enganchado.
+- **Facturación** — **10 líneas de metainformación antes del encabezado real**, montos
+  con espacio de miles (`195 866`), fechas `D/M/AAAA`, y una fila de total al final.
+
+Ese preámbulo rompía la detección de encabezado, que buscaba "la primera fila con 3+
+celdas llenas" — la línea 2 (`Meta Platforms Ireland Limited, Merrion Road, Dublin 4…`)
+tiene 6. Ahora una fuente puede declarar un **ancla de encabezado** y **filas a
+descartar**, para que la fila de total no entre en las sumas.
 
 ## Estados canónicos
 

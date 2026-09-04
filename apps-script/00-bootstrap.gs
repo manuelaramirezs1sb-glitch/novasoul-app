@@ -89,10 +89,12 @@ const ESQUEMA_EMPRESARIAL = {
 
 // Staging crudo. Nova NUNCA lee estas pestañas — solo los importadores.
 const IMPORTS_EMPRESARIAL = [
-  // pauta
-  '_Import_Meta', '_Import_TikTok',
-  // pedidos / fulfillment — una tienda usa UNA sola de estas
-  '_Import_Dropi', '_Import_Effi', '_Import_Mastershop', '_Import_Shopify',
+  // pauta — Meta emite dos reportes con formatos distintos
+  '_Import_Meta', '_Import_Meta_Facturacion', '_Import_TikTok',
+  // pedidos / fulfillment — una tienda usa UNA sola de estas plataformas.
+  // Effi emite dos reportes separados que se cruzan por número de guía.
+  '_Import_Dropi', '_Import_Mastershop', '_Import_Shopify',
+  '_Import_Effi_Guias', '_Import_Effi_Novedades',
   // central telefónica — alimenta Llamadas, no Pedidos
   '_Import_Iris',
 ];

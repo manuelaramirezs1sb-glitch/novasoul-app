@@ -80,15 +80,45 @@ const MAPA_ESTADOS = {
     'generada':                 ESTADOS.CONFIRMADO,
     'guia generada':            ESTADOS.CONFIRMADO,
     'en bodega':                ESTADOS.EN_BODEGA,
+    'centro acopio':            ESTADOS.EN_BODEGA,
+    'en terminal origen':       ESTADOS.EN_BODEGA,
     'en transito':              ESTADOS.EN_TRANSITO,
+    'en transporte':            ESTADOS.EN_TRANSITO,
     'en reparto':               ESTADOS.EN_TRANSITO,
+    'reparto':                  ESTADOS.EN_TRANSITO,
     'en distribucion':          ESTADOS.EN_TRANSITO,
+    'en terminal destino':      ESTADOS.EN_TRANSITO,
+    'intento de entrega':       ESTADOS.NOVEDAD,
     'en oficina':               ESTADOS.EN_OFICINA,
+    'reclame en oficina':       ESTADOS.EN_OFICINA,
   },
 
-  // Effi usa el mismo formato de reporte que Mastershop.
-  // Si aparece una diferencia, se separa en su propio bloque.
-  effi: null, // se resuelve con el mapa de mastershop
+  // Effi — VERIFICADO. Es un sistema de GUÍAS, no de pedidos.
+  // Trae dos columnas: `Estado global guía inicial` (limpio, 7 valores) y
+  // `Estado guía inicial` (sucio, con ciudad pegada). Se usa el global.
+  // Los estados con ciudad ("DEVUELTA DESDE TUNJA", "ENTREGADA DIGITALIZADA
+  // EN MEDELLIN") se resuelven por prefijo — la ciudad es dinámica y no se
+  // puede enumerar.
+  effi: {
+    // Estado global — el bueno
+    'entregada a destino':                ESTADOS.ENTREGADO,
+    'generada':                           ESTADOS.CONFIRMADO,
+    'devolucion a origen':                ESTADOS.DEVOLUCION,
+    'en transito':                        ESTADOS.EN_TRANSITO,
+    'en reparto':                         ESTADOS.EN_TRANSITO,
+    'novedad':                            ESTADOS.NOVEDAD,
+    'disponible para retiro en oficina':  ESTADOS.EN_OFICINA,
+    // Estado de guía — el sucio, por si el global viene vacío
+    'entregada':                          ESTADOS.ENTREGADO,
+    'entregada digitalizada':             ESTADOS.ENTREGADO, // + " EN <CIUDAD>"
+    'devuelta desde':                     ESTADOS.DEVOLUCION, // + " <CIUDAD>"
+    'devolucion ratificada':              ESTADOS.DEVOLUCION,
+    'generada effi':                      ESTADOS.CONFIRMADO,
+    'admitida':                           ESTADOS.EN_BODEGA,
+    'a recibir por':                      ESTADOS.EN_BODEGA, // + " <TRANSPORTADORA>"
+    'cerrado por incidencia':             ESTADOS.NOVEDAD,   // + ", VER CAUSA"
+    'en terminal destino':                ESTADOS.EN_TRANSITO,
+  },
 
   // Shopify — POR VERIFICAR contra un export real
   shopify: {
@@ -159,8 +189,35 @@ const GRUPOS_NOVEDAD = {
   ],
 };
 
-/** Agrupa un motivo de novedad. Devuelve 'otro' si no cae en ninguno. */
-function grupoNovedad(motivo) {
+/**
+ * Códigos numéricos de novedad de Effi — VERIFICADO.
+ * El código es más estable que el texto: Effi puede reescribir la
+ * descripción, el número no cambia. Cuando venga código, manda el código.
+ */
+const CODIGOS_NOVEDAD_EFFI = {
+  '701': { grupo: 'no_contacta', txt: 'Se visita, no se logra entrega' },
+  '81':  { grupo: 'no_contacta', txt: 'Coordinar la entrega' },
+  '828': { grupo: 'dinero',      txt: 'No cancela el valor a recaudar (RCE)' },
+  '801': { grupo: 'rechaza',     txt: 'Pedido cancelado' },
+  '699': { grupo: 'direccion',   txt: 'Dirección incompleta' },
+  '702': { grupo: 'direccion',   txt: 'No se localiza dirección del destinatario' },
+  '703': { grupo: 'direccion',   txt: 'En dirección de entrega no conocen destinatario' },
+  '706': { grupo: 'direccion',   txt: 'Destinatario solicita otra dirección' },
+  '713': { grupo: 'direccion',   txt: 'Dirección destinatario no existe' },
+  '728': { grupo: 'dinero',      txt: 'Solicita entrega en fecha posterior para pagar' },
+  '44':  { grupo: 'rechaza',     txt: 'Destinatario se rehúsa a recibir' },
+  '34':  { grupo: 'rechaza',     txt: 'Solicita inventario, unidades selladas' },
+  '31':  { grupo: 'direccion',   txt: 'No conocen destinatario en dirección destino' },
+};
+
+/**
+ * Agrupa un motivo de novedad en una de seis causas.
+ * Si viene código de Effi, el código manda; si no, se busca por texto.
+ */
+function grupoNovedad(motivo, codigo) {
+  if (codigo && CODIGOS_NOVEDAD_EFFI[String(codigo).trim()]) {
+    return CODIGOS_NOVEDAD_EFFI[String(codigo).trim()].grupo;
+  }
   if (!motivo) return '';
   const k = norm(motivo);
   const grupos = Object.keys(GRUPOS_NOVEDAD);
@@ -171,6 +228,18 @@ function grupoNovedad(motivo) {
     }
   }
   return 'otro';
+}
+
+/**
+ * Effi guarda el documento como "CC: 3223665889" — tipo y número pegados.
+ * Devuelve { tipo, numero }.
+ */
+function partirDocumento(raw) {
+  if (!raw) return { tipo: '', numero: '' };
+  const s = String(raw).trim();
+  const m = s.match(/^([A-Za-zÁÉÍÓÚÑ.]+)\s*:\s*(.+)$/);
+  if (m) return { tipo: m[1].replace(/\./g, '').toUpperCase(), numero: m[2].replace(/\D/g, '') };
+  return { tipo: '', numero: s.replace(/\D/g, '') };
 }
 
 // ─── TELÉFONO: PREFIJOS Y NORMALIZACIÓN ──────────────────────

@@ -87,12 +87,79 @@ const FUENTES = {
     },
   },
 
-  // Effi usa el mismo formato de reporte que Mastershop.
-  // Si un export real muestra diferencias, se separa en su propio bloque.
-  effi: {
+  // Effi — VERIFICADO. NO hereda de Mastershop: es un sistema de GUÍAS,
+  // con vocabulario de transporte (Remitente/Destinatario) en vez de
+  // pedidos (Cliente). Emite DOS reportes separados que hay que cruzar
+  // por número de guía.
+  effi_guias: {
     tipo: 'pedidos',
-    verificado: false, // POR VERIFICAR — se asume formato Mastershop
-    hereda: 'mastershop',
+    verificado: true,
+    tab: '_Import_Effi_Guias',
+    alias: {
+      prefijo_guia:     ['prefijo id guia'],
+      guia:             ['guia transportadora'],
+      guia_devolucion:  ['guia devolucion transportadora'],
+      fecha:            ['fecha de envio'],
+      fecha_promesa:    ['fecha de entrega esperada'],
+      fecha_entrega:    ['fecha de estado final'],
+      cliente:          ['destinatario'],
+      documento:        ['id. destinatario'],   // viene como "CC: 3223665889"
+      pais:             ['pais destinatario'],
+      departamento:     ['departamento destinatario'],
+      ciudad:           ['ciudad destinatario'],
+      direccion:        ['direccion destinatario'],
+      telefono:         ['telefonos destinatario'],
+      transportadora:   ['nombre transportadora efficommerce'],
+      transportadora_det:['transportadora'],
+      costo_envio:      ['precio flete total a cliente'],
+      flete_base:       ['precio flete a cliente'],
+      seguro:           ['precio manejo (seguro) a cliente'],
+      descuento:        ['% descuento'],
+      valor:            ['valor recaudo', 'valor declarado'],
+      valor_declarado:  ['valor declarado'],
+      metodo_pago:      ['forma de pago'],
+      producto:         ['contenido'],
+      cantidad:         ['cantidad de paquetes'],
+      peso:             ['peso (kg)'],
+      // El global es el limpio (7 valores); el otro trae la ciudad pegada
+      estado:           ['estado global guia inicial'],
+      estado_transportadora: ['estado guia inicial'],
+      estado_devolucion:['estado global guia devolucion'],
+      nota:             ['nota guia'],
+      observacion:      ['observacion'],
+      sucursal:         ['sucursal'],
+      centro_costos:    ['centro de costos'],
+      creado_en:        ['fecha de creacion'],
+      creado_por:       ['responsable de creacion'],
+    },
+  },
+
+  effi_novedades: {
+    tipo: 'novedades',
+    verificado: true,
+    tab: '_Import_Effi_Novedades',
+    alias: {
+      id_externo:       ['id novedad'],
+      fecha:            ['fecha novedad'],
+      guia:             ['guia novedad'],
+      codigo:           ['cod. novedad'],       // 701, 828... más estable que el texto
+      motivo:           ['novedad'],
+      aclaracion:       ['aclaracion'],
+      solucion:         ['historico de soluciones'],
+      foto:             ['url foto'],
+      creada_en:        ['fecha creacion effi'],
+      creada_por:       ['responsable creacion'],
+      cliente:          ['destinatario'],
+      telefono:         ['telefono destinatario'],
+      ciudad:           ['ciudad destinatario'],
+      departamento:     ['departamento destinatario'],
+      direccion:        ['direccion destinatario'],
+      transportadora:   ['transportadora efficommerce'],
+      valor:            ['valor recaudo', 'valor declarado'],
+      costo_envio:      ['valor flete'],
+      producto:         ['contenido'],
+      estado:           ['estado'],
+    },
   },
 
   // IRIS NO es una plataforma de pedidos: es la central telefónica.
@@ -143,21 +210,58 @@ const FUENTES = {
 
   // ── PAUTA ──────────────────────────────────────────────────
 
+  // Meta CAMPAÑAS — VERIFICADO. Es reporte a nivel campaña, no de conjunto.
+  // Trae CPA y ROAS ya calculados: mejor usarlos que recalcularlos.
+  // Ojo: dice "coste", no "costo".
   meta: {
     tipo: 'pauta',
-    verificado: false, // POR VERIFICAR
-    // El spec avisa: el informe de Meta viene en COP. Se normaliza con
-    // la tasa del DÍA DE LA TRANSACCIÓN, nunca la de hoy.
+    verificado: true,
+    tab: '_Import_Meta',
     moneda_default: 'COP',
     alias: {
-      fecha:        ['dia', 'día', 'fecha', 'date', 'reporting starts'],
-      campana:      ['nombre de la campaña', 'campaña', 'campaign name'],
-      conjunto:     ['nombre del conjunto de anuncios', 'conjunto', 'ad set name'],
-      gasto:        ['importe gastado', 'importe gastado (cop)', 'amount spent'],
+      fecha:        ['inicio del informe', 'dia', 'fecha', 'date'],
+      fecha_fin:    ['fin del informe'],
+      campana:      ['nombre de la campana'],
+      entrega:      ['entrega de la campana'],
+      conjunto:     ['nombre del conjunto de anuncios', 'conjunto'],
+      presupuesto:  ['presupuesto del conjunto de anuncios'],
+      gasto:        ['importe gastado (cop)', 'importe gastado', 'amount spent'],
+      cpm:          ['cpm (coste por 1000 impresiones) (cop)', 'cpm'],
+      resultados:   ['resultados'],
+      compras:      ['compras'],
+      cpa:          ['coste por compra (cop)'],
+      roas:         ['roas (retorno del gasto publicitario) de compras'],
+      aov:          ['aov'],
+      valor_conv:   ['valor de conversion de compras'],
+      clics:        ['clics en el enlace', 'clics', 'clicks'],
+      ctr:          ['ctr (tasa de clics en el enlace)'],
+      cpc:          ['cpc (coste por clic en el enlace) (cop)'],
       impresiones:  ['impresiones', 'impressions'],
-      clics:        ['clics', 'clicks', 'clics en el enlace'],
-      resultados:   ['resultados', 'results'],
-      cpm:          ['cpm', 'cpm (costo por 1000 impresiones)'],
+      alcance:      ['alcance'],
+      frecuencia:   ['frecuencia'],
+      visitas_lp:   ['visitas a la pagina de destino'],
+    },
+  },
+
+  // Meta FACTURACIÓN — VERIFICADO. Formato distinto al de campañas:
+  //   · 10 líneas de metainformación ANTES del encabezado real
+  //   · montos con espacio de miles ("195 866")
+  //   · una fila de total al final que hay que descartar
+  //   · fechas D/M/AAAA (las de campañas vienen en ISO)
+  // Son los cargos a la tarjeta, no el gasto por campaña. Sirve para
+  // cuadrar que lo facturado coincida con lo reportado.
+  meta_facturacion: {
+    tipo: 'facturacion',
+    verificado: true,
+    tab: '_Import_Meta_Facturacion',
+    moneda_default: 'COP',
+    encabezado_tras: 'fecha,identificador de la transaccion', // ancla del header
+    descartar_filas: ['importe total facturado'],
+    alias: {
+      fecha:        ['fecha'],
+      id_externo:   ['identificador de la transaccion'],
+      gasto:        ['importe'],
+      moneda_gasto: ['divisa'],
     },
   },
 
@@ -236,27 +340,45 @@ function aISO(v, zonaHoraria) {
  * permite probar el mapeo sin ensuciar las hojas de producción.
  */
 function leerCrudo(ss, fuenteId, tienda) {
-  let cfg = FUENTES[fuenteId];
+  const cfg = FUENTES[fuenteId];
   if (!cfg) throw new Error('Fuente desconocida: ' + fuenteId);
-  // Fuentes que comparten formato (Effi usa el reporte de Mastershop)
-  if (cfg.hereda) cfg = Object.assign({}, FUENTES[cfg.hereda], { tipo: cfg.tipo });
 
-  const tab = '_Import_' + fuenteId.charAt(0).toUpperCase() + fuenteId.slice(1);
+  const tab = cfg.tab ||
+    ('_Import_' + fuenteId.charAt(0).toUpperCase() + fuenteId.slice(1));
   const sh = ss.getSheetByName(tab);
   if (!sh) throw new Error('Falta la pestaña ' + tab);
 
   const datos = sh.getDataRange().getValues();
   if (datos.length < 2) return { filas: [], sinMapear: [], tab: tab };
 
-  // La fila de encabezados es la primera que tenga 3+ celdas con texto
+  // ── Encontrar la fila de encabezados ──
+  // El informe de facturación de Meta trae 10 líneas de metainformación
+  // antes del header real, y varias tienen 3+ celdas llenas. Por eso, cuando
+  // la fuente declara un ancla, se busca esa; el conteo de celdas no sirve.
   let filaEnc = 0;
-  for (let i = 0; i < Math.min(datos.length, 10); i++) {
-    const llenas = datos[i].filter(function (c) { return String(c).trim() !== ''; });
-    if (llenas.length >= 3) { filaEnc = i; break; }
+  if (cfg.encabezado_tras) {
+    const ancla = norm(cfg.encabezado_tras);
+    for (let i = 0; i < Math.min(datos.length, 40); i++) {
+      if (datos[i].map(norm).join(',').indexOf(ancla) === 0) { filaEnc = i; break; }
+    }
+  } else {
+    for (let i = 0; i < Math.min(datos.length, 10); i++) {
+      const llenas = datos[i].filter(function (c) { return String(c).trim() !== ''; });
+      if (llenas.length >= 3) { filaEnc = i; break; }
+    }
   }
 
   const enc = datos[filaEnc].map(norm);
-  const cuerpo = datos.slice(filaEnc + 1);
+  let cuerpo = datos.slice(filaEnc + 1);
+
+  // Filas de total / subtotal que no son hechos y romperían las sumas
+  if (cfg.descartar_filas && cfg.descartar_filas.length) {
+    const patrones = cfg.descartar_filas.map(norm);
+    cuerpo = cuerpo.filter(function (r) {
+      const linea = r.map(norm).join(' ');
+      return !patrones.some(function (p) { return linea.indexOf(p) !== -1; });
+    });
+  }
 
   // columna normalizada -> índice en el export
   const idx = {};
