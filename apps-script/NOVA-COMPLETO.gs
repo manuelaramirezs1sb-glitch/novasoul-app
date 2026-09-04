@@ -3,24 +3,29 @@
  * ─────────────────────────────────────────────────────────────
  * Archivo único. Pégalo completo en Código.gs y listo.
  *
- * ┌─ PARA INSTALAR EN UNA CUENTA NUEVA ────────────────────────┐
+ * ┌─ INSTALACIÓN ──────────────────────────────────────────────┐
  * │                                                            │
- * │   1) Ejecutar → instalarNova()                             │
- * │        crea la carpeta, los 4 workbooks y todas las        │
- * │        pestañas. Guarda los IDs solo: no hay que copiar    │
- * │        ni pegar ningún ID a mano.                          │
+ * │   Corre SOLO estas tres, en este orden:                    │
  * │                                                            │
- * │   2) Ejecutar → crearNutrea()                              │
- * │        crea TU hoja de operación, copiando el template.    │
+ * │   1) instalarNova()          crea carpeta, 4 hojas y todas │
+ * │                              las pestañas EN LA CUENTA EN  │
+ * │                              LA QUE ESTÁS. Te dice cuál es │
+ * │                              antes de crear nada.          │
  * │                                                            │
- * │   3) Ejecutar → instalarTriggerTasas()                     │
- * │        deja las tasas de cambio actualizándose solas.      │
+ * │   2) crearNutrea()           crea tu hoja de operación     │
+ * │                                                            │
+ * │   3) instalarTriggerTasas()  deja las tasas al día solas   │
+ * │                                                            │
+ * │   NO corras bootstrapTodo() por tu cuenta: construye       │
+ * │   pestañas en hojas que ya existen, y sin instalar         │
+ * │   primero no sabe cuáles son.                              │
  * │                                                            │
  * └────────────────────────────────────────────────────────────┘
  *
- * IMPORTANTE: corre esto en la cuenta de Nova, no en una personal.
- * El Web App se ejecuta con los permisos de quien es dueño del script,
- * así que el script y las hojas tienen que vivir en la misma cuenta.
+ * IMPORTANTE: instala esto en la cuenta de Nova, no en una personal.
+ * El Web App corre con los permisos del dueño del script, así que el
+ * script y las hojas tienen que vivir en la misma cuenta.
+ * Si no estás seguro de en cuál estás: cuentaActual()
  *
  * Contiene, en este orden:
  *   1. Bootstrap ....... instalación y estructura de los 4 workbooks
@@ -32,13 +37,14 @@
  *   7. Tasas ........... tasas automáticas y efecto cambiario
  *
  * ÚTILES:
+ *   cuentaActual()              en qué cuenta de Google corre esto
  *   verInstalacion()            a qué hojas apunta el script
- *   listarClientes()            qué clientes hay y a qué hoja apunta cada uno
+ *   listarClientes()            qué clientes hay y dónde está cada hoja
  *   actualizarTasas()           trae las tasas que falten
  *   alarmaTasa()                avisa si la tasa se movió lo que importa
  *   efectoCambiario(c,td,a,b)   separa operación de tipo de cambio
  *   tasasFaltantes()            qué tasas faltan para convertir dinero
- *   proponerMapeo(fuente,td)    mapea una fuente nueva sin export de muestra
+ *   proponerMapeo(fuente,td)    mapea una fuente sin export de muestra
  *   diagnosticar(fuente,td)     revisa el mapeo de una fuente configurada
  *
  * Esquemas tomados de design_handoff_nova/DATOS-Y-ALARMAS.md y verificados
@@ -63,22 +69,42 @@
  *
  * Los valores de abajo son solo el respaldo de la instalación original.
  */
-const IDS_DEFAULT = {
-  empresarial: '1MEzF8O2qDHuBTU2jsGER5Q9MZx8o5jexdSB0RL8-2iQ', // Nova_Empresarial_TEMPLATE
-  central:     '1IDfY-zoc5lyPJWgqLGWWk_1CvFeedD_mVuauTvQ6FWM', // Nova_Central
-  soul:        '1xY3v7Fv5KPsZfj-Y8Ud2jpo8LbJg3oQOuGl6yOgLf1M', // Nova_Soul
-  academy:     '1KgMBwFFdiPbE4M18tP91iFSgSgi4lTt7_L62_BOdCNo', // Nova_Academy
-};
-
+/**
+ * NO hay IDs de respaldo a propósito.
+ *
+ * Antes había unos escritos aquí, y eso hizo que en una instalación el
+ * script escribiera en las hojas de OTRA cuenta sin avisar: corrió bien,
+ * dijo que todo estaba listo, y construyó las pestañas donde no era.
+ *
+ * Un respaldo que apunta a la cuenta equivocada es peor que no tener
+ * respaldo. Si no hay IDs configurados, esto falla y dice qué hacer.
+ */
 function IDS_() {
   const p = PropertiesService.getScriptProperties().getProperties();
+  if (!p.ID_EMPRESARIAL || !p.ID_CENTRAL || !p.ID_SOUL || !p.ID_ACADEMY) {
+    throw new Error(
+      'Este script todavía no está instalado en esta cuenta.\n\n' +
+      'Corre  instalarNova()  primero: crea la carpeta, las 4 hojas y ' +
+      'todas las pestañas en la cuenta en la que estás ahora.\n\n' +
+      'No corras bootstrapTodo() directamente — esa función construye ' +
+      'pestañas en hojas que ya existen, y sin instalación previa no ' +
+      'sabe cuáles son.'
+    );
+  }
   return {
-    empresarial: p.ID_EMPRESARIAL || IDS_DEFAULT.empresarial,
-    central:     p.ID_CENTRAL     || IDS_DEFAULT.central,
-    soul:        p.ID_SOUL        || IDS_DEFAULT.soul,
-    academy:     p.ID_ACADEMY     || IDS_DEFAULT.academy,
-    carpeta:     p.ID_CARPETA     || '',
+    empresarial: p.ID_EMPRESARIAL,
+    central:     p.ID_CENTRAL,
+    soul:        p.ID_SOUL,
+    academy:     p.ID_ACADEMY,
+    carpeta:     p.ID_CARPETA || '',
   };
+}
+
+/** En qué cuenta de Google está corriendo esto. */
+function cuentaActual() {
+  const email = Session.getEffectiveUser().getEmail();
+  Logger.log('Este script corre como: ' + email);
+  return email;
 }
 
 /**
@@ -98,6 +124,12 @@ function instalarNova() {
   const props = PropertiesService.getScriptProperties();
   const ya = props.getProperties();
   const log = [];
+
+  // Lo primero que se dice es en qué cuenta se está instalando. Es el dato
+  // que más caro sale equivocarse, y el más fácil de no notar.
+  const cuenta = Session.getEffectiveUser().getEmail();
+  log.push('Instalando en la cuenta: ' + cuenta);
+  log.push('');
 
   // 1. Carpeta
   let carpeta;

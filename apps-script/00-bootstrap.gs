@@ -23,22 +23,42 @@
  *
  * Los valores de abajo son solo el respaldo de la instalación original.
  */
-const IDS_DEFAULT = {
-  empresarial: '1MEzF8O2qDHuBTU2jsGER5Q9MZx8o5jexdSB0RL8-2iQ', // Nova_Empresarial_TEMPLATE
-  central:     '1IDfY-zoc5lyPJWgqLGWWk_1CvFeedD_mVuauTvQ6FWM', // Nova_Central
-  soul:        '1xY3v7Fv5KPsZfj-Y8Ud2jpo8LbJg3oQOuGl6yOgLf1M', // Nova_Soul
-  academy:     '1KgMBwFFdiPbE4M18tP91iFSgSgi4lTt7_L62_BOdCNo', // Nova_Academy
-};
-
+/**
+ * NO hay IDs de respaldo a propósito.
+ *
+ * Antes había unos escritos aquí, y eso hizo que en una instalación el
+ * script escribiera en las hojas de OTRA cuenta sin avisar: corrió bien,
+ * dijo que todo estaba listo, y construyó las pestañas donde no era.
+ *
+ * Un respaldo que apunta a la cuenta equivocada es peor que no tener
+ * respaldo. Si no hay IDs configurados, esto falla y dice qué hacer.
+ */
 function IDS_() {
   const p = PropertiesService.getScriptProperties().getProperties();
+  if (!p.ID_EMPRESARIAL || !p.ID_CENTRAL || !p.ID_SOUL || !p.ID_ACADEMY) {
+    throw new Error(
+      'Este script todavía no está instalado en esta cuenta.\n\n' +
+      'Corre  instalarNova()  primero: crea la carpeta, las 4 hojas y ' +
+      'todas las pestañas en la cuenta en la que estás ahora.\n\n' +
+      'No corras bootstrapTodo() directamente — esa función construye ' +
+      'pestañas en hojas que ya existen, y sin instalación previa no ' +
+      'sabe cuáles son.'
+    );
+  }
   return {
-    empresarial: p.ID_EMPRESARIAL || IDS_DEFAULT.empresarial,
-    central:     p.ID_CENTRAL     || IDS_DEFAULT.central,
-    soul:        p.ID_SOUL        || IDS_DEFAULT.soul,
-    academy:     p.ID_ACADEMY     || IDS_DEFAULT.academy,
-    carpeta:     p.ID_CARPETA     || '',
+    empresarial: p.ID_EMPRESARIAL,
+    central:     p.ID_CENTRAL,
+    soul:        p.ID_SOUL,
+    academy:     p.ID_ACADEMY,
+    carpeta:     p.ID_CARPETA || '',
   };
+}
+
+/** En qué cuenta de Google está corriendo esto. */
+function cuentaActual() {
+  const email = Session.getEffectiveUser().getEmail();
+  Logger.log('Este script corre como: ' + email);
+  return email;
 }
 
 /**
@@ -58,6 +78,12 @@ function instalarNova() {
   const props = PropertiesService.getScriptProperties();
   const ya = props.getProperties();
   const log = [];
+
+  // Lo primero que se dice es en qué cuenta se está instalando. Es el dato
+  // que más caro sale equivocarse, y el más fácil de no notar.
+  const cuenta = Session.getEffectiveUser().getEmail();
+  log.push('Instalando en la cuenta: ' + cuenta);
+  log.push('');
 
   // 1. Carpeta
   let carpeta;
