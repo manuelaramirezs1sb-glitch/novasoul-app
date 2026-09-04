@@ -2531,7 +2531,8 @@ function enterApp(forceRol){
   const label  = labelDe(email);
 
   document.getElementById('app').setAttribute('data-rol', ROL);
-  document.getElementById('brand-rol').textContent = 'Nova · ' + label.charAt(0).toUpperCase() + label.slice(1);
+  const brandRolEl = document.getElementById('brand-rol');
+  if (brandRolEl) brandRolEl.textContent = 'Nova · ' + label.charAt(0).toUpperCase() + label.slice(1);
   document.getElementById('toprol').textContent = nombre + ' · ' + label;
 
   // Gestoras no cambian de tienda; fijan la primera
