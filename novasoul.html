@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NovaSoul</title>
-<script>(function(){var m=localStorage.getItem('ns_modo');if(m)document.documentElement.setAttribute('data-modo',m);})()</script>
+<script>(function(){var m=localStorage.getItem('ns_modo');var t=localStorage.getItem('ns_tema');if(m)document.documentElement.setAttribute('data-modo',m);if(t&&t!=='amarillo')document.documentElement.setAttribute('data-tema',t);})()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -51,6 +51,18 @@
   --sage:#23281F; --sage-line:#384232; --sage-d:#A8C4A2;
   --shadow: 0 8px 28px rgba(0,0,0,.35);
 }
+/* ── TEMAS ── */
+:root[data-tema="verde"]{--acc:#6E9B5A;--acc-lo:#3F6830;--acc-hi:#9FC28A;--acc-ink:#1B2A15;--acc-d:#3F6830;--amber:#EBF4E6;--amber-line:#CCDEBC;}
+:root[data-tema="terracota"]{--acc:#C4775C;--acc-lo:#8E4530;--acc-hi:#DEA48D;--acc-ink:#241510;--acc-d:#8E4530;--amber:#F5EDE8;--amber-line:#E5C5B6;}
+:root[data-tema="azul"]{--acc:#5B8AAE;--acc-lo:#365C7A;--acc-hi:#89B2CB;--acc-ink:#101D26;--acc-d:#365C7A;--amber:#E3EFF7;--amber-line:#BBCFDC;}
+@media(prefers-color-scheme:dark){
+  :root[data-tema="verde"]:not([data-modo="claro"]){--acc:#8ABE76;--acc-ink:#1B2A15;--acc-d:#9FC28A;--amber:#1E2B1A;--amber-line:#2D4025;}
+  :root[data-tema="terracota"]:not([data-modo="claro"]){--acc:#DB9680;--acc-ink:#241510;--acc-d:#DEA48D;--amber:#2A1D18;--amber-line:#3F2A22;}
+  :root[data-tema="azul"]:not([data-modo="claro"]){--acc:#79AACB;--acc-ink:#101D26;--acc-d:#89B2CB;--amber:#192028;--amber-line:#243040;}
+}
+:root[data-tema="verde"][data-modo="oscuro"]{--acc:#8ABE76;--acc-ink:#1B2A15;--acc-d:#9FC28A;--amber:#1E2B1A;--amber-line:#2D4025;}
+:root[data-tema="terracota"][data-modo="oscuro"]{--acc:#DB9680;--acc-ink:#241510;--acc-d:#DEA48D;--amber:#2A1D18;--amber-line:#3F2A22;}
+:root[data-tema="azul"][data-modo="oscuro"]{--acc:#79AACB;--acc-ink:#101D26;--acc-d:#89B2CB;--amber:#192028;--amber-line:#243040;}
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;overflow:hidden;}
@@ -164,6 +176,10 @@ textarea,input,select,button{font-family:inherit;}
 .tb-mode{display:flex;gap:3px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:3px;}
 .tb-mbtn{font:600 11px/1 'DM Sans';color:var(--mut3);padding:6px 11px;border-radius:17px;cursor:pointer;}
 .tb-mbtn.on{background:var(--soft2);color:var(--ink);}
+.tb-cdots{display:flex;gap:5px;align-items:center;margin-left:6px;}
+.tb-cdot{width:15px;height:15px;border-radius:50%;cursor:pointer;transition:transform .15s;border:2.5px solid transparent;flex-shrink:0;}
+.tb-cdot.on{border-color:var(--ink2);transform:scale(1.2);}
+.tb-cdot:hover:not(.on){transform:scale(1.1);}
 
 .content{flex:1;overflow-y:auto;padding:24px 26px 40px;display:flex;flex-direction:column;gap:18px;}
 
@@ -438,6 +454,12 @@ textarea,input,select,button{font-family:inherit;}
         <div class="tb-mode">
           <div class="tb-mbtn on" id="bcl" onclick="setModo('claro')">Claro</div>
           <div class="tb-mbtn" id="bos" onclick="setModo('oscuro')">Oscuro</div>
+        </div>
+        <div class="tb-cdots">
+          <div class="tb-cdot on" data-t="amarillo" style="background:#DDA43C" onclick="setTema('amarillo')"></div>
+          <div class="tb-cdot" data-t="verde" style="background:#6E9B5A" onclick="setTema('verde')"></div>
+          <div class="tb-cdot" data-t="terracota" style="background:#C4775C" onclick="setTema('terracota')"></div>
+          <div class="tb-cdot" data-t="azul" style="background:#5B8AAE" onclick="setTema('azul')"></div>
         </div>
         <span class="tb-lang">ES</span>
         <div class="tb-av">M</div>
@@ -744,6 +766,15 @@ textarea,input,select,button{font-family:inherit;}
               </div>
             </div>
             <div class="pref-row">
+              <span class="pref-key">Color</span>
+              <div class="tb-cdots" style="margin-left:0">
+                <div class="tb-cdot on" data-t="amarillo" style="background:#DDA43C" onclick="setTema('amarillo')"></div>
+                <div class="tb-cdot" data-t="verde" style="background:#6E9B5A" onclick="setTema('verde')"></div>
+                <div class="tb-cdot" data-t="terracota" style="background:#C4775C" onclick="setTema('terracota')"></div>
+                <div class="tb-cdot" data-t="azul" style="background:#5B8AAE" onclick="setTema('azul')"></div>
+              </div>
+            </div>
+            <div class="pref-row">
               <span class="pref-key">Zona horaria</span>
               <span class="pref-val">America/Bogota (UTC−5)</span>
             </div>
@@ -758,6 +789,7 @@ textarea,input,select,button{font-family:inherit;}
 <script>
 // ── STATE ─────────────────────────────────────────────
 let MD = localStorage.getItem('ns_modo') || 'claro';
+let TM = localStorage.getItem('ns_tema') || 'amarillo';
 let SEL_DIA = 3; // today index (0=Mon ... 6=Sun)
 let SEL_TEMA = -1;
 
@@ -815,17 +847,26 @@ function go(view,el){
   else{const m=document.querySelector('[data-v="'+view+'"]');if(m)m.classList.add('on');}
 }
 
-// ── MODO ──────────────────────────────────────────────
+// ── MODO / TEMA ───────────────────────────────────────
 function setModo(m){
   MD=m; localStorage.setItem('ns_modo',m);
   document.documentElement.setAttribute('data-modo',m);
   document.getElementById('bcl').classList.toggle('on',m==='claro');
   document.getElementById('bos').classList.toggle('on',m==='oscuro');
 }
+function setTema(t){
+  TM=t; localStorage.setItem('ns_tema',t);
+  if(t==='amarillo') document.documentElement.removeAttribute('data-tema');
+  else document.documentElement.setAttribute('data-tema',t);
+  document.querySelectorAll('.tb-cdot').forEach(d=>d.classList.toggle('on',d.dataset.t===t));
+}
 function applyModo(){
   document.documentElement.setAttribute('data-modo',MD);
   document.getElementById('bcl').classList.toggle('on',MD==='claro');
   document.getElementById('bos').classList.toggle('on',MD==='oscuro');
+  if(TM==='amarillo') document.documentElement.removeAttribute('data-tema');
+  else document.documentElement.setAttribute('data-tema',TM);
+  document.querySelectorAll('.tb-cdot').forEach(d=>d.classList.toggle('on',d.dataset.t===TM));
 }
 
 // ── DATA BUILDERS ─────────────────────────────────────
@@ -1062,6 +1103,8 @@ function toggleTask(el){
 
 document.addEventListener('DOMContentLoaded',()=>{
   document.documentElement.setAttribute('data-modo', MD);
+  if(TM!=='amarillo') document.documentElement.setAttribute('data-tema',TM);
+  document.querySelectorAll('.tb-cdot').forEach(d=>d.classList.toggle('on',d.dataset.t===TM));
 });
 </script>
 </body>
