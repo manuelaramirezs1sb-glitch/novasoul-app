@@ -48,13 +48,37 @@ const ESQUEMA_EMPRESARIAL = {
   // estado_nova y direccion_corregida: columnas propias de la app. El spec exige
   //   "nunca sobrescribir una fila importada" — estado y direccion los manda la
   //   plataforma, lo que el equipo cambia vive aparte. La UI muestra el _nova si existe.
-  Pedidos: ['id','fuente','id_externo','fecha','tienda','cliente','telefono','ciudad',
-            'direccion','producto','sku','cantidad','valor','costo_producto','costo_envio',
-            'estado','transportadora','guia','intentos','gestora_asignada','fecha_promesa',
-            'fecha_entrega','estado_nova','direccion_corregida','nota',
+  // telefono_norm es la clave de cruce con las llamadas de IRIS: el mismo
+  //   cliente aparece como 984712695 en Dropi y como 593984712695 en la central.
+  // telefono_2 guarda el número alterno — el caso de "escribió desde otro
+  //   número" o "pide que lo llamen a este otro", que hoy se pierde en la nota.
+  // estado_transportadora existe porque Mastershop/Effi traen DOS estados:
+  //   el del negocio y el del courier, y no siempre coinciden.
+  Pedidos: ['id','fuente','id_externo','fecha','tienda','cliente','cedula','correo',
+            'telefono','telefono_norm','telefono_2','telefono_2_norm',
+            'ciudad','departamento','direccion','producto','sku','cantidad',
+            'valor','costo_producto','costo_envio','metodo_pago','bodega',
+            'estado','estado_transportadora','estado_canonico','transportadora','guia',
+            'intentos','gestora_asignada','fecha_promesa','fecha_entrega',
+            'razon_cancelacion','estado_nova','nota','ultimo_movimiento',
             'actualizado_en','actualizado_por'],
-  Novedades: ['id','fuente','id_externo','pedido_id','fecha','tipo','motivo','estado',
-              'gestora','nota','intentos','resuelta_en','actualizado_en','actualizado_por'],
+
+  // `solucion` es la instrucción que se le da al courier para resolver la
+  // novedad ("dejar en oficina y llamar", "volver a pasar"). No cambia la
+  // dirección cargada del cliente — es la salida de la novedad.
+  // `grupo` agrupa el motivo (no_contacta / rechaza / direccion / dinero...)
+  // y es lo que permite la alarma de patrón: 3 del mismo grupo en la semana
+  // es un problema de proceso, no tres casos sueltos.
+  Novedades: ['id','fuente','id_externo','pedido_id','fecha','tipo','motivo','grupo',
+              'estado','gestora','solucion','nota','intentos','resuelta_en',
+              'actualizado_en','actualizado_por'],
+
+  // IRIS no es una plataforma de pedidos — es la central telefónica.
+  // Cruza con Pedidos por telefono_norm, no por id de orden.
+  Llamadas: ['id','fuente','id_externo','fecha_hora','tienda','sentido','estado',
+             'extension','agente','telefono','telefono_norm','pedido_id',
+             'seg_conversado','seg_espera','seg_total','campana','grabacion',
+             'etiqueta','observacion'],
   Pauta: ['fecha','tienda','plataforma','cuenta','campana','conjunto','gasto',
           'moneda_gasto','gasto_normalizado','impresiones','clics','resultados','cpm','cpa'],
   Inventario: ['sku','producto','tienda','fuente','stock','costo_unitario','precio',
@@ -67,8 +91,10 @@ const ESQUEMA_EMPRESARIAL = {
 const IMPORTS_EMPRESARIAL = [
   // pauta
   '_Import_Meta', '_Import_TikTok',
-  // pedidos / fulfillment
-  '_Import_Dropi', '_Import_Effi', '_Import_Mastershop', '_Import_Iris', '_Import_Shopify',
+  // pedidos / fulfillment — una tienda usa UNA sola de estas
+  '_Import_Dropi', '_Import_Effi', '_Import_Mastershop', '_Import_Shopify',
+  // central telefónica — alimenta Llamadas, no Pedidos
+  '_Import_Iris',
 ];
 
 const ESQUEMA_CENTRAL = {

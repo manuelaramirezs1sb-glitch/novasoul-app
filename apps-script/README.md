@@ -71,48 +71,94 @@ aplica la app, no Google Drive.
 
 ## Fuentes
 
-Siete, en dos familias. Cada una entra por su propia pestaña `_Import_*`.
+Siete, en **tres** familias. Una tienda usa una sola plataforma de pedidos —
+el soporte múltiple existe para que un cliente con Effi o Mastershop pueda
+usar la app sin restricción, no para mezclar fuentes dentro de una tienda.
 
 | Familia | Fuentes | Alimenta |
 |---|---|---|
-| Pedidos / fulfillment | Dropi · Effi · Mastershop · Iris · Shopify | `Pedidos`, `Novedades`, `Inventario` |
+| Pedidos / fulfillment | Dropi · Effi · Mastershop · Shopify | `Pedidos`, `Novedades` |
 | Pauta | Meta · TikTok | `Pauta` |
+| Central telefónica | IRIS | `Llamadas` |
 
 El mapeo de columnas es **declarativo**, en `FUENTES` dentro de `20-importadores.gs`.
 Agregar una plataforma es agregar un bloque de alias, no escribir un importador nuevo.
 
-### Los mapeos están sin verificar
+### IRIS no es una plataforma de pedidos
 
-Cada plataforma nombra distinto la misma cosa (`Estatus` / `Estado` / `Status`) y cambia
-los nombres sin avisar. Los alias actuales son una primera aproximación — **ninguno está
-cotejado contra un export real todavía**.
+Revisando `IRIS (1).csv` resultó ser el log de la central telefónica: 2.782 llamadas
+salientes con `Sentido · Estado · Extensión · Número · Usuario · Grabación`. No trae
+pedidos. Alimenta una entidad propia, **`Llamadas`**, y cruza con `Pedidos`
+**por teléfono normalizado**, no por número de orden.
 
-Para cerrarlos, por cada fuente:
+Eso convierte la normalización de teléfono en pieza central, no en detalle. Medido
+en tus datos:
 
-1. Pega un export de muestra en su pestaña `_Import_*`
-2. Corre `diagnosticar('dropi', 'gt')` — cambiando la fuente y la tienda
-3. Te dice qué columnas no encontró y cómo quedó la primera fila normalizada
-4. Me pasas ese resultado y ajusto los alias
+| Fuente | Formato real |
+|---|---|
+| Dropi EC | `984712695` — 9 dígitos, sin prefijo |
+| Mastershop CO | `3138880827` y `+573202241205` — **mezclados en el mismo archivo** |
+| IRIS | 10, 11, 12 y 13 dígitos según el país |
 
-Sin este paso los importadores van a dejar columnas vacías en silencio, que es
-exactamente lo que hace que las alarmas de dinero disparen en falso.
+Por eso cada fila guarda el número tal como llegó (`telefono`) **y** su forma canónica
+E.164 (`telefono_norm`), que es la única que se usa para cruzar. Está en `10-estados.gs`.
 
-## Tres columnas que agregué por las fuentes múltiples
+### Estado de verificación
 
-- **`fuente` + `id_externo`** en `Pedidos` y `Novedades` — con cinco plataformas de
-  pedidos distintas, sin esto no se puede deduplicar ni rastrear una fila de vuelta a
-  la plataforma de donde salió.
-- **`estado_nova` y `direccion_corregida`** en `Pedidos` — el spec exige *"nunca
-  sobrescribir una fila importada"* y que lo que escribe la app viva en *"columnas
-  propias"*. `estado` y `direccion` los manda la plataforma; lo que corrige el equipo
-  va aparte. La UI muestra el `_nova` si existe, si no el importado.
-- **`moneda_gasto` + `gasto_normalizado`** en `Pauta` — Meta factura en COP y TikTok en
-  USD. Guardar el gasto original junto al convertido es lo que permite auditar la
-  conversión después.
+| Fuente | Estado | Cotejado contra |
+|---|---|---|
+| Dropi | ✅ verificado | `Dropi-Pedidos-NutreaShop.xlsx` (Maestro EC, 569 pedidos) |
+| Mastershop | ✅ verificado | `reporte-historial-de-pedidos-*.xlsx` |
+| IRIS | ✅ verificado | `IRIS (1).csv` (2.782 llamadas) |
+| Effi | ⚠️ hereda Mastershop | falta un export real |
+| Shopify | ⚠️ por verificar | falta `orders_export.csv` cotejado |
+| Meta | ⚠️ por verificar | falta cotejar el informe de facturación |
+| TikTok | ⚠️ por verificar | falta un export real |
 
-Y una hoja: **`Fuentes`** (`tienda · fuente · tipo · cuenta · activa · ultima_importacion
-· filas_ultima · notas`). La pantalla de login de Nova Empresarial ya muestra
-"Shopify + Dropi · USD · 3 fuentes" — de aquí sale ese conteo.
+Para cerrar las que faltan: pega un export en su pestaña `_Import_*` y corre
+`diagnosticar('effi', 'gt')`. Devuelve qué columnas no encontró y cómo quedó la
+primera fila normalizada.
+
+## Estados canónicos
+
+Cada plataforma nombra los estados distinto — Dropi dice `ENTREGADO`, Mastershop dice
+`Entregada`, el courier dice `ENTREGADA DIGITALIZADA`. Sin una tabla canónica la alarma
+de *"entrega bajo 65%"* cuenta mal según de qué fuente venga la fila.
+
+`10-estados.gs` define diez estados y mapea los reales de cada plataforma:
+
+```
+pendiente · confirmado · en_bodega · en_transito · en_oficina
+novedad · novedad_resuelta · entregado · devolucion · cancelado
+```
+
+Un estado que no cae en el mapa se guarda como `__sin_mapear__:<texto>` — visible en
+la hoja, nunca descartado en silencio.
+
+También agrupa los motivos de novedad reales del Maestro en seis causas
+(`no_contacta`, `rechaza`, `direccion`, `dinero`, `ausente`, `logistica`). El
+agrupamiento es lo que hace funcionar la alarma de patrón: tres novedades del mismo
+grupo en la semana es un problema de proceso, no tres casos sueltos.
+
+## Columnas que salieron de los datos reales
+
+- **`solucion`** en `Novedades` — en tu Maestro ya existe como columna, con instrucciones
+  al courier (*"dejar en oficina y llamar"*, *"volver a pasar"*). Es la salida de la
+  novedad, no una dirección corregida. Reemplaza el `direccion_corregida` que había
+  puesto antes; la dirección cargada del cliente no se toca.
+- **`telefono_2` + `telefono_2_norm`** — el número alterno. El caso de *"escribió desde
+  otro número"* o *"pide que lo llamen a este otro"*, que hoy se pierde dentro de la nota.
+  `extraerTelefonos()` lo saca del texto libre.
+- **`estado` + `estado_transportadora` + `estado_canonico`** — Mastershop trae dos estados
+  distintos (el del negocio y el del courier) y no siempre coinciden. Se guardan los dos
+  crudos más el canónico calculado.
+- **`fuente` + `id_externo`** — para rastrear cualquier fila de vuelta a su plataforma.
+- **`departamento`**, `cedula`, `correo`, `metodo_pago`, `bodega`, `razon_cancelacion` —
+  vienen en el reporte de Mastershop y se estaban perdiendo.
+- **`moneda_gasto` + `gasto_normalizado`** en `Pauta` — Meta factura en COP, TikTok en USD.
+
+Y dos hojas: **`Fuentes`** (de donde sale el "3 fuentes" que muestra tu login) y
+**`Llamadas`** (IRIS).
 
 ## Pendiente
 
