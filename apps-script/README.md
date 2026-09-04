@@ -69,9 +69,54 @@ Un workbook por cuenta Nova (por facturación). `tienda` discrimina las filas.
 El equipo nunca abre el Drive — entra por Nova. Los permisos por rol y por tienda los
 aplica la app, no Google Drive.
 
+## Fuentes
+
+Siete, en dos familias. Cada una entra por su propia pestaña `_Import_*`.
+
+| Familia | Fuentes | Alimenta |
+|---|---|---|
+| Pedidos / fulfillment | Dropi · Effi · Mastershop · Iris · Shopify | `Pedidos`, `Novedades`, `Inventario` |
+| Pauta | Meta · TikTok | `Pauta` |
+
+El mapeo de columnas es **declarativo**, en `FUENTES` dentro de `20-importadores.gs`.
+Agregar una plataforma es agregar un bloque de alias, no escribir un importador nuevo.
+
+### Los mapeos están sin verificar
+
+Cada plataforma nombra distinto la misma cosa (`Estatus` / `Estado` / `Status`) y cambia
+los nombres sin avisar. Los alias actuales son una primera aproximación — **ninguno está
+cotejado contra un export real todavía**.
+
+Para cerrarlos, por cada fuente:
+
+1. Pega un export de muestra en su pestaña `_Import_*`
+2. Corre `diagnosticar('dropi', 'gt')` — cambiando la fuente y la tienda
+3. Te dice qué columnas no encontró y cómo quedó la primera fila normalizada
+4. Me pasas ese resultado y ajusto los alias
+
+Sin este paso los importadores van a dejar columnas vacías en silencio, que es
+exactamente lo que hace que las alarmas de dinero disparen en falso.
+
+## Tres columnas que agregué por las fuentes múltiples
+
+- **`fuente` + `id_externo`** en `Pedidos` y `Novedades` — con cinco plataformas de
+  pedidos distintas, sin esto no se puede deduplicar ni rastrear una fila de vuelta a
+  la plataforma de donde salió.
+- **`estado_nova` y `direccion_corregida`** en `Pedidos` — el spec exige *"nunca
+  sobrescribir una fila importada"* y que lo que escribe la app viva en *"columnas
+  propias"*. `estado` y `direccion` los manda la plataforma; lo que corrige el equipo
+  va aparte. La UI muestra el `_nova` si existe, si no el importado.
+- **`moneda_gasto` + `gasto_normalizado`** en `Pauta` — Meta factura en COP y TikTok en
+  USD. Guardar el gasto original junto al convertido es lo que permite auditar la
+  conversión después.
+
+Y una hoja: **`Fuentes`** (`tienda · fuente · tipo · cuenta · activa · ultima_importacion
+· filas_ultima · notas`). La pantalla de login de Nova Empresarial ya muestra
+"Shopify + Dropi · USD · 3 fuentes" — de aquí sale ese conteo.
+
 ## Pendiente
 
 - `10-api.gs` — endpoints `doGet`/`doPost` para leer y escribir desde las pantallas
-- `20-importadores.gs` — una función por fuente: Meta, Dropi, Shopify
 - `30-alarmas.gs` — evaluador central + correo, con trigger de 15 minutos
 - `40-provisionar.gs` — copia del template al crear un cliente desde Nova Central
+- Verificar los alias de las 7 fuentes contra exports reales

@@ -37,23 +37,39 @@ const ESQUEMA_EMPRESARIAL = {
   Parametros: ['tienda','clave','valor','actualizado_en','actualizado_por'],
   Tasas: ['fecha','moneda_origen','moneda_destino','tasa'],
 
+  // Catálogo de fuentes por tienda. La pantalla de login ya muestra
+  // "Shopify + Dropi · USD · 3 fuentes" — esto es de donde sale ese conteo.
+  Fuentes: ['tienda','fuente','tipo','cuenta','activa','ultima_importacion',
+            'filas_ultima','notas'],
+
   // Operación
-  Pedidos: ['id','fecha','tienda','cliente','telefono','ciudad','direccion',
-            'producto','cantidad','valor','costo_producto','costo_envio','estado',
-            'transportadora','guia','intentos','gestora_asignada','fecha_promesa',
-            'fecha_entrega','actualizado_en','actualizado_por'],
-  Novedades: ['id','pedido_id','fecha','tipo','motivo','estado','gestora','nota',
-              'intentos','resuelta_en','actualizado_en','actualizado_por'],
-  Pauta: ['fecha','tienda','plataforma','campana','conjunto','gasto','impresiones',
-          'clics','resultados','cpm','cpa'],
-  Inventario: ['sku','producto','tienda','stock','costo_unitario','precio',
+  // fuente + id_externo: sin esto no se puede deduplicar ni rastrear una fila
+  //   de vuelta a la plataforma de donde salió (con 5 fuentes de pedidos es obligatorio).
+  // estado_nova y direccion_corregida: columnas propias de la app. El spec exige
+  //   "nunca sobrescribir una fila importada" — estado y direccion los manda la
+  //   plataforma, lo que el equipo cambia vive aparte. La UI muestra el _nova si existe.
+  Pedidos: ['id','fuente','id_externo','fecha','tienda','cliente','telefono','ciudad',
+            'direccion','producto','sku','cantidad','valor','costo_producto','costo_envio',
+            'estado','transportadora','guia','intentos','gestora_asignada','fecha_promesa',
+            'fecha_entrega','estado_nova','direccion_corregida','nota',
+            'actualizado_en','actualizado_por'],
+  Novedades: ['id','fuente','id_externo','pedido_id','fecha','tipo','motivo','estado',
+              'gestora','nota','intentos','resuelta_en','actualizado_en','actualizado_por'],
+  Pauta: ['fecha','tienda','plataforma','cuenta','campana','conjunto','gasto',
+          'moneda_gasto','gasto_normalizado','impresiones','clics','resultados','cpm','cpa'],
+  Inventario: ['sku','producto','tienda','fuente','stock','costo_unitario','precio',
                'dias_cobertura','ultimo_conteo','actualizado_en','actualizado_por'],
   Equipo: ['id','nombre','correo','rol','tienda','estado','casos_asignados',
            'casos_resueltos','nota_auditoria','ultima_conexion'],
 };
 
 // Staging crudo. Nova NUNCA lee estas pestañas — solo los importadores.
-const IMPORTS_EMPRESARIAL = ['_Import_Meta','_Import_Dropi','_Import_Shopify'];
+const IMPORTS_EMPRESARIAL = [
+  // pauta
+  '_Import_Meta', '_Import_TikTok',
+  // pedidos / fulfillment
+  '_Import_Dropi', '_Import_Effi', '_Import_Mastershop', '_Import_Iris', '_Import_Shopify',
+];
 
 const ESQUEMA_CENTRAL = {
   // sheet_id no está en el spec pero es indispensable: es lo que permite
@@ -193,16 +209,28 @@ function sembrarParametros() {
 // El template se queda sin filas para que las copias nazcan limpias.
 
 function sembrarTiendasNutrea(fileId) {
-  const sh = SpreadsheetApp.openById(fileId || IDS.empresarial).getSheetByName('Tiendas');
-  if (!sh || sh.getLastRow() > 1) {
-    Logger.log('Tiendas ya tiene filas, no se toca.');
-    return;
+  const ss = SpreadsheetApp.openById(fileId || IDS.empresarial);
+
+  const shT = ss.getSheetByName('Tiendas');
+  if (shT && shT.getLastRow() <= 1) {
+    shT.getRange(2, 1, 2, 10).setValues([
+      ['gt', 'Nutrea GT', 'Nutrea', 'Guatemala', '', '', 'GTQ',
+       'America/Guatemala', '16:00', 'activa'],
+      ['ec', 'Nutrea EC', 'Nutrea', 'Ecuador',   '', '', 'USD',
+       'America/Guayaquil', '16:00', 'activa'],
+    ]);
+    Logger.log('Tiendas: Nutrea GT y Nutrea EC sembradas.');
   }
-  sh.getRange(2, 1, 2, 10).setValues([
-    ['gt', 'Nutrea GT', 'Nutrea', 'Guatemala', '', '', 'GTQ',
-     'America/Guatemala', '16:00', 'activa'],
-    ['ec', 'Nutrea EC', 'Nutrea', 'Ecuador',   '', '', 'USD',
-     'America/Guayaquil', '16:00', 'activa'],
-  ]);
-  Logger.log('Nutrea GT y Nutrea EC sembradas.');
+
+  // Ajusta estas filas a las fuentes que uses de verdad en cada tienda.
+  const shF = ss.getSheetByName('Fuentes');
+  if (shF && shF.getLastRow() <= 1) {
+    shF.getRange(2, 1, 4, 8).setValues([
+      ['gt', 'dropi',   'pedidos', '', 'si', '', '', ''],
+      ['gt', 'meta',    'pauta',   '', 'si', '', '', ''],
+      ['ec', 'shopify', 'pedidos', '', 'si', '', '', ''],
+      ['ec', 'meta',    'pauta',   '', 'si', '', '', ''],
+    ]);
+    Logger.log('Fuentes sembradas (ajústalas a tu operación real).');
+  }
 }
