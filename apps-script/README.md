@@ -114,12 +114,50 @@ E.164 (`telefono_norm`), que es la única que se usa para cruzar. Está en `10-e
 | Meta campañas | ✅ verificado | `CP-Nutrea-Ecuador-Campañas.csv` (35 col) |
 | Meta facturación | ✅ verificado | `Resumen_Facturación.csv` |
 | IRIS | ✅ verificado | `IRIS (1).csv` (2.782 llamadas) |
-| Shopify | ⚠️ por verificar | falta cotejar `orders_export.csv` |
-| TikTok | ⚠️ por verificar | falta un export real |
+| Shopify | ✅ verificado | `orders_export_1.csv` (79 col, 729 pedidos) |
+| TikTok | 🔎 auto-mapeo | sin export de muestra — lo resuelve el detector |
 
-Para cerrar las que faltan: pega un export en su pestaña `_Import_*` y corre
-`diagnosticar('shopify', 'ec')`. Devuelve qué columnas no encontró y cómo quedó la
-primera fila normalizada.
+## Fuentes sin export de muestra
+
+TikTok no tiene archivo de ejemplo, y el problema se va a repetir: cada plataforma
+nueva, y cada vez que Meta o Dropi renombren una columna sin avisar. Por eso hay un
+detector que **lee la forma de los datos, no el nombre de la columna**.
+
+Una columna de gasto se reconoce porque es numérica, positiva, con decimales y de
+magnitud media — no porque se llame *"Importe gastado"*. Y cuando tres columnas de
+enteros compiten, desempata una regla de coherencia: **impresiones > clics > resultados**
+por magnitud.
+
+```
+1. Pega el export en su pestaña _Import_*
+2. Corre  proponerMapeo('tiktok', 'gt')
+3. Escribe sus propuestas en la hoja `Mapeos`, con nivel de confianza
+4. Revisas y corriges lo que esté mal — sin tocar código
+5. Pon "humano" en definido_por y esa fila ya no se sobrescribe
+```
+
+Lo que quede en `Mapeos` **manda sobre los alias del código**. Así una corrección tuya
+sobrevive a cualquier cambio posterior del `.gs`, y agregar una plataforma es trabajo
+tuyo de dos minutos en vez de un cambio de código que tienes que esperar.
+
+Probado contra exports sintéticos:
+
+| Caso | Aciertos |
+|---|---|
+| TikTok, encabezados en inglés | 11/11 |
+| TikTok, encabezados en español (coma decimal, punto de miles) | 11/11 |
+| Encabezados abreviados (`Day`, `Amount`, `Impr.`, `Curr.`) | 9/11 |
+
+En el tercer caso las dos que no resolvió las reportó como **sin resolver** en vez de
+adivinarlas. Ese es el comportamiento correcto: un mapeo equivocado en silencio deja
+una columna vacía, y una columna `gasto` vacía hace que el CPA y el margen disparen
+alarmas falsas.
+
+Los alias de TikTok que hay en `20-importadores.gs` son **candidatos en los dos idiomas,
+no nombres confirmados**. No dependas de ellos: el camino real es `proponerMapeo()`.
+
+Para cotejar cualquier fuente ya mapeada: `diagnosticar('shopify', 'ec')` devuelve qué
+columnas no encontró y cómo quedó la primera fila normalizada.
 
 ### Effi no se parece a Mastershop
 

@@ -298,19 +298,35 @@ const FUENTES = {
     },
   },
 
+  // TikTok — SIN VERIFICAR. No hay export de muestra todavía.
+  //
+  // Los alias de abajo son candidatos en los dos idiomas en que TikTok Ads
+  // Manager exporta, NO nombres confirmados. No dependas de ellos.
+  //
+  // El camino real es el auto-mapeo: pega el export en _Import_Tiktok y corre
+  //   proponerMapeo('tiktok', 'gt')
+  // Detecta las columnas por la FORMA de los datos, no por el nombre, escribe
+  // sus propuestas en la hoja `Mapeos`, y lo que quede ahí manda sobre esto.
+  // Así TikTok entra sin que nadie tenga que ver el archivo primero.
   tiktok: {
     tipo: 'pauta',
-    verificado: false, // POR VERIFICAR
+    verificado: false,
+    automapeo: true, // usa el detector si `Mapeos` no tiene nada
     moneda_default: 'USD',
     alias: {
-      fecha:        ['date', 'fecha', 'dia'],
-      campana:      ['campaign name', 'nombre de campaña', 'campaña'],
-      conjunto:     ['ad group name', 'grupo de anuncios', 'conjunto'],
-      gasto:        ['cost', 'spend', 'gasto', 'costo'],
+      fecha:        ['date', 'fecha', 'dia', 'time', 'día'],
+      campana:      ['campaign name', 'nombre de la campaña', 'nombre de campaña', 'campaña'],
+      conjunto:     ['ad group name', 'nombre del grupo de anuncios', 'grupo de anuncios'],
+      anuncio:      ['ad name', 'nombre del anuncio'],
+      gasto:        ['cost', 'spend', 'total cost', 'gasto', 'costo', 'costo total'],
       impresiones:  ['impressions', 'impresiones'],
-      clics:        ['clicks', 'clics'],
-      resultados:   ['conversions', 'results', 'conversiones'],
-      cpm:          ['cpm'],
+      clics:        ['clicks', 'clics', 'clicks (destination)'],
+      resultados:   ['conversions', 'conversiones', 'results', 'resultados'],
+      cpm:          ['cpm', 'costo por mil'],
+      cpc:          ['cpc', 'costo por clic'],
+      cpa:          ['cost per conversion', 'costo por conversión', 'cpa'],
+      ctr:          ['ctr', 'tasa de clics'],
+      moneda_gasto: ['currency', 'moneda', 'divisa'],
     },
   },
 };
@@ -413,16 +429,20 @@ function leerCrudo(ss, fuenteId, tienda) {
     });
   }
 
-  // columna normalizada -> índice en el export
+  // ── Resolver el mapeo de columnas ──
+  // Prioridad: lo que confirmaste en la hoja `Mapeos` gana sobre los alias
+  // del código. Así una corrección tuya sobrevive a cualquier cambio del .gs
+  const alias = Object.assign({}, cfg.alias || {}, aliasDesdeMapeos(ss, fuenteId) || {});
+
   const idx = {};
-  Object.keys(cfg.alias).forEach(function (campo) {
-    const opciones = cfg.alias[campo].map(norm);
+  Object.keys(alias).forEach(function (campo) {
+    const opciones = alias[campo].map(norm);
     for (let i = 0; i < enc.length; i++) {
       if (opciones.indexOf(enc[i]) !== -1) { idx[campo] = i; return; }
     }
   });
 
-  const sinMapear = Object.keys(cfg.alias).filter(function (c) {
+  const sinMapear = Object.keys(alias).filter(function (c) {
     return idx[c] === undefined;
   });
 
