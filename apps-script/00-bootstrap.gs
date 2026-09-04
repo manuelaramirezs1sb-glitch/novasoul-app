@@ -245,6 +245,14 @@ const PARAMETROS_DEFAULT = [
   ['*', 'pedido_sin_movimiento_dias', 3, '', ''],
   ['*', 'novedad_sin_resolver_horas',24, '', ''],
   ['*', 'cliente_sin_pagar_dias',    15, '', ''],
+  // Moneda en la que el dueño ve su plata. Puede ser distinta a la de
+  // todas sus tiendas: se opera en USD y GTQ, pero se vive en COP.
+  ['*', 'moneda_reporte',         'COP', '', ''],
+  // Movimiento de tasa a 30 días que dispara aviso (%)
+  ['*', 'tasa_alerta_pct_30d',        5, '', ''],
+  // Opcional: la tasa con la que montaste el negocio, para medir cuánto
+  // se corrió desde entonces. Ej: tasa_referencia_USD = 4000
+  ['*', 'tasa_referencia_USD',       '', '', ''],
 ];
 
 // ─── MOTOR ───────────────────────────────────────────────────
