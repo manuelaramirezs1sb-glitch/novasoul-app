@@ -461,7 +461,9 @@ input.li:focus{border-color:var(--acc-d);}
 [data-rol="dueno"]   .ro-gestora,
 [data-rol="admin"]   .ro-gestora,
 [data-rol="dueno"]   .v-gestora,
-[data-rol="admin"]   .v-gestora {display:none!important;}
+[data-rol="admin"]   .v-gestora,
+[data-rol="dueno"]   .v-soloadmin,
+[data-rol="gestora"] .v-soloadmin {display:none!important;}
 .view.v-gestora{display:none;}
 [data-rol="gestora"] .view.v-gestora.on{display:flex;}
 [data-rol="gestora"] #v-hoy,[data-rol="gestora"] #v-pedidos,
@@ -470,7 +472,8 @@ input.li:focus{border-color:var(--acc-d);}
 [data-rol="gestora"] #v-pauta,[data-rol="gestora"] #v-inventario,
 [data-rol="gestora"] #v-dinero,[data-rol="gestora"] #v-calc,
 [data-rol="gestora"] #v-permisos,[data-rol="gestora"] #v-config,
-[data-rol="gestora"] #v-productos{display:none!important;}
+[data-rol="gestora"] #v-productos,
+[data-rol="gestora"] #v-cierre{display:none!important;}
 [data-rol="admin"] #v-pauta,[data-rol="admin"] #v-inventario,
 [data-rol="admin"] #v-dinero,[data-rol="admin"] #v-calc,
 [data-rol="admin"] #v-permisos,[data-rol="admin"] #v-config{display:none!important;}
@@ -552,6 +555,67 @@ input.li:focus{border-color:var(--acc-d);}
 .som-kc .kk{font:600 10px/1 'DM Sans';letter-spacing:.8px;color:var(--t-mut3);margin-bottom:5px;}
 .som-kc .vv{font:700 18px/1 'Fraunces',serif;color:var(--t-ink);}
 .som-badge{display:inline-block;font:600 10px/1 'DM Sans';padding:4px 9px;border-radius:20px;}
+
+/* ─── CIERRE DE MES ──────────────────────────────────────── */
+.cm-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.cm-sel{border:1px solid var(--s-line3);background:var(--s-card2);border-radius:10px;
+  padding:9px 12px;font:600 12px/1 'DM Sans';color:var(--t-ink);outline:none;}
+.cm-btn{background:var(--acc-d);color:#f1f4e8;font:600 12px/1 'DM Sans';
+  padding:10px 16px;border-radius:10px;cursor:pointer;border:none;}
+.cm-btn:hover{opacity:.9;}
+.cm-doc{background:var(--s-card);border:1px solid var(--s-line);border-radius:16px;
+  padding:30px 34px;display:flex;flex-direction:column;gap:24px;}
+.cm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+  border-bottom:2px solid var(--s-line4);padding-bottom:16px;}
+.cm-h1{font:600 24px/1.15 'Fraunces',serif;color:var(--t-ink);}
+.cm-meta{font:500 11px/1.6 'DM Sans';color:var(--t-mut2);text-align:right;}
+.cm-sec{display:flex;flex-direction:column;gap:11px;}
+.cm-st{font:600 10px/1 'DM Sans';letter-spacing:1.3px;color:var(--acc-d);
+  padding-bottom:7px;border-bottom:1px solid var(--s-line2);}
+.cm-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+.cm-k{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:11px;padding:12px 14px;}
+.cm-k-l{font:600 9px/1 'DM Sans';letter-spacing:.9px;color:var(--t-mut2);}
+.cm-k-v{font:700 20px/1.15 'Fraunces',serif;color:var(--t-ink);
+  font-variant-numeric:tabular-nums;margin-top:5px;}
+.cm-k-d{font:600 10px/1 'DM Sans';margin-top:3px;}
+.cm-up{color:#4a7c59;} .cm-dn{color:#a8563a;} .cm-flat{color:var(--t-mut3);}
+.cm-tbl{width:100%;border-collapse:collapse;font:500 11.5px/1.5 'DM Sans';}
+.cm-tbl th{text-align:left;font:600 9px/1 'DM Sans';letter-spacing:.9px;
+  color:var(--t-mut2);padding:7px 9px;border-bottom:1px solid var(--s-line3);}
+.cm-tbl td{padding:8px 9px;border-bottom:1px solid var(--s-line2);color:var(--t-ink2);}
+.cm-tbl td.n{text-align:right;font-variant-numeric:tabular-nums;}
+.cm-item{display:flex;gap:11px;align-items:flex-start;padding:11px 13px;border-radius:11px;}
+.cm-item.mal{background:#f6e3db;border-left:3px solid #a8563a;}
+.cm-item.ojo{background:#f6ecd0;border-left:3px solid #8a6a13;}
+.cm-item.ok{background:#e6efe8;border-left:3px solid #4a7c59;}
+.cm-item-t{font:600 12.5px/1.35 'DM Sans';color:#2b2b26;}
+.cm-item-d{font:500 11.5px/1.55 'DM Sans';color:#4a4a42;margin-top:3px;}
+.cm-item-a{font:600 11px/1.4 'DM Sans';color:#2b2b26;margin-top:6px;}
+.cm-fx{background:var(--s-soft);border-radius:12px;padding:15px 17px;
+  display:flex;flex-direction:column;gap:9px;}
+.cm-fx-r{display:flex;justify-content:space-between;gap:12px;
+  font:500 12px/1.5 'DM Sans';color:var(--t-ink2);}
+.cm-fx-r b{font-variant-numeric:tabular-nums;}
+.cm-fx-lee{font:500 11.5px/1.6 'DM Sans';color:var(--t-ink3);
+  border-top:1px solid var(--s-line3);padding-top:9px;}
+.cm-vacio{font:500 12px/1.6 'DM Sans';color:var(--t-mut3);
+  background:var(--s-bg);border:1px dashed var(--s-line4);border-radius:11px;padding:16px 18px;}
+
+/* Al imprimir queda solo el documento, en hoja carta */
+@media print{
+  @page{size:letter;margin:14mm;}
+  body{background:#fff;height:auto;overflow:visible;}
+  html{height:auto;overflow:visible;}
+  #app{display:block!important;height:auto;overflow:visible;}
+  .sidebar,.topbar,.soblay,.chat-fab,.chat-panel,.cm-bar,.mobbtn{display:none!important;}
+  .main,.content{overflow:visible!important;height:auto!important;padding:0!important;}
+  .view{display:none!important;}
+  .view#v-cierre{display:block!important;}
+  .cm-doc{border:none;border-radius:0;padding:0;gap:18px;}
+  .cm-sec{break-inside:avoid;}
+  .cm-item,.cm-k,.cm-fx{break-inside:avoid;}
+  .cm-tbl{font-size:10px;}
+}
 
 /* ── Nova brand harmony ───────────────────────────────── */
 .sidebar{background:#0b1824!important;border-right:1px solid #192d42!important;}
@@ -664,11 +728,13 @@ input.li:focus{border-color:var(--acc-d);}
         <div class="ni" data-v="dinero" onclick="go('dinero',this)">Dinero</div>
         <div class="ni" data-v="pauta" onclick="go('pauta',this)">Pauta y gastos</div>
         <div class="ni" data-v="calc" onclick="go('calc',this)">Calculadoras</div>
+        <div class="ni" data-v="cierre" onclick="go('cierre',this)">Cierre de mes</div>
       </div>
       <div class="navg">
         <div class="navg-lbl">EQUIPO</div>
         <div class="ni ro-admin" data-v="gestoras" onclick="go('gestoras',this)">Gestoras</div>
         <div class="ni ro-admin" data-v="auditoria" onclick="go('auditoria',this)">Auditoría</div>
+        <div class="ni v-soloadmin" data-v="cierre" onclick="go('cierre',this)">Reporte del mes</div>
         <div class="ni ro-dueno" data-v="permisos" onclick="go('permisos',this)">Permisos</div>
       </div>
       <div class="navg ro-dueno">
@@ -1044,6 +1110,18 @@ input.li:focus{border-color:var(--acc-d);}
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- ════ CIERRE DE MES ════ -->
+      <div class="view" id="v-cierre">
+        <div class="cm-bar">
+          <select class="cm-sel" id="cm-mes" onchange="buildCierre()"></select>
+          <select class="cm-sel" id="cm-tienda" onchange="buildCierre()"></select>
+          <button class="cm-btn" onclick="window.print()">Descargar PDF</button>
+          <span style="font:500 11px/1.5 'DM Sans';color:var(--t-mut3);">
+            Se abre el diálogo de impresión · elige "Guardar como PDF"</span>
+        </div>
+        <div class="cm-doc" id="cm-doc"></div>
       </div>
 
       <!-- ════ PERMISOS ════ -->
@@ -2466,7 +2544,7 @@ function calcPre(){
 const TITLES = {
   hoy:'Hoy',pedidos:'Pedidos',novedades:'Novedades',oficina:'Seguimiento a oficina',
   gestoras:'Gestoras',auditoria:'Auditoría',pauta:'Pauta y gastos',inventario:'Inventario',
-  dinero:'Dinero',calc:'Calculadoras',permisos:'Permisos',productos:'Productos',config:'Configuración',
+  dinero:'Dinero',calc:'Calculadoras',permisos:'Permisos',cierre:'Cierre de mes',productos:'Productos',config:'Configuración',
   'g-hoy':'Mis pedidos de hoy','g-pedidos':'Mis pedidos','g-novedades':'Mis novedades',
 };
 function go(view, el) {
@@ -2483,6 +2561,7 @@ function go(view, el) {
   if (el) el.classList.add('on');
   else { const m=document.querySelector('[data-v="'+view+'"]'); if(m) m.classList.add('on'); }
   document.getElementById('ptitle').textContent = TITLES[view]||view;
+  if (view === 'cierre') buildCierre();
   closeSb();
 }
 
@@ -2556,6 +2635,281 @@ function logout(){
   document.getElementById('chat-fab').style.display='none';
   document.getElementById('chat-panel').classList.remove('on');
   step(1);
+}
+
+// ─── CIERRE DE MES ────────────────────────────────────────
+/**
+ * El cierre no es un dashboard: es un documento que se lee una vez al mes
+ * y se archiva. Por eso tres cosas que un dashboard no hace:
+ *   · compara siempre contra el mes anterior — un número solo no dice nada
+ *   · detecta las falencias con reglas, no las deja a interpretación
+ *   · cada falencia sale con la acción concreta que la resuelve
+ *
+ * Mientras no esté conectado el Sheet, corre sobre los datos de ejemplo
+ * y lo dice arriba. La estructura y las reglas son las definitivas.
+ */
+const CM_META = { entrega:65, roas:2.0, devol:10, margen:15 };
+
+function mesesDisponibles(n){
+  const out=[], d=new Date();
+  for(let i=0;i<n;i++){
+    const x=new Date(d.getFullYear(), d.getMonth()-i, 1);
+    out.push({v:x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'),
+      t:['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
+         'septiembre','octubre','noviembre','diciembre'][x.getMonth()]+' '+x.getFullYear()});
+  }
+  return out;
+}
+
+/** Datos del mes. Hoy sintéticos y deterministas; mañana los trae la API. */
+function cierreDatos(mes, tienda){
+  let h=2166136261; const k=mes+tienda;
+  for(let i=0;i<k.length;i++){ h=Math.imul(h^k.charCodeAt(i),16777619); }
+  // Cada campo se mezcla aparte; desplazar un mismo hash daba valores
+  // correlacionados y todos los meses salían casi idénticos.
+  const r=(min,max,off)=>{
+    let x=Math.imul(h^Math.imul(off+1,2654435761),2246822519);
+    x=(x^(x>>>15))>>>0;
+    return min+(x/4294967296)*(max-min);
+  };
+  const f=STORES[tienda]||STORES.ec;
+  const ped=Math.round(r(280,520,1)), desp=Math.round(ped*r(.86,.97,2));
+  const ent=Math.round(desp*r(.58,.83,3)), dev=Math.round((desp-ent)*r(.55,.9,4));
+  const ticket=r(38,62,5)*f.f, ventas=Math.round(ent*ticket);
+  const gasto=Math.round(ventas*r(.18,.42,6)), costoProd=Math.round(ventas*r(.32,.44,7));
+  const envio=Math.round(desp*r(3.5,6.5,8)*f.f), fijos=Math.round(r(1200,2600,9)*f.f);
+  return {
+    mes, tienda, sym:f.sym, nombre:f.name,
+    pedidos:ped, despachados:desp, entregados:ent, devueltos:dev,
+    ventas, gasto, costoProd, envio, fijos,
+    margen: ventas-gasto-costoProd-envio-fijos,
+    efectividad: desp? ent/desp*100 : 0,
+    tasaDevol: desp? dev/desp*100 : 0,
+    cpa: ent? gasto/ent : 0,
+    roas: gasto? ventas/gasto : 0,
+    ticket,
+    novedades: Math.round((desp-ent)*r(.8,1.25,10)),
+    grupos: [
+      {g:'No contesta',        n:Math.round(r(14,44,11))},
+      {g:'Dirección',          n:Math.round(r(5,22,12))},
+      {g:'Rechaza el pedido',  n:Math.round(r(4,17,13))},
+      {g:'No tiene el dinero', n:Math.round(r(2,11,14))},
+      {g:'Ausente',            n:Math.round(r(1,8,15))},
+    ].sort((a,b)=>b.n-a.n),
+    transp: [
+      {t:'Servientrega', ent:r(62,88,16), n:Math.round(r(70,180,17))},
+      {t:'Laar Courier', ent:r(58,86,18), n:Math.round(r(60,160,19))},
+      {t:'Gintracom',    ent:r(55,84,20), n:Math.round(r(40,120,21))},
+    ].sort((a,b)=>b.n-a.n),
+    campanas: [
+      {c:'Testeo · Evil Goods',  g:Math.round(r(200,700,22))*f.f, v:0, roas:r(.7,3.4,23)},
+      {c:'Retargeting · Q3',     g:Math.round(r(150,560,24))*f.f, v:0, roas:r(1.1,4.6,25)},
+      {c:'Prospección · Amplio', g:Math.round(r(180,640,26))*f.f, v:0, roas:r(.5,2.9,27)},
+    ].map(x=>({...x, v:Math.round(x.g*x.roas)})),
+    sinMover: Math.round(r(3,26,28)),
+    sinNota:  Math.round(r(0,13,29)),
+  };
+}
+
+function mesAnterior(mes){
+  const [a,m]=mes.split('-').map(Number);
+  const d=new Date(a, m-2, 1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+
+/**
+ * Las falencias salen de reglas, no de criterio. Cada una lleva la acción
+ * que la cierra: un aviso sin acción no sirve de nada.
+ */
+function cierreFalencias(d, p){
+  const F=[], delta=(a,b)=> b? (a-b)/b*100 : 0;
+
+  if(d.efectividad < CM_META.entrega) F.push({n:'mal',
+    t:'Efectividad de entrega en '+d.efectividad.toFixed(1)+'%, bajo la meta de '+CM_META.entrega+'%',
+    d:'De '+d.despachados+' despachados llegaron '+d.entregados+'. Cada punto por debajo '+
+      'de la meta son '+d.sym+Math.round(d.despachados*.01*d.ticket).toLocaleString('es')+' que no entran.',
+    a:'Mira la tabla de transportadoras: si una está muy por debajo de las otras, el problema es de ella, no del equipo.'});
+
+  if(d.tasaDevol > CM_META.devol) F.push({n:'mal',
+    t:'Devoluciones en '+d.tasaDevol.toFixed(1)+'%, sobre el 10% aceptable',
+    d:d.devueltos+' pedidos devueltos. Cada devolución cuesta el flete de ida y el de vuelta, '+
+      'y el producto vuelve a bodega en estado incierto.',
+    a:'La causa principal fue "'+d.grupos[0].g+'" con '+d.grupos[0].n+' casos. Ataca esa primero.'});
+
+  const top=d.grupos[0], tot=d.grupos.reduce((x,y)=>x+y.n,0);
+  if(tot && top.n/tot > .35) F.push({n:'ojo',
+    t:'"'+top.g+'" concentra el '+(top.n/tot*100).toFixed(0)+'% de las novedades',
+    d:top.n+' de '+tot+' novedades del mes son del mismo motivo. Cuando una causa pesa '+
+      'más de un tercio, ya no son casos sueltos: es un problema de proceso.',
+    a: top.g==='No contesta'
+      ? 'Confirma por WhatsApp antes de despachar. La mayoría de "no contesta" son pedidos que nunca se confirmaron.'
+      : top.g==='Dirección'
+      ? 'Valida la dirección en el formulario: exige barrio y un punto de referencia.'
+      : 'Revisa el guion de confirmación con las gestoras.'});
+
+  if(d.roas < CM_META.roas) F.push({n:'mal',
+    t:'ROAS en '+d.roas.toFixed(2)+'x, bajo el mínimo de '+CM_META.roas.toFixed(1)+'x',
+    d:'Gastaste '+d.sym+d.gasto.toLocaleString('es')+' para vender '+d.sym+d.ventas.toLocaleString('es')+
+      '. Con ese retorno, cada peso de pauta deja muy poco después de producto y envío.',
+    a:'Frena la campaña de menor ROAS y mueve ese presupuesto a la de mayor.'});
+
+  const peor=[...d.campanas].sort((a,b)=>a.roas-b.roas)[0];
+  const mejor=[...d.campanas].sort((a,b)=>b.roas-a.roas)[0];
+  if(peor.roas < 1) F.push({n:'mal',
+    t:'"'+peor.c+'" está por debajo de 1x: pierde plata',
+    d:'Gastó '+d.sym+peor.g.toLocaleString('es')+' y devolvió '+d.sym+peor.v.toLocaleString('es')+
+      '. Por debajo de 1x no es margen bajo, es pérdida directa.',
+    a:'Apágala. Pasa su presupuesto a "'+mejor.c+'", que va en '+mejor.roas.toFixed(2)+'x.'});
+
+  const mgPct = d.ventas? d.margen/d.ventas*100 : 0;
+  if(mgPct < CM_META.margen) F.push({n: mgPct<0?'mal':'ojo',
+    t: mgPct<0 ? 'Margen negativo: el mes cerró en pérdida'
+              : 'Margen en '+mgPct.toFixed(1)+'%, bajo el 15% sano',
+    d:'De '+d.sym+d.ventas.toLocaleString('es')+' quedaron '+d.sym+d.margen.toLocaleString('es')+
+      ' después de pauta, producto, envío y fijos.',
+    a: mgPct<0 ? 'Sube precio o baja CPA. Con margen negativo, vender más profundiza el hueco.'
+              : 'El CPA de '+d.sym+Math.round(d.cpa).toLocaleString('es')+' es la palanca más rápida.'});
+
+  if(d.sinMover > 15) F.push({n:'ojo',
+    t:d.sinMover+' pedidos pasaron más de 3 días sin movimiento',
+    d:'Un pedido quieto tres días casi siempre termina en devolución. Son '+
+      d.sym+Math.round(d.sinMover*d.ticket).toLocaleString('es')+' en riesgo.',
+    a:'Revisa la asignación: suele ser una gestora con más carga de la que puede mover.'});
+
+  if(d.sinNota > 8) F.push({n:'ojo',
+    t:d.sinNota+' casos se cerraron sin dejar nota',
+    d:'Sin nota no hay forma de saber qué se hizo ni de auditar después. '+
+      'Y el patrón de novedades se calcula mal.',
+    a:'Bloquea el cierre de turno cuando queden casos sin nota.'});
+
+  const dv=delta(d.ventas,p.ventas);
+  if(dv > 12) F.push({n:'ok',
+    t:'Ventas subieron '+dv.toFixed(1)+'% contra el mes pasado',
+    d:'Pasaste de '+d.sym+p.ventas.toLocaleString('es')+' a '+d.sym+d.ventas.toLocaleString('es')+'.',
+    a:'Antes de escalar pauta, revisa que la efectividad de entrega aguante el volumen.'});
+
+  if(d.efectividad >= CM_META.entrega && d.tasaDevol <= CM_META.devol) F.push({n:'ok',
+    t:'La operación logística cumplió',
+    d:'Entrega en '+d.efectividad.toFixed(1)+'% y devoluciones en '+d.tasaDevol.toFixed(1)+'%. '+
+      'Ambas dentro de meta.',
+    a:'Es el momento de escalar: la operación aguanta más volumen.'});
+
+  return F.sort((a,b)=>({mal:0,ojo:1,ok:2})[a.n]-({mal:0,ojo:1,ok:2})[b.n]);
+}
+
+function buildCierre(){
+  const selM=document.getElementById('cm-mes'), selT=document.getElementById('cm-tienda');
+  if(!selM.options.length){
+    selM.innerHTML=mesesDisponibles(12).map(m=>'<option value="'+m.v+'">'+m.t+'</option>').join('');
+    selT.innerHTML=Object.keys(STORES).map(k=>
+      '<option value="'+k+'"'+(k===ST?' selected':'')+'>'+STORES[k].name+'</option>').join('');
+  }
+  const mes=selM.value, tienda=selT.value;
+  const d=cierreDatos(mes,tienda), p=cierreDatos(mesAnterior(mes),tienda);
+  const F=cierreFalencias(d,p);
+  const S=d.sym, esDueno = ROL==='dueno';
+  const nf=n=>Math.round(n).toLocaleString('es');
+  const dl=(a,b,inv)=>{ const v=b?(a-b)/b*100:0;
+    const cls=Math.abs(v)<1?'cm-flat':((v>0)!==!!inv?'cm-up':'cm-dn');
+    return '<div class="cm-k-d '+cls+'">'+(v>0?'▲':v<0?'▼':'')+' '+Math.abs(v).toFixed(1)+'% vs mes anterior</div>'; };
+  const kpi=(l,v,d2)=>'<div class="cm-k"><div class="cm-k-l">'+l+'</div><div class="cm-k-v">'+v+'</div>'+(d2||'')+'</div>';
+  const mesTxt=mesesDisponibles(12).find(m=>m.v===mes);
+
+  let h='<div class="cm-head"><div>'+
+    '<div class="cm-h1">Cierre de '+(mesTxt?mesTxt.t:mes)+'</div>'+
+    '<div style="font:500 12px/1.5 \'DM Sans\';color:var(--t-mut);margin-top:5px;">'+
+      d.nombre+' · valores en '+(tienda==='gt'?'GTQ':'USD')+'</div></div>'+
+    '<div class="cm-meta">Generado '+new Date().toLocaleDateString('es')+'<br>'+
+      (nombreDe(localStorage.getItem('ne_email')||'')||'Manuela')+' · '+
+      (esDueno?'Dueña':'Admin')+'</div></div>';
+
+  h+='<div class="cm-vacio">Datos de ejemplo. Cuando se conecte la hoja de Google, '+
+     'este mismo documento se llena con tu operación real.</div>';
+
+  // Resumen
+  h+='<div class="cm-sec"><div class="cm-st">RESUMEN DEL MES</div><div class="cm-kpis">'+
+    kpi('VENTAS', S+nf(d.ventas), dl(d.ventas,p.ventas))+
+    kpi('PEDIDOS', nf(d.pedidos), dl(d.pedidos,p.pedidos))+
+    kpi('ENTREGADOS', nf(d.entregados), dl(d.entregados,p.entregados))+
+    kpi('EFECTIVIDAD', d.efectividad.toFixed(1)+'%', dl(d.efectividad,p.efectividad))+
+    kpi('TICKET PROMEDIO', S+nf(d.ticket), dl(d.ticket,p.ticket))+
+    (esDueno? kpi('MARGEN', S+nf(d.margen), dl(d.margen,p.margen)) : '')+
+    '</div></div>';
+
+  // Embudo
+  const pct=n=>d.pedidos? (n/d.pedidos*100).toFixed(1)+'%' : '0%';
+  h+='<div class="cm-sec"><div class="cm-st">DE PEDIDO A ENTREGA</div>'+
+    '<table class="cm-tbl"><tr><th>Etapa</th><th class="n">Pedidos</th><th class="n">% del total</th><th class="n">Mes anterior</th></tr>'+
+    [['Entraron',d.pedidos,p.pedidos],['Despachados',d.despachados,p.despachados],
+     ['Entregados',d.entregados,p.entregados],['Devueltos',d.devueltos,p.devueltos]]
+    .map(r=>'<tr><td>'+r[0]+'</td><td class="n">'+nf(r[1])+'</td><td class="n">'+pct(r[1])+
+      '</td><td class="n">'+nf(r[2])+'</td></tr>').join('')+'</table></div>';
+
+  // Dinero — solo dueño, como en el resto del panel
+  if(esDueno){
+    h+='<div class="cm-sec"><div class="cm-st">DINERO</div><table class="cm-tbl">'+
+      '<tr><th>Concepto</th><th class="n">Monto</th><th class="n">% de ventas</th></tr>'+
+      [['Ventas',d.ventas],['Pauta',-d.gasto],['Costo de producto',-d.costoProd],
+       ['Envíos',-d.envio],['Costos fijos',-d.fijos]]
+      .map(r=>'<tr><td>'+r[0]+'</td><td class="n">'+(r[1]<0?'−':'')+S+nf(Math.abs(r[1]))+
+        '</td><td class="n">'+(d.ventas?Math.abs(r[1]/d.ventas*100).toFixed(1):'0')+'%</td></tr>').join('')+
+      '<tr style="font-weight:700;"><td>Margen</td><td class="n">'+S+nf(d.margen)+
+      '</td><td class="n">'+(d.ventas?(d.margen/d.ventas*100).toFixed(1):'0')+'%</td></tr></table>'+
+      '<div class="cm-kpis" style="margin-top:4px;">'+
+        kpi('CPA', S+nf(d.cpa), dl(d.cpa,p.cpa,true))+
+        kpi('ROAS', d.roas.toFixed(2)+'x', dl(d.roas,p.roas))+
+        kpi('DEVOLUCIONES', d.tasaDevol.toFixed(1)+'%', dl(d.tasaDevol,p.tasaDevol,true))+
+      '</div></div>';
+
+    // Efecto cambiario: solo si la tienda opera en otra moneda
+    if(tienda!=='gt'){
+      const t0=4000, t1=3760, R0=p.ventas, R1=d.ventas;
+      const total=R1*t1-R0*t0, op=(R1-R0)*t0, fx=R1*(t1-t0);
+      h+='<div class="cm-sec"><div class="cm-st">EFECTO CAMBIARIO</div><div class="cm-fx">'+
+        '<div class="cm-fx-r"><span>Ventas en USD</span><b>'+nf(R0)+' → '+nf(R1)+'</b></div>'+
+        '<div class="cm-fx-r"><span>Tasa USD→COP</span><b>'+t0+' → '+t1+'</b></div>'+
+        '<div class="cm-fx-r"><span>Variación total en COP</span><b>$ '+nf(total)+'</b></div>'+
+        '<div class="cm-fx-r"><span>· por operación</span><b>$ '+nf(op)+'</b></div>'+
+        '<div class="cm-fx-r"><span>· por tipo de cambio</span><b>$ '+nf(fx)+'</b></div>'+
+        '<div class="cm-fx-lee">'+(Math.abs(fx)>Math.abs(op)*2
+          ? 'La mayor parte del movimiento es cambiario, no operativo. Antes de tocar pauta o precios, ten presente que la tasa explica casi todo.'
+          : 'El movimiento es principalmente operativo. La tasa influyó poco este mes.')+
+        '</div></div></div>';
+    }
+  }
+
+  // Novedades
+  const totN=d.grupos.reduce((a,b)=>a+b.n,0);
+  h+='<div class="cm-sec"><div class="cm-st">NOVEDADES POR CAUSA</div>'+
+    '<table class="cm-tbl"><tr><th>Causa</th><th class="n">Casos</th><th class="n">% del total</th></tr>'+
+    d.grupos.map(g=>'<tr><td>'+g.g+'</td><td class="n">'+g.n+'</td><td class="n">'+
+      (totN?(g.n/totN*100).toFixed(1):'0')+'%</td></tr>').join('')+'</table></div>';
+
+  // Transportadoras
+  h+='<div class="cm-sec"><div class="cm-st">TRANSPORTADORAS</div>'+
+    '<table class="cm-tbl"><tr><th>Transportadora</th><th class="n">Guías</th><th class="n">Efectividad</th></tr>'+
+    d.transp.map(t=>'<tr><td>'+t.t+'</td><td class="n">'+t.n+'</td><td class="n">'+
+      t.ent.toFixed(1)+'%</td></tr>').join('')+'</table></div>';
+
+  // Pauta — solo dueño
+  if(esDueno){
+    h+='<div class="cm-sec"><div class="cm-st">PAUTA POR CAMPAÑA</div>'+
+      '<table class="cm-tbl"><tr><th>Campaña</th><th class="n">Gasto</th><th class="n">Ventas</th><th class="n">ROAS</th></tr>'+
+      [...d.campanas].sort((a,b)=>b.roas-a.roas).map(c=>'<tr><td>'+c.c+'</td><td class="n">'+
+        S+nf(c.g)+'</td><td class="n">'+S+nf(c.v)+'</td><td class="n">'+c.roas.toFixed(2)+'x</td></tr>').join('')+
+      '</table></div>';
+  }
+
+  // Falencias y optimizaciones
+  const vis = esDueno? F : F.filter(x=>!/ROAS|argen|pauta|campaña|Pauta/i.test(x.t));
+  h+='<div class="cm-sec"><div class="cm-st">FALENCIAS Y OPTIMIZACIONES</div>'+
+    (vis.length? vis.map(f=>'<div class="cm-item '+f.n+'"><div>'+
+      '<div class="cm-item-t">'+f.t+'</div><div class="cm-item-d">'+f.d+'</div>'+
+      '<div class="cm-item-a">→ '+f.a+'</div></div></div>').join('')
+      : '<div class="cm-vacio">Sin falencias detectadas este mes.</div>')+
+    '</div>';
+
+  document.getElementById('cm-doc').innerHTML=h;
 }
 
 // ─── SIDEBAR MOBILE ───────────────────────────────────
