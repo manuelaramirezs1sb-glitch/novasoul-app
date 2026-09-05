@@ -38,6 +38,8 @@
 
 
 
+
+
 /* ═══════════════════════════════════════════════════════════════
    1 · INSTALACIÓN Y BOOTSTRAP
    ═══════════════════════════════════════════════════════════════ */
@@ -3011,13 +3013,18 @@ function efectoCambiarioSS(ss, tienda, mesA, mesB) {
  * Simula un login completo sin salir del editor. Úsalo antes de
  * publicar para confirmar que Equipo está bien cargado.
  */
-function probarApi() {
-  const email = Session.getEffectiveUser().getEmail();
+function probarApi(email) {
+  // Sin argumento usa la cuenta que corre el script, pero eso obliga a que
+  // ese correo esté en Equipo. Pasando uno se prueba cualquier persona:
+  //   probarApi('gestora@tutienda.com')
+  email = String(email || Session.getEffectiveUser().getEmail()).toLowerCase().trim();
   const p = buscarPersona(email);
   if (!p) {
-    const msg = 'Tu correo (' + email + ') no está en la hoja Equipo de ningún ' +
-      'cliente.\n\nAgrégate en Nova_Empresarial_Nutrea → Equipo con:\n' +
-      '  id, nombre, correo, rol (dueno/admin/gestora), tienda (* para todas), estado (activo)';
+    const msg = 'El correo ' + email + ' no está en la hoja Equipo de ningún cliente.\n\n' +
+      'Agrégalo en Nova_Empresarial_Nutrea → Equipo:\n' +
+      '  id · nombre · correo · rol (dueno/admin/gestora) · tienda (* = todas) · estado (activo)\n\n' +
+      'O prueba con un correo que ya esté en la lista:\n' +
+      '  probarApi(\'otro@correo.com\')';
     Logger.log(msg);
     return msg;
   }
