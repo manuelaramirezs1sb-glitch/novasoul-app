@@ -198,11 +198,21 @@ function buscarPersona(email) {
       if (String(f[c('correo')] || '').toLowerCase().trim() !== email) continue;
       if (norm(f[c('estado')]) === 'inactivo') return null;
 
+      const rol = rolCanonico(f[c('rol')]);
+      if (!rol) {
+        throw new Error(
+          'El rol "' + f[c('rol')] + '" de ' + f[c('nombre')] + ' no se reconoce.\n\n' +
+          'En la hoja Equipo, la columna rol tiene que decir una de estas: ' +
+          'dueno · admin · gestora\n\n' +
+          'Se aceptan variantes (dueña, administradora, asesora...), pero no ' +
+          'cualquier texto: un rol que no se entiende dejaría a la persona con ' +
+          'menos permisos de los que le tocan, sin avisar.');
+      }
       const tiendaCol = String(f[c('tienda')] || '').trim();
       return {
         id: f[c('id')],
         nombre: f[c('nombre')],
-        rol: norm(f[c('rol')]) || 'gestora',
+        rol: rol,
         clienteId: filas[i][0],
         sheetId: sheetId,
         // '*' o vacío significa todas las tiendas del cliente
@@ -224,6 +234,31 @@ function tiendasDe(ss) {
   return datos.slice(1)
     .filter(function (f) { return f[cId] && norm(f[cEst]) !== 'inactiva'; })
     .map(function (f) { return String(f[cId]).trim(); });
+}
+
+
+/**
+ * Traduce lo que esté escrito en la columna `rol` al rol canónico.
+ *
+ * Sin esto, escribir "Administradora" en vez de "admin" hacía que la
+ * persona cayera en gestora por defecto: veía menos de lo que le
+ * corresponde y nadie se enteraba. Un permiso mal asignado en silencio
+ * es peor que un error visible, así que lo que no se reconoce falla.
+ */
+const ROLES_VALIDOS = {
+  dueno:   ['dueno','duena','owner','propietario','propietaria','ceo','jefa','jefe'],
+  admin:   ['admin','administrador','administradora','administrator','gerente','supervisor','supervisora'],
+  gestora: ['gestora','gestor','agente','asesor','asesora','vendedor','vendedora'],
+};
+
+function rolCanonico(raw) {
+  const k = norm(raw);
+  if (!k) return null;
+  const roles = Object.keys(ROLES_VALIDOS);
+  for (let i = 0; i < roles.length; i++) {
+    if (ROLES_VALIDOS[roles[i]].indexOf(k) !== -1) return roles[i];
+  }
+  return null;
 }
 
 // ─── PERMISOS ────────────────────────────────────────────────
