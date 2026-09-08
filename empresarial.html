@@ -665,7 +665,8 @@ input.li:focus{border-color:var(--acc-d);}
           <span class="dtag" onclick="document.getElementById('em').value='daniela@nutrea.co'">Admin</span>
           <span class="dtag" onclick="document.getElementById('em').value='camila@nutrea.co'">Gestora</span>
         </div></div>
-        <button class="lbtn" onclick="step(2)">Enviarme el código</button>
+        <button class="lbtn" id="btn-cod" onclick="pedirCodigo()">Enviarme el código</button>
+        <div id="lg-err" style="display:none;font:500 12px/1.5 'DM Sans';color:#b8322f;"></div>
         <div class="ldiv"><hr><span>o</span><hr></div>
         <div class="lghost">Entrar con Google</div>
         <div style="text-align:center;"><span style="font:500 12px/1 'DM Sans';color:var(--t-mut2);">¿Primera vez? </span><span class="llink" onclick="enterApp()">Entrar en modo demo →</span></div>
@@ -674,11 +675,11 @@ input.li:focus{border-color:var(--acc-d);}
       <div class="lstep" id="s2">
         <div><div class="ltag">PASO 2 DE 3</div><div class="ltitle">Revisa tu correo</div>
         <p class="lsub">Mandé un código a <strong id="em-show" style="color:var(--acc-d);">manuela@nutrea.co</strong>. Vence en 10 minutos.</p></div>
-        <div style="display:flex;gap:8px;">
-          <div class="cbox f">4</div><div class="cbox f">1</div><div class="cbox f">8</div>
-          <div class="cbox">·</div><div class="cbox">·</div><div class="cbox">·</div>
-        </div>
-        <button class="lbtn" onclick="step(3)">Verificar y entrar</button>
+        <input class="li" id="cod" inputmode="numeric" maxlength="6" placeholder="000000"
+          style="text-align:center;font:700 26px/1 'Fraunces',serif;letter-spacing:10px;padding:16px;"
+          onkeydown="if(event.key==='Enter')verificarCodigo()">
+        <button class="lbtn" id="btn-ver" onclick="verificarCodigo()">Verificar y entrar</button>
+        <div id="lg-err2" style="display:none;font:500 12px/1.5 'DM Sans';color:#b8322f;"></div>
         <div style="display:flex;justify-content:space-between;"><span class="llink" onclick="step(1)">← Cambiar correo</span><span class="llink">Reenviar código</span></div>
       </div>
       <!-- paso 3 -->
@@ -2597,6 +2598,165 @@ function setModo(m){
   document.getElementById('bos').classList.toggle('on',m==='oscuro');
 }
 
+// ─── CONEXIÓN CON LA HOJA ─────────────────────────────────────
+/**
+ * Regla de esta capa: NUNCA mezclar números reales con inventados sin
+ * decir cuál es cuál. Un panel mitad real mitad ejemplo es peor que uno
+ * todo de ejemplo, porque invita a decidir sobre ficción.
+ *
+ * Por eso cada bloque queda marcado con su origen, y lo que no tiene
+ * dato real se rotula "ejemplo" en vez de quedarse callado.
+ */
+const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
+
+let TOKEN = localStorage.getItem('ne_token') || '';
+let CONECTADO = false;
+let REAL = null;   // resumen que devolvió la hoja
+
+/**
+ * POST en text/plain a propósito: con application/json el navegador
+ * dispara un preflight OPTIONS que Apps Script no sabe responder.
+ */
+async function api(accion, datos) {
+  const cuerpo = Object.assign({ accion: accion, token: TOKEN }, datos || {});
+  const r = await fetch(NOVA_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(cuerpo),
+  });
+  const j = await r.json();
+  if (j && j.reautenticar) { TOKEN=''; localStorage.removeItem('ne_token'); }
+  return j;
+}
+
+function errLogin(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+
+async function pedirCodigo() {
+  const email = (document.getElementById('em').value||'').trim();
+  const btn = document.getElementById('btn-cod');
+  errLogin('lg-err','');
+  if (!email || email.indexOf('@')===-1) { errLogin('lg-err','Escribe un correo válido.'); return; }
+
+  btn.textContent='Enviando…'; btn.style.opacity='.6';
+  try {
+    const r = await api('login', { email: email });
+    if (!r.ok) { errLogin('lg-err', r.error||'No se pudo enviar el código.'); return; }
+    document.getElementById('em-show').textContent = email;
+    step(2);
+    setTimeout(()=>{ const c=document.getElementById('cod'); if(c) c.focus(); }, 80);
+  } catch (e) {
+    // Sin conexión no se deja a la persona atascada: se ofrece el demo
+    errLogin('lg-err','No hay conexión con la hoja. Puedes entrar en modo demo abajo.');
+  } finally { btn.textContent='Enviarme el código'; btn.style.opacity='1'; }
+}
+
+async function verificarCodigo() {
+  const email = (document.getElementById('em').value||'').trim();
+  const codigo = (document.getElementById('cod').value||'').trim();
+  const btn = document.getElementById('btn-ver');
+  errLogin('lg-err2','');
+  if (codigo.length !== 6) { errLogin('lg-err2','El código son 6 dígitos.'); return; }
+
+  btn.textContent='Verificando…'; btn.style.opacity='.6';
+  try {
+    const r = await api('verificar', { email: email, codigo: codigo });
+    if (!r.ok) { errLogin('lg-err2', r.error||'Código incorrecto.'); return; }
+    TOKEN = r.token;
+    localStorage.setItem('ne_token', TOKEN);
+    localStorage.setItem('ne_email', email);
+    CONECTADO = true;
+    SESION = r.sesion;
+    // Las tiendas que la hoja autoriza mandan sobre las que muestra el HTML
+    pintarTiendasPermitidas(r.sesion.tiendas);
+    step(3);
+  } catch (e) {
+    errLogin('lg-err2','No hay conexión con la hoja.');
+  } finally { btn.textContent='Verificar y entrar'; btn.style.opacity='1'; }
+}
+
+let SESION = null;
+
+/** Oculta del selector las tiendas que esta persona no tiene asignadas. */
+function pintarTiendasPermitidas(tiendas) {
+  if (!tiendas || !tiendas.length) return;
+  document.querySelectorAll('#s3 .spick').forEach(function(el){
+    const m = (el.getAttribute('onclick')||'').match(/setStore\('(\w+)'\)/);
+    if (m) el.style.display = tiendas.indexOf(m[1])!==-1 ? '' : 'none';
+  });
+}
+
+/**
+ * Trae el resumen de la hoja y lo aplica. Si algo falla, el panel se
+ * queda en modo ejemplo y lo dice: nunca se muestra un número real a
+ * medias ni uno de ejemplo disfrazado de real.
+ */
+async function cargarReales() {
+  if (!CONECTADO || !TOKEN) { marcarOrigen(false); return; }
+  try {
+    const mes = new Date().toISOString().slice(0,7);
+    const r = await api('resumen', { tienda: ST, mes: mes });
+    if (!r.ok) { marcarOrigen(false, r.error); return; }
+    REAL = r.datos;
+    aplicarReales(r.datos);
+    marcarOrigen(true);
+  } catch (e) { marcarOrigen(false, 'sin conexión'); }
+}
+
+/** Reemplaza los KPIs de Hoy con los de la hoja. */
+function aplicarReales(d) {
+  const S = (STORES[ST]||STORES.ec).sym;
+  const nf = n => Math.round(n||0).toLocaleString('es');
+  const cont = document.getElementById('kmes');
+  if (!cont) return;
+
+  const tarjetas = [
+    {lb:'VENTAS DEL MES',  v:S+nf(d.ventas),                  sub:d.entregados+' pedidos entregados', cl:'g'},
+    {lb:'PEDIDOS',         v:nf(d.pedidos),                   sub:nf(d.despachados)+' despachados',   cl:'a'},
+    {lb:'EFECTIVIDAD',     v:(d.efectividad||0).toFixed(1)+'%',sub:'Meta 65%',   cl:d.efectividad>=65?'g':'r'},
+    {lb:'NOVEDADES',       v:nf(d.novedades),                 sub:nf(d.sinMover)+' sin mover 3 días', cl:d.sinMover>10?'r':'w'},
+  ];
+  if (d.gasto !== undefined && ROL==='dueno') {
+    tarjetas.push({lb:'CPA', v:S+nf(d.cpa), sub:'ROAS '+(d.roas||0).toFixed(2)+'x',
+                   cl:(d.roas||0)>=2?'g':'r'});
+  }
+  cont.innerHTML = tarjetas.map(k=>
+    '<div class="kc '+k.cl+'"><div class="klbl">'+k.lb+'</div>'+
+    '<div class="kval">'+k.v+'</div><div class="ksub">'+k.sub+'</div></div>').join('');
+}
+
+/**
+ * El aviso de origen. Es lo que impide que alguien tome una decisión
+ * creyendo que un número de ejemplo es su operación real.
+ */
+function marcarOrigen(real, motivo) {
+  let b = document.getElementById('origen-datos');
+  if (!b) {
+    b = document.createElement('div');
+    b.id = 'origen-datos';
+    b.style.cssText = 'font:600 11px/1.5 \'DM Sans\';padding:9px 14px;border-radius:10px;margin-bottom:14px;';
+    const c = document.querySelector('#v-hoy');
+    if (c) c.insertBefore(b, c.firstChild);
+  }
+  if (real) {
+    b.style.background = '#e6efe8'; b.style.color = '#2f5738';
+    b.textContent = '● Datos reales de tu hoja · actualizado ' +
+      new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+  } else {
+    b.style.background = '#f6ecd0'; b.style.color = '#7a5c10';
+    b.textContent = '● Datos de EJEMPLO' + (motivo? ' · '+motivo : '') +
+      ' — no tomes decisiones con estos números.';
+  }
+  // Las secciones sin fuente real quedan rotuladas, no calladas
+  document.querySelectorAll('.sin-fuente-real').forEach(function(el){
+    el.style.display = real ? 'block' : 'none';
+  });
+}
+
 // ─── LOGIN FLOW ───────────────────────────────────────
 function step(n){
   document.querySelectorAll('.lstep').forEach(s=>s.classList.remove('on'));
@@ -2621,6 +2781,7 @@ function enterApp(forceRol){
   document.getElementById('login').style.display='none';
   document.getElementById('app').classList.add('on');
   applyPrefs(); buildAll(); updateSub();
+  cargarReales();
 
   // Mostrar chat FAB
   document.getElementById('chat-fab').style.display='flex';
@@ -2630,6 +2791,9 @@ function enterApp(forceRol){
   if (ROL === 'dueno' && !localStorage.getItem('ne_onboarded')) showOnboarding();
 }
 function logout(){
+  if (TOKEN) { try { api('salir'); } catch(e){} }
+  TOKEN=''; CONECTADO=false; REAL=null;
+  localStorage.removeItem('ne_token');
   document.getElementById('app').classList.remove('on');
   document.getElementById('login').style.display='flex';
   document.getElementById('chat-fab').style.display='none';
