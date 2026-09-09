@@ -1493,8 +1493,8 @@ function labelDe(correo){
 // reales del cliente, con su moneda y su símbolo. No hay nada aquí que
 // limite Nova a Ecuador y Guatemala.
 let STORES = {
-  ec: {name:'Nutrea EC', sub:'Shopify + Dropi · USD', sym:'$', moneda:'USD', f:1},
-  gt: {name:'Nutrea GT', sub:'Dropi · GTQ',           sym:'Q', moneda:'GTQ', f:3.72}
+  ec: {name:'Nutrea EC', sub:'Shopify + Dropi · USD', sym:'$', moneda:'USD', pais:'Ecuador',   f:1},
+  gt: {name:'Nutrea GT', sub:'Dropi · GTQ',           sym:'Q', moneda:'GTQ', pais:'Guatemala', f:3.72}
 };
 
 /** Símbolo de cualquiera de las 35 monedas del catálogo de la hoja. */
@@ -1515,8 +1515,32 @@ const SIMBOLOS = {
  */
 function SYM(t) { return (STORES[t||ST] || {}).sym || '$'; }
 function MON(t) { return (STORES[t||ST] || {}).moneda || 'USD'; }
-/** Formato de número latinoamericano, sin atarlo a un país. */
-function NUM(n) { return Math.round(Number(n)||0).toLocaleString('es'); }
+/**
+ * Latinoamérica NO escribe los números igual. Se parte en dos:
+ *
+ *   1.234.567,89  →  Colombia, Ecuador, Chile, Argentina, Bolivia, Paraguay
+ *   1,234,567.89  →  México, Perú, Guatemala
+ *
+ * Usar un solo locale le muestra los miles al revés a la mitad de la
+ * región. El formato sale del país de la tienda, que viene en la hoja.
+ */
+const LOCALES = {
+  colombia:'es-CO', ecuador:'es-EC', guatemala:'es-GT', mexico:'es-MX',
+  peru:'es-PE', chile:'es-CL', argentina:'es-AR', bolivia:'es-BO',
+  paraguay:'es-PY', uruguay:'es-UY', venezuela:'es-VE', panama:'es-PA',
+  'costa rica':'es-CR', honduras:'es-HN', nicaragua:'es-NI',
+  'el salvador':'es-SV', 'republica dominicana':'es-DO', cuba:'es-CU',
+  brasil:'pt-BR', espana:'es-ES', 'estados unidos':'en-US',
+};
+
+function LOC(t) {
+  const p = (STORES[t||ST] || {}).pais || '';
+  const k = p.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  return LOCALES[k] || 'es-CO';
+}
+
+/** Número en el formato del país de la tienda activa. */
+function NUM(n, t) { return Math.round(Number(n)||0).toLocaleString(LOC(t)); }
 /** El dato demo de la tienda activa; si no existe, el de la primera. */
 function DEMO(t) { return POR_TIENDA[t||ST] || POR_TIENDA[Object.keys(POR_TIENDA)[0]]; }
 
@@ -1652,7 +1676,7 @@ const PERM_DEFAULTS = {
 function C(usd) {
   const {sym,f}=STORES[ST], v=usd*f;
   if(v>=1000000) return sym+(v/1000000).toFixed(1)+'M';
-  if(v>=1000)    return sym+Math.round(v).toLocaleString('es');
+  if(v>=1000)    return sym+Math.round(v).toLocaleString(LOC());
   return sym+v.toFixed(2);
 }
 
@@ -1820,12 +1844,12 @@ function buildHoy() {
   document.getElementById('pp-bono').textContent  = DEMO().ppBono  || (SYM()+' —');
   // Bar chart
   const days=['L','M','M','J','V','S','D'], vals=d.dinBarVals, mx=Math.max(...vals);
-  document.getElementById('dval').textContent = (SYM()+' ')+vals[6].toLocaleString('es');
+  document.getElementById('dval').textContent = (SYM()+' ')+vals[6].toLocaleString(LOC());
   const bestI=vals.indexOf(mx), bestD=days[bestI];
-  document.getElementById('barfoot').textContent = `Mejor día: ${bestD==='M'?'miércoles/martes':bestD==='L'?'lunes':bestD==='J'?'jueves':bestD==='V'?'viernes':bestD==='S'?'sábado':'domingo'} con ${(SYM()+' ')+mx.toLocaleString('es')}. La semana va 11% por encima del promedio.`;
+  document.getElementById('barfoot').textContent = `Mejor día: ${bestD==='M'?'miércoles/martes':bestD==='L'?'lunes':bestD==='J'?'jueves':bestD==='V'?'viernes':bestD==='S'?'sábado':'domingo'} con ${(SYM()+' ')+mx.toLocaleString(LOC())}. La semana va 11% por encima del promedio.`;
   document.getElementById('barchart').innerHTML = days.map((d,i)=>{
     const pct=Math.round(vals[i]/mx*100), ht=(i===6)?'hoy':'';
-    const lbl=(SYM()+' ')+vals[i].toLocaleString('es');
+    const lbl=(SYM()+' ')+vals[i].toLocaleString(LOC());
     return `<div class="bcol" onclick="document.getElementById('dlbl').textContent='${d}';document.getElementById('dval').textContent='${lbl}';">
       <div class="bfill" style="height:${pct}%;background:${i===6?'var(--acc-d)':'var(--s-dark3)'};" title="${lbl}"></div>
       <span class="blbl ${ht}">${d}</span></div>`;
@@ -2716,8 +2740,21 @@ function pintarTiendasPermitidas(tiendas) {
   // Es lo que permite que una cuenta con tiendas en Perú o México use
   // esta misma pantalla sin tocar una línea de código.
   tiendas.forEach(function(t){
-    if (!STORES[t]) STORES[t] = { name:t.toUpperCase(), sub:'', sym:'$', moneda:'USD', f:1 };
+    // La hoja puede mandar el id suelto o la ficha completa
+    const id = typeof t === 'string' ? t : t.id;
+    const d  = typeof t === 'string' ? {} : t;
+    if (!STORES[id] || d.moneda) {
+      STORES[id] = {
+        name:   d.nombre || (STORES[id]||{}).name || id.toUpperCase(),
+        sub:    d.sub    || (STORES[id]||{}).sub  || '',
+        moneda: d.moneda || (STORES[id]||{}).moneda || 'USD',
+        pais:   d.pais   || (STORES[id]||{}).pais   || '',
+        sym:    SIMBOLOS[d.moneda] || (STORES[id]||{}).sym || '$',
+        f: (STORES[id]||{}).f || 1,
+      };
+    }
   });
+  tiendas = tiendas.map(function(t){ return typeof t === 'string' ? t : t.id; });
   if (tiendas.indexOf(ST) === -1) ST = tiendas[0];
   document.querySelectorAll('#s3 .spick').forEach(function(el){
     const m = (el.getAttribute('onclick')||'').match(/setStore\('(\w+)'\)/);
@@ -2745,7 +2782,7 @@ async function cargarReales() {
 /** Reemplaza los KPIs de Hoy con los de la hoja. */
 function aplicarReales(d) {
   const S = (STORES[ST]||STORES.ec).sym;
-  const nf = n => Math.round(n||0).toLocaleString('es');
+  const nf = n => Math.round(n||0).toLocaleString(LOC());
   const cont = document.getElementById('kmes');
   if (!cont) return;
 
@@ -2926,7 +2963,7 @@ function cierreFalencias(d, p){
   if(d.efectividad < CM_META.entrega) F.push({n:'mal',
     t:'Efectividad de entrega en '+d.efectividad.toFixed(1)+'%, bajo la meta de '+CM_META.entrega+'%',
     d:'De '+d.despachados+' despachados llegaron '+d.entregados+'. Cada punto por debajo '+
-      'de la meta son '+d.sym+Math.round(d.despachados*.01*d.ticket).toLocaleString('es')+' que no entran.',
+      'de la meta son '+d.sym+Math.round(d.despachados*.01*d.ticket).toLocaleString(LOC())+' que no entran.',
     a:'Mira la tabla de transportadoras: si una está muy por debajo de las otras, el problema es de ella, no del equipo.'});
 
   if(d.tasaDevol > CM_META.devol) F.push({n:'mal',
@@ -2948,7 +2985,7 @@ function cierreFalencias(d, p){
 
   if(d.roas < CM_META.roas) F.push({n:'mal',
     t:'ROAS en '+d.roas.toFixed(2)+'x, bajo el mínimo de '+CM_META.roas.toFixed(1)+'x',
-    d:'Gastaste '+d.sym+d.gasto.toLocaleString('es')+' para vender '+d.sym+d.ventas.toLocaleString('es')+
+    d:'Gastaste '+d.sym+d.gasto.toLocaleString(LOC())+' para vender '+d.sym+d.ventas.toLocaleString(LOC())+
       '. Con ese retorno, cada peso de pauta deja muy poco después de producto y envío.',
     a:'Frena la campaña de menor ROAS y mueve ese presupuesto a la de mayor.'});
 
@@ -2956,7 +2993,7 @@ function cierreFalencias(d, p){
   const mejor=[...d.campanas].sort((a,b)=>b.roas-a.roas)[0];
   if(peor.roas < 1) F.push({n:'mal',
     t:'"'+peor.c+'" está por debajo de 1x: pierde plata',
-    d:'Gastó '+d.sym+peor.g.toLocaleString('es')+' y devolvió '+d.sym+peor.v.toLocaleString('es')+
+    d:'Gastó '+d.sym+peor.g.toLocaleString(LOC())+' y devolvió '+d.sym+peor.v.toLocaleString(LOC())+
       '. Por debajo de 1x no es margen bajo, es pérdida directa.',
     a:'Apágala. Pasa su presupuesto a "'+mejor.c+'", que va en '+mejor.roas.toFixed(2)+'x.'});
 
@@ -2964,15 +3001,15 @@ function cierreFalencias(d, p){
   if(mgPct < CM_META.margen) F.push({n: mgPct<0?'mal':'ojo',
     t: mgPct<0 ? 'Margen negativo: el mes cerró en pérdida'
               : 'Margen en '+mgPct.toFixed(1)+'%, bajo el 15% sano',
-    d:'De '+d.sym+d.ventas.toLocaleString('es')+' quedaron '+d.sym+d.margen.toLocaleString('es')+
+    d:'De '+d.sym+d.ventas.toLocaleString(LOC())+' quedaron '+d.sym+d.margen.toLocaleString(LOC())+
       ' después de pauta, producto, envío y fijos.',
     a: mgPct<0 ? 'Sube precio o baja CPA. Con margen negativo, vender más profundiza el hueco.'
-              : 'El CPA de '+d.sym+Math.round(d.cpa).toLocaleString('es')+' es la palanca más rápida.'});
+              : 'El CPA de '+d.sym+Math.round(d.cpa).toLocaleString(LOC())+' es la palanca más rápida.'});
 
   if(d.sinMover > 15) F.push({n:'ojo',
     t:d.sinMover+' pedidos pasaron más de 3 días sin movimiento',
     d:'Un pedido quieto tres días casi siempre termina en devolución. Son '+
-      d.sym+Math.round(d.sinMover*d.ticket).toLocaleString('es')+' en riesgo.',
+      d.sym+Math.round(d.sinMover*d.ticket).toLocaleString(LOC())+' en riesgo.',
     a:'Revisa la asignación: suele ser una gestora con más carga de la que puede mover.'});
 
   if(d.sinNota > 8) F.push({n:'ojo',
@@ -2984,7 +3021,7 @@ function cierreFalencias(d, p){
   const dv=delta(d.ventas,p.ventas);
   if(dv > 12) F.push({n:'ok',
     t:'Ventas subieron '+dv.toFixed(1)+'% contra el mes pasado',
-    d:'Pasaste de '+d.sym+p.ventas.toLocaleString('es')+' a '+d.sym+d.ventas.toLocaleString('es')+'.',
+    d:'Pasaste de '+d.sym+p.ventas.toLocaleString(LOC())+' a '+d.sym+d.ventas.toLocaleString(LOC())+'.',
     a:'Antes de escalar pauta, revisa que la efectividad de entrega aguante el volumen.'});
 
   if(d.efectividad >= CM_META.entrega && d.tasaDevol <= CM_META.devol) F.push({n:'ok',
@@ -3007,7 +3044,7 @@ function buildCierre(){
   const d=cierreDatos(mes,tienda), p=cierreDatos(mesAnterior(mes),tienda);
   const F=cierreFalencias(d,p);
   const S=d.sym, esDueno = ROL==='dueno';
-  const nf=n=>Math.round(n).toLocaleString('es');
+  const nf=n=>Math.round(n).toLocaleString(LOC());
   const dl=(a,b,inv)=>{ const v=b?(a-b)/b*100:0;
     const cls=Math.abs(v)<1?'cm-flat':((v>0)!==!!inv?'cm-up':'cm-dn');
     return '<div class="cm-k-d '+cls+'">'+(v>0?'▲':v<0?'▼':'')+' '+Math.abs(v).toFixed(1)+'% vs mes anterior</div>'; };

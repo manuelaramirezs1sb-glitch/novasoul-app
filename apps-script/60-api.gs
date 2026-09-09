@@ -167,8 +167,13 @@ function apiSalir(token) {
 }
 
 /** Lo que el cliente puede saber de su propia sesión. Sin sheetId. */
-function publico(s) {
-  return { email: s.email, nombre: s.nombre, rol: s.rol, tiendas: s.tiendas };
+function publico(s, ss) {
+  const o = { email: s.email, nombre: s.nombre, rol: s.rol, tiendas: s.tiendas };
+  // La ficha va con moneda y país para que la pantalla no tenga que adivinarlos
+  try {
+    o.fichas = fichasDe(ss || SpreadsheetApp.openById(s.sheetId), s.tiendas);
+  } catch (e) { o.fichas = []; }
+  return o;
 }
 
 /**
@@ -229,11 +234,40 @@ function tiendasDe(ss) {
   const sh = ss.getSheetByName('Tiendas');
   if (!sh || sh.getLastRow() < 2) return [];
   const datos = sh.getDataRange().getValues();
-  const cId = datos[0].map(norm).indexOf('id');
-  const cEst = datos[0].map(norm).indexOf('estado');
+  const e = datos[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
   return datos.slice(1)
-    .filter(function (f) { return f[cId] && norm(f[cEst]) !== 'inactiva'; })
-    .map(function (f) { return String(f[cId]).trim(); });
+    .filter(function (f) { return f[c('id')] && norm(f[c('estado')]) !== 'inactiva'; })
+    .map(function (f) { return String(f[c('id')]).trim(); });
+}
+
+/**
+ * La ficha completa de cada tienda, no solo el id.
+ *
+ * La pantalla necesita la moneda para el símbolo y el país para el
+ * formato de número: Guatemala escribe 1,234.56 y Colombia 1.234,56.
+ * Mandar solo el id obligaría al HTML a adivinarlo, que es justo lo que
+ * ataba la pantalla a dos países.
+ */
+function fichasDe(ss, ids) {
+  const sh = ss.getSheetByName('Tiendas');
+  if (!sh || sh.getLastRow() < 2) return [];
+  const datos = sh.getDataRange().getValues();
+  const e = datos[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+  return datos.slice(1)
+    .filter(function (f) {
+      const id = String(f[c('id')]).trim();
+      return id && ids.indexOf(id) !== -1;
+    })
+    .map(function (f) {
+      return {
+        id:     String(f[c('id')]).trim(),
+        nombre: f[c('nombre')] || '',
+        moneda: String(f[c('moneda')] || '').toUpperCase(),
+        pais:   f[c('pais')] || '',
+      };
+    });
 }
 
 
