@@ -2631,7 +2631,9 @@ function switchSt(s){
   document.getElementById('cgt').classList.toggle('on',s==='gt');
   document.getElementById('bsub').textContent='Manuela · Nutrea '+(s==='ec'?'EC':'GT');
   updateSub(); buildAll();
-  montarImportadores(); cargarHistorialFuentes();
+  montarImportadores();
+  // La tienda cambió: los datos de la anterior no pueden quedarse en pantalla
+  cargarReales();
 }
 
 // ─── TEMA / MODO ──────────────────────────────────────
@@ -2798,6 +2800,10 @@ async function cargarReales() {
     pintarEstadoCierre(r.datos);
     marcarOrigen(true);
     cargarHistorialFuentes();
+    // Cada lista se conecta por su cuenta: que Novedades esté vacía no
+    // puede dejar a Pedidos sin cargar.
+    cargarPedidosReales();
+    cargarNovedadesReales();
   } catch (e) { marcarOrigen(false, 'sin conexión'); }
 }
 
@@ -2846,6 +2852,296 @@ function marcarOrigen(real, motivo) {
       ' — no tomes decisiones con estos números.';
   }
   sellarEjemplo(real);
+}
+
+// ─── PEDIDOS Y NOVEDADES REALES ───────────────────────────────
+/**
+ * Hasta aquí, Pedidos y Novedades dibujaban el guion de demostración
+ * incluso con la sesión abierta: al lado de los KPIs reales del mes se
+ * veían diez pedidos inventados con la misma pinta. La API ya sabía
+ * responder —listar filtra por rol y por tienda del lado del servidor—,
+ * lo que faltaba era que la pantalla preguntara.
+ *
+ * Si la hoja no tiene filas todavía, se queda el ejemplo con su sello.
+ * Es preferible a una pantalla en blanco que no explica nada.
+ */
+const COLOR_ESTADO = {
+  pendiente:        ['#8a6a13', '#f6ecd0', 'Pendiente'],
+  confirmado:       ['#3f5330', '#e2ead6', 'Confirmado'],
+  en_bodega:        ['#3C6684', '#dde7ef', 'En bodega'],
+  en_transito:      ['#3C6684', '#dde7ef', 'En tránsito'],
+  en_oficina:       ['#3C6684', '#dde7ef', 'En oficina'],
+  novedad:          ['#b8322f', '#f6e3db', 'Novedad'],
+  novedad_resuelta: ['#8a6a13', '#f6ecd0', 'Novedad resuelta'],
+  entregado:        ['#3f5330', '#d3e0c2', 'Entregado'],
+  devolucion:       ['#b8322f', '#f6e3db', 'Devolución'],
+  cancelado:        ['#5b5b55', '#e6e4de', 'Cancelado'],
+};
+
+/** El estado tal como se muestra. Lo sin mapear se ve, no se esconde. */
+function fichaEstado(p) {
+  const c = String(p.estado_canonico || '').trim();
+  if (COLOR_ESTADO[c]) return COLOR_ESTADO[c];
+  const crudo = String(p.estado || p.estado_transportadora || '').trim();
+  // Un estado que Nova no conoce se muestra tal cual y en gris: si se
+  // pintara como "pendiente" nadie se enteraría de que falta mapearlo.
+  return ['#5b5b55', '#e6e4de', crudo || 'Sin estado'];
+}
+
+function fechaCorta(v) {
+  const d = new Date(v);
+  if (isNaN(d)) return String(v || '');
+  return d.toLocaleDateString(LOC(), { day: '2-digit', month: 'short' });
+}
+
+let PEDS_REALES = [];
+
+async function cargarPedidosReales() {
+  if (!CONECTADO) return false;
+  let r;
+  try { r = await api('listar', { entidad: 'Pedidos', tienda: ST, limite: 300 }); }
+  catch (e) { return false; }
+  if (!r.ok || !r.filas || !r.filas.length) return false;
+
+  PEDS_REALES = r.filas;
+  pintarPedidosReales(r.filas, r.total);
+  pintarEstadosReales(r.filas);
+  desellar(['pedlist', 'stlist', 'barchart']);
+  return true;
+}
+
+function pintarPedidosReales(filas, total) {
+  const S = (STORES[ST]||STORES.ec).sym;
+  const ests = ['pendiente','confirmado','en_transito','en_oficina','novedad',
+                'entregado','devolucion','cancelado'];
+
+  document.getElementById('pedlist').innerHTML = filas.map(function (p, i) {
+    const e = fichaEstado(p);
+    const val = S + ' ' + Math.round(Number(p.valor) || 0).toLocaleString(LOC());
+    const tel = p.telefono || p.telefono_norm || '—';
+    const tel2 = p.telefono_2 || p.telefono_2_norm || '';
+    return '<div class="orow" id="prow' + i + '" onclick="togPedReal(' + i + ')" style="cursor:pointer;">' +
+      '<div class="otop"><div><span class="onm">' + esc(p.cliente || 'Sin nombre') + '</span>&ensp;' +
+        '<span class="oid">#' + esc(p.id_externo || p.id) + '</span></div>' +
+        '<span class="bd" style="color:' + e[0] + ';background:' + e[1] + ';">' + esc(e[2]) + '</span></div>' +
+      '<div class="ometa"><span>' + esc(p.producto || '') + '</span>' +
+        '<span>' + esc(p.ciudad || '') + '</span><b>' + val + '</b>' +
+        '<span>' + (p.gestora_asignada ? 'Gestiona ' + esc(p.gestora_asignada) : 'Sin asignar') + '</span>' +
+        '<span>' + fechaCorta(p.fecha) + '</span>' +
+        '<span class="ntog ptog">Ver detalle ▾</span></div>' +
+      '<div class="ped-dtl" id="pd' + i + '" style="display:none;flex-direction:column;gap:10px;">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;border-top:1px solid var(--s-line2);padding-top:10px;">' +
+          '<div><div class="dlbl">TELÉFONO</div><div class="dtxt">' + esc(tel) +
+            (tel2 ? '<br><span style="color:var(--t-mut2);">2º: ' + esc(tel2) + '</span>' : '') + '</div></div>' +
+          '<div><div class="dlbl">DIRECCIÓN</div><div class="dtxt">' + esc(p.direccion || '—') + '</div></div>' +
+          '<div><div class="dlbl">TRANSPORTADORA</div><div class="dtxt">' +
+            esc(p.transportadora || '—') + (p.guia ? ' · ' + esc(p.guia) : '') + '</div></div>' +
+          '<div><div class="dlbl">ESTADO EN LA PLATAFORMA</div><div class="dtxt">' +
+            esc(p.estado || p.estado_transportadora || '—') + '</div></div>' +
+        '</div>' +
+        '<div><div class="dlbl">ESTADO EN NOVA</div><div class="nstates" data-id="' + esc(p.id) + '">' +
+          ests.map(function (x) {
+            return '<div class="nst' + (x === p.estado_nova ? ' on' : '') + '" data-val="' + x + '" ' +
+              'onclick="event.stopPropagation();elegirEstado(this)">' +
+              (COLOR_ESTADO[x] ? COLOR_ESTADO[x][2] : x) + '</div>';
+          }).join('') + '</div></div>' +
+        '<textarea class="narea" id="nota' + i + '" placeholder="Nota sobre este pedido…" ' +
+          'onclick="event.stopPropagation()">' + esc(p.nota || '') + '</textarea>' +
+        '<div class="nsavebtn" onclick="event.stopPropagation();guardarPedido(' + i + ')">Guardar</div>' +
+      '</div></div>';
+  }).join('');
+
+  const cab = document.querySelector('#v-pedidos > p');
+  if (cab) {
+    cab.textContent = 'Los pedidos de esta tienda en tu hoja. ' +
+      (total > filas.length ? 'Mostrando ' + filas.length + ' de ' + total + '.' : filas.length + ' en total.');
+  }
+}
+
+/** Escapar es obligatorio: estos textos vienen de un archivo externo. */
+function esc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function elegirEstado(el) {
+  el.closest('.nstates').querySelectorAll('.nst').forEach(function (x) { x.classList.remove('on'); });
+  el.classList.add('on');
+}
+
+function togPedReal(i) {
+  const d = document.getElementById('pd' + i);
+  const t = document.querySelector('#prow' + i + ' .ptog');
+  const abierto = d.style.display !== 'none';
+  PEDS_REALES.forEach(function (_, j) {
+    if (j === i) return;
+    const dj = document.getElementById('pd' + j);
+    const tj = document.querySelector('#prow' + j + ' .ptog');
+    if (dj) dj.style.display = 'none';
+    if (tj) tj.textContent = 'Ver detalle ▾';
+    const rj = document.getElementById('prow' + j);
+    if (rj) rj.classList.remove('open');
+  });
+  d.style.display = abierto ? 'none' : 'flex';
+  t.textContent = abierto ? 'Ver detalle ▾' : 'Cerrar ▴';
+  document.getElementById('prow' + i).classList.toggle('open', !abierto);
+}
+
+async function guardarPedido(i) {
+  const p = PEDS_REALES[i];
+  if (!p) return;
+  const sel = document.querySelector('#pd' + i + ' .nstates .nst.on');
+  const campos = { nota: document.getElementById('nota' + i).value };
+  if (sel) campos.estado_nova = sel.dataset.val;
+
+  try {
+    const r = await api('escribir', { entidad: 'Pedidos', id: p.id, campos: campos });
+    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
+    Object.assign(p, campos);
+    showToast('Guardado en la hoja');
+  } catch (e) { showToast('Sin conexión: no se guardó'); }
+}
+
+/** La barra de estados, contada sobre los pedidos que hay de verdad. */
+function pintarEstadosReales(filas) {
+  const cuenta = {};
+  filas.forEach(function (p) {
+    const e = fichaEstado(p);
+    cuenta[e[2]] = cuenta[e[2]] || { n: 0, c: e[0] };
+    cuenta[e[2]].n++;
+  });
+  const orden = Object.keys(cuenta).sort(function (a, b) { return cuenta[b].n - cuenta[a].n; });
+  const total = filas.length || 1;
+
+  const bar = document.getElementById('stbar');
+  const lista = document.getElementById('stlist');
+  if (bar) {
+    bar.innerHTML = orden.map(function (k) {
+      return '<span class="stseg" style="width:' + (cuenta[k].n/total*100).toFixed(1) +
+        '%;background:' + cuenta[k].c + ';"></span>';
+    }).join('');
+  }
+  if (lista) {
+    lista.innerHTML = orden.map(function (k) {
+      const pct = Math.round(cuenta[k].n/total*100);
+      return '<div class="strow"><span class="stdot" style="background:' + cuenta[k].c + ';"></span>' +
+        '<span style="font:500 12.5px/1 \'DM Sans\';color:var(--t-ink2);flex:1;">' + esc(k) + '</span>' +
+        '<span style="font:500 11px/1 \'DM Sans\';color:var(--t-mut2);">' + pct + '%</span>' +
+        '<span style="font:600 12.5px/1 \'DM Sans\';color:var(--t-ink);width:34px;text-align:right;">' +
+        cuenta[k].n + '</span></div>';
+    }).join('');
+  }
+}
+
+let NOVS_REALES = [];
+
+async function cargarNovedadesReales() {
+  if (!CONECTADO) return false;
+  let r;
+  try { r = await api('listar', { entidad: 'Novedades', tienda: ST, limite: 300 }); }
+  catch (e) { return false; }
+  if (!r.ok || !r.filas || !r.filas.length) return false;
+
+  NOVS_REALES = r.filas;
+  pintarNovedadesReales(r.filas);
+  desellar(['novlist', 'novkpi']);
+  return true;
+}
+
+function pintarNovedadesReales(filas) {
+  const hoy = Date.now();
+  const dias = function (v) {
+    const d = new Date(v);
+    return isNaN(d) ? null : Math.floor((hoy - d.getTime()) / 86400000);
+  };
+  const abierta = function (n) { return norm2(n.estado) !== 'resuelto' && !n.resuelta_en; };
+
+  const abiertas = filas.filter(abierta);
+  const viejas = abiertas.filter(function (n) { const d = dias(n.fecha); return d !== null && d >= 1; });
+  const resueltas7 = filas.filter(function (n) {
+    const d = dias(n.resuelta_en); return n.resuelta_en && d !== null && d <= 7;
+  });
+  const porPedido = {};
+  filas.forEach(function (n) { porPedido[n.pedido_id] = (porPedido[n.pedido_id]||0) + 1; });
+  const reincidentes = Object.keys(porPedido).filter(function (k) { return porPedido[k] >= 2; }).length;
+
+  document.getElementById('novkpi').innerHTML = [
+    {lb:'ABIERTAS',      v:abiertas.length,    sub:'Sin resolver ahora',        c:'#b8322f'},
+    {lb:'MÁS DE 24H',    v:viejas.length,      sub:'Abiertas hace un día o más',c:'#8a6a13'},
+    {lb:'RESUELTAS 7D',  v:resueltas7.length,  sub:'Últimos siete días',        c:'#6d7d4a'},
+    {lb:'REINCIDENTES',  v:reincidentes,       sub:'Mismo pedido ≥2 novedades', c:reincidentes?'#8a6a13':'#6d7d4a'},
+    {lb:'TOTAL',         v:filas.length,       sub:'En esta tienda',            c:'#3C6684'},
+  ].map(function (k) {
+    return '<div class="kc" style="border-left:4px solid ' + k.c + ';"><div class="klbl">' + k.lb +
+      '</div><div class="kval">' + k.v + '</div><div class="ksub">' + k.sub + '</div></div>';
+  }).join('');
+
+  const estados = ['abierta','en_gestion','esperando_cliente','reprogramar',
+                   'reenviar','devolver','resuelto'];
+
+  document.getElementById('novlist').innerHTML = filas.map(function (n, i) {
+    const d = dias(n.fecha);
+    const urg = abierta(n) && d !== null && d >= 1;
+    const veces = porPedido[n.pedido_id] > 1 ? porPedido[n.pedido_id] + 'ª vez' : '1ª vez';
+    const col = abierta(n) ? ['#b8322f','#f6e3db'] : ['#3f5330','#d3e0c2'];
+    return '<div class="nrow' + (urg ? ' urg' : '') + '" id="nrow' + i + '">' +
+      '<div class="nh"><div><span class="ncl">' + esc(n.pedido_id || n.id) + '</span>&ensp;' +
+        '<span style="font:500 11.5px/1 \'DM Sans\';color:var(--t-mut2);">' +
+        esc(n.fuente || '') + ' · ' + fechaCorta(n.fecha) + '</span></div>' +
+        '<span class="bd" style="color:' + col[0] + ';background:' + col[1] + ';">' +
+        esc(n.estado || 'abierta') + '</span></div>' +
+      '<div class="nmeta"><span>' + esc(n.motivo || n.tipo || 'Sin motivo') + '</span>' +
+        '<span>' + esc(n.grupo || '') + '</span>' +
+        '<span class="ntime">' + (d === null ? '' : d + ' d') + '</span>' +
+        '<span style="color:var(--t-mut3);">' + veces + '</span>' +
+        '<span>' + (n.gestora ? esc(n.gestora) : 'Sin asignar') + '</span>' +
+        '<span class="ntog" onclick="togNov(' + i + ')">Ver detalle ▾</span></div>' +
+      '<div class="ndtl" id="nd' + i + '" style="display:none;">' +
+        '<div><div class="dlbl">QUÉ PASÓ</div><div class="dtxt">' +
+          esc(n.motivo || '—') + '</div></div>' +
+        (n.solucion ? '<div><div class="dlbl">SOLUCIÓN PEDIDA AL COURIER</div>' +
+          '<div class="dtxt">' + esc(n.solucion) + '</div></div>' : '') +
+        '<div><div class="dlbl">CAMBIAR ESTADO</div><div class="nstates">' +
+          estados.map(function (x) {
+            return '<div class="nst' + (norm2(x) === norm2(n.estado) ? ' on' : '') + '" data-val="' + x + '" ' +
+              'onclick="elegirEstado(this)">' + x.replace(/_/g,' ') + '</div>';
+          }).join('') + '</div></div>' +
+        '<textarea class="narea" id="nnota' + i + '" placeholder="Qué pasó, qué acordaste con la clienta y qué sigue.">' +
+          esc(n.nota || '') + '</textarea>' +
+        '<div class="nsavebtn" onclick="event.stopPropagation();guardarNovedad(' + i + ')">Guardar</div>' +
+      '</div></div>';
+  }).join('');
+}
+
+function norm2(v) {
+  return String(v||'').toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_');
+}
+
+async function guardarNovedad(i) {
+  const n = NOVS_REALES[i];
+  if (!n) return;
+  const sel = document.querySelector('#nd' + i + ' .nstates .nst.on');
+  const campos = { nota: document.getElementById('nnota' + i).value };
+  if (sel) campos.estado = sel.dataset.val;
+
+  try {
+    const r = await api('escribir', { entidad: 'Novedades', id: n.id, campos: campos });
+    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
+    Object.assign(n, campos);
+    showToast('Guardado en la hoja');
+  } catch (e) { showToast('Sin conexión: no se guardó'); }
+}
+
+/** Lo que ya trae datos reales deja de llevar el sello. */
+function desellar(ids) {
+  ids.forEach(function (id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const bloque = el.closest('.card, .recuento, .dcard, .acrit') || el;
+    if (bloque && !bloque.classList.contains('view')) bloque.classList.remove('sello-ej');
+  });
 }
 
 // ─── IMPORTAR DESDE LA APP ────────────────────────────────────
