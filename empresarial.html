@@ -732,10 +732,6 @@ input.li:focus{border-color:var(--acc-d);}
         <div class="ni v-gestora" data-v="g-pedidos" onclick="go('g-pedidos',this)">Mis pedidos</div>
         <div class="ni v-gestora" data-v="g-novedades" onclick="go('g-novedades',this)">Mis novedades</div>
       </div>
-      <div class="navg ro-admin">
-        <div class="navg-lbl">DATOS</div>
-        <div class="ni" data-v="importar" onclick="go('importar',this)">Importar archivos</div>
-      </div>
       <div class="navg ro-dueno">
         <div class="navg-lbl">DINERO</div>
         <div class="ni" data-v="dinero" onclick="go('dinero',this)">Dinero</div>
@@ -760,7 +756,7 @@ input.li:focus{border-color:var(--acc-d);}
       <div class="stores-lbl">TIENDA</div>
       <div class="schip on" id="cec" onclick="switchSt('ec')"><strong>Nutrea EC</strong><small>Shopify + Dropi · USD</small></div>
       <div class="schip" id="cgt" onclick="switchSt('gt')"><strong>Nutrea GT</strong><small>Dropi · GTQ</small></div>
-      <div class="ubtn" onclick="go('importar',null)">Subir archivos</div>
+      <div class="ubtn" onclick="go('pedidos',null)">Subir archivos</div>
     </div>
   </nav>
 
@@ -905,6 +901,7 @@ input.li:focus{border-color:var(--acc-d);}
       <!-- ════ PEDIDOS ════ -->
       <div class="view" id="v-pedidos">
         <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Los pedidos del día en esta tienda. Ves quién los tiene y en qué van.</p>
+        <div class="imp-slot" data-zona="pedidos"></div>
         <div style="display:flex;flex-direction:column;gap:9px;" id="pedlist"></div>
       </div>
 
@@ -914,6 +911,7 @@ input.li:focus{border-color:var(--acc-d);}
           <div style="font:600 21px/1 'Fraunces',serif;color:var(--t-ink);margin-bottom:6px;">Bandeja de novedades</div>
           <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut2);">Toca una fila para ver la nota de la gestora y el historial completo de contactos.</p>
         </div>
+        <div class="imp-slot" data-zona="novedades"></div>
         <div class="kgrid" id="novkpi"></div>
         <div style="display:flex;flex-direction:column;gap:9px;" id="novlist"></div>
       </div>
@@ -1019,76 +1017,6 @@ input.li:focus{border-color:var(--acc-d);}
       </div>
 
       <!-- ════ DINERO ════ -->
-      <!-- ════ IMPORTAR ARCHIVOS ════ -->
-      <div class="view ro-admin" id="v-importar">
-        <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">
-          Aquí entra la información real. Sube el archivo tal como lo exporta la
-          plataforma: Nova lo lee, lo normaliza y lo guarda en la tienda que
-          tienes abierta arriba. No hay que tocar la hoja de cálculo.</p>
-        <div class="g2">
-          <div class="card">
-            <div class="card-h"><span class="ct">Subir un archivo</span>
-              <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);" id="imp-tienda"></span></div>
-            <p style="font:500 12px/1.55 'DM Sans';color:var(--t-mut);margin:0 0 4px;">
-              Primero elige de qué plataforma viene. Acepta CSV y Excel (.xlsx).</p>
-
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-              <select class="cm-sel" id="imp-fuente">
-                <option value="">Elige la plataforma…</option>
-                <optgroup label="Pedidos">
-                  <option value="dropi">Dropi</option>
-                  <option value="mastershop">Mastershop</option>
-                  <option value="effi_guias">Effi · guías</option>
-                  <option value="effi_novedades">Effi · novedades</option>
-                  <option value="shopify">Shopify</option>
-                </optgroup>
-                <optgroup label="Pauta">
-                  <option value="meta">Meta · campañas</option>
-                  <option value="meta_facturacion">Meta · facturación</option>
-                  <option value="tiktok">TikTok</option>
-                </optgroup>
-                <optgroup label="Llamadas">
-                  <option value="iris">IRIS</option>
-                </optgroup>
-              </select>
-              <button class="cm-btn" id="imp-btn" onclick="abrirArchivo()">Elegir archivo</button>
-            </div>
-            <input type="file" id="imp-file" accept=".csv,.xlsx,.txt" style="display:none" onchange="subirArchivo(this)">
-
-            <div id="imp-estado" style="display:none;font:500 12px/1.6 'DM Sans';
-              padding:11px 14px;border-radius:11px;margin-top:4px;white-space:pre-line;"></div>
-
-            <div class="slbl" style="margin-top:6px;">ÚLTIMAS IMPORTACIONES</div>
-            <div id="imp-hist" style="font:500 11.5px/1.7 'DM Sans';color:var(--t-mut2);">
-              Entra con tu correo para ver el historial.</div>
-          </div>
-
-          <div class="card">
-            <div class="card-h"><span class="ct">Qué archivo bajar</span></div>
-            <div style="font:500 12px/1.7 'DM Sans';color:var(--t-mut);display:flex;flex-direction:column;gap:10px;">
-              <div><strong style="color:var(--t-ink);">Dropi</strong><br>
-                Pedidos → Exportar. El reporte con una fila por pedido.</div>
-              <div><strong style="color:var(--t-ink);">Mastershop</strong><br>
-                Órdenes → Descargar reporte.</div>
-              <div><strong style="color:var(--t-ink);">Effi</strong><br>
-                Son dos archivos distintos: guías y novedades. Súbelos por separado
-                con la opción que corresponde.</div>
-              <div><strong style="color:var(--t-ink);">Meta</strong><br>
-                Campañas es el reporte de resultados. Facturación es el recibo de
-                cobro: trae el gasto real en la moneda que te cobraron.</div>
-              <div><strong style="color:var(--t-ink);">IRIS</strong><br>
-                El reporte de llamadas. Nova lo cruza con los pedidos por el número
-                de celular, así que no importa que traiga prefijo.</div>
-            </div>
-            <div class="dline"></div>
-            <p style="font:500 11.5px/1.6 'DM Sans';color:var(--t-mut2);margin:0;">
-              Si un archivo trae columnas que Nova no conoce, te lo dice al terminar
-              en vez de inventar. Vuelve a subir el mismo archivo las veces que
-              quieras: los pedidos repetidos se actualizan, no se duplican.</p>
-          </div>
-        </div>
-      </div>
-
       <div class="view ro-dueno" id="v-dinero">
         <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">De arriba hacia abajo: lo que entró, lo que se fue y lo que queda.</p>
         <div class="kgrid" id="dinkpi2"></div>
@@ -1118,6 +1046,8 @@ input.li:focus{border-color:var(--acc-d);}
             </div>
           </div>
         </div>
+        <div class="imp-slot" data-zona="dinero"></div>
+
         <!-- Gastos del mes -->
         <div class="card">
           <div class="card-h"><span class="ct">Gastos del mes</span><span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">Fijos + Variables</span></div>
@@ -2665,7 +2595,6 @@ const TITLES = {
   hoy:'Hoy',pedidos:'Pedidos',novedades:'Novedades',oficina:'Seguimiento a oficina',
   gestoras:'Gestoras',auditoria:'Auditoría',pauta:'Pauta y gastos',inventario:'Inventario',
   dinero:'Dinero',calc:'Calculadoras',permisos:'Permisos',cierre:'Cierre de mes',productos:'Productos',config:'Configuración',
-  importar:'Importar archivos',
   'g-hoy':'Mis pedidos de hoy','g-pedidos':'Mis pedidos','g-novedades':'Mis novedades',
 };
 function go(view, el) {
@@ -2694,6 +2623,7 @@ function switchSt(s){
   document.getElementById('cgt').classList.toggle('on',s==='gt');
   document.getElementById('bsub').textContent='Manuela · Nutrea '+(s==='ec'?'EC':'GT');
   updateSub(); buildAll();
+  montarImportadores(); cargarHistorialFuentes();
 }
 
 // ─── TEMA / MODO ──────────────────────────────────────
@@ -2858,6 +2788,7 @@ async function cargarReales() {
     aplicarReales(r.datos);
     pintarEstadoCierre(r.datos);
     marcarOrigen(true);
+    cargarHistorialFuentes();
   } catch (e) { marcarOrigen(false, 'sin conexión'); }
 }
 
@@ -2915,15 +2846,86 @@ function marcarOrigen(real, motivo) {
  * es, así que había que declararlo aparte y podía quedar mal asignado.
  * Subiéndolo desde la app, la tienda es la que está abierta.
  */
-function abrirArchivo() {
-  const f = document.getElementById('imp-fuente').value;
-  if (!f) { impEstado('Elige primero la plataforma.', 'ojo'); return; }
-  if (!CONECTADO) { impEstado('Entra con tu correo para poder importar.', 'ojo'); return; }
-  document.getElementById('imp-file').click();
+/**
+ * Un punto de subida por sección, no uno solo para todo.
+ *
+ * Donde se sube ya dice qué se sube: el archivo de pedidos entra en
+ * Pedidos, el de novedades en Novedades, el de pauta en Dinero. Así la
+ * lista de plataformas de cada punto es corta y no hay forma de mandar
+ * el recibo de Meta a la tabla de pedidos por escoger mal en un menú
+ * de diez opciones.
+ */
+const ZONAS_IMPORT = {
+  pedidos: {
+    titulo: 'Subir pedidos',
+    nota: 'El export de pedidos de tu plataforma, tal como lo descargas. ' +
+          'Trae el cliente, el teléfono, el estado y el valor.',
+    fuentes: [['dropi','Dropi'], ['mastershop','Mastershop'],
+              ['effi_guias','Effi · guías'], ['shopify','Shopify']],
+  },
+  novedades: {
+    titulo: 'Subir novedades y llamadas',
+    nota: 'Las novedades de Effi, y el reporte de llamadas de IRIS. ' +
+          'Nova cruza las llamadas con los pedidos por el número de celular, ' +
+          'así que no importa que traiga prefijo. Si trabajas con Dropi, las ' +
+          'novedades salen solas del archivo de pedidos.',
+    fuentes: [['effi_novedades','Effi · novedades'], ['iris','IRIS · llamadas']],
+  },
+  dinero: {
+    titulo: 'Subir pauta y facturación',
+    nota: 'Campañas es el reporte de resultados. Facturación es el recibo de ' +
+          'cobro: trae el gasto real y en qué moneda te cobraron.',
+    fuentes: [['meta','Meta · campañas'], ['meta_facturacion','Meta · facturación'],
+              ['tiktok','TikTok']],
+  },
+};
+
+function montarImportadores() {
+  document.querySelectorAll('.imp-slot').forEach(function (slot) {
+    const z = slot.dataset.zona;
+    const cfg = ZONAS_IMPORT[z];
+    if (!cfg || slot.dataset.listo) return;
+    slot.dataset.listo = '1';
+
+    const ops = cfg.fuentes.map(function (f) {
+      return '<option value="' + f[0] + '">' + f[1] + '</option>';
+    }).join('');
+
+    slot.innerHTML =
+      '<div class="card">' +
+        '<div class="card-h"><span class="ct">' + cfg.titulo + '</span>' +
+          '<span style="font:500 11px/1 \'DM Sans\';color:var(--t-mut2);" ' +
+            'id="imp-tienda-' + z + '"></span></div>' +
+        '<p style="font:500 12px/1.55 \'DM Sans\';color:var(--t-mut);margin:0 0 4px;">' +
+          cfg.nota + '</p>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+          '<select class="cm-sel" id="imp-fuente-' + z + '">' +
+            '<option value="">Elige la plataforma…</option>' + ops +
+          '</select>' +
+          '<button class="cm-btn" id="imp-btn-' + z + '" ' +
+            'onclick="abrirArchivo(\'' + z + '\')">Elegir archivo</button>' +
+        '</div>' +
+        '<input type="file" id="imp-file-' + z + '" accept=".csv,.xlsx,.txt" ' +
+          'style="display:none" onchange="subirArchivo(this,\'' + z + '\')">' +
+        '<div id="imp-estado-' + z + '" style="display:none;font:500 12px/1.6 \'DM Sans\';' +
+          'padding:11px 14px;border-radius:11px;margin-top:4px;white-space:pre-line;"></div>' +
+        '<div class="slbl" style="margin-top:6px;">ÚLTIMAS IMPORTACIONES</div>' +
+        '<div id="imp-hist-' + z + '" style="font:500 11.5px/1.7 \'DM Sans\';' +
+          'color:var(--t-mut2);">Entra con tu correo para ver el historial.</div>' +
+      '</div>';
+  });
+  pintarTiendaImport();
 }
 
-function impEstado(msg, tipo) {
-  const el = document.getElementById('imp-estado');
+function abrirArchivo(z) {
+  const sel = document.getElementById('imp-fuente-' + z);
+  if (!sel || !sel.value) { impEstado(z, 'Elige primero la plataforma.', 'ojo'); return; }
+  if (!CONECTADO) { impEstado(z, 'Entra con tu correo para poder importar.', 'ojo'); return; }
+  document.getElementById('imp-file-' + z).click();
+}
+
+function impEstado(z, msg, tipo) {
+  const el = document.getElementById('imp-estado-' + z);
   if (!el) return;
   const c = { ok:['#e6efe8','#2f5738'], ojo:['#f6ecd0','#7a5c10'], mal:['#f6e3db','#a8563a'] }[tipo||'ojo'];
   el.style.display = 'block';
@@ -2932,39 +2934,38 @@ function impEstado(msg, tipo) {
   el.textContent = msg;
 }
 
-async function subirArchivo(input) {
+async function subirArchivo(input, z) {
   const file = input.files && input.files[0];
   input.value = '';
   if (!file) return;
 
-  const fuente = document.getElementById('imp-fuente').value;
-  const btn = document.getElementById('imp-btn');
+  const fuente = document.getElementById('imp-fuente-' + z).value;
+  const btn = document.getElementById('imp-btn-' + z);
   const nombreTienda = (STORES[ST]||{}).name || ST;
 
   if (file.size > 8 * 1024 * 1024) {
-    impEstado('El archivo pesa ' + (file.size/1048576).toFixed(1) + ' MB. ' +
+    impEstado(z, 'El archivo pesa ' + (file.size/1048576).toFixed(1) + ' MB. ' +
       'El máximo son 8 MB — expórtalo por rangos de fecha más cortos.', 'mal');
     return;
   }
 
-  impEstado('Leyendo ' + file.name + '…', 'ojo');
+  impEstado(z, 'Leyendo ' + file.name + '…', 'ojo');
   btn.style.opacity = '.6'; btn.textContent = 'Subiendo…';
 
   try {
     const b64 = await archivoABase64(file);
-    impEstado('Importando a ' + nombreTienda + '…\nEsto puede tardar según el tamaño.', 'ojo');
+    impEstado(z, 'Importando a ' + nombreTienda + '…\nEsto puede tardar según el tamaño.', 'ojo');
 
     const r = await api('importar', {
       fuente: fuente, tienda: ST, nombre: file.name, contenido: b64,
     });
 
-    if (!r.ok) { impEstado(r.error || 'No se pudo importar.', 'mal'); return; }
-    impEstado(r.resumen || ('Importadas ' + r.filas + ' filas.'), 'ok');
+    if (!r.ok) { impEstado(z, r.error || 'No se pudo importar.', 'mal'); return; }
+    impEstado(z, r.resumen || ('Importadas ' + r.filas + ' filas.'), 'ok');
     cargarReales();
-  cargarHistorialFuentes();
     cargarHistorialFuentes();
   } catch (e) {
-    impEstado('Falló la subida: ' + e.message, 'mal');
+    impEstado(z, 'Falló la subida: ' + e.message, 'mal');
   } finally {
     btn.style.opacity = '1'; btn.textContent = 'Elegir archivo';
   }
@@ -2983,22 +2984,37 @@ function archivoABase64(file) {
   });
 }
 
-/** Qué se importó y cuándo, por fuente. */
+/** A qué tienda va lo que se suba: se dice antes de subir, no después. */
+function pintarTiendaImport() {
+  const nombre = (STORES[ST]||{}).name || ST;
+  Object.keys(ZONAS_IMPORT).forEach(function (z) {
+    const t = document.getElementById('imp-tienda-' + z);
+    if (t) t.textContent = 'Entra a ' + nombre;
+  });
+}
+
+/** Qué se importó y cuándo. Cada punto muestra solo sus propias fuentes. */
 async function cargarHistorialFuentes() {
-  const el = document.getElementById('imp-hist');
-  const t = document.getElementById('imp-tienda');
-  if (t) t.textContent = 'Entra a ' + ((STORES[ST]||{}).name || ST);
-  if (!el || !CONECTADO) return;
+  pintarTiendaImport();
+  if (!CONECTADO) return;
   try {
     const r = await api('fuentes', { tienda: ST });
-    if (!r.ok || !r.configuradas.length) {
-      el.textContent = 'Todavía no has importado nada en esta tienda.';
-      return;
-    }
-    el.innerHTML = r.configuradas.map(function (f) {
-      return '· <b>' + f.fuente + '</b> — ' +
-        (f.ultima ? f.ultima + ' · ' + (f.filas||0) + ' filas' : 'sin importar');
-    }).join('<br>');
+    if (!r.ok) return;
+    const hechas = r.configuradas || [];
+    Object.keys(ZONAS_IMPORT).forEach(function (z) {
+      const el = document.getElementById('imp-hist-' + z);
+      if (!el) return;
+      const mias = ZONAS_IMPORT[z].fuentes.map(function (f) { return f[0]; });
+      const filas = hechas.filter(function (f) { return mias.indexOf(f.fuente) !== -1; });
+      if (!filas.length) {
+        el.textContent = 'Todavía no has subido nada de esto en esta tienda.';
+        return;
+      }
+      el.innerHTML = filas.map(function (f) {
+        return '· <b>' + f.fuente + '</b> — ' +
+          (f.ultima ? f.ultima + ' · ' + (f.filas||0) + ' filas' : 'sin importar');
+      }).join('<br>');
+    });
   } catch (e) { /* el historial no es crítico */ }
 }
 
@@ -3113,6 +3129,7 @@ function enterApp(forceRol){
   document.getElementById('login').style.display='none';
   document.getElementById('app').classList.add('on');
   applyPrefs(); buildAll(); updateSub();
+  montarImportadores();
   cargarReales();
 
   // Mostrar chat FAB
