@@ -191,7 +191,7 @@ body { margin: 0; background: var(--bg); font-family: 'DM Sans', sans-serif; min
 
   <div class="grid">
 
-    <a class="card c-emp" href="./empresarial.html">
+    <a class="card c-emp" data-mod="empresarial" href="./empresarial.html">
       <div class="card-icon"><img src="icono-empresarial.png" alt="Nova Empresarial"></div>
       <div>
         <div class="card-kicker">NOVA EMPRESARIAL</div>
@@ -201,7 +201,7 @@ body { margin: 0; background: var(--bg); font-family: 'DM Sans', sans-serif; min
       <div class="card-cta">Entrar</div>
     </a>
 
-    <a class="card c-soul" href="./novasoul.html">
+    <a class="card c-soul" data-mod="soul" href="./novasoul.html">
       <div class="card-icon"><img src="icono-novasoul.png" alt="NovaSoul"></div>
       <div>
         <div class="card-kicker">NOVA SOUL</div>
@@ -211,7 +211,7 @@ body { margin: 0; background: var(--bg); font-family: 'DM Sans', sans-serif; min
       <div class="card-cta">Entrar</div>
     </a>
 
-    <a class="card c-acad" href="./novacademy.html">
+    <a class="card c-acad" data-mod="academy" href="./novacademy.html">
       <div class="card-icon"><img src="icono-novacademy.png" alt="novAcademy"></div>
       <div>
         <div class="card-kicker">NOVACADEMY</div>
@@ -221,7 +221,7 @@ body { margin: 0; background: var(--bg); font-family: 'DM Sans', sans-serif; min
       <div class="card-cta">Entrar</div>
     </a>
 
-    <a class="card c-cent" href="./novacentral.html">
+    <a class="card c-cent" data-mod="central" href="./novacentral.html">
       <div class="card-icon"><img src="icono-central.png" alt="Nova Central"></div>
       <div>
         <div class="card-kicker">NOVA CENTRAL</div>
@@ -240,6 +240,48 @@ body { margin: 0; background: var(--bg); font-family: 'DM Sans', sans-serif; min
 <button class="modo-btn" onclick="toggleModo()">☀ / ☾</button>
 
 <script>
+
+/**
+ * El hub muestra solo lo que la cuenta compró.
+ *
+ * Un cliente de Nova Empresarial no debe ver NovaSoul ni novAcademy:
+ * no los compró, y NovaSoul guarda datos personales de quien la usa.
+ * Mostrar el enlace, aunque no pueda entrar, ya es filtrar de más.
+ *
+ * Sin sesión se muestra solo Nova Empresarial, que es lo que se vende.
+ * Los demás aparecen cuando la hoja confirma que el plan los incluye.
+ */
+const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
+
+function verCards(modulos) {
+  document.querySelectorAll('.card[data-mod]').forEach(function (c) {
+    c.style.display = modulos.indexOf(c.dataset.mod) !== -1 ? '' : 'none';
+  });
+  const n = document.querySelector('.hub-note');
+  if (n && modulos.length === 1) {
+    n.textContent = 'Estás viendo los productos incluidos en tu plan.';
+  }
+}
+
+(async function () {
+  // Por defecto, lo mínimo. Si la sesión dice más, se amplía.
+  verCards(['empresarial']);
+
+  const token = localStorage.getItem('ne_token');
+  if (!token) return;
+  try {
+    const r = await fetch(NOVA_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ accion: 'yo', token: token }),
+    });
+    const j = await r.json();
+    if (j && j.ok && j.sesion && j.sesion.modulos) verCards(j.sesion.modulos);
+  } catch (e) {
+    // Sin conexión se queda en el mínimo: nunca se abre de más por un fallo
+  }
+})();
+
 (function(){
   const R = document.documentElement;
   const saved = localStorage.getItem('nova_modo');

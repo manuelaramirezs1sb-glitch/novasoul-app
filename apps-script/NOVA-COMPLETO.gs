@@ -2502,6 +2502,7 @@ function apiVerificar(p) {
     clienteId: persona.clienteId,
     sheetId: persona.sheetId,
     tiendas: persona.tiendas,
+    modulos: persona.modulos,
     vence: Date.now() + TTL_SESION_H * 3600000,
   };
   cache.put('ses_' + token, JSON.stringify(s), TTL_SESION_H * 3600);
@@ -2525,7 +2526,8 @@ function apiSalir(token) {
 
 /** Lo que el cliente puede saber de su propia sesión. Sin sheetId. */
 function publico(s, ss) {
-  const o = { email: s.email, nombre: s.nombre, rol: s.rol, tiendas: s.tiendas };
+  const o = { email: s.email, nombre: s.nombre, rol: s.rol,
+              tiendas: s.tiendas, modulos: s.modulos || ['empresarial'] };
   // La ficha va con moneda y país para que la pantalla no tenga que adivinarlos
   try {
     o.fichas = fichasDe(ss || SpreadsheetApp.openById(s.sheetId), s.tiendas);
@@ -2572,6 +2574,7 @@ function buscarPersona(email) {
       }
       const tiendaCol = String(f[c('tienda')] || '').trim();
       return {
+        modulos: modulosDelPlan(filas[i][3]),
         id: f[c('id')],
         nombre: f[c('nombre')],
         rol: rol,
@@ -2650,6 +2653,40 @@ function rolCanonico(raw) {
     if (ROLES_VALIDOS[roles[i]].indexOf(k) !== -1) return roles[i];
   }
   return null;
+}
+
+
+/**
+ * Qué productos de Nova ve esta cuenta.
+ *
+ * Un cliente que compró Nova Empresarial NO debe ver NovaSoul ni
+ * novAcademy en su pantalla de inicio: no los compró, y NovaSoul además
+ * guarda datos personales de quien la usa. Mostrar el enlace, aunque no
+ * pueda entrar, ya es filtrar de más.
+ *
+ * El plan vive en Nova_Central → Clientes, y su composición en Planes.
+ * Sin plan reconocido se cae al mínimo: solo Empresarial.
+ */
+function modulosDelPlan(plan) {
+  const p = norm(plan);
+  if (!p) return ['empresarial'];
+  if (p === 'interno') return ['empresarial', 'soul', 'academy', 'central'];
+
+  try {
+    const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Planes');
+    if (sh && sh.getLastRow() > 1) {
+      const d = sh.getDataRange().getValues();
+      const e = d[0].map(norm);
+      const cN = e.indexOf('nombre'), cM = e.indexOf('modulos');
+      for (let i = 1; i < d.length; i++) {
+        if (norm(d[i][cN]) !== p) continue;
+        const m = String(d[i][cM] || '').split(/[,;]/)
+          .map(function (x) { return norm(x); }).filter(String);
+        return m.length ? m : ['empresarial'];
+      }
+    }
+  } catch (err) { /* sin hoja Planes se usa el mínimo */ }
+  return ['empresarial'];
 }
 
 // ─── PERMISOS ────────────────────────────────────────────────
