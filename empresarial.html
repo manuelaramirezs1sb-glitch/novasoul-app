@@ -2980,9 +2980,15 @@ function sellarEjemplo(conectado) {
   SIN_FUENTE.forEach(function (id) {
     const el = document.getElementById(id);
     if (!el) return;
-    // El sello va en la tarjeta contenedora, no en el div de datos
-    const card = el.closest('.card') || el.parentElement;
-    if (card) card.classList.toggle('sello-ej', !!conectado);
+    // El sello va en el bloque que contiene el dato. Buscar solo '.card'
+    // fallaba con los bloques que no lo son —como el recuento— y subía
+    // hasta la vista entera, sellando la pantalla completa en vez de la
+    // tarjeta inventada. Se prueban las clases de bloque, y si ninguna
+    // aparece se sella el elemento mismo: nunca se sube a la vista.
+    const bloque = el.closest('.card, .recuento, .dcard, .acrit') || el;
+    if (bloque && !bloque.classList.contains('view')) {
+      bloque.classList.toggle('sello-ej', !!conectado);
+    }
   });
 }
 
