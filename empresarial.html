@@ -824,7 +824,8 @@ input.li:focus{border-color:var(--acc-d);}
               <div><div style="font:600 13px/1.35 'DM Sans';color:var(--t-ondark);">Ingresos crecieron $5,200 trimestre a trimestre</div><div style="font:500 11.5px/1.4 'DM Sans';color:var(--t-ondark-mut);margin-top:3px;">Proteína Vainilla fue el producto estrella con ROAS 5.2x.</div></div>
             </div>
           </div>
-          <div class="rec-cta">Calificar estos meses →</div>
+          <div class="rec-cta" id="rec-cta" onclick="cerrarMesActual()"
+            style="cursor:pointer;">Cerrar el mes →</div>
         </div>
 
         <!-- KPIs del mes -->
@@ -2819,6 +2820,7 @@ async function cargarReales() {
     if (!r.ok) { marcarOrigen(false, r.error); return; }
     REAL = r.datos;
     aplicarReales(r.datos);
+    pintarEstadoCierre(r.datos);
     marcarOrigen(true);
   } catch (e) { marcarOrigen(false, 'sin conexión'); }
 }
@@ -2990,6 +2992,65 @@ function sellarEjemplo(conectado) {
       bloque.classList.toggle('sello-ej', !!conectado);
     }
   });
+}
+
+// ─── CIERRE REAL DEL MES ──────────────────────────────────────
+/**
+ * Un mes no cierra el día 31: cierra cuando sus pedidos ya se
+ * resolvieron. Uno del 28 de agosto se entrega el 5 de septiembre, y
+ * hasta que eso pase la tasa de entrega y el margen de agosto son
+ * provisionales.
+ *
+ * Al cerrar, las cifras se congelan. Si se recalcularan siempre, el
+ * agosto que reportaste en septiembre cambiaría en octubre cuando una
+ * devolución vieja se resuelva — y un número que cambia solo no sirve
+ * ni para decidir ni para rendir cuentas.
+ */
+async function cerrarMesActual() {
+  if (!CONECTADO) {
+    alert('Entra con tu correo para poder cerrar el mes.');
+    return;
+  }
+  if (ROL !== 'dueno') {
+    alert('Solo la dueña cierra un mes.');
+    return;
+  }
+  const mes = prompt('¿Qué mes quieres cerrar? (AAAA-MM)',
+    new Date(new Date().setMonth(new Date().getMonth() - 1))
+      .toISOString().slice(0, 7));
+  if (!mes) return;
+
+  let r = await api('cerrarmes', { tienda: ST, mes: mes });
+
+  // Cerrar con pedidos pendientes se permite, pero se advierte: sus
+  // ventas ya no entran en ese mes y las cifras quedan así para siempre.
+  if (!r.ok && r.requiere_confirmacion) {
+    if (!confirm(r.error + '\n\n¿Cerrar de todas formas?')) return;
+    r = await api('cerrarmes', { tienda: ST, mes: mes, forzar: true });
+  }
+  if (!r.ok) { alert(r.error || 'No se pudo cerrar el mes.'); return; }
+
+  const S = SYM();
+  alert('Mes ' + mes + ' cerrado.\n\n' +
+    'Ventas: ' + S + ' ' + NUM(r.datos.ventas) + '\n' +
+    'Entregados: ' + NUM(r.datos.entregados) + ' de ' + NUM(r.datos.pedidos) + '\n' +
+    'Efectividad: ' + (r.datos.efectividad || 0).toFixed(1) + '%\n\n' +
+    'Estas cifras quedan congeladas: no cambian aunque después se ' +
+    'resuelva un pedido viejo.');
+  cargarReales();
+}
+
+/** Avisa cuántos pedidos impiden cerrar el mes todavía. */
+function pintarEstadoCierre(d) {
+  const cta = document.getElementById('rec-cta');
+  if (!cta || !d) return;
+  if (d.pendientes > 0) {
+    cta.textContent = 'Quedan ' + d.pendientes + ' pedidos sin resolver · Cerrar igual →';
+    cta.title = 'Normalmente se cierra cuando ya no hay nada pendiente por entregar.';
+  } else {
+    cta.textContent = 'Cerrar el mes →';
+    cta.title = 'No quedan pedidos pendientes: el mes se puede cerrar.';
+  }
 }
 
 // ─── LOGIN FLOW ───────────────────────────────────────

@@ -197,6 +197,19 @@ const ESQUEMA_EMPRESARIAL = {
                'dias_cobertura','ultimo_conteo','actualizado_en','actualizado_por'],
   Equipo: ['id','nombre','correo','rol','tienda','estado','casos_asignados',
            'casos_resueltos','nota_auditoria','ultima_conexion'],
+
+  // Un mes no cierra el día 31: cierra cuando los pedidos de ese mes ya
+  // se resolvieron. Un pedido del 28 de agosto se entrega el 5 de
+  // septiembre, y hasta que eso pase la tasa de entrega y el margen de
+  // agosto son provisionales.
+  //
+  // Al cerrar se CONGELAN las cifras. Si se recalcularan siempre, el
+  // agosto que reportaste en septiembre cambiaría en octubre cuando una
+  // devolución vieja por fin se resuelva — y un número que cambia solo
+  // no sirve para decidir ni para rendir cuentas.
+  Cierres: ['tienda','mes','estado','cerrado_en','cerrado_por',
+            'pendientes_al_cierre','pedidos','entregados','devueltos',
+            'ventas','gasto','margen','efectividad','nota'],
 };
 
 // Staging crudo. Nova NUNCA lee estas pestañas — solo los importadores.
@@ -2415,6 +2428,7 @@ function manejar(e, metodo) {
       case 'cierre':    return json(apiCierre(s, p));
       case 'importar':  return json(apiImportarArchivo(s, p));
       case 'fuentes':   return json(apiFuentes(s, p));
+      case 'cerrarmes': return json(apiCerrarMes(s, p));
       case 'salir':     return json(apiSalir(p.token));
       default:          return json({ ok: false, error: 'Acción desconocida: ' + accion });
     }
@@ -2915,12 +2929,21 @@ function apiCierre(s, p) {
   const mes = String(p.mes || Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM'));
   const prev = mesAnterior(mes);
 
+  // Un mes cerrado devuelve lo que se congeló, no un recálculo: si se
+  // recalculara, las cifras que ya reportaste cambiarían solas.
+  const congelado = cierreGuardado(ss, tienda, mes);
   const r = {
     ok: true, tienda: tienda, mes: mes,
     moneda: monedaDeTienda(ss, tienda),
-    actual: agregarMes(ss, tienda, mes, s),
+    actual: congelado ? congelado.datos : agregarMes(ss, tienda, mes, s),
     anterior: agregarMes(ss, tienda, prev, s),
+    cerrado: !!congelado,
+    cerrado_en: congelado ? congelado.cerrado_en : '',
   };
+  if (!congelado) {
+    r.provisional = r.actual.pendientes > 0;
+    r.pendientes = r.actual.pendientes;
+  }
 
   // El efecto cambiario es solo de la dueña: es información de dinero
   if (s.rol === 'dueno' && monedaDeTienda(ss, tienda) !== monedaReporte(ss)) {
@@ -2941,6 +2964,7 @@ function apiCierre(s, p) {
 function agregarMes(ss, tienda, mes, s) {
   const out = {
     pedidos: 0, despachados: 0, entregados: 0, devueltos: 0, cancelados: 0,
+    pendientes: 0,
     ventas: 0, costoProducto: 0, costoEnvio: 0,
     novedades: 0, sinMover: 0,
     grupos: {}, transportadoras: {},
@@ -2977,8 +3001,10 @@ function agregarMes(ss, tienda, mes, s) {
         if (est === 'entregado') out.transportadoras[t].entregados++;
       }
 
-      // Sin movimiento: terminal no cuenta, ya cerró su ciclo
+      // Un pedido sin estado terminal es un desenlace que todavía no se
+      // conoce: mientras haya alguno, el mes es provisional.
       if (['entregado','devolucion','cancelado'].indexOf(est) === -1) {
+        out.pendientes++;
         const ult = aISO(f[c('ultimo_movimiento')] || f[c('actualizado_en')], 'UTC') || fecha;
         const dias = (hoy - new Date(ult + 'T00:00:00Z')) / 86400000;
         if (dias > 3) out.sinMover++;
@@ -3056,6 +3082,84 @@ function efectoCambiarioSS(ss, tienda, mesA, mesB) {
   };
 }
 
+
+
+// ─── CIERRE DE MES ───────────────────────────────────────────
+
+/** Devuelve las cifras congeladas de un mes ya cerrado, o null. */
+function cierreGuardado(ss, tienda, mes) {
+  const sh = ss.getSheetByName('Cierres');
+  if (!sh || sh.getLastRow() < 2) return null;
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+  for (let i = 1; i < d.length; i++) {
+    if (String(d[i][c('tienda')]).trim() !== tienda) continue;
+    if (String(d[i][c('mes')]).trim() !== mes) continue;
+    if (norm(d[i][c('estado')]) !== 'cerrado') continue;
+    return {
+      cerrado_en: d[i][c('cerrado_en')],
+      datos: {
+        pedidos: num(d[i][c('pedidos')]), entregados: num(d[i][c('entregados')]),
+        devueltos: num(d[i][c('devueltos')]), ventas: num(d[i][c('ventas')]),
+        gasto: num(d[i][c('gasto')]), margen: num(d[i][c('margen')]),
+        efectividad: num(d[i][c('efectividad')]),
+        pendientes: num(d[i][c('pendientes_al_cierre')]),
+        despachados: 0, cancelados: 0, novedades: 0, sinMover: 0,
+        grupos: {}, transportadoras: {}, congelado: true,
+      },
+    };
+  }
+  return null;
+}
+
+/**
+ * Cierra un mes: congela sus cifras.
+ *
+ * Solo la dueña. Y avisa si quedan pedidos sin resolver, porque cerrar
+ * con pendientes deja fuera ventas que todavía pueden entrar — pero no
+ * lo prohíbe: a veces hay que cerrar contra una fecha aunque falten dos
+ * guías perdidas.
+ */
+function apiCerrarMes(s, p) {
+  if (s.rol !== 'dueno') {
+    return { ok: false, error: 'Solo la dueña cierra un mes.' };
+  }
+  const tienda = String(p.tienda || '').trim();
+  const mes = String(p.mes || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  if (!/^\d{4}-\d{2}$/.test(mes)) {
+    return { ok: false, error: 'El mes va como AAAA-MM.' };
+  }
+
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  if (cierreGuardado(ss, tienda, mes)) {
+    return { ok: false, error: 'Ese mes ya está cerrado. Para rehacerlo, ' +
+             'cambia su estado a "abierto" en la hoja Cierres.' };
+  }
+
+  const d = agregarMes(ss, tienda, mes, s);
+  if (d.pendientes > 0 && !p.forzar) {
+    return {
+      ok: false, requiere_confirmacion: true, pendientes: d.pendientes,
+      error: 'Quedan ' + d.pendientes + ' pedidos de ' + mes + ' sin resolver. ' +
+        'Si cierras ahora, sus ventas no entran en este mes y las cifras ' +
+        'quedan congeladas así. Normalmente se cierra cuando ya no hay ' +
+        'nada pendiente por entregar.',
+    };
+  }
+
+  const sh = ss.getSheetByName('Cierres');
+  if (!sh) return { ok: false, error: 'Falta la hoja Cierres. Corre bootstrapTodo().' };
+  sh.appendRow([tienda, mes, 'cerrado', ahoraISO(), s.email, d.pendientes,
+                d.pedidos, d.entregados, d.devueltos, d.ventas,
+                d.gasto || 0, d.margen || 0, d.efectividad,
+                p.nota || '']);
+  registrarMovimiento(s, 'Cierres', tienda + '/' + mes, 'estado', 'abierto', 'cerrado');
+  return { ok: true, mes: mes, tienda: tienda, datos: d, cerrado_en: ahoraISO() };
+}
 
 // ─── IMPORTAR DESDE LA APP ───────────────────────────────────
 /**

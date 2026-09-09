@@ -204,6 +204,19 @@ const ESQUEMA_EMPRESARIAL = {
                'dias_cobertura','ultimo_conteo','actualizado_en','actualizado_por'],
   Equipo: ['id','nombre','correo','rol','tienda','estado','casos_asignados',
            'casos_resueltos','nota_auditoria','ultima_conexion'],
+
+  // Un mes no cierra el día 31: cierra cuando los pedidos de ese mes ya
+  // se resolvieron. Un pedido del 28 de agosto se entrega el 5 de
+  // septiembre, y hasta que eso pase la tasa de entrega y el margen de
+  // agosto son provisionales.
+  //
+  // Al cerrar se CONGELAN las cifras. Si se recalcularan siempre, el
+  // agosto que reportaste en septiembre cambiaría en octubre cuando una
+  // devolución vieja por fin se resuelva — y un número que cambia solo
+  // no sirve para decidir ni para rendir cuentas.
+  Cierres: ['tienda','mes','estado','cerrado_en','cerrado_por',
+            'pendientes_al_cierre','pedidos','entregados','devueltos',
+            'ventas','gasto','margen','efectividad','nota'],
 };
 
 // Staging crudo. Nova NUNCA lee estas pestañas — solo los importadores.
