@@ -732,6 +732,10 @@ input.li:focus{border-color:var(--acc-d);}
         <div class="ni v-gestora" data-v="g-pedidos" onclick="go('g-pedidos',this)">Mis pedidos</div>
         <div class="ni v-gestora" data-v="g-novedades" onclick="go('g-novedades',this)">Mis novedades</div>
       </div>
+      <div class="navg ro-admin">
+        <div class="navg-lbl">DATOS</div>
+        <div class="ni" data-v="importar" onclick="go('importar',this)">Importar archivos</div>
+      </div>
       <div class="navg ro-dueno">
         <div class="navg-lbl">DINERO</div>
         <div class="ni" data-v="dinero" onclick="go('dinero',this)">Dinero</div>
@@ -756,7 +760,7 @@ input.li:focus{border-color:var(--acc-d);}
       <div class="stores-lbl">TIENDA</div>
       <div class="schip on" id="cec" onclick="switchSt('ec')"><strong>Nutrea EC</strong><small>Shopify + Dropi · USD</small></div>
       <div class="schip" id="cgt" onclick="switchSt('gt')"><strong>Nutrea GT</strong><small>Dropi · GTQ</small></div>
-      <div class="ubtn">Subir archivos</div>
+      <div class="ubtn" onclick="go('importar',null)">Subir archivos</div>
     </div>
   </nav>
 
@@ -1015,6 +1019,76 @@ input.li:focus{border-color:var(--acc-d);}
       </div>
 
       <!-- ════ DINERO ════ -->
+      <!-- ════ IMPORTAR ARCHIVOS ════ -->
+      <div class="view ro-admin" id="v-importar">
+        <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">
+          Aquí entra la información real. Sube el archivo tal como lo exporta la
+          plataforma: Nova lo lee, lo normaliza y lo guarda en la tienda que
+          tienes abierta arriba. No hay que tocar la hoja de cálculo.</p>
+        <div class="g2">
+          <div class="card">
+            <div class="card-h"><span class="ct">Subir un archivo</span>
+              <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);" id="imp-tienda"></span></div>
+            <p style="font:500 12px/1.55 'DM Sans';color:var(--t-mut);margin:0 0 4px;">
+              Primero elige de qué plataforma viene. Acepta CSV y Excel (.xlsx).</p>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <select class="cm-sel" id="imp-fuente">
+                <option value="">Elige la plataforma…</option>
+                <optgroup label="Pedidos">
+                  <option value="dropi">Dropi</option>
+                  <option value="mastershop">Mastershop</option>
+                  <option value="effi_guias">Effi · guías</option>
+                  <option value="effi_novedades">Effi · novedades</option>
+                  <option value="shopify">Shopify</option>
+                </optgroup>
+                <optgroup label="Pauta">
+                  <option value="meta">Meta · campañas</option>
+                  <option value="meta_facturacion">Meta · facturación</option>
+                  <option value="tiktok">TikTok</option>
+                </optgroup>
+                <optgroup label="Llamadas">
+                  <option value="iris">IRIS</option>
+                </optgroup>
+              </select>
+              <button class="cm-btn" id="imp-btn" onclick="abrirArchivo()">Elegir archivo</button>
+            </div>
+            <input type="file" id="imp-file" accept=".csv,.xlsx,.txt" style="display:none" onchange="subirArchivo(this)">
+
+            <div id="imp-estado" style="display:none;font:500 12px/1.6 'DM Sans';
+              padding:11px 14px;border-radius:11px;margin-top:4px;white-space:pre-line;"></div>
+
+            <div class="slbl" style="margin-top:6px;">ÚLTIMAS IMPORTACIONES</div>
+            <div id="imp-hist" style="font:500 11.5px/1.7 'DM Sans';color:var(--t-mut2);">
+              Entra con tu correo para ver el historial.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><span class="ct">Qué archivo bajar</span></div>
+            <div style="font:500 12px/1.7 'DM Sans';color:var(--t-mut);display:flex;flex-direction:column;gap:10px;">
+              <div><strong style="color:var(--t-ink);">Dropi</strong><br>
+                Pedidos → Exportar. El reporte con una fila por pedido.</div>
+              <div><strong style="color:var(--t-ink);">Mastershop</strong><br>
+                Órdenes → Descargar reporte.</div>
+              <div><strong style="color:var(--t-ink);">Effi</strong><br>
+                Son dos archivos distintos: guías y novedades. Súbelos por separado
+                con la opción que corresponde.</div>
+              <div><strong style="color:var(--t-ink);">Meta</strong><br>
+                Campañas es el reporte de resultados. Facturación es el recibo de
+                cobro: trae el gasto real en la moneda que te cobraron.</div>
+              <div><strong style="color:var(--t-ink);">IRIS</strong><br>
+                El reporte de llamadas. Nova lo cruza con los pedidos por el número
+                de celular, así que no importa que traiga prefijo.</div>
+            </div>
+            <div class="dline"></div>
+            <p style="font:500 11.5px/1.6 'DM Sans';color:var(--t-mut2);margin:0;">
+              Si un archivo trae columnas que Nova no conoce, te lo dice al terminar
+              en vez de inventar. Vuelve a subir el mismo archivo las veces que
+              quieras: los pedidos repetidos se actualizan, no se duplican.</p>
+          </div>
+        </div>
+      </div>
+
       <div class="view ro-dueno" id="v-dinero">
         <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">De arriba hacia abajo: lo que entró, lo que se fue y lo que queda.</p>
         <div class="kgrid" id="dinkpi2"></div>
@@ -1044,45 +1118,6 @@ input.li:focus{border-color:var(--acc-d);}
             </div>
           </div>
         </div>
-        <!-- ═══ IMPORTAR DATOS ═══ -->
-        <div class="card">
-          <div class="card-h"><span class="ct">Importar datos</span>
-            <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);" id="imp-tienda"></span></div>
-          <p style="font:500 12px/1.55 'DM Sans';color:var(--t-mut);margin:0 0 4px;">
-            Sube el archivo tal como lo exporta la plataforma. Nova lo lee, lo normaliza
-            y lo guarda en la tienda que tienes abierta.</p>
-
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <select class="cm-sel" id="imp-fuente">
-              <option value="">Elige la plataforma…</option>
-              <optgroup label="Pedidos">
-                <option value="dropi">Dropi</option>
-                <option value="mastershop">Mastershop</option>
-                <option value="effi_guias">Effi · guías</option>
-                <option value="effi_novedades">Effi · novedades</option>
-                <option value="shopify">Shopify</option>
-              </optgroup>
-              <optgroup label="Pauta">
-                <option value="meta">Meta · campañas</option>
-                <option value="meta_facturacion">Meta · facturación</option>
-                <option value="tiktok">TikTok</option>
-              </optgroup>
-              <optgroup label="Llamadas">
-                <option value="iris">IRIS</option>
-              </optgroup>
-            </select>
-            <button class="cm-btn" id="imp-btn" onclick="abrirArchivo()">Elegir archivo</button>
-          </div>
-          <input type="file" id="imp-file" accept=".csv,.xlsx,.txt" style="display:none" onchange="subirArchivo(this)">
-
-          <div id="imp-estado" style="display:none;font:500 12px/1.6 'DM Sans';
-            padding:11px 14px;border-radius:11px;margin-top:4px;white-space:pre-line;"></div>
-
-          <div class="slbl" style="margin-top:6px;">ÚLTIMAS IMPORTACIONES</div>
-          <div id="imp-hist" style="font:500 11.5px/1.7 'DM Sans';color:var(--t-mut2);">
-            Entra con tu correo para ver el historial.</div>
-        </div>
-
         <!-- Gastos del mes -->
         <div class="card">
           <div class="card-h"><span class="ct">Gastos del mes</span><span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">Fijos + Variables</span></div>
@@ -2630,6 +2665,7 @@ const TITLES = {
   hoy:'Hoy',pedidos:'Pedidos',novedades:'Novedades',oficina:'Seguimiento a oficina',
   gestoras:'Gestoras',auditoria:'Auditoría',pauta:'Pauta y gastos',inventario:'Inventario',
   dinero:'Dinero',calc:'Calculadoras',permisos:'Permisos',cierre:'Cierre de mes',productos:'Productos',config:'Configuración',
+  importar:'Importar archivos',
   'g-hoy':'Mis pedidos de hoy','g-pedidos':'Mis pedidos','g-novedades':'Mis novedades',
 };
 function go(view, el) {
