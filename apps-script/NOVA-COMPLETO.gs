@@ -1,7 +1,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════
-   1 · INSTALACIÓN Y BOOTSTRAP
+   1 · INSTALACIÓN
    ═══════════════════════════════════════════════════════════════ */
 
 
@@ -358,7 +358,7 @@ function sembrarParametros() {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   2 · ESTADOS CANÓNICOS Y TELÉFONOS
+   2 · ESTADOS Y TELÉFONOS
    ═══════════════════════════════════════════════════════════════ */
 
 
@@ -733,7 +733,7 @@ function extraerTelefonos(campoTelefono, textoLibre, paisDefault) {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   3 · MONEDAS Y CONVERSIÓN
+   3 · MONEDAS
    ═══════════════════════════════════════════════════════════════ */
 
 
@@ -1321,10 +1321,15 @@ function leerCrudo(ss, fuenteId, tienda) {
   const cfg = FUENTES[fuenteId];
   if (!cfg) throw new Error('Fuente desconocida: ' + fuenteId);
 
-  const tab = cfg.tab ||
+  // Una pestaña por tienda cuando hace falta: si la misma plataforma
+  // sirve a dos tiendas, cada una necesita su propio export. Se busca
+  // primero _Import_Dropi_EC y se cae a _Import_Dropi si no existe.
+  const base = cfg.tab ||
     ('_Import_' + fuenteId.charAt(0).toUpperCase() + fuenteId.slice(1));
-  const sh = ss.getSheetByName(tab);
-  if (!sh) throw new Error('Falta la pestaña ' + tab);
+  const propia = base + '_' + String(tienda || '').toUpperCase();
+  const sh = ss.getSheetByName(propia) || ss.getSheetByName(base);
+  if (!sh) throw new Error('Falta la pestaña ' + base + ' (ni ' + propia + ').');
+  const tab = sh.getName();
 
   const datos = sh.getDataRange().getValues();
   if (datos.length < 2) return { filas: [], sinMapear: [], tab: tab };
@@ -1746,7 +1751,7 @@ function aliasDesdeMapeos(ss, fuenteId) {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   6 · PROVISIONAR CLIENTES
+   6 · CLIENTES
    ═══════════════════════════════════════════════════════════════ */
 
 
@@ -1948,7 +1953,7 @@ function listarClientes() {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   7 · TASAS Y EFECTO CAMBIARIO
+   7 · TASAS
    ═══════════════════════════════════════════════════════════════ */
 
 
@@ -3337,10 +3342,36 @@ function importarTodo(cliente) {
   const enc = datos[0].map(norm);
   const cT = enc.indexOf('tienda'), cF = enc.indexOf('fuente'), cA = enc.indexOf('activa');
 
+  // Cuántas tiendas activas usa cada plataforma. Si son dos y comparten
+  // una sola pestaña, importar las dos etiquetaría las mismas filas
+  // primero con una tienda y luego con la otra: los datos quedarían
+  // asignados a la que corrió de último, sin que nadie lo note.
+  const porFuente = {};
+  datos.slice(1).forEach(function (f) {
+    if (norm(f[cA]) !== 'si') return;
+    const fu = String(f[cF]).trim();
+    (porFuente[fu] = porFuente[fu] || []).push(String(f[cT]).trim());
+  });
+
   const log = [];
   datos.slice(1).forEach(function (f) {
     if (norm(f[cA]) !== 'si') return;
     const fuente = String(f[cF]).trim(), tienda = String(f[cT]).trim();
+
+    if (porFuente[fuente].length > 1) {
+      const base = '_Import_' + fuente.charAt(0).toUpperCase() + fuente.slice(1);
+      if (!ss.getSheetByName(base + '_' + tienda.toUpperCase())) {
+        log.push('SALTADA: ' + fuente + ' / ' + tienda + '\n' +
+          '  La usan ' + porFuente[fuente].length + ' tiendas (' +
+          porFuente[fuente].join(', ') + ') y solo hay una pestaña ' + base + '.\n' +
+          '  Importarlas juntas etiquetaría las mismas filas con la tienda\n' +
+          '  equivocada. Elige una salida:\n' +
+          '    a) Crea una pestaña por tienda: ' + base + '_GT y ' + base + '_EC\n' +
+          '    b) O pon "no" en la columna activa de la tienda que no la usa');
+        return;
+      }
+    }
+
     // Effi son dos reportes con nombres propios
     const ids = fuente === 'effi' ? ['effi_guias', 'effi_novedades'] : [fuente];
     ids.forEach(function (id) {
@@ -3355,3 +3386,16 @@ function importarTodo(cliente) {
   Logger.log(msg);
   return msg;
 }
+
+
+// ─── ATAJOS ──────────────────────────────────────────────────
+// El botón Ejecutar de Apps Script no permite pasar argumentos, así que
+// cada combinación frecuente necesita su propia función en el desplegable.
+
+function importarDropiEC()      { return importar('dropi', 'ec'); }
+function importarDropiGT()      { return importar('dropi', 'gt'); }
+function importarMetaEC()       { return importar('meta', 'ec'); }
+function importarMetaGT()       { return importar('meta', 'gt'); }
+function importarFacturacionEC(){ return importar('meta_facturacion', 'ec'); }
+function importarShopifyEC()    { return importar('shopify', 'ec'); }
+function importarIris()         { return importar('iris', 'ec'); }

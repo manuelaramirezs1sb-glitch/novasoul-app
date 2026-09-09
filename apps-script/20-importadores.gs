@@ -400,10 +400,15 @@ function leerCrudo(ss, fuenteId, tienda) {
   const cfg = FUENTES[fuenteId];
   if (!cfg) throw new Error('Fuente desconocida: ' + fuenteId);
 
-  const tab = cfg.tab ||
+  // Una pestaña por tienda cuando hace falta: si la misma plataforma
+  // sirve a dos tiendas, cada una necesita su propio export. Se busca
+  // primero _Import_Dropi_EC y se cae a _Import_Dropi si no existe.
+  const base = cfg.tab ||
     ('_Import_' + fuenteId.charAt(0).toUpperCase() + fuenteId.slice(1));
-  const sh = ss.getSheetByName(tab);
-  if (!sh) throw new Error('Falta la pestaña ' + tab);
+  const propia = base + '_' + String(tienda || '').toUpperCase();
+  const sh = ss.getSheetByName(propia) || ss.getSheetByName(base);
+  if (!sh) throw new Error('Falta la pestaña ' + base + ' (ni ' + propia + ').');
+  const tab = sh.getName();
 
   const datos = sh.getDataRange().getValues();
   if (datos.length < 2) return { filas: [], sinMapear: [], tab: tab };
