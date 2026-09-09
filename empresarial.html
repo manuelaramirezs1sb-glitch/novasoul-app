@@ -1035,22 +1035,45 @@ input.li:focus{border-color:var(--acc-d);}
             </div>
           </div>
         </div>
-        <!-- Subir reporte Meta -->
+        <!-- ═══ IMPORTAR DATOS ═══ -->
         <div class="card">
-          <div class="card-h"><span class="ct">Reporte de Meta Ads</span></div>
-          <div class="meta-upload" onclick="document.getElementById('meta-file-inp').click()">
-            <div class="meta-upload-ico">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-            </div>
-            <div class="meta-upload-txt">
-              <div class="meta-upload-nm">Subir reporte de Meta Ads</div>
-              <div class="meta-upload-sub">Sube el CSV exportado de Meta. Nova lo lee y actualiza la pauta, el CPA y el ROAS automáticamente.</div>
-            </div>
-            <div class="meta-upload-lbl" id="meta-lbl">Subir ↑</div>
+          <div class="card-h"><span class="ct">Importar datos</span>
+            <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);" id="imp-tienda"></span></div>
+          <p style="font:500 12px/1.55 'DM Sans';color:var(--t-mut);margin:0 0 4px;">
+            Sube el archivo tal como lo exporta la plataforma. Nova lo lee, lo normaliza
+            y lo guarda en la tienda que tienes abierta.</p>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <select class="cm-sel" id="imp-fuente">
+              <option value="">Elige la plataforma…</option>
+              <optgroup label="Pedidos">
+                <option value="dropi">Dropi</option>
+                <option value="mastershop">Mastershop</option>
+                <option value="effi_guias">Effi · guías</option>
+                <option value="effi_novedades">Effi · novedades</option>
+                <option value="shopify">Shopify</option>
+              </optgroup>
+              <optgroup label="Pauta">
+                <option value="meta">Meta · campañas</option>
+                <option value="meta_facturacion">Meta · facturación</option>
+                <option value="tiktok">TikTok</option>
+              </optgroup>
+              <optgroup label="Llamadas">
+                <option value="iris">IRIS</option>
+              </optgroup>
+            </select>
+            <button class="cm-btn" id="imp-btn" onclick="abrirArchivo()">Elegir archivo</button>
           </div>
-          <input type="file" id="meta-file-inp" accept=".csv,.xlsx" style="display:none" onchange="onMetaFile(this)">
-          <p style="font:500 11px/1.5 'DM Sans';color:var(--t-mut2);margin:10px 0 0;">Formato: exportación estándar de Meta Ads Manager en CSV. Solo se leen las columnas normalizadas de campaña, gasto, resultados e impresiones.</p>
+          <input type="file" id="imp-file" accept=".csv,.xlsx,.txt" style="display:none" onchange="subirArchivo(this)">
+
+          <div id="imp-estado" style="display:none;font:500 12px/1.6 'DM Sans';
+            padding:11px 14px;border-radius:11px;margin-top:4px;white-space:pre-line;"></div>
+
+          <div class="slbl" style="margin-top:6px;">ÚLTIMAS IMPORTACIONES</div>
+          <div id="imp-hist" style="font:500 11.5px/1.7 'DM Sans';color:var(--t-mut2);">
+            Entra con tu correo para ver el historial.</div>
         </div>
+
         <!-- Gastos del mes -->
         <div class="card">
           <div class="card-h"><span class="ct">Gastos del mes</span><span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">Fijos + Variables</span></div>
@@ -2299,7 +2322,7 @@ function delGasto(tipo,i){
   renderGastos();
   showToast('Gasto eliminado');
 }
-function onMetaFile(inp){
+function onMetaFileViejo(inp){
   if(!inp.files||!inp.files[0]) return;
   const lbl=document.getElementById('meta-lbl');
   lbl.textContent='Procesando…';
@@ -2827,6 +2850,100 @@ function marcarOrigen(real, motivo) {
   document.querySelectorAll('.sin-fuente-real').forEach(function(el){
     el.style.display = real ? 'block' : 'none';
   });
+}
+
+// ─── IMPORTAR DESDE LA APP ────────────────────────────────────
+/**
+ * La importación vive aquí, no en la hoja. Y eso resuelve un problema
+ * de raíz: un archivo pegado a mano en el Sheet no dice de qué tienda
+ * es, así que había que declararlo aparte y podía quedar mal asignado.
+ * Subiéndolo desde la app, la tienda es la que está abierta.
+ */
+function abrirArchivo() {
+  const f = document.getElementById('imp-fuente').value;
+  if (!f) { impEstado('Elige primero la plataforma.', 'ojo'); return; }
+  if (!CONECTADO) { impEstado('Entra con tu correo para poder importar.', 'ojo'); return; }
+  document.getElementById('imp-file').click();
+}
+
+function impEstado(msg, tipo) {
+  const el = document.getElementById('imp-estado');
+  if (!el) return;
+  const c = { ok:['#e6efe8','#2f5738'], ojo:['#f6ecd0','#7a5c10'], mal:['#f6e3db','#a8563a'] }[tipo||'ojo'];
+  el.style.display = 'block';
+  el.style.background = c[0];
+  el.style.color = c[1];
+  el.textContent = msg;
+}
+
+async function subirArchivo(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+
+  const fuente = document.getElementById('imp-fuente').value;
+  const btn = document.getElementById('imp-btn');
+  const nombreTienda = (STORES[ST]||{}).name || ST;
+
+  if (file.size > 8 * 1024 * 1024) {
+    impEstado('El archivo pesa ' + (file.size/1048576).toFixed(1) + ' MB. ' +
+      'El máximo son 8 MB — expórtalo por rangos de fecha más cortos.', 'mal');
+    return;
+  }
+
+  impEstado('Leyendo ' + file.name + '…', 'ojo');
+  btn.style.opacity = '.6'; btn.textContent = 'Subiendo…';
+
+  try {
+    const b64 = await archivoABase64(file);
+    impEstado('Importando a ' + nombreTienda + '…\nEsto puede tardar según el tamaño.', 'ojo');
+
+    const r = await api('importar', {
+      fuente: fuente, tienda: ST, nombre: file.name, contenido: b64,
+    });
+
+    if (!r.ok) { impEstado(r.error || 'No se pudo importar.', 'mal'); return; }
+    impEstado(r.resumen || ('Importadas ' + r.filas + ' filas.'), 'ok');
+    cargarReales();
+  cargarHistorialFuentes();
+    cargarHistorialFuentes();
+  } catch (e) {
+    impEstado('Falló la subida: ' + e.message, 'mal');
+  } finally {
+    btn.style.opacity = '1'; btn.textContent = 'Elegir archivo';
+  }
+}
+
+/** El archivo viaja en base64 porque la API recibe JSON, no binario. */
+function archivoABase64(file) {
+  return new Promise(function (resolve, reject) {
+    const fr = new FileReader();
+    fr.onload = function () {
+      const s = String(fr.result);
+      resolve(s.slice(s.indexOf(',') + 1));
+    };
+    fr.onerror = function () { reject(new Error('no se pudo leer el archivo')); };
+    fr.readAsDataURL(file);
+  });
+}
+
+/** Qué se importó y cuándo, por fuente. */
+async function cargarHistorialFuentes() {
+  const el = document.getElementById('imp-hist');
+  const t = document.getElementById('imp-tienda');
+  if (t) t.textContent = 'Entra a ' + ((STORES[ST]||{}).name || ST);
+  if (!el || !CONECTADO) return;
+  try {
+    const r = await api('fuentes', { tienda: ST });
+    if (!r.ok || !r.configuradas.length) {
+      el.textContent = 'Todavía no has importado nada en esta tienda.';
+      return;
+    }
+    el.innerHTML = r.configuradas.map(function (f) {
+      return '· <b>' + f.fuente + '</b> — ' +
+        (f.ultima ? f.ultima + ' · ' + (f.filas||0) + ' filas' : 'sin importar');
+    }).join('<br>');
+  } catch (e) { /* el historial no es crítico */ }
 }
 
 // ─── LOGIN FLOW ───────────────────────────────────────

@@ -58,6 +58,8 @@ function manejar(e, metodo) {
       case 'listar':    return json(apiListar(s, p));
       case 'escribir':  return json(apiEscribir(s, p));
       case 'cierre':    return json(apiCierre(s, p));
+      case 'importar':  return json(apiImportarArchivo(s, p));
+      case 'fuentes':   return json(apiFuentes(s, p));
       case 'salir':     return json(apiSalir(p.token));
       default:          return json({ ok: false, error: 'Acción desconocida: ' + accion });
     }
@@ -660,6 +662,157 @@ function efectoCambiarioSS(ss, tienda, mesA, mesB) {
     porOperacion: (R1 - R0) * T0,
     porCambio: R1 * (T1 - T0),
   };
+}
+
+
+// ─── IMPORTAR DESDE LA APP ───────────────────────────────────
+/**
+ * Recibe un archivo subido desde la pantalla y lo importa.
+ *
+ * Esta es la vía real del producto. Pegar a mano en las pestañas
+ * _Import_* era andamiaje de pruebas, y traía un problema que aquí
+ * no existe: un archivo pegado no dice de qué tienda es, así que había
+ * que declararlo aparte y podía quedar mal. Cuando la persona sube el
+ * archivo desde la app, la tienda es la que tiene abierta. No hay nada
+ * que adivinar.
+ *
+ * El crudo igual queda archivado en su pestaña _Import_*, porque es lo
+ * que permite rehacer una importación cuando un mapeo se corrige.
+ */
+function apiImportarArchivo(s, p) {
+  const fuente = String(p.fuente || '').trim();
+  const tienda = String(p.tienda || '').trim();
+  const nombre = String(p.nombre || 'archivo').trim();
+  const b64 = String(p.contenido || '');
+
+  if (!FUENTES[fuente]) return { ok: false, error: 'Fuente desconocida: ' + fuente };
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a la tienda ' + tienda + '.' };
+  }
+  if (s.rol === 'gestora') {
+    return { ok: false, error: 'Las importaciones las hace la admin o la dueña.' };
+  }
+  if (!b64) return { ok: false, error: 'El archivo llegó vacío.' };
+  // ~8 MB en base64. Por encima, Apps Script se queda sin tiempo.
+  if (b64.length > 11000000) {
+    return { ok: false, error: 'El archivo es muy grande (más de 8 MB). ' +
+             'Expórtalo por rangos de fecha más cortos.' };
+  }
+
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  let filas;
+  try {
+    filas = leerArchivo(b64, nombre);
+  } catch (err) {
+    return { ok: false, error: 'No pude leer el archivo: ' + err.message };
+  }
+  if (!filas || filas.length < 2) {
+    return { ok: false, error: 'El archivo no tiene filas de datos.' };
+  }
+
+  // El crudo se archiva en su pestaña, con el nombre por tienda para que
+  // dos tiendas con la misma plataforma no se pisen.
+  const cfg = FUENTES[fuente];
+  const base = cfg.tab ||
+    ('_Import_' + fuente.charAt(0).toUpperCase() + fuente.slice(1));
+  const nomTab = base + '_' + tienda.toUpperCase();
+  let sh = ss.getSheetByName(nomTab);
+  if (!sh) { sh = ss.insertSheet(nomTab); sh.setTabColor('#cccccc'); }
+  sh.clear();
+
+  const ancho = Math.max.apply(null, filas.map(function (f) { return f.length; }));
+  const rect = filas.map(function (f) {
+    const r = f.slice();
+    while (r.length < ancho) r.push('');
+    return r;
+  });
+  sh.getRange(1, 1, rect.length, ancho).setValues(rect);
+  SpreadsheetApp.flush();
+
+  let res;
+  try {
+    res = importar(fuente, tienda, s.sheetId);
+  } catch (err) {
+    return { ok: false, error: err.message, archivado: nomTab };
+  }
+
+  registrarMovimiento(s, 'Fuentes', fuente + '/' + tienda, 'importacion',
+                      '', nombre + ' · ' + (filas.length - 1) + ' filas');
+  return { ok: true, resumen: res, archivo: nombre,
+           filas: filas.length - 1, tab: nomTab };
+}
+
+/**
+ * Convierte el archivo subido en una matriz de filas.
+ *
+ * CSV se parsea directo. XLSX no: es un zip binario, así que se sube a
+ * Drive pidiendo conversión a hoja de cálculo, se lee, y se borra.
+ * El archivo temporal se elimina siempre, incluso si la lectura falla.
+ */
+function leerArchivo(b64, nombre) {
+  const bytes = Utilities.base64Decode(b64);
+  const ext = String(nombre).toLowerCase().split('.').pop();
+
+  if (ext === 'csv' || ext === 'txt') {
+    let texto = Utilities.newBlob(bytes).getDataAsString('UTF-8');
+    // Un CSV de Excel suele venir en latin1: si aparece el carácter de
+    // reemplazo, se reintenta con esa codificación.
+    if (texto.indexOf('�') !== -1) {
+      texto = Utilities.newBlob(bytes).getDataAsString('ISO-8859-1');
+    }
+    const sep = detectarSeparador(texto);
+    return Utilities.parseCsv(texto, sep);
+  }
+
+  const blob = Utilities.newBlob(bytes,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', nombre);
+  let temp = null;
+  try {
+    temp = Drive.Files.insert({ title: 'nova_tmp_' + Date.now(),
+      mimeType: MimeType.GOOGLE_SHEETS }, blob);
+    const tmpSS = SpreadsheetApp.openById(temp.id);
+    return tmpSS.getSheets()[0].getDataRange().getValues();
+  } finally {
+    if (temp && temp.id) {
+      try { DriveApp.getFileById(temp.id).setTrashed(true); } catch (e) {}
+    }
+  }
+}
+
+/** Coma o punto y coma: Excel en español exporta con punto y coma. */
+function detectarSeparador(texto) {
+  const linea = texto.split(/\r?\n/)[0] || '';
+  return (linea.split(';').length > linea.split(',').length) ? ';' : ',';
+}
+
+/** Las fuentes configuradas para una tienda, para poblar el selector. */
+function apiFuentes(s, p) {
+  const tienda = String(p.tienda || s.tiendas[0] || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const sh = ss.getSheetByName('Fuentes');
+  const out = [];
+  if (sh && sh.getLastRow() > 1) {
+    const d = sh.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    d.slice(1).forEach(function (f) {
+      if (String(f[c('tienda')]).trim() !== tienda) return;
+      out.push({
+        fuente: String(f[c('fuente')]).trim(),
+        tipo: String(f[c('tipo')] || '').trim(),
+        ultima: f[c('ultima_importacion')] || '',
+        filas: f[c('filas_ultima')] || '',
+      });
+    });
+  }
+  // Todo lo que Nova sabe leer, por si la tienda aún no lo tiene declarado
+  const catalogo = Object.keys(FUENTES).map(function (k) {
+    return { fuente: k, tipo: FUENTES[k].tipo, verificado: !!FUENTES[k].verificado };
+  });
+  return { ok: true, tienda: tienda, configuradas: out, catalogo: catalogo };
 }
 
 // ─── PRUEBA ──────────────────────────────────────────────────
