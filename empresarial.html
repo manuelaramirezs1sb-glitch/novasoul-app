@@ -2696,7 +2696,17 @@ async function api(accion, datos) {
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(cuerpo),
   });
-  const j = await r.json();
+  const texto = await r.text();
+  let j;
+  try {
+    j = JSON.parse(texto);
+  } catch (err) {
+    // Google devuelve HTML cuando algo falla del lado del despliegue.
+    // Sin esto, el error real quedaba tapado por "no hay conexión".
+    console.error('[Nova] respuesta no-JSON:', texto.slice(0, 400));
+    throw new Error('la hoja respondió algo que no es JSON (HTTP ' + r.status +
+      '). Revisa que la implementación esté como "Cualquier usuario".');
+  }
   if (j && j.reautenticar) { TOKEN=''; localStorage.removeItem('ne_token'); }
   return j;
 }
@@ -2722,8 +2732,9 @@ async function pedirCodigo() {
     step(2);
     setTimeout(()=>{ const c=document.getElementById('cod'); if(c) c.focus(); }, 80);
   } catch (e) {
-    // Sin conexión no se deja a la persona atascada: se ofrece el demo
-    errLogin('lg-err','No hay conexión con la hoja. Puedes entrar en modo demo abajo.');
+    errLogin('lg-err', 'Falló la conexión: ' + (e && e.message || e) +
+      '\nPuedes entrar en modo demo abajo mientras lo revisamos.');
+    console.error('[Nova] login:', e);
   } finally { btn.textContent='Enviarme el código'; btn.style.opacity='1'; }
 }
 
@@ -2747,7 +2758,9 @@ async function verificarCodigo() {
     pintarTiendasPermitidas(r.sesion.tiendas);
     step(3);
   } catch (e) {
-    errLogin('lg-err2','No hay conexión con la hoja.');
+    // Un mensaje genérico esconde la causa y deja a todos adivinando.
+    errLogin('lg-err2', 'Falló al verificar: ' + (e && e.message || e));
+    console.error('[Nova] verificar:', e);
   } finally { btn.textContent='Verificar y entrar'; btn.style.opacity='1'; }
 }
 
