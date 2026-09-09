@@ -3074,7 +3074,17 @@ async function cargarHistorialFuentes() {
  *
  * Cuando cada sección se conecte, se saca de esta lista.
  */
-const SIN_FUENTE = ['recuento', 'palist', 'eqhoy', 'invriesgo', 'barchart', 'stlist'];
+const SIN_FUENTE = [
+  // Hoy
+  'recuento', 'palist', 'eqhoy', 'barchart', 'stlist',
+  // Operación: las listas todavía no llaman a la API, son del guion demo
+  'pedlist', 'novkpi', 'novlist', 'prodlist', 'jlist', 'tlist',
+  'caslist', 'audqlist', 'commlist',
+  // Dinero
+  'dinkpi', 'roaslist', 'pautabar', 'cpalist', 'invlist', 'invriesgo',
+  // Vistas de la gestora
+  'g-kpi', 'g-urgentes', 'g-pedkpi', 'g-pedlist', 'g-novlist',
+];
 
 function sellarEjemplo(conectado) {
   SIN_FUENTE.forEach(function (id) {
