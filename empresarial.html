@@ -659,12 +659,9 @@ input.li:focus{border-color:var(--acc-d);}
         <div><div class="ltag">PASO 1 DE 3</div><div class="ltitle">Entra con tu correo</div>
         <p class="lsub">Te mando un código de 6 dígitos. Sin contraseña que se te olvide.</p></div>
         <div class="lfield"><span>CORREO</span><input class="li" id="em" type="email" value="manuela@nutrea.co"></div>
-        <div><div class="ltag" style="margin-bottom:6px;">CUENTAS DE PRUEBA</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <span class="dtag" onclick="document.getElementById('em').value='manuela@nutrea.co'">Dueña · Nutrea</span>
-          <span class="dtag" onclick="document.getElementById('em').value='daniela@nutrea.co'">Admin</span>
-          <span class="dtag" onclick="document.getElementById('em').value='camila@nutrea.co'">Gestora</span>
-        </div></div>
+        <!-- Los chips de cuentas de prueba se quitaron: rellenaban correos
+             inventados que no existen en la hoja Equipo, así que solo
+             podían llevar a un error. Quien entra usa su correo real. -->
         <button class="lbtn" id="btn-cod" onclick="pedirCodigo()">Enviarme el código</button>
         <div id="lg-err" style="display:none;font:500 12px/1.5 'DM Sans';color:#b8322f;"></div>
         <div class="ldiv"><hr><span>o</span><hr></div>
