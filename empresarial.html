@@ -617,6 +617,17 @@ input.li:focus{border-color:var(--acc-d);}
   .cm-tbl{font-size:10px;}
 }
 
+/* Sello de dato de ejemplo. Cuando la hoja está conectada, todo lo que
+   NO viene de ella queda marcado: una pantalla mitad real mitad inventada
+   sin distinguir cuál es cuál invita a decidir sobre ficción. */
+.sello-ej{position:relative;}
+.sello-ej::after{
+  content:'EJEMPLO';position:absolute;top:8px;right:10px;z-index:3;
+  font:700 8px/1 'DM Sans';letter-spacing:1px;
+  background:#f6ecd0;color:#7a5c10;border:1px solid #e3d3a0;
+  border-radius:20px;padding:4px 7px;pointer-events:none;
+}
+
 /* ── Nova brand harmony ───────────────────────────────── */
 .sidebar{background:#0b1824!important;border-right:1px solid #192d42!important;}
 .sidebar .navg-lbl{color:#46576e!important;}
@@ -2856,10 +2867,7 @@ function marcarOrigen(real, motivo) {
     b.textContent = '● Datos de EJEMPLO' + (motivo? ' · '+motivo : '') +
       ' — no tomes decisiones con estos números.';
   }
-  // Las secciones sin fuente real quedan rotuladas, no calladas
-  document.querySelectorAll('.sin-fuente-real').forEach(function(el){
-    el.style.display = real ? 'block' : 'none';
-  });
+  sellarEjemplo(real);
 }
 
 // ─── IMPORTAR DESDE LA APP ────────────────────────────────────
@@ -2956,6 +2964,28 @@ async function cargarHistorialFuentes() {
   } catch (e) { /* el historial no es crítico */ }
 }
 
+/**
+ * Marca visualmente lo que sigue siendo de ejemplo.
+ *
+ * Hoy la hoja alimenta los KPIs del mes. Todo lo demás —el recuento, el
+ * equilibrio, los productos, la jornada— sigue siendo demo porque esos
+ * datos aún no existen en las hojas. Dejarlos sin marcar junto a números
+ * reales es lo peor de los dos mundos: parecen ciertos y no lo son.
+ *
+ * Cuando cada sección se conecte, se saca de esta lista.
+ */
+const SIN_FUENTE = ['recuento', 'palist', 'eqhoy', 'invriesgo', 'barchart', 'stlist'];
+
+function sellarEjemplo(conectado) {
+  SIN_FUENTE.forEach(function (id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // El sello va en la tarjeta contenedora, no en el div de datos
+    const card = el.closest('.card') || el.parentElement;
+    if (card) card.classList.toggle('sello-ej', !!conectado);
+  });
+}
+
 // ─── LOGIN FLOW ───────────────────────────────────────
 function step(n){
   document.querySelectorAll('.lstep').forEach(s=>s.classList.remove('on'));
@@ -2987,7 +3017,12 @@ function enterApp(forceRol){
   initChat();
 
   // Primera vez: mostrar onboarding solo al dueño
-  if (ROL === 'dueno' && !localStorage.getItem('ne_onboarded')) showOnboarding();
+  // El asistente de configuración pedía pegar IDs de spreadsheet a mano.
+  // Con la API conectada esa conexión ya está hecha del lado del servidor,
+  // así que mostrarlo solo invita a romper algo que funciona.
+  if (!CONECTADO && ROL === 'dueno' && !localStorage.getItem('ne_onboarded')) {
+    showOnboarding();
+  }
 }
 function logout(){
   if (TOKEN) { try { api('salir'); } catch(e){} }
