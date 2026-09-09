@@ -149,6 +149,7 @@ function apiVerificar(p) {
     sheetId: persona.sheetId,
     tiendas: persona.tiendas,
     modulos: persona.modulos,
+    permisos: persona.permisos,
     vence: Date.now() + TTL_SESION_H * 3600000,
   };
   cache.put('ses_' + token, JSON.stringify(s), TTL_SESION_H * 3600);
@@ -171,9 +172,64 @@ function apiSalir(token) {
 }
 
 /** Lo que el cliente puede saber de su propia sesión. Sin sheetId. */
+/**
+ * Qué puede hacer cada rol si la dueña no dice otra cosa.
+ *
+ * La gestora sube pedidos y novedades porque es quien gestiona: bajar el
+ * archivo de Dropi y subirlo es parte de su trabajo diario, no una tarea
+ * administrativa. Lo que no trae por defecto es la pauta, porque ahí está
+ * el gasto y el margen.
+ *
+ * La admin tampoco trae pauta de entrada. La dueña se la da escribiendo
+ * "subir_pauta" en la columna permisos de esa persona, en la hoja Equipo.
+ *
+ * La dueña no aparece aquí: puede todo, siempre. Un dueño que se queda sin
+ * permisos deja la cuenta huérfana y sin quién los devuelva.
+ */
+const PERMISOS_POR_ROL = {
+  admin:   ['subir_pedidos', 'subir_novedades'],
+  gestora: ['subir_pedidos', 'subir_novedades'],
+};
+
+/** Qué permiso exige cada plataforma. */
+const PERMISO_DE_FUENTE = {
+  dropi: 'subir_pedidos', mastershop: 'subir_pedidos',
+  effi_guias: 'subir_pedidos', shopify: 'subir_pedidos',
+  effi_novedades: 'subir_novedades', iris: 'subir_novedades',
+  meta: 'subir_pauta', meta_facturacion: 'subir_pauta', tiktok: 'subir_pauta',
+};
+
+const PERMISOS_CONOCIDOS = ['subir_pedidos', 'subir_novedades', 'subir_pauta'];
+
+/**
+ * Los permisos de una persona: los de su rol, más lo que la dueña le haya
+ * escrito en la columna permisos.
+ *
+ * La celda suma, no reemplaza. Si reemplazara, escribir "subir_pauta" para
+ * darle Meta a una admin le quitaría en silencio los pedidos que ya subía.
+ * Para quitar algo se antepone un menos: "-subir_novedades".
+ */
+function permisosDe(rol, celda) {
+  if (rol === 'dueno') return PERMISOS_CONOCIDOS.slice();
+
+  const out = (PERMISOS_POR_ROL[rol] || []).slice();
+  String(celda || '').split(/[,;]/).forEach(function (t) {
+    const raw = norm(t).replace(/\s+/g, '_');
+    if (!raw) return;
+    const quita = raw.charAt(0) === '-';
+    const p = quita ? raw.slice(1) : raw;
+    if (PERMISOS_CONOCIDOS.indexOf(p) === -1) return; // texto suelto: se ignora
+    const i = out.indexOf(p);
+    if (quita) { if (i !== -1) out.splice(i, 1); }
+    else if (i === -1) out.push(p);
+  });
+  return out;
+}
+
 function publico(s, ss) {
   const o = { email: s.email, nombre: s.nombre, rol: s.rol,
-              tiendas: s.tiendas, modulos: s.modulos || ['empresarial'] };
+              tiendas: s.tiendas, modulos: s.modulos || ['empresarial'],
+              permisos: s.permisos || [] };
   // La ficha va con moneda y país para que la pantalla no tenga que adivinarlos
   try {
     o.fichas = fichasDe(ss || SpreadsheetApp.openById(s.sheetId), s.tiendas);
@@ -224,6 +280,9 @@ function buscarPersona(email) {
         id: f[c('id')],
         nombre: f[c('nombre')],
         rol: rol,
+        // c('permisos') es -1 en hojas creadas antes de que la columna
+        // existiera: sin celda, quedan los permisos del rol.
+        permisos: permisosDe(rol, c('permisos') === -1 ? '' : f[c('permisos')]),
         clienteId: filas[i][0],
         sheetId: sheetId,
         // '*' o vacío significa todas las tiendas del cliente
@@ -817,8 +876,15 @@ function apiImportarArchivo(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a la tienda ' + tienda + '.' };
   }
-  if (s.rol === 'gestora') {
-    return { ok: false, error: 'Las importaciones las hace la admin o la dueña.' };
+  // Quién puede subir qué lo decide la dueña, no el rol a secas ni la
+  // pantalla: esconder un botón no impide llamar a la API directamente.
+  const necesita = PERMISO_DE_FUENTE[fuente];
+  const tiene = s.permisos || [];
+  if (necesita && tiene.indexOf(necesita) === -1) {
+    return { ok: false, error:
+      necesita === 'subir_pauta'
+        ? 'No tienes permiso para subir pauta. La dueña lo activa en Permisos.'
+        : 'No tienes permiso para subir este tipo de archivo.' };
   }
   if (!b64) return { ok: false, error: 'El archivo llegó vacío.' };
   // ~8 MB en base64. Por encima, Apps Script se queda sin tiempo.

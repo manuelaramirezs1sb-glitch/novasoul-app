@@ -466,6 +466,9 @@ input.li:focus{border-color:var(--acc-d);}
 [data-rol="gestora"] .v-soloadmin {display:none!important;}
 .view.v-gestora{display:none;}
 [data-rol="gestora"] .view.v-gestora.on{display:flex;}
+/* Permiso que la dueña concede: oculto salvo que la sesión lo traiga */
+.pm-pauta{display:none;}
+#app[data-pauta="1"] .pm-pauta{display:block;}
 [data-rol="gestora"] #v-hoy,[data-rol="gestora"] #v-pedidos,
 [data-rol="gestora"] #v-novedades,[data-rol="gestora"] #v-oficina,
 [data-rol="gestora"] #v-gestoras,[data-rol="gestora"] #v-auditoria,
@@ -744,6 +747,7 @@ input.li:focus{border-color:var(--acc-d);}
         <div class="ni ro-admin" data-v="gestoras" onclick="go('gestoras',this)">Gestoras</div>
         <div class="ni ro-admin" data-v="auditoria" onclick="go('auditoria',this)">Auditoría</div>
         <div class="ni v-soloadmin" data-v="cierre" onclick="go('cierre',this)">Reporte del mes</div>
+        <div class="ni v-soloadmin pm-pauta" data-v="pauta" onclick="go('pauta',this)">Pauta y gastos</div>
         <div class="ni ro-dueno" data-v="permisos" onclick="go('permisos',this)">Permisos</div>
       </div>
       <div class="navg ro-dueno">
@@ -901,7 +905,7 @@ input.li:focus{border-color:var(--acc-d);}
       <!-- ════ PEDIDOS ════ -->
       <div class="view" id="v-pedidos">
         <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Los pedidos del día en esta tienda. Ves quién los tiene y en qué van.</p>
-        <div class="imp-slot" data-zona="pedidos"></div>
+        <div class="imp-slot" data-tipo="pedidos"></div>
         <div style="display:flex;flex-direction:column;gap:9px;" id="pedlist"></div>
       </div>
 
@@ -911,7 +915,7 @@ input.li:focus{border-color:var(--acc-d);}
           <div style="font:600 21px/1 'Fraunces',serif;color:var(--t-ink);margin-bottom:6px;">Bandeja de novedades</div>
           <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut2);">Toca una fila para ver la nota de la gestora y el historial completo de contactos.</p>
         </div>
-        <div class="imp-slot" data-zona="novedades"></div>
+        <div class="imp-slot" data-tipo="novedades"></div>
         <div class="kgrid" id="novkpi"></div>
         <div style="display:flex;flex-direction:column;gap:9px;" id="novlist"></div>
       </div>
@@ -981,6 +985,8 @@ input.li:focus{border-color:var(--acc-d);}
 
       <!-- ════ PAUTA Y ROAS ════ -->
       <div class="view" id="v-pauta">
+        <!-- Solo la admin: la dueña ya tiene el suyo en Dinero -->
+        <div class="imp-slot" data-tipo="pauta" data-solo="admin"></div>
         <div class="kgrid" id="dinkpi"></div>
         <div class="g2">
           <div class="card">
@@ -1046,7 +1052,7 @@ input.li:focus{border-color:var(--acc-d);}
             </div>
           </div>
         </div>
-        <div class="imp-slot" data-zona="dinero"></div>
+        <div class="imp-slot" data-tipo="pauta"></div>
 
         <!-- Gastos del mes -->
         <div class="card">
@@ -1256,6 +1262,7 @@ input.li:focus{border-color:var(--acc-d);}
           <div style="font:600 21px/1 'Fraunces',serif;color:var(--t-ink);margin-bottom:6px;">Mis pedidos</div>
           <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Solo los pedidos asignados a ti. Puedes actualizar el estado, agregar nota o marcar intento de contacto.</p>
         </div>
+        <div class="imp-slot" data-tipo="pedidos"></div>
         <div class="kgrid" id="g-pedkpi"></div>
         <div style="display:flex;flex-direction:column;gap:9px;" id="g-pedlist"></div>
       </div>
@@ -1266,6 +1273,7 @@ input.li:focus{border-color:var(--acc-d);}
           <div style="font:600 21px/1 'Fraunces',serif;color:var(--t-ink);margin-bottom:6px;">Mis novedades</div>
           <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Cada novedad que tienes asignada. Registra el intento, deja nota y cambia el estado al resolver.</p>
         </div>
+        <div class="imp-slot" data-tipo="novedades"></div>
         <div style="display:flex;flex-direction:column;gap:9px;" id="g-novlist"></div>
       </div>
 
@@ -2734,6 +2742,7 @@ async function verificarCodigo() {
     SESION = r.sesion;
     // Las tiendas que la hoja autoriza mandan sobre las que muestra el HTML
     pintarTiendasPermitidas(r.sesion.tiendas);
+    aplicarPermisos();
     step(3);
   } catch (e) {
     // Un mensaje genérico esconde la causa y deja a todos adivinando.
@@ -2855,7 +2864,7 @@ function marcarOrigen(real, motivo) {
  * el recibo de Meta a la tabla de pedidos por escoger mal en un menú
  * de diez opciones.
  */
-const ZONAS_IMPORT = {
+const TIPOS_IMPORT = {
   pedidos: {
     titulo: 'Subir pedidos',
     nota: 'El export de pedidos de tu plataforma, tal como lo descargas. ' +
@@ -2871,7 +2880,7 @@ const ZONAS_IMPORT = {
           'novedades salen solas del archivo de pedidos.',
     fuentes: [['effi_novedades','Effi · novedades'], ['iris','IRIS · llamadas']],
   },
-  dinero: {
+  pauta: {
     titulo: 'Subir pauta y facturación',
     nota: 'Campañas es el reporte de resultados. Facturación es el recibo de ' +
           'cobro: trae el gasto real y en qué moneda te cobraron.',
@@ -2880,12 +2889,49 @@ const ZONAS_IMPORT = {
   },
 };
 
+/**
+ * El mismo importador aparece en varias pantallas: pedidos está en la
+ * vista de la dueña y en la de la gestora. Cada montaje necesita ids
+ * propios, si no, el segundo pisa al primero y el archivo termina en el
+ * estado equivocado.
+ */
+const MONTADOS = [];
+
+/** Lo que esta persona puede subir. Sin sesión, nada. */
+function puedeSubir(tipo) {
+  if (!SESION) return false;
+  return (SESION.permisos || []).indexOf('subir_' + tipo) !== -1;
+}
+
+/**
+ * Lo que la dueña concedió, aplicado a la pantalla.
+ *
+ * La admin no ve Pauta y gastos hasta que la dueña le escribe
+ * "subir_pauta" en su fila de la hoja Equipo. Ahí está el gasto y el
+ * margen, así que es una decisión de la dueña, no del rol.
+ */
+function aplicarPermisos() {
+  const app = document.getElementById('app');
+  app.setAttribute('data-pauta', puedeSubir('pauta') ? '1' : '0');
+  montarImportadores();
+}
+
 function montarImportadores() {
   document.querySelectorAll('.imp-slot').forEach(function (slot) {
-    const z = slot.dataset.zona;
-    const cfg = ZONAS_IMPORT[z];
-    if (!cfg || slot.dataset.listo) return;
+    const tipo = slot.dataset.tipo;
+    const cfg = TIPOS_IMPORT[tipo];
+    if (!cfg) return;
+    if (slot.dataset.solo && slot.dataset.solo !== ROL) { slot.innerHTML=''; return; }
+
+    // Sin permiso no se dibuja. El servidor lo vuelve a comprobar igual:
+    // esto es para no ofrecer lo que no se puede hacer.
+    if (SESION && !puedeSubir(tipo)) { slot.innerHTML = ''; slot.dataset.listo = ''; return; }
+    if (slot.dataset.listo) return;
+
+    const z = slot.dataset.z || (tipo + '-' + MONTADOS.length);
+    slot.dataset.z = z;
     slot.dataset.listo = '1';
+    if (!MONTADOS.some(function (m) { return m.z === z; })) MONTADOS.push({ z: z, tipo: tipo });
 
     const ops = cfg.fuentes.map(function (f) {
       return '<option value="' + f[0] + '">' + f[1] + '</option>';
@@ -2987,8 +3033,8 @@ function archivoABase64(file) {
 /** A qué tienda va lo que se suba: se dice antes de subir, no después. */
 function pintarTiendaImport() {
   const nombre = (STORES[ST]||{}).name || ST;
-  Object.keys(ZONAS_IMPORT).forEach(function (z) {
-    const t = document.getElementById('imp-tienda-' + z);
+  MONTADOS.forEach(function (m) {
+    const t = document.getElementById('imp-tienda-' + m.z);
     if (t) t.textContent = 'Entra a ' + nombre;
   });
 }
@@ -3001,10 +3047,10 @@ async function cargarHistorialFuentes() {
     const r = await api('fuentes', { tienda: ST });
     if (!r.ok) return;
     const hechas = r.configuradas || [];
-    Object.keys(ZONAS_IMPORT).forEach(function (z) {
-      const el = document.getElementById('imp-hist-' + z);
+    MONTADOS.forEach(function (m) {
+      const el = document.getElementById('imp-hist-' + m.z);
       if (!el) return;
-      const mias = ZONAS_IMPORT[z].fuentes.map(function (f) { return f[0]; });
+      const mias = TIPOS_IMPORT[m.tipo].fuentes.map(function (f) { return f[0]; });
       const filas = hechas.filter(function (f) { return mias.indexOf(f.fuente) !== -1; });
       if (!filas.length) {
         el.textContent = 'Todavía no has subido nada de esto en esta tienda.';

@@ -195,8 +195,11 @@ const ESQUEMA_EMPRESARIAL = {
           'moneda_gasto','gasto_normalizado','impresiones','clics','resultados','cpm','cpa'],
   Inventario: ['sku','producto','tienda','fuente','stock','costo_unitario','precio',
                'dias_cobertura','ultimo_conteo','actualizado_en','actualizado_por'],
+  // "permisos" es lo que la dueña decide que esta persona puede hacer,
+  // separado por comas. Vacío = lo que el rol trae por defecto.
+  // Ver PERMISOS_POR_ROL en 60-api.gs.
   Equipo: ['id','nombre','correo','rol','tienda','estado','casos_asignados',
-           'casos_resueltos','nota_auditoria','ultima_conexion'],
+           'casos_resueltos','nota_auditoria','ultima_conexion','permisos'],
 
   // Un mes no cierra el día 31: cierra cuando los pedidos de ese mes ya
   // se resolvieron. Un pedido del 28 de agosto se entrega el 5 de
@@ -311,6 +314,10 @@ function construir(fileId, nombre, esquema, importsCrudos) {
 
   Object.keys(todas).forEach(function (tab) {
     if (crearTab(ss, tab, todas[tab])) creadas.push(tab);
+    else {
+      const nuevas = agregarColumnasFaltantes(ss, tab, todas[tab]);
+      if (nuevas.length) creadas.push(tab + ' (+' + nuevas.join(', ') + ')');
+    }
   });
 
   // Staging crudo: sin encabezados fijos, el formato lo dicta la exportación
@@ -347,6 +354,44 @@ function crearTab(ss, nombre, encabezados) {
   if (sobran > 0) sh.deleteColumns(encabezados.length + 1, sobran);
 
   return true;
+}
+
+/**
+ * Agrega al final las columnas que el esquema tiene y la hoja todavía no.
+ *
+ * El esquema crece: cuando se agregó "permisos" a Equipo, las hojas ya
+ * creadas se quedaron sin esa columna y crearTab() no las tocaba porque
+ * la pestaña ya existía. El resultado era una función nueva que no
+ * funcionaba en las cuentas viejas y sí en las nuevas.
+ *
+ * Solo agrega. Nunca renombra ni reordena ni borra: si alguien movió una
+ * columna de sitio o le puso otro nombre, esa decisión se respeta y la
+ * columna que falta se añade al final.
+ */
+function agregarColumnasFaltantes(ss, nombre, encabezados) {
+  const sh = ss.getSheetByName(nombre);
+  if (!sh) return [];
+
+  const ancho = sh.getLastColumn();
+  const actuales = ancho
+    ? sh.getRange(1, 1, 1, ancho).getValues()[0]
+        .map(function (h) { return String(h || '').trim().toLowerCase(); })
+    : [];
+
+  const faltan = encabezados.filter(function (h) {
+    return actuales.indexOf(String(h).trim().toLowerCase()) === -1;
+  });
+  if (!faltan.length) return [];
+
+  if (sh.getMaxColumns() < ancho + faltan.length) {
+    sh.insertColumnsAfter(Math.max(ancho, 1), faltan.length);
+  }
+  sh.getRange(1, ancho + 1, 1, faltan.length)
+    .setValues([faltan])
+    .setFontWeight('bold')
+    .setBackground('#0b1824')
+    .setFontColor('#c9a84c');
+  return faltan;
 }
 
 /** Borra la "Hoja 1" / "Sheet1" vacía que Drive crea por defecto. */
@@ -2517,6 +2562,7 @@ function apiVerificar(p) {
     sheetId: persona.sheetId,
     tiendas: persona.tiendas,
     modulos: persona.modulos,
+    permisos: persona.permisos,
     vence: Date.now() + TTL_SESION_H * 3600000,
   };
   cache.put('ses_' + token, JSON.stringify(s), TTL_SESION_H * 3600);
@@ -2539,9 +2585,64 @@ function apiSalir(token) {
 }
 
 /** Lo que el cliente puede saber de su propia sesión. Sin sheetId. */
+/**
+ * Qué puede hacer cada rol si la dueña no dice otra cosa.
+ *
+ * La gestora sube pedidos y novedades porque es quien gestiona: bajar el
+ * archivo de Dropi y subirlo es parte de su trabajo diario, no una tarea
+ * administrativa. Lo que no trae por defecto es la pauta, porque ahí está
+ * el gasto y el margen.
+ *
+ * La admin tampoco trae pauta de entrada. La dueña se la da escribiendo
+ * "subir_pauta" en la columna permisos de esa persona, en la hoja Equipo.
+ *
+ * La dueña no aparece aquí: puede todo, siempre. Un dueño que se queda sin
+ * permisos deja la cuenta huérfana y sin quién los devuelva.
+ */
+const PERMISOS_POR_ROL = {
+  admin:   ['subir_pedidos', 'subir_novedades'],
+  gestora: ['subir_pedidos', 'subir_novedades'],
+};
+
+/** Qué permiso exige cada plataforma. */
+const PERMISO_DE_FUENTE = {
+  dropi: 'subir_pedidos', mastershop: 'subir_pedidos',
+  effi_guias: 'subir_pedidos', shopify: 'subir_pedidos',
+  effi_novedades: 'subir_novedades', iris: 'subir_novedades',
+  meta: 'subir_pauta', meta_facturacion: 'subir_pauta', tiktok: 'subir_pauta',
+};
+
+const PERMISOS_CONOCIDOS = ['subir_pedidos', 'subir_novedades', 'subir_pauta'];
+
+/**
+ * Los permisos de una persona: los de su rol, más lo que la dueña le haya
+ * escrito en la columna permisos.
+ *
+ * La celda suma, no reemplaza. Si reemplazara, escribir "subir_pauta" para
+ * darle Meta a una admin le quitaría en silencio los pedidos que ya subía.
+ * Para quitar algo se antepone un menos: "-subir_novedades".
+ */
+function permisosDe(rol, celda) {
+  if (rol === 'dueno') return PERMISOS_CONOCIDOS.slice();
+
+  const out = (PERMISOS_POR_ROL[rol] || []).slice();
+  String(celda || '').split(/[,;]/).forEach(function (t) {
+    const raw = norm(t).replace(/\s+/g, '_');
+    if (!raw) return;
+    const quita = raw.charAt(0) === '-';
+    const p = quita ? raw.slice(1) : raw;
+    if (PERMISOS_CONOCIDOS.indexOf(p) === -1) return; // texto suelto: se ignora
+    const i = out.indexOf(p);
+    if (quita) { if (i !== -1) out.splice(i, 1); }
+    else if (i === -1) out.push(p);
+  });
+  return out;
+}
+
 function publico(s, ss) {
   const o = { email: s.email, nombre: s.nombre, rol: s.rol,
-              tiendas: s.tiendas, modulos: s.modulos || ['empresarial'] };
+              tiendas: s.tiendas, modulos: s.modulos || ['empresarial'],
+              permisos: s.permisos || [] };
   // La ficha va con moneda y país para que la pantalla no tenga que adivinarlos
   try {
     o.fichas = fichasDe(ss || SpreadsheetApp.openById(s.sheetId), s.tiendas);
@@ -2592,6 +2693,9 @@ function buscarPersona(email) {
         id: f[c('id')],
         nombre: f[c('nombre')],
         rol: rol,
+        // c('permisos') es -1 en hojas creadas antes de que la columna
+        // existiera: sin celda, quedan los permisos del rol.
+        permisos: permisosDe(rol, c('permisos') === -1 ? '' : f[c('permisos')]),
         clienteId: filas[i][0],
         sheetId: sheetId,
         // '*' o vacío significa todas las tiendas del cliente
@@ -3185,8 +3289,15 @@ function apiImportarArchivo(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a la tienda ' + tienda + '.' };
   }
-  if (s.rol === 'gestora') {
-    return { ok: false, error: 'Las importaciones las hace la admin o la dueña.' };
+  // Quién puede subir qué lo decide la dueña, no el rol a secas ni la
+  // pantalla: esconder un botón no impide llamar a la API directamente.
+  const necesita = PERMISO_DE_FUENTE[fuente];
+  const tiene = s.permisos || [];
+  if (necesita && tiene.indexOf(necesita) === -1) {
+    return { ok: false, error:
+      necesita === 'subir_pauta'
+        ? 'No tienes permiso para subir pauta. La dueña lo activa en Permisos.'
+        : 'No tienes permiso para subir este tipo de archivo.' };
   }
   if (!b64) return { ok: false, error: 'El archivo llegó vacío.' };
   // ~8 MB en base64. Por encima, Apps Script se queda sin tiempo.

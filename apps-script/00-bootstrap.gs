@@ -202,8 +202,11 @@ const ESQUEMA_EMPRESARIAL = {
           'moneda_gasto','gasto_normalizado','impresiones','clics','resultados','cpm','cpa'],
   Inventario: ['sku','producto','tienda','fuente','stock','costo_unitario','precio',
                'dias_cobertura','ultimo_conteo','actualizado_en','actualizado_por'],
+  // "permisos" es lo que la dueña decide que esta persona puede hacer,
+  // separado por comas. Vacío = lo que el rol trae por defecto.
+  // Ver PERMISOS_POR_ROL en 60-api.gs.
   Equipo: ['id','nombre','correo','rol','tienda','estado','casos_asignados',
-           'casos_resueltos','nota_auditoria','ultima_conexion'],
+           'casos_resueltos','nota_auditoria','ultima_conexion','permisos'],
 
   // Un mes no cierra el día 31: cierra cuando los pedidos de ese mes ya
   // se resolvieron. Un pedido del 28 de agosto se entrega el 5 de
@@ -318,6 +321,10 @@ function construir(fileId, nombre, esquema, importsCrudos) {
 
   Object.keys(todas).forEach(function (tab) {
     if (crearTab(ss, tab, todas[tab])) creadas.push(tab);
+    else {
+      const nuevas = agregarColumnasFaltantes(ss, tab, todas[tab]);
+      if (nuevas.length) creadas.push(tab + ' (+' + nuevas.join(', ') + ')');
+    }
   });
 
   // Staging crudo: sin encabezados fijos, el formato lo dicta la exportación
@@ -354,6 +361,44 @@ function crearTab(ss, nombre, encabezados) {
   if (sobran > 0) sh.deleteColumns(encabezados.length + 1, sobran);
 
   return true;
+}
+
+/**
+ * Agrega al final las columnas que el esquema tiene y la hoja todavía no.
+ *
+ * El esquema crece: cuando se agregó "permisos" a Equipo, las hojas ya
+ * creadas se quedaron sin esa columna y crearTab() no las tocaba porque
+ * la pestaña ya existía. El resultado era una función nueva que no
+ * funcionaba en las cuentas viejas y sí en las nuevas.
+ *
+ * Solo agrega. Nunca renombra ni reordena ni borra: si alguien movió una
+ * columna de sitio o le puso otro nombre, esa decisión se respeta y la
+ * columna que falta se añade al final.
+ */
+function agregarColumnasFaltantes(ss, nombre, encabezados) {
+  const sh = ss.getSheetByName(nombre);
+  if (!sh) return [];
+
+  const ancho = sh.getLastColumn();
+  const actuales = ancho
+    ? sh.getRange(1, 1, 1, ancho).getValues()[0]
+        .map(function (h) { return String(h || '').trim().toLowerCase(); })
+    : [];
+
+  const faltan = encabezados.filter(function (h) {
+    return actuales.indexOf(String(h).trim().toLowerCase()) === -1;
+  });
+  if (!faltan.length) return [];
+
+  if (sh.getMaxColumns() < ancho + faltan.length) {
+    sh.insertColumnsAfter(Math.max(ancho, 1), faltan.length);
+  }
+  sh.getRange(1, ancho + 1, 1, faltan.length)
+    .setValues([faltan])
+    .setFontWeight('bold')
+    .setBackground('#0b1824')
+    .setFontColor('#c9a84c');
+  return faltan;
 }
 
 /** Borra la "Hoja 1" / "Sheet1" vacía que Drive crea por defecto. */
