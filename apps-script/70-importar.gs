@@ -397,13 +397,15 @@ function importarTodo(cliente) {
 
 
 // ─── ATAJOS ──────────────────────────────────────────────────
-// El botón Ejecutar de Apps Script no permite pasar argumentos, así que
-// cada combinación frecuente necesita su propia función en el desplegable.
-
-function importarDropiEC()      { return importar('dropi', 'ec'); }
-function importarDropiGT()      { return importar('dropi', 'gt'); }
-function importarMetaEC()       { return importar('meta', 'ec'); }
-function importarMetaGT()       { return importar('meta', 'gt'); }
-function importarFacturacionEC(){ return importar('meta_facturacion', 'ec'); }
-function importarShopifyEC()    { return importar('shopify', 'ec'); }
-function importarIris()         { return importar('iris', 'ec'); }
+/**
+ * El botón Ejecutar de Apps Script no permite pasar argumentos, así que
+ * para importar una sola fuente hace falta una función sin parámetros.
+ *
+ * No se listan por tienda a propósito: hacerlo ataría el código a las
+ * tiendas de una cuenta, y Nova se vende a clientes de toda la región.
+ * importarTodo() recorre la hoja Fuentes, que es donde vive esa lista.
+ *
+ * Si necesitas importar una fuente suelta, escribe la llamada en la
+ * consola del editor:  importar('dropi', 'lima')
+ */
+function importarTodoAhora() { return importarTodo(); }

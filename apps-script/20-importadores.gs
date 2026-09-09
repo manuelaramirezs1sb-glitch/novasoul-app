@@ -496,9 +496,20 @@ function zonaHorariaDe(ss, tienda) {
  * Diagnóstico. Córrelo con un export pegado en la pestaña y te dice
  * exactamente qué columnas no encontró, para completar el mapeo.
  */
+/** Las tiendas de un cliente, en el orden en que están en la hoja. */
+function tiendasDeCliente(ss) {
+  const sh = ss.getSheetByName('Tiendas');
+  if (!sh || sh.getLastRow() < 2) return [];
+  const d = sh.getDataRange().getValues();
+  const c = d[0].map(norm).indexOf('id');
+  return d.slice(1).map(function (f) { return String(f[c]).trim(); }).filter(String);
+}
+
 function diagnosticar(fuenteId, tienda, cliente) {
   const ss = SpreadsheetApp.openById(hojaCliente(cliente));
-  const r = leerCrudo(ss, fuenteId, tienda || 'gt');
+  // Sin tienda se toma la primera del cliente, no una fija
+  const t = tienda || (tiendasDeCliente(ss)[0] || '');
+  const r = leerCrudo(ss, fuenteId, t);
   const msg = [
     'Fuente: ' + fuenteId + '  (' + r.tipo + ')',
     'Pestaña: ' + r.tab,

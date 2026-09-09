@@ -1488,12 +1488,38 @@ function labelDe(correo){
   return found ? found.lbl : 'dueña';
 }
 
-const STORES = {
-  ec: {name:'Nutrea EC', sub:'Shopify + Dropi · USD', sym:'$',  f:1},
-  gt: {name:'Nutrea GT', sub:'Dropi · GTQ',           sym:'Q',  f:3.72}
+// Catálogo de tiendas. Son valores de ejemplo hasta que la hoja
+// responda: `pintarTiendasPermitidas()` los reemplaza con las tiendas
+// reales del cliente, con su moneda y su símbolo. No hay nada aquí que
+// limite Nova a Ecuador y Guatemala.
+let STORES = {
+  ec: {name:'Nutrea EC', sub:'Shopify + Dropi · USD', sym:'$', moneda:'USD', f:1},
+  gt: {name:'Nutrea GT', sub:'Dropi · GTQ',           sym:'Q', moneda:'GTQ', f:3.72}
+};
+
+/** Símbolo de cualquiera de las 35 monedas del catálogo de la hoja. */
+const SIMBOLOS = {
+  ARS:'$', BOB:'Bs', BRL:'R$', CLP:'$', COP:'$', CRC:'₡', CUP:'$', DOP:'RD$',
+  GTQ:'Q', HNL:'L', MXN:'$', NIO:'C$', PAB:'B/.', PEN:'S/', PYG:'₲', UYU:'$U',
+  VES:'Bs.', USD:'$', EUR:'€', BZD:'BZ$', JMD:'J$', TTD:'TT$', HTG:'G',
 };
 
 // ─── SAMPLE DATA (POR_TIENDA) ─────────────────────────
+
+/**
+ * El símbolo sale de la tienda activa, nunca de comparar con 'ec'.
+ * Antes había `ST==='ec' ? '$' : 'Q'` repartido por la pantalla: eso
+ * asume que solo existen Ecuador y Guatemala, y le mostraría quetzales
+ * a un cliente en Perú. Nova se vende para toda Latinoamérica, así que
+ * la moneda tiene que salir del dato.
+ */
+function SYM(t) { return (STORES[t||ST] || {}).sym || '$'; }
+function MON(t) { return (STORES[t||ST] || {}).moneda || 'USD'; }
+/** Formato de número latinoamericano, sin atarlo a un país. */
+function NUM(n) { return Math.round(Number(n)||0).toLocaleString('es'); }
+/** El dato demo de la tienda activa; si no existe, el de la primera. */
+function DEMO(t) { return POR_TIENDA[t||ST] || POR_TIENDA[Object.keys(POR_TIENDA)[0]]; }
+
 const POR_TIENDA = {
   ec: {
     pedidos: [
@@ -1777,11 +1803,11 @@ function buildHoy() {
   const badCpa = d.cpa ? d.cpa.find(c=>!c.ok) : null;
   if(badCpa){
     document.getElementById('acrit-cpa').textContent   = badCpa.cpa;
-    document.getElementById('acrit-techo').textContent = ST==='ec'?'$ 10,00':'Q 38,00';
+    document.getElementById('acrit-techo').textContent = SYM()+' '+NUM((STORES[ST]||{}).cpaTecho||10);
   }
   // Recuento
   document.getElementById('rec-ventas').textContent = d.mes?.[0]?.v || '';
-  document.getElementById('rec-nom').textContent    = ST==='ec'?'$4.0M':'Q14.9M';
+  document.getElementById('rec-nom').textContent    = DEMO().nomina || (SYM()+' —');
   // Escalar / frenar list
   document.getElementById('palist').innerHTML = d.productos.map(p=>`<div class="parow"><span class="panm">${p.nm}</span><span class="bd" style="background:${p.vBg};color:${p.vInk};">${p.ver}</span></div>`).join('');
   // Equipo hoy
@@ -1790,22 +1816,22 @@ function buildHoy() {
   const riesgo = d.productos.filter(p=>p.ver==='Frenar'||p.ver==='Pausado');
   document.getElementById('invriesgo').innerHTML = riesgo.map(r=>`<div class="invr-row"><div class="invr-top"><span class="invr-nm">${r.nm}</span><span class="bd" style="color:${r.vInk};background:${r.vBg};">${r.ver}</span></div><span class="invr-sub">${r.stock} · ${r.por}</span></div>`).join('');
   // Pendientes pauta (dinero)
-  document.getElementById('pp-extra').textContent = ST==='ec'?'$ 5.240.000':'Q 18.600';
-  document.getElementById('pp-bono').textContent  = ST==='ec'?'$ 320.000':'Q 1.190';
+  document.getElementById('pp-extra').textContent = DEMO().ppExtra || (SYM()+' —');
+  document.getElementById('pp-bono').textContent  = DEMO().ppBono  || (SYM()+' —');
   // Bar chart
   const days=['L','M','M','J','V','S','D'], vals=d.dinBarVals, mx=Math.max(...vals);
-  document.getElementById('dval').textContent = (ST==='ec'?'$ ':'Q ')+vals[6].toLocaleString('es-EC');
+  document.getElementById('dval').textContent = (SYM()+' ')+vals[6].toLocaleString('es');
   const bestI=vals.indexOf(mx), bestD=days[bestI];
-  document.getElementById('barfoot').textContent = `Mejor día: ${bestD==='M'?'miércoles/martes':bestD==='L'?'lunes':bestD==='J'?'jueves':bestD==='V'?'viernes':bestD==='S'?'sábado':'domingo'} con ${(ST==='ec'?'$ ':'Q ')+mx.toLocaleString('es-EC')}. La semana va 11% por encima del promedio.`;
+  document.getElementById('barfoot').textContent = `Mejor día: ${bestD==='M'?'miércoles/martes':bestD==='L'?'lunes':bestD==='J'?'jueves':bestD==='V'?'viernes':bestD==='S'?'sábado':'domingo'} con ${(SYM()+' ')+mx.toLocaleString('es')}. La semana va 11% por encima del promedio.`;
   document.getElementById('barchart').innerHTML = days.map((d,i)=>{
     const pct=Math.round(vals[i]/mx*100), ht=(i===6)?'hoy':'';
-    const lbl=(ST==='ec'?'$ ':'Q ')+vals[i].toLocaleString('es-EC');
+    const lbl=(SYM()+' ')+vals[i].toLocaleString('es');
     return `<div class="bcol" onclick="document.getElementById('dlbl').textContent='${d}';document.getElementById('dval').textContent='${lbl}';">
       <div class="bfill" style="height:${pct}%;background:${i===6?'var(--acc-d)':'var(--s-dark3)'};" title="${lbl}"></div>
       <span class="blbl ${ht}">${d}</span></div>`;
   }).join('');
   // Status bar
-  const ec=ST==='ec';
+  const ec = ST === Object.keys(POR_TIENDA)[0];
   const sts=ec?[
     {lb:'Entregados',   p:37,n:47, c:'#6d7d4a'},
     {lb:'En tránsito',  p:28,n:36, c:'var(--acc-d)'},
@@ -1855,7 +1881,7 @@ function togPed(i){
 }
 
 function buildNovedades() {
-  const ec=ST==='ec';
+  const ec = ST === Object.keys(POR_TIENDA)[0];
   document.getElementById('novkpi').innerHTML = [
     {lb:'ABIERTAS',     v:ec?'2':'1',  sub:'Esta semana', c:'#b8322f'},
     {lb:'SIN RESOLVER', v:ec?'1':'1',  sub:'Más de 24h → alerta', c:'#8a6a13'},
@@ -2006,7 +2032,7 @@ function buildAuditoria() {
 }
 
 function buildPauta() {
-  const ec=ST==='ec';
+  const ec = ST === Object.keys(POR_TIENDA)[0];
   document.getElementById('dinkpi').innerHTML = [
     {lb:'GASTO PAUTA MES', v:ec?'$ 21.180.000':'Q 78.900', sub:ec?'31% del recaudo del mes':'31% del recaudo del mes', cl:'a'},
     {lb:'ROAS GENERAL',    v:ec?'4.4×':'3.9×',  sub:'Mínimo 2.0× · lleva 18 días sobre umbral', cl:'g'},
@@ -2054,7 +2080,7 @@ function buildInventario() {
         <div class="inv-grid">
           <div class="inv-field"><div class="inv-lbl">STOCK ACTUAL</div><input class="inv-inp" value="${r.stock}" type="number" onclick="event.stopPropagation()"></div>
           <div class="inv-field"><div class="inv-lbl">PUNTO DE REPOSICIÓN (días)</div><input class="inv-inp" value="${r.rep}" type="number" onclick="event.stopPropagation()"></div>
-          <div class="inv-field"><div class="inv-lbl">COSTO UNITARIO (${ST==='ec'?'$':'Q'})</div><input class="inv-inp" value="${r.costo}" type="number" onclick="event.stopPropagation()"></div>
+          <div class="inv-field"><div class="inv-lbl">COSTO UNITARIO (${SYM()})</div><input class="inv-inp" value="${r.costo}" type="number" onclick="event.stopPropagation()"></div>
           <div class="inv-field"><div class="inv-lbl">PROVEEDOR</div><input class="inv-inp" value="${r.prov}" onclick="event.stopPropagation()"></div>
         </div>
         <div class="nsavebtn" style="align-self:flex-start;" onclick="event.stopPropagation();showToast('SKU actualizado ✓')">Guardar cambios</div>
@@ -2178,7 +2204,7 @@ function togProd(i){
 
 // ─── DINERO ───────────────────────────────────────────
 function buildDinero(){
-  const ec=ST==='ec';
+  const ec = ST === Object.keys(POR_TIENDA)[0];
   const kpis=[
     {lb:'RECAUDO DEL MES', v:ec?'$ 68.420.000':'Q 280.900', sub:ec?'+11% vs. julio':'+8% vs. julio', color:'#4c6236'},
     {lb:'PAUTA DEL MES',   v:ec?'$ 21.180.000':'Q 84.600',  sub:'31% del recaudo',                   color:'var(--acc-d)'},
@@ -2215,9 +2241,11 @@ const GASTOS = {
   ]
 };
 function renderGastos(){
-  const isEc=ST==='ec';
-  const sym=isEc?'$ ':'Q ';
-  const fmt=g=>sym+Math.round(g[isEc?'ec':'gt']||g.custom||0).toLocaleString('es');
+  const isEc = ST === Object.keys(POR_TIENDA)[0];
+  const sym=SYM()+' ';
+  // El gasto se guarda por id de tienda, no en dos columnas fijas: así
+  // una cuenta con cinco tiendas funciona igual que una con dos.
+  const fmt=g=>sym+NUM(g[ST]!==undefined?g[ST]:(g.custom||0));
   ['fijo','variable'].forEach(tipo=>{
     const id='gastos-'+tipo+'s';
     const el=document.getElementById(id);
@@ -2234,8 +2262,8 @@ function addGasto(tipo){
   const nm=(document.getElementById(nmId)?.value||'').trim();
   const val=parseFloat(document.getElementById(valId)?.value||0);
   if(!nm||!val){showToast('Completa nombre y valor');return;}
-  const isEc=ST==='ec';
-  const entry={nm, ec:isEc?val:0, gt:!isEc?val:0, custom:val};
+  const isEc = ST === Object.keys(POR_TIENDA)[0];
+  const entry={nm, custom:val}; entry[ST]=val;
   GASTOS[tipo].push(entry);
   document.getElementById(nmId).value='';
   document.getElementById(valId).value='';
@@ -2684,6 +2712,13 @@ let SESION = null;
 /** Oculta del selector las tiendas que esta persona no tiene asignadas. */
 function pintarTiendasPermitidas(tiendas) {
   if (!tiendas || !tiendas.length) return;
+  // Si la hoja trae tiendas que el HTML no conoce, se agregan al vuelo.
+  // Es lo que permite que una cuenta con tiendas en Perú o México use
+  // esta misma pantalla sin tocar una línea de código.
+  tiendas.forEach(function(t){
+    if (!STORES[t]) STORES[t] = { name:t.toUpperCase(), sub:'', sym:'$', moneda:'USD', f:1 };
+  });
+  if (tiendas.indexOf(ST) === -1) ST = tiendas[0];
   document.querySelectorAll('#s3 .spick').forEach(function(el){
     const m = (el.getAttribute('onclick')||'').match(/setStore\('(\w+)'\)/);
     if (m) el.style.display = tiendas.indexOf(m[1])!==-1 ? '' : 'none';
@@ -3147,11 +3182,17 @@ function applyPrefs(){
   document.getElementById('bcl').classList.toggle('on',MD==='claro');
   document.getElementById('bos').classList.toggle('on',MD==='oscuro');
   document.querySelectorAll('.cdot').forEach(d=>d.classList.toggle('on',d.dataset.t===TM));
-  document.getElementById('cec').classList.toggle('on',ST==='ec');
+  // Los chips de tienda se marcan por id, sin asumir cuáles existen
+  Object.keys(STORES).forEach(function(k){
+    const el=document.getElementById('c'+k);
+    if(el) el.classList.toggle('on', ST===k);
+  });
   document.getElementById('cgt').classList.toggle('on',ST==='gt');
   const email=localStorage.getItem('ne_email')||'';
   const nombre=nombreDe(email);
-  document.getElementById('bsub').textContent=nombre+' · Nutrea '+(ST==='ec'?'EC':'GT');
+  // El nombre de la tienda sale del catálogo, no se arma pegando texto
+  document.getElementById('bsub').textContent =
+    nombre + ' · ' + ((STORES[ST]||{}).name || ST);
 }
 
 document.addEventListener('DOMContentLoaded',()=>{

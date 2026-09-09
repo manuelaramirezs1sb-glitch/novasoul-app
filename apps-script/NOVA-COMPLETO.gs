@@ -1417,9 +1417,20 @@ function zonaHorariaDe(ss, tienda) {
  * Diagnóstico. Córrelo con un export pegado en la pestaña y te dice
  * exactamente qué columnas no encontró, para completar el mapeo.
  */
+/** Las tiendas de un cliente, en el orden en que están en la hoja. */
+function tiendasDeCliente(ss) {
+  const sh = ss.getSheetByName('Tiendas');
+  if (!sh || sh.getLastRow() < 2) return [];
+  const d = sh.getDataRange().getValues();
+  const c = d[0].map(norm).indexOf('id');
+  return d.slice(1).map(function (f) { return String(f[c]).trim(); }).filter(String);
+}
+
 function diagnosticar(fuenteId, tienda, cliente) {
   const ss = SpreadsheetApp.openById(hojaCliente(cliente));
-  const r = leerCrudo(ss, fuenteId, tienda || 'gt');
+  // Sin tienda se toma la primera del cliente, no una fija
+  const t = tienda || (tiendasDeCliente(ss)[0] || '');
+  const r = leerCrudo(ss, fuenteId, t);
   const msg = [
     'Fuente: ' + fuenteId + '  (' + r.tipo + ')',
     'Pestaña: ' + r.tab,
@@ -3389,13 +3400,15 @@ function importarTodo(cliente) {
 
 
 // ─── ATAJOS ──────────────────────────────────────────────────
-// El botón Ejecutar de Apps Script no permite pasar argumentos, así que
-// cada combinación frecuente necesita su propia función en el desplegable.
-
-function importarDropiEC()      { return importar('dropi', 'ec'); }
-function importarDropiGT()      { return importar('dropi', 'gt'); }
-function importarMetaEC()       { return importar('meta', 'ec'); }
-function importarMetaGT()       { return importar('meta', 'gt'); }
-function importarFacturacionEC(){ return importar('meta_facturacion', 'ec'); }
-function importarShopifyEC()    { return importar('shopify', 'ec'); }
-function importarIris()         { return importar('iris', 'ec'); }
+/**
+ * El botón Ejecutar de Apps Script no permite pasar argumentos, así que
+ * para importar una sola fuente hace falta una función sin parámetros.
+ *
+ * No se listan por tienda a propósito: hacerlo ataría el código a las
+ * tiendas de una cuenta, y Nova se vende a clientes de toda la región.
+ * importarTodo() recorre la hoja Fuentes, que es donde vive esa lista.
+ *
+ * Si necesitas importar una fuente suelta, escribe la llamada en la
+ * consola del editor:  importar('dropi', 'lima')
+ */
+function importarTodoAhora() { return importarTodo(); }
