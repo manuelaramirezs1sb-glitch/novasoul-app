@@ -3164,9 +3164,12 @@ const TIPOS_IMPORT = {
   pedidos: {
     titulo: 'Subir pedidos',
     nota: 'El export de pedidos de tu plataforma, tal como lo descargas. ' +
-          'Trae el cliente, el teléfono, el estado y el valor.',
+          'Trae el cliente, el teléfono, el estado y el valor. ¿Llevas tu ' +
+          'propio control en Excel? Elige “Mi propio archivo”: Nova lo lee, ' +
+          'te muestra qué entendió de cada columna y tú confirmas antes de cargar.',
     fuentes: [['dropi','Dropi'], ['mastershop','Mastershop'],
-              ['effi_guias','Effi · guías'], ['shopify','Shopify']],
+              ['effi_guias','Effi · guías'], ['shopify','Shopify'],
+              ['propio','Mi propio archivo (histórico)']],
   },
   novedades: {
     titulo: 'Subir novedades y llamadas',
@@ -3303,6 +3306,14 @@ async function subirArchivo(input, z) {
     });
 
     if (!r.ok) { impEstado(z, r.error || 'No se pudo importar.', 'mal'); return; }
+
+    // Archivo propio: primero se revisa el mapeo, no se importa nada aún
+    if (r.revisar) {
+      PENDIENTE[z] = { b64: b64, nombre: file.name, fuente: fuente };
+      pintarRevision(z, r);
+      return;
+    }
+
     impEstado(z, r.resumen || ('Importadas ' + r.filas + ' filas.'), 'ok');
     cargarReales();
     cargarHistorialFuentes();
@@ -3310,6 +3321,147 @@ async function subirArchivo(input, z) {
     impEstado(z, 'Falló la subida: ' + e.message, 'mal');
   } finally {
     btn.style.opacity = '1'; btn.textContent = 'Elegir archivo';
+  }
+}
+
+// ─── REVISAR EL ARCHIVO PROPIO ────────────────────────────────
+/**
+ * El histórico de un cliente no se importa a ciegas.
+ *
+ * Un export de Dropi siempre trae las mismas columnas. El control diario
+ * que alguien lleva a mano, no: ahí "Tel" puede ser el teléfono de la
+ * clienta o el de la transportadora, y solo lo sabe quien lo escribió.
+ * Por eso Nova propone, muestra tres filas de ejemplo, y espera. Un
+ * histórico mal leído ensucia la base y no hay cómo distinguirlo después.
+ */
+const PENDIENTE = {};
+
+const NOMBRE_CAMPO = {
+  id_externo:'Número de pedido', fecha:'Fecha', cliente:'Cliente',
+  telefono:'Teléfono', telefono_2:'Segundo teléfono', cedula:'Documento',
+  correo:'Correo', direccion:'Dirección', ciudad:'Ciudad',
+  departamento:'Departamento', producto:'Producto', cantidad:'Cantidad',
+  valor:'Valor', costo_envio:'Flete', costo_producto:'Costo del producto',
+  estado:'Estado', guia:'Guía', transportadora:'Transportadora',
+  gestora_asignada:'Gestora', nota:'Nota', metodo_pago:'Método de pago',
+};
+
+const COLOR_CONF = { alta:['#3f5330','#e2ead6'], media:['#8a6a13','#f6ecd0'],
+                     baja:['#b8322f','#f6e3db'] };
+
+function pintarRevision(z, r) {
+  const el = document.getElementById('imp-estado-' + z);
+  if (!el) return;
+
+  const elegido = {};
+  (r.propuestas || []).forEach(function (p) { elegido[p.campo] = p; });
+
+  // Primero lo dudoso, después lo que Nova entendió bien. Quien revisa
+  // necesita ver lo que falta arriba, no enterrado al final de la lista.
+  const orden = (r.campos || []).slice().sort(function (a, b) {
+    const peso = function (p) {
+      if (!p) return 1;
+      return p.confianza === 'alta' ? 3 : (p.confianza === 'media' ? 2 : 0);
+    };
+    return peso(elegido[a]) - peso(elegido[b]);
+  });
+
+  const cabeceras = (r.encabezados || []).filter(function (h) { return h; });
+
+  const filas = orden.map(function (campo) {
+    const p = elegido[campo];
+    const c = p ? (COLOR_CONF[p.confianza] || COLOR_CONF.baja) : ['#8a8880','#efedE8'];
+    const etiqueta = p ? p.confianza : 'sin encontrar';
+    const ops = ['<option value="">— no está en mi archivo —</option>'].concat(
+      cabeceras.map(function (h) {
+        const sel = (p && p.columna === h) ? ' selected' : '';
+        return '<option value="' + esc(h) + '"' + sel + '>' + esc(h) + '</option>';
+      })).join('');
+    return '<tr>' +
+      '<td style="padding:5px 8px 5px 0;white-space:nowrap;">' +
+        esc(NOMBRE_CAMPO[campo] || campo) + '</td>' +
+      '<td style="padding:5px 8px 5px 0;">' +
+        '<select class="cm-sel" data-campo="' + campo + '" style="min-width:180px;">' +
+        ops + '</select></td>' +
+      '<td style="padding:5px 0;"><span class="bd" style="color:' + c[0] +
+        ';background:' + c[1] + ';">' + etiqueta + '</span></td>' +
+    '</tr>';
+  }).join('');
+
+  const muestra = (r.muestra || []).length
+    ? '<div class="slbl" style="margin-top:10px;">PRIMERAS FILAS DE TU ARCHIVO</div>' +
+      '<div style="overflow-x:auto;"><table style="border-collapse:collapse;' +
+        'font:500 11px/1.5 \'DM Sans\';">' +
+      '<tr>' + (r.encabezados||[]).map(function (h) {
+        return '<th style="text-align:left;padding:3px 8px 3px 0;' +
+          'color:var(--t-mut2);white-space:nowrap;">' + esc(h) + '</th>';
+      }).join('') + '</tr>' +
+      r.muestra.map(function (f) {
+        return '<tr>' + f.map(function (c) {
+          return '<td style="padding:3px 8px 3px 0;white-space:nowrap;' +
+            'color:var(--t-ink2);">' + esc(c) + '</td>';
+        }).join('') + '</tr>';
+      }).join('') + '</table></div>'
+    : '';
+
+  el.style.display = 'block';
+  el.style.background = 'var(--s-bg)';
+  el.style.color = 'var(--t-ink)';
+  el.style.whiteSpace = 'normal';
+  el.innerHTML =
+    '<div style="font:600 13px/1.4 \'DM Sans\';margin-bottom:2px;">' +
+      'Revisa qué entendió Nova de tu archivo</div>' +
+    '<div style="font:500 11.5px/1.6 \'DM Sans\';color:var(--t-mut);margin-bottom:8px;">' +
+      esc(r.archivo) + ' · ' + r.filas + ' filas. Corrige lo que esté mal y ' +
+      'confirma. No se ha guardado nada todavía.</div>' +
+    '<div style="overflow-x:auto;"><table id="map-' + z + '" ' +
+      'style="border-collapse:collapse;font:500 12px/1.5 \'DM Sans\';">' +
+      filas + '</table></div>' +
+    muestra +
+    '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">' +
+      '<button class="cm-btn" onclick="confirmarMapeo(\'' + z + '\')">' +
+        'Importar con este mapeo</button>' +
+      '<button class="cm-btn" style="background:transparent;color:var(--t-mut);' +
+        'border:1px solid var(--s-line2);" onclick="cancelarRevision(\'' + z +
+        '\')">Cancelar</button>' +
+    '</div>';
+}
+
+function cancelarRevision(z) {
+  delete PENDIENTE[z];
+  impEstado(z, 'Cancelado. No se importó nada.', 'ojo');
+}
+
+async function confirmarMapeo(z) {
+  const pend = PENDIENTE[z];
+  if (!pend) { impEstado(z, 'Se perdió el archivo. Vuelve a subirlo.', 'mal'); return; }
+
+  const mapeo = {};
+  document.querySelectorAll('#map-' + z + ' select[data-campo]').forEach(function (sel) {
+    if (sel.value) mapeo[sel.dataset.campo] = sel.value;
+  });
+
+  // Sin cliente ni teléfono la fila no sirve: no hay a quién contactar
+  // ni con qué cruzar las llamadas.
+  if (!mapeo.cliente && !mapeo.telefono) {
+    impEstado(z, 'Falta decir cuál columna es el cliente o el teléfono. ' +
+      'Sin eso los pedidos no se pueden gestionar.', 'mal');
+    return;
+  }
+
+  impEstado(z, 'Importando tu histórico…\nEsto puede tardar según el tamaño.', 'ojo');
+  try {
+    const r = await api('importar', {
+      fuente: pend.fuente, tienda: ST, nombre: pend.nombre,
+      contenido: pend.b64, mapeo: mapeo,
+    });
+    if (!r.ok) { impEstado(z, r.error || 'No se pudo importar.', 'mal'); return; }
+    delete PENDIENTE[z];
+    impEstado(z, r.resumen || ('Importadas ' + r.filas + ' filas.'), 'ok');
+    cargarReales();
+    cargarHistorialFuentes();
+  } catch (e) {
+    impEstado(z, 'Falló la importación: ' + e.message, 'mal');
   }
 }
 

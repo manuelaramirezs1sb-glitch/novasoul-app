@@ -933,6 +933,33 @@ function apiImportarArchivo(s, p) {
   sh.getRange(1, 1, rect.length, ancho).setValues(rect);
   SpreadsheetApp.flush();
 
+  /**
+   * Un archivo propio no se importa a ciegas.
+   *
+   * El export de Dropi siempre trae las mismas columnas; el control
+   * diario que alguien lleva a mano, no. Ahí "Tel" puede ser el
+   * teléfono de la clienta o el de la transportadora, y nadie más que
+   * quien lo escribió lo sabe. Así que se lee, se propone, y se espera
+   * confirmación antes de escribir una sola fila en Pedidos.
+   */
+  if (cfg.propio) {
+    if (p.mapeo && Object.keys(p.mapeo).length) {
+      guardarMapeo(ss, fuente, p.mapeo, s.nombre);
+    } else {
+      let an;
+      try {
+        an = analizarFilas(filas, SINONIMOS_PEDIDOS, FORMAS_PEDIDOS);
+      } catch (err) {
+        return { ok: false, error: err.message, archivado: nomTab };
+      }
+      return { ok: true, revisar: true, archivo: nombre, tab: nomTab,
+               filas: an.filas, encabezados: an.encabezados,
+               propuestas: an.propuestas, sinResolver: an.sinResolver,
+               muestra: an.muestra,
+               campos: Object.keys(SINONIMOS_PEDIDOS) };
+    }
+  }
+
   let res;
   try {
     res = importar(fuente, tienda, s.sheetId);
@@ -1023,6 +1050,46 @@ function convertirAHoja(blob) {
   const id = JSON.parse(r.getContentText()).id;
   if (!id) throw new Error('La conversión no devolvió un archivo.');
   return id;
+}
+
+/**
+ * Guarda en `Mapeos` lo que la persona confirmó.
+ *
+ * Se marca 'humano' a propósito: proponerMapeo() borra sus propias
+ * propuestas al recalcular, pero respeta las humanas. Una corrección
+ * hecha a mano no debe perderse porque el análisis se volvió a correr.
+ *
+ * Y queda guardado para la próxima vez: quien sube su histórico mes a
+ * mes con el mismo formato no vuelve a confirmar nada.
+ */
+function guardarMapeo(ss, fuenteId, mapeo, quien) {
+  let sh = ss.getSheetByName('Mapeos');
+  if (!sh) {
+    sh = ss.insertSheet('Mapeos');
+    sh.getRange(1, 1, 1, 7)
+      .setValues([['fuente','campo_nova','columna_origen','confianza','aviso','definido_por','fecha']])
+      .setFontWeight('bold').setBackground('#0b1824').setFontColor('#c9a84c');
+    sh.setFrozenRows(1);
+  }
+
+  // Fuera las filas anteriores de esta fuente: el mapeo nuevo manda
+  const todo = sh.getDataRange().getValues();
+  for (let i = todo.length - 1; i >= 1; i--) {
+    if (String(todo[i][0]) === fuenteId) sh.deleteRow(i + 1);
+  }
+
+  const hoy = Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd');
+  const filas = Object.keys(mapeo)
+    .filter(function (campo) { return String(mapeo[campo] || '').trim(); })
+    .map(function (campo) {
+      return [fuenteId, campo, String(mapeo[campo]).trim(), 'confirmada', '',
+              'humano', hoy];
+    });
+  if (filas.length) {
+    sh.getRange(sh.getLastRow() + 1, 1, filas.length, 7).setValues(filas);
+  }
+  SpreadsheetApp.flush();
+  return filas.length;
 }
 
 /** Coma o punto y coma: Excel en español exporta con punto y coma. */

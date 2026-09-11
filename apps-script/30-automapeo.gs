@@ -137,10 +137,10 @@ function puntajeForma(forma, p) {
 }
 
 /** Qué tanto se parece el encabezado al campo. 0 a 100. */
-function puntajeNombre(campo, encabezado) {
+function puntajeNombre(campo, encabezado, dicc) {
   const h = norm(encabezado);
   if (!h) return 0;
-  const syns = SINONIMOS[campo] || [];
+  const syns = (dicc || SINONIMOS)[campo] || [];
   let mejor = 0;
   for (let i = 0; i < syns.length; i++) {
     const s = norm(syns[i]);
@@ -154,6 +154,149 @@ function puntajeNombre(campo, encabezado) {
     }
   }
   return mejor;
+}
+
+// ─── ARCHIVOS PROPIOS DEL CLIENTE ────────────────────────────
+/**
+ * El histórico que ya tiene el cliente.
+ *
+ * Casi nadie empieza en cero: llega con su control diario en Excel,
+ * hecho a mano, con los encabezados que a esa persona le hicieron
+ * sentido. "Tel", "Cel de la clienta", "A quién se le entregó".
+ * Ningún catálogo de alias va a cubrir eso.
+ *
+ * Por eso este diccionario no pretende acertar siempre: pretende
+ * proponer, y que la persona confirme antes de que se escriba nada.
+ * Un histórico mal leído es peor que no cargarlo.
+ */
+const SINONIMOS_PEDIDOS = {
+  id_externo:   ['id','no','num','numero','orden','pedido','no orden','numero orden',
+                 'numero de orden','guia','order','order id','referencia','codigo'],
+  fecha:        ['fecha','dia','date','fecha pedido','fecha de pedido','fecha creacion',
+                 'creado','registro','fecha venta'],
+  cliente:      ['cliente','nombre','nombre cliente','nombre del cliente','clienta',
+                 'destinatario','comprador','nombre completo','customer'],
+  telefono:     ['telefono','tel','celular','cel','movil','whatsapp','contacto',
+                 'numero','numero de contacto','phone'],
+  telefono_2:   ['telefono 2','tel 2','celular 2','segundo numero','otro numero',
+                 'numero alterno','telefono alterno','contacto 2','whatsapp 2'],
+  cedula:       ['cedula','documento','dni','identificacion','ci','nit','rut'],
+  correo:       ['correo','email','mail','e mail'],
+  direccion:    ['direccion','dir','domicilio','address','direccion de entrega'],
+  ciudad:       ['ciudad','city','municipio','localidad','destino','ciudad destino'],
+  // 'estado' NO va aquí aunque en México signifique región: en una
+  // tienda esa columna es el estado del pedido nueve de cada diez veces,
+  // y si departamento se la queda, los pedidos entran sin estado.
+  departamento: ['departamento','provincia','region','depto','dpto'],
+  producto:     ['producto','productos','product','products','articulo','item',
+                 'descripcion','description','sku','referencia producto',
+                 'nombre producto','item name'],
+  cantidad:     ['cantidad','cant','unidades','qty','uds','n unidades'],
+  valor:        ['valor','total','monto','precio','importe','valor total',
+                 'total orden','total de la orden','venta','plata','dinero',
+                 'valor a cobrar','recaudo','cobrar','amount'],
+  costo_envio:  ['flete','envio','costo envio','domicilio','shipping','valor envio'],
+  costo_producto:['costo','costo producto','cost','costo unitario'],
+  estado:       ['estado','status','estatus','situacion','estado pedido',
+                 'estado del pedido','en que va'],
+  guia:         ['guia','numero guia','no guia','tracking','rastreo','guia transportadora'],
+  transportadora:['transportadora','courier','operador','empresa envio','mensajeria'],
+  gestora_asignada:['gestora','asesora','vendedora','responsable','encargada','atendido por',
+                 'asignado a','quien atiende'],
+  nota:         ['nota','notas','observacion','observaciones','comentario','comentarios',
+                 'detalle','anotacion'],
+  metodo_pago:  ['pago','metodo pago','forma de pago','medio de pago','payment'],
+};
+
+const FORMAS_PEDIDOS = {
+  id_externo:   'texto',
+  fecha:        'fecha',
+  cliente:      'texto',
+  telefono:     'texto',
+  telefono_2:   'texto',
+  cedula:       'texto',
+  correo:       'texto',
+  direccion:    'texto',
+  ciudad:       'texto_repetido',
+  departamento: 'texto_repetido',
+  producto:     'texto_repetido',
+  cantidad:     'entero',
+  valor:        'numero',
+  costo_envio:  'numero',
+  costo_producto:'numero',
+  estado:       'texto_repetido',
+  guia:         'texto',
+  transportadora:'texto_repetido',
+  gestora_asignada:'texto_repetido',
+  nota:         'texto',
+  metodo_pago:  'texto_repetido',
+};
+
+/**
+ * El mismo análisis, pero sobre filas en memoria en vez de una pestaña.
+ *
+ * Existe para que la app pueda proponer el mapeo de un archivo recién
+ * subido sin escribir una sola fila todavía: primero se muestra qué
+ * entendió, la persona corrige, y solo entonces se importa.
+ */
+function analizarFilas(datos, dicc, formas, campos) {
+  dicc = dicc || SINONIMOS;
+  formas = formas || FORMAS;
+  if (!datos || datos.length < 2) {
+    throw new Error('El archivo no tiene filas de datos.');
+  }
+
+  let filaEnc = 0;
+  for (let i = 0; i < Math.min(datos.length, 15); i++) {
+    const textos = datos[i].filter(function (c) {
+      return String(c).trim() !== '' && aNumero(c) === '';
+    });
+    if (textos.length >= 3) { filaEnc = i; break; }
+  }
+
+  const enc = datos[filaEnc];
+  const cuerpo = datos.slice(filaEnc + 1);
+  const perfiles = enc.map(function (_, j) {
+    return perfilar(cuerpo.map(function (r) { return r[j]; }));
+  });
+
+  const objetivo = campos || Object.keys(dicc);
+  const ranking = [];
+  objetivo.forEach(function (campo) {
+    enc.forEach(function (h, j) {
+      if (!String(h).trim()) return;
+      const pn = puntajeNombre(campo, h, dicc);
+      const pf = puntajeForma(formas[campo] || 'texto', perfiles[j]);
+      if (pn === 0 && pf === 0) return;
+      ranking.push({ campo: campo, col: j, encabezado: String(h),
+                     punt: pn + pf, pn: pn, pf: pf });
+    });
+  });
+  ranking.sort(function (a, b) { return b.punt - a.punt; });
+
+  const resueltos = {}, usadas = {}, propuestas = [];
+  ranking.forEach(function (r) {
+    if (resueltos[r.campo] || usadas[r.col]) return;
+    if (r.pn === 0 && r.pf < 40) return;
+    resueltos[r.campo] = true;
+    usadas[r.col] = true;
+    propuestas.push({
+      campo: r.campo, columna: r.encabezado, indice: r.col, puntaje: r.punt,
+      confianza: r.punt >= 110 ? 'alta' : (r.punt >= 70 ? 'media' : 'baja'),
+    });
+  });
+
+  return {
+    filaEncabezado: filaEnc + 1,
+    encabezados: enc.map(function (h) { return String(h || '').trim(); }),
+    filas: cuerpo.length,
+    propuestas: propuestas,
+    sinResolver: objetivo.filter(function (c) { return !resueltos[c]; }),
+    // Tres filas de ejemplo para que la persona vea lo que va a cargar
+    muestra: cuerpo.slice(0, 3).map(function (r) {
+      return r.map(function (c) { return String(c == null ? '' : c).slice(0, 40); });
+    }),
+  };
 }
 
 // ─── PROPUESTA DE MAPEO ──────────────────────────────────────

@@ -162,6 +162,23 @@ const FUENTES = {
     },
   },
 
+  // ── EL HISTÓRICO DEL PROPIO CLIENTE ────────────────────────
+  /**
+   * Casi nadie llega en cero. Llega con su control diario en Excel,
+   * hecho a mano, con los encabezados que a esa persona le hicieron
+   * sentido: "Tel", "A quién se le entregó", "Plata".
+   *
+   * Esta fuente no trae alias porque no hay alias que valgan: cada
+   * archivo es distinto. El mapeo se propone leyendo el archivo y lo
+   * confirma la persona antes de importar, y queda guardado en Mapeos
+   * para las siguientes veces.
+   */
+  propio: {
+    tipo: 'pedidos',
+    propio: true,
+    alias: {},
+  },
+
   // IRIS NO es una plataforma de pedidos: es la central telefónica.
   // VERIFICADO contra IRIS (1).csv — 2.782 llamadas salientes.
   // Se usa en TODAS las tiendas, no solo en una.
