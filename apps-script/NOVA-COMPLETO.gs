@@ -3903,7 +3903,7 @@ function importar(fuenteId, tienda, cliente) {
     if (nov.length) {
       const rn = escribirFilas(ss, 'Novedades', nov, fuenteId);
       extra = '\nNovedades derivadas: ' + rn.nuevas + ' nuevas, ' +
-              rn.actualizadas + ' actualizadas';
+              rn.actualizadas + ' actualizadas, ' + rn.iguales + ' sin cambios';
     }
   }
 
@@ -3993,60 +3993,103 @@ function aSegundos(v) {
  * Escribe las filas en su hoja: actualiza las que ya existen, agrega las
  * nuevas. Nunca borra, y nunca pisa las columnas del equipo.
  */
+/**
+ * Escribe las filas en su entidad, por bloques.
+ *
+ * Antes escribía celda por celda. Era lo más seguro sobre el papel —una
+ * hoja no tiene bloqueo de fila, así que dos escrituras simultáneas se
+ * pisan— pero con 206 pedidos y ocho columnas eran mil seiscientas
+ * llamadas, una por una, y la importación tardaba más de un minuto.
+ * Google corta la respuesta antes y el navegador solo ve un 404: el
+ * archivo entraba a medias y parecía que había fallado la subida.
+ *
+ * Ahora se arma todo en memoria y se escribe por tramos de columnas
+ * seguidas. Las columnas del equipo se quedan fuera del tramo, así que
+ * siguen intocables; las de la plataforma solo las escribe esto, de modo
+ * que devolver su valor actual a una fila que no cambió no pisa nada.
+ * Y un candado impide que dos importaciones corran encima.
+ */
 function escribirFilas(ss, hoja, filas, fuenteId) {
   const sh = ss.getSheetByName(hoja);
   if (!sh) throw new Error('No existe la hoja ' + hoja);
 
-  const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
-  const cId = enc.indexOf('id');
-  if (cId === -1) throw new Error(hoja + ' no tiene columna id.');
-
-  // Índice de lo que ya está, para no recorrer la hoja por cada fila
-  const existentes = {};
-  if (sh.getLastRow() > 1) {
-    const datos = sh.getRange(2, 1, sh.getLastRow() - 1, enc.length).getValues();
-    datos.forEach(function (f, i) {
-      const k = String(f[cId]).trim();
-      if (k) existentes[k] = { fila: i + 2, valores: f };
-    });
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) {
+    throw new Error('Hay otra importación corriendo. Espera a que termine.');
   }
 
-  const nuevas = [], sinEstado = {};
-  let actualizadas = 0, iguales = 0;
+  try {
+    const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
+    const cId = enc.indexOf('id');
+    if (cId === -1) throw new Error(hoja + ' no tiene columna id.');
 
-  filas.forEach(function (o) {
-    if (o.estado_canonico && o.estado_canonico.indexOf('__sin_mapear__') === 0) {
-      sinEstado[o.estado_canonico.replace('__sin_mapear__:', '')] = 1;
+    // Lo que ya está, indexado, para no recorrer la hoja por cada fila
+    let datos = [];
+    const existentes = {};
+    if (sh.getLastRow() > 1) {
+      datos = sh.getRange(2, 1, sh.getLastRow() - 1, enc.length).getValues();
+      datos.forEach(function (f, i) {
+        const k = String(f[cId]).trim();
+        if (k) existentes[k] = i;
+      });
     }
 
-    const prev = existentes[o.id];
-    if (!prev) {
-      nuevas.push(enc.map(function (col) {
-        return o[col] !== undefined ? o[col] : '';
-      }));
-      return;
-    }
+    const nuevas = [], sinEstado = {}, tocadas = {};
+    let actualizadas = 0, iguales = 0;
 
-    // Ya existe: solo se tocan las celdas que cambiaron, y jamás las del equipo
-    let cambio = false;
-    enc.forEach(function (col, i) {
-      if (COLUMNAS_DEL_EQUIPO.indexOf(col) !== -1) return;
-      if (o[col] === undefined || o[col] === '') return;
-      if (String(prev.valores[i]) === String(o[col])) return;
-      sh.getRange(prev.fila, i + 1).setValue(o[col]);
-      cambio = true;
+    filas.forEach(function (o) {
+      if (o.estado_canonico && o.estado_canonico.indexOf('__sin_mapear__') === 0) {
+        sinEstado[o.estado_canonico.replace('__sin_mapear__:', '')] = 1;
+      }
+
+      const i = existentes[o.id];
+      if (i === undefined) {
+        nuevas.push(enc.map(function (col) {
+          return o[col] !== undefined ? o[col] : '';
+        }));
+        return;
+      }
+
+      let cambio = false;
+      enc.forEach(function (col, c) {
+        if (COLUMNAS_DEL_EQUIPO.indexOf(col) !== -1) return;
+        if (o[col] === undefined || o[col] === '') return;
+        if (String(datos[i][c]) === String(o[col])) return;
+        datos[i][c] = o[col];
+        tocadas[c] = true;
+        cambio = true;
+      });
+      if (cambio) actualizadas++; else iguales++;
     });
-    if (cambio) actualizadas++; else iguales++;
-  });
 
-  if (nuevas.length) {
-    sh.getRange(sh.getLastRow() + 1, 1, nuevas.length, enc.length).setValues(nuevas);
+    // Tramos de columnas seguidas que hay que reescribir
+    if (datos.length && Object.keys(tocadas).length) {
+      const cols = Object.keys(tocadas).map(Number).sort(function (a, b) { return a - b; });
+      let ini = cols[0], fin = cols[0];
+      const escribirTramo = function (a, b) {
+        const ancho = b - a + 1;
+        const sub = datos.map(function (f) { return f.slice(a, b + 1); });
+        sh.getRange(2, a + 1, datos.length, ancho).setValues(sub);
+      };
+      for (let k = 1; k < cols.length; k++) {
+        if (cols[k] === fin + 1) { fin = cols[k]; continue; }
+        escribirTramo(ini, fin);
+        ini = fin = cols[k];
+      }
+      escribirTramo(ini, fin);
+    }
+
+    if (nuevas.length) {
+      sh.getRange(sh.getLastRow() + 1, 1, nuevas.length, enc.length).setValues(nuevas);
+    }
+
+    return {
+      nuevas: nuevas.length, actualizadas: actualizadas, iguales: iguales,
+      sinEstado: Object.keys(sinEstado),
+    };
+  } finally {
+    lock.releaseLock();
   }
-
-  return {
-    nuevas: nuevas.length, actualizadas: actualizadas, iguales: iguales,
-    sinEstado: Object.keys(sinEstado),
-  };
 }
 
 /**
