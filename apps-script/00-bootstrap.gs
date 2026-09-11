@@ -308,8 +308,46 @@ function bootstrapTodo() {
   log.push(construir(IDS_().academy,  'Nova_Academy', ESQUEMA_ACADEMY));
 
   sembrarParametros();
+  log.push(actualizarClientes());
   Logger.log(log.join('\n'));
   return log.join('\n');
+}
+
+/**
+ * Pone al día las hojas de los clientes que ya existen.
+ *
+ * El template es el molde, no la operación: las tiendas de verdad viven
+ * en las copias. Cuando el esquema crece —una pestaña Cierres, una
+ * columna permisos— el template se actualiza y las copias se quedan
+ * atrás, así que la función nueva sirve en una instalación recién hecha
+ * y falla en la que lleva meses trabajando. Que es al revés de lo que
+ * uno quiere.
+ *
+ * Solo agrega pestañas y columnas que faltan. No borra ni reordena ni
+ * toca una sola celda de datos.
+ */
+function actualizarClientes() {
+  const central = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  if (!central || central.getLastRow() < 2) return 'Clientes: ninguno registrado todavía';
+
+  const filas = central.getDataRange().getValues();
+  const enc = filas[0].map(function (h) { return String(h || '').trim().toLowerCase(); });
+  const cId = enc.indexOf('sheet_id') !== -1 ? enc.indexOf('sheet_id') : 13;
+  const cNom = enc.indexOf('empresa') !== -1 ? enc.indexOf('empresa') : 1;
+
+  const out = [];
+  for (let i = 1; i < filas.length; i++) {
+    const id = String(filas[i][cId] || '').trim();
+    if (!id) continue;
+    const nombre = String(filas[i][cNom] || id).trim();
+    try {
+      out.push('  ' + construir(id, nombre, ESQUEMA_EMPRESARIAL, IMPORTS_EMPRESARIAL));
+    } catch (e) {
+      // Una hoja borrada o sin permiso no puede detener a las demás
+      out.push('  ' + nombre + ': NO se pudo abrir (' + e.message + ')');
+    }
+  }
+  return 'Clientes:\n' + (out.length ? out.join('\n') : '  ninguno con hoja');
 }
 
 function construir(fileId, nombre, esquema, importsCrudos) {
