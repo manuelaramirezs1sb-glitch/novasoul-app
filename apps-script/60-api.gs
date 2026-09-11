@@ -441,9 +441,12 @@ function puede(s, accion, entidad) {
  * que mirar. De 4 en adelante está en curso, y de 7 ya terminó.
  */
 const PRIORIDAD_ESTADO = {
+  // Pedidos
   novedad: 0, pendiente: 1, en_oficina: 2,
   novedad_resuelta: 4, confirmado: 5, en_bodega: 5, en_transito: 6,
   entregado: 7, devolucion: 8, cancelado: 9,
+  // Novedades: los mismos criterios, sobre su propia columna estado
+  abierta: 0, resuelta: 7, cerrada: 8,
 };
 
 function prioridadEstado(v) {
@@ -528,7 +531,9 @@ function apiListar(s, p) {
    * Y dentro de lo que necesita acción, primero lo más viejo: ahí la
    * antigüedad es deuda, no historia.
    */
-  const cE = enc.indexOf('estado_canonico');
+  // Las novedades no tienen estado_canonico: su urgencia vive en `estado`
+  const cE = enc.indexOf('estado_canonico') !== -1
+    ? enc.indexOf('estado_canonico') : enc.indexOf('estado');
   if (cE !== -1 || cF !== -1) {
     filas.sort(function (a, b) {
       const pa = cE === -1 ? 5 : prioridadEstado(a[cE]);

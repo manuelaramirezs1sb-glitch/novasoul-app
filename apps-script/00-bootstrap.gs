@@ -188,8 +188,13 @@ const ESQUEMA_EMPRESARIAL = {
   // `grupo` agrupa el motivo (no_contacta / rechaza / direccion / dinero...)
   // y es lo que permite la alarma de patrón: 3 del mismo grupo en la semana
   // es un problema de proceso, no tres casos sueltos.
+  // `desenlace` es cómo terminó el pedido de esa novedad. Separado del
+  // estado de la novedad a propósito: una novedad puede resolverse y el
+  // pedido devolverse igual. Son dos hechos distintos, y confundirlos
+  // esconde justo el caso que hay que mirar.
   Novedades: ['id','fuente','id_externo','pedido_id','fecha','tipo','motivo','grupo',
-              'estado','gestora','solucion','nota','intentos','resuelta_en',
+              'estado','solucionada','fecha_solucion','desenlace',
+              'gestora','solucion','nota','intentos','resuelta_en',
               'actualizado_en','actualizado_por'],
 
   // IRIS no es una plataforma de pedidos — es la central telefónica.

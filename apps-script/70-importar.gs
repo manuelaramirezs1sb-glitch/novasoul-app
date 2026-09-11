@@ -297,13 +297,45 @@ function escribirFilas(ss, hoja, filas, fuenteId) {
  * reporte aparte como Effi. Se extraen para que la alarma de patrón y
  * el cierre de mes puedan contarlas.
  */
+/**
+ * Saca las novedades que vienen dentro del export de pedidos.
+ *
+ * El estado de la novedad no es el estado del pedido, y confundirlos fue
+ * un error caro: antes una novedad solo contaba como resuelta si el
+ * pedido estaba EN ESE MOMENTO en "novedad solucionada". Pero un pedido
+ * que tuvo novedad y después se entregó ya no está en ese estado, está
+ * entregado — así que su novedad quedaba abierta para siempre. Setenta y
+ * dos novedades y setenta y dos "abiertas", cuando de verdad quedaban dos.
+ *
+ * Dropi ya trae la respuesta en sus propias columnas, y ahora se leen.
+ * Son tres hechos distintos y cada uno tiene su columna:
+ *
+ *   solucionada  lo que dice la plataforma: SI o NO
+ *   desenlace    cómo terminó el pedido: entregado, devuelto, cancelado
+ *   estado       qué hay que hacer hoy con ella
+ *
+ * Separarlos deja ver el caso que importa: la novedad que el equipo SÍ
+ * resolvió y el pedido se devolvió igual. Eso es trabajo que no se
+ * convirtió en venta, y mezclado con lo demás no se ve.
+ */
 function derivarNovedades(pedidos, fuenteId, tienda) {
+  const TERMINALES = ['entregado', 'devolucion', 'cancelado'];
+
   return pedidos
     .filter(function (p) {
       const m = String(p.motivo_novedad || '').trim();
       return m && m !== '.' && m !== '-';
     })
     .map(function (p) {
+      const sol = norm(p.solucionada || '');
+      const solucionada = sol === 'si' || sol === 'sí' || sol === 'true' || sol === '1';
+      const cerrado = TERMINALES.indexOf(p.estado_canonico) !== -1;
+
+      let estado;
+      if (solucionada || p.estado_canonico === 'novedad_resuelta') estado = 'resuelta';
+      else if (cerrado) estado = 'cerrada';   // terminó sin resolverse
+      else estado = 'abierta';                // sigue esperando a alguien
+
       return {
         id: fuenteId + '-nov-' + p.id_externo,
         fuente: fuenteId,
@@ -313,8 +345,10 @@ function derivarNovedades(pedidos, fuenteId, tienda) {
         tipo: 'novedad',
         motivo: p.motivo_novedad,
         grupo: grupoNovedad(p.motivo_novedad),
-        estado: p.estado_canonico === 'novedad_resuelta' ? 'resuelta' : 'abierta',
-        solucion: p.solucion || '',
+        estado: estado,
+        solucionada: solucionada ? 'si' : 'no',
+        fecha_solucion: p.fecha_solucion || '',
+        desenlace: cerrado ? p.estado_canonico : '',
       };
     });
 }

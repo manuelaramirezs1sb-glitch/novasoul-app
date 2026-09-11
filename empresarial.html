@@ -3088,36 +3088,55 @@ function pintarNovedadesReales(filas) {
     const d = new Date(v);
     return isNaN(d) ? null : Math.floor((hoy - d.getTime()) / 86400000);
   };
-  const abierta = function (n) { return norm2(n.estado) !== 'resuelto' && !n.resuelta_en; };
 
-  const abiertas = filas.filter(abierta);
+  /**
+   * Una novedad abierta es la que todavía espera a alguien. No es lo
+   * mismo que una que terminó mal.
+   *
+   * Antes se contaba como abierta todo lo que no dijera "resuelto", y
+   * salían las 72 del mes abiertas cuando de verdad quedaban cinco. Un
+   * tablero que dice 72 cuando son 5 no se mira más.
+   */
+  const es = function (n, e) { return norm2(n.estado) === e; };
+  const abiertas  = filas.filter(function (n) { return es(n, 'abierta'); });
+  const resueltas = filas.filter(function (n) { return es(n, 'resuelta'); });
+  const cerradas  = filas.filter(function (n) { return es(n, 'cerrada'); });
   const viejas = abiertas.filter(function (n) { const d = dias(n.fecha); return d !== null && d >= 1; });
-  const resueltas7 = filas.filter(function (n) {
-    const d = dias(n.resuelta_en); return n.resuelta_en && d !== null && d <= 7;
-  });
-  const porPedido = {};
-  filas.forEach(function (n) { porPedido[n.pedido_id] = (porPedido[n.pedido_id]||0) + 1; });
-  const reincidentes = Object.keys(porPedido).filter(function (k) { return porPedido[k] >= 2; }).length;
+
+  // El caso que importa: el equipo resolvió y el pedido se devolvió igual.
+  const enVano = resueltas.filter(function (n) { return norm2(n.desenlace) === 'devolucion'; });
 
   document.getElementById('novkpi').innerHTML = [
-    {lb:'ABIERTAS',      v:abiertas.length,    sub:'Sin resolver ahora',        c:'#b8322f'},
-    {lb:'MÁS DE 24H',    v:viejas.length,      sub:'Abiertas hace un día o más',c:'#8a6a13'},
-    {lb:'RESUELTAS 7D',  v:resueltas7.length,  sub:'Últimos siete días',        c:'#6d7d4a'},
-    {lb:'REINCIDENTES',  v:reincidentes,       sub:'Mismo pedido ≥2 novedades', c:reincidentes?'#8a6a13':'#6d7d4a'},
-    {lb:'TOTAL',         v:filas.length,       sub:'En esta tienda',            c:'#3C6684'},
+    {lb:'ABIERTAS',   v:abiertas.length,  sub:'Esperan a alguien ahora',    c:abiertas.length?'#b8322f':'#6d7d4a'},
+    {lb:'MÁS DE 24H', v:viejas.length,    sub:'Abiertas hace un día o más', c:viejas.length?'#8a6a13':'#6d7d4a'},
+    {lb:'RESUELTAS',  v:resueltas.length, sub:'La solución se aplicó',      c:'#6d7d4a'},
+    {lb:'EN VANO',    v:enVano.length,    sub:'Resueltas y devueltas igual', c:enVano.length?'#8a6a13':'#6d7d4a'},
+    {lb:'SIN RESOLVER', v:cerradas.length,sub:'Terminaron sin solución',    c:'#5b5b55'},
   ].map(function (k) {
     return '<div class="kc" style="border-left:4px solid ' + k.c + ';"><div class="klbl">' + k.lb +
       '</div><div class="kval">' + k.v + '</div><div class="ksub">' + k.sub + '</div></div>';
   }).join('');
 
+  const porPedido = {};
+  filas.forEach(function (n) { porPedido[n.pedido_id] = (porPedido[n.pedido_id]||0) + 1; });
+
+  const COLOR_NOV = {
+    abierta:  ['#b8322f','#f6e3db'],
+    resuelta: ['#3f5330','#d3e0c2'],
+    cerrada:  ['#5b5b55','#e6e4de'],
+  };
   const estados = ['abierta','en_gestion','esperando_cliente','reprogramar',
-                   'reenviar','devolver','resuelto'];
+                   'reenviar','resuelta','cerrada'];
 
   document.getElementById('novlist').innerHTML = filas.map(function (n, i) {
     const d = dias(n.fecha);
-    const urg = abierta(n) && d !== null && d >= 1;
+    const abierta = es(n, 'abierta');
+    const urg = abierta && d !== null && d >= 1;
     const veces = porPedido[n.pedido_id] > 1 ? porPedido[n.pedido_id] + 'ª vez' : '1ª vez';
-    const col = abierta(n) ? ['#b8322f','#f6e3db'] : ['#3f5330','#d3e0c2'];
+    const col = COLOR_NOV[norm2(n.estado)] || COLOR_NOV.cerrada;
+    const fin = n.desenlace
+      ? (COLOR_ESTADO[n.desenlace] ? COLOR_ESTADO[n.desenlace][2] : n.desenlace)
+      : '';
     return '<div class="nrow' + (urg ? ' urg' : '') + '" id="nrow' + i + '">' +
       '<div class="nh"><div><span class="ncl">' + esc(n.pedido_id || n.id) + '</span>&ensp;' +
         '<span style="font:500 11.5px/1 \'DM Sans\';color:var(--t-mut2);">' +
@@ -3126,13 +3145,15 @@ function pintarNovedadesReales(filas) {
         esc(n.estado || 'abierta') + '</span></div>' +
       '<div class="nmeta"><span>' + esc(n.motivo || n.tipo || 'Sin motivo') + '</span>' +
         '<span>' + esc(n.grupo || '') + '</span>' +
+        (fin ? '<span>Terminó ' + esc(fin).toLowerCase() + '</span>' : '') +
         '<span class="ntime">' + (d === null ? '' : d + ' d') + '</span>' +
         '<span style="color:var(--t-mut3);">' + veces + '</span>' +
-        '<span>' + (n.gestora ? esc(n.gestora) : 'Sin asignar') + '</span>' +
         '<span class="ntog" onclick="togNov(' + i + ')">Ver detalle ▾</span></div>' +
       '<div class="ndtl" id="nd' + i + '" style="display:none;">' +
         '<div><div class="dlbl">QUÉ PASÓ</div><div class="dtxt">' +
           esc(n.motivo || '—') + '</div></div>' +
+        (n.fecha_solucion ? '<div><div class="dlbl">LA PLATAFORMA LA DIO POR SOLUCIONADA</div>' +
+          '<div class="dtxt">' + esc(n.fecha_solucion) + '</div></div>' : '') +
         (n.solucion ? '<div><div class="dlbl">SOLUCIÓN PEDIDA AL COURIER</div>' +
           '<div class="dtxt">' + esc(n.solucion) + '</div></div>' : '') +
         '<div><div class="dlbl">CAMBIAR ESTADO</div><div class="nstates">' +

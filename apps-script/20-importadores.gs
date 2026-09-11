@@ -45,6 +45,11 @@ const FUENTES = {
       cantidad:         ['cantidad', 'qty', 'unidades'],
       motivo_novedad:   ['novedad'],
       solucion:         ['solucion'],
+      // Dropi ya dice si la novedad se resolvió y cuándo. Sin leer esto,
+      // toda novedad de un pedido que después se entregó quedaba abierta
+      // para siempre: 72 novedades y 72 "abiertas".
+      solucionada:      ['fue solucionada la novedad'],
+      fecha_solucion:   ['fecha de solucion'],
       ultimo_movimiento:['ultimo movimiento'],
       fecha_ingreso:    ['fecha ingreso'],
       actualizado:      ['ultima actualizacion'],

@@ -181,8 +181,13 @@ const ESQUEMA_EMPRESARIAL = {
   // `grupo` agrupa el motivo (no_contacta / rechaza / direccion / dinero...)
   // y es lo que permite la alarma de patrón: 3 del mismo grupo en la semana
   // es un problema de proceso, no tres casos sueltos.
+  // `desenlace` es cómo terminó el pedido de esa novedad. Separado del
+  // estado de la novedad a propósito: una novedad puede resolverse y el
+  // pedido devolverse igual. Son dos hechos distintos, y confundirlos
+  // esconde justo el caso que hay que mirar.
   Novedades: ['id','fuente','id_externo','pedido_id','fecha','tipo','motivo','grupo',
-              'estado','gestora','solucion','nota','intentos','resuelta_en',
+              'estado','solucionada','fecha_solucion','desenlace',
+              'gestora','solucion','nota','intentos','resuelta_en',
               'actualizado_en','actualizado_por'],
 
   // IRIS no es una plataforma de pedidos — es la central telefónica.
@@ -1068,6 +1073,11 @@ const FUENTES = {
       cantidad:         ['cantidad', 'qty', 'unidades'],
       motivo_novedad:   ['novedad'],
       solucion:         ['solucion'],
+      // Dropi ya dice si la novedad se resolvió y cuándo. Sin leer esto,
+      // toda novedad de un pedido que después se entregó quedaba abierta
+      // para siempre: 72 novedades y 72 "abiertas".
+      solucionada:      ['fue solucionada la novedad'],
+      fecha_solucion:   ['fecha de solucion'],
       ultimo_movimiento:['ultimo movimiento'],
       fecha_ingreso:    ['fecha ingreso'],
       actualizado:      ['ultima actualizacion'],
@@ -3072,9 +3082,12 @@ function puede(s, accion, entidad) {
  * que mirar. De 4 en adelante está en curso, y de 7 ya terminó.
  */
 const PRIORIDAD_ESTADO = {
+  // Pedidos
   novedad: 0, pendiente: 1, en_oficina: 2,
   novedad_resuelta: 4, confirmado: 5, en_bodega: 5, en_transito: 6,
   entregado: 7, devolucion: 8, cancelado: 9,
+  // Novedades: los mismos criterios, sobre su propia columna estado
+  abierta: 0, resuelta: 7, cerrada: 8,
 };
 
 function prioridadEstado(v) {
@@ -3159,7 +3172,9 @@ function apiListar(s, p) {
    * Y dentro de lo que necesita acción, primero lo más viejo: ahí la
    * antigüedad es deuda, no historia.
    */
-  const cE = enc.indexOf('estado_canonico');
+  // Las novedades no tienen estado_canonico: su urgencia vive en `estado`
+  const cE = enc.indexOf('estado_canonico') !== -1
+    ? enc.indexOf('estado_canonico') : enc.indexOf('estado');
   if (cE !== -1 || cF !== -1) {
     filas.sort(function (a, b) {
       const pa = cE === -1 ? 5 : prioridadEstado(a[cE]);
@@ -4187,13 +4202,45 @@ function escribirFilas(ss, hoja, filas, fuenteId) {
  * reporte aparte como Effi. Se extraen para que la alarma de patrón y
  * el cierre de mes puedan contarlas.
  */
+/**
+ * Saca las novedades que vienen dentro del export de pedidos.
+ *
+ * El estado de la novedad no es el estado del pedido, y confundirlos fue
+ * un error caro: antes una novedad solo contaba como resuelta si el
+ * pedido estaba EN ESE MOMENTO en "novedad solucionada". Pero un pedido
+ * que tuvo novedad y después se entregó ya no está en ese estado, está
+ * entregado — así que su novedad quedaba abierta para siempre. Setenta y
+ * dos novedades y setenta y dos "abiertas", cuando de verdad quedaban dos.
+ *
+ * Dropi ya trae la respuesta en sus propias columnas, y ahora se leen.
+ * Son tres hechos distintos y cada uno tiene su columna:
+ *
+ *   solucionada  lo que dice la plataforma: SI o NO
+ *   desenlace    cómo terminó el pedido: entregado, devuelto, cancelado
+ *   estado       qué hay que hacer hoy con ella
+ *
+ * Separarlos deja ver el caso que importa: la novedad que el equipo SÍ
+ * resolvió y el pedido se devolvió igual. Eso es trabajo que no se
+ * convirtió en venta, y mezclado con lo demás no se ve.
+ */
 function derivarNovedades(pedidos, fuenteId, tienda) {
+  const TERMINALES = ['entregado', 'devolucion', 'cancelado'];
+
   return pedidos
     .filter(function (p) {
       const m = String(p.motivo_novedad || '').trim();
       return m && m !== '.' && m !== '-';
     })
     .map(function (p) {
+      const sol = norm(p.solucionada || '');
+      const solucionada = sol === 'si' || sol === 'sí' || sol === 'true' || sol === '1';
+      const cerrado = TERMINALES.indexOf(p.estado_canonico) !== -1;
+
+      let estado;
+      if (solucionada || p.estado_canonico === 'novedad_resuelta') estado = 'resuelta';
+      else if (cerrado) estado = 'cerrada';   // terminó sin resolverse
+      else estado = 'abierta';                // sigue esperando a alguien
+
       return {
         id: fuenteId + '-nov-' + p.id_externo,
         fuente: fuenteId,
@@ -4203,8 +4250,10 @@ function derivarNovedades(pedidos, fuenteId, tienda) {
         tipo: 'novedad',
         motivo: p.motivo_novedad,
         grupo: grupoNovedad(p.motivo_novedad),
-        estado: p.estado_canonico === 'novedad_resuelta' ? 'resuelta' : 'abierta',
-        solucion: p.solucion || '',
+        estado: estado,
+        solucionada: solucionada ? 'si' : 'no',
+        fecha_solucion: p.fecha_solucion || '',
+        desenlace: cerrado ? p.estado_canonico : '',
       };
     });
 }
