@@ -3299,11 +3299,10 @@ async function subirArchivo(input, z) {
 
   try {
     const b64 = await archivoABase64(file);
-    impEstado(z, 'Importando a ' + nombreTienda + '…\nEsto puede tardar según el tamaño.', 'ojo');
+    const envio = await enviarArchivo(z, b64, nombreTienda);
 
-    const r = await api('importar', {
-      fuente: fuente, tienda: ST, nombre: file.name, contenido: b64,
-    });
+    const r = await api('importar', Object.assign(
+      { fuente: fuente, tienda: ST, nombre: file.name }, envio));
 
     if (!r.ok) { impEstado(z, r.error || 'No se pudo importar.', 'mal'); return; }
 
@@ -3449,12 +3448,11 @@ async function confirmarMapeo(z) {
     return;
   }
 
-  impEstado(z, 'Importando tu histórico…\nEsto puede tardar según el tamaño.', 'ojo');
   try {
-    const r = await api('importar', {
-      fuente: pend.fuente, tienda: ST, nombre: pend.nombre,
-      contenido: pend.b64, mapeo: mapeo,
-    });
+    const envio = await enviarArchivo(z, pend.b64, (STORES[ST]||{}).name || ST);
+    const r = await api('importar', Object.assign(
+      { fuente: pend.fuente, tienda: ST, nombre: pend.nombre, mapeo: mapeo },
+      envio));
     if (!r.ok) { impEstado(z, r.error || 'No se pudo importar.', 'mal'); return; }
     delete PENDIENTE[z];
     impEstado(z, r.resumen || ('Importadas ' + r.filas + ' filas.'), 'ok');
@@ -3463,6 +3461,44 @@ async function confirmarMapeo(z) {
   } catch (e) {
     impEstado(z, 'Falló la importación: ' + e.message, 'mal');
   }
+}
+
+/**
+ * El archivo viaja partido.
+ *
+ * Entero en una sola petición no llega: Google rechaza la petición antes
+ * de que el script se entere —no queda ni rastro en el registro de
+ * ejecuciones— y el navegador solo ve un 404 que no explica nada. Media
+ * hora se puede ir buscando el error en el sitio equivocado.
+ *
+ * 30 KB por pedazo. El caché donde se guardan mientras llegan los demás
+ * admite hasta 100 KB, así que el límite no es ese: es que no sabemos
+ * dónde corta Google exactamente. Lo que sí sabemos es que 72 KB en una
+ * sola petición no pasa y 80 bytes sí. 30 KB queda lejos de la duda, y
+ * son cuatro peticiones para un archivo de medio mega.
+ */
+const TROZO = 30000;
+
+async function enviarArchivo(z, b64, nombreTienda) {
+  if (b64.length <= TROZO) {
+    impEstado(z, 'Importando a ' + nombreTienda + '…\nEsto puede tardar según el tamaño.', 'ojo');
+    return { contenido: b64 };
+  }
+
+  const total = Math.ceil(b64.length / TROZO);
+  const clave = 'u' + Date.now() + Math.floor(Math.random() * 1000);
+
+  for (let i = 0; i < total; i++) {
+    impEstado(z, 'Subiendo ' + (i + 1) + ' de ' + total + '…\n' +
+      Math.round((b64.length / 1024 / 1024) * 10) / 10 + ' MB en total.', 'ojo');
+    const r = await api('trozo', {
+      clave: clave, indice: i, trozo: b64.slice(i * TROZO, (i + 1) * TROZO),
+    });
+    if (!r.ok) throw new Error('Se cortó en la parte ' + (i + 1) + ': ' + (r.error || ''));
+  }
+
+  impEstado(z, 'Importando a ' + nombreTienda + '…\nEsto puede tardar según el tamaño.', 'ojo');
+  return { clave: clave, trozos: total };
 }
 
 /** El archivo viaja en base64 porque la API recibe JSON, no binario. */

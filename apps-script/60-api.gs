@@ -60,6 +60,7 @@ function manejar(e, metodo) {
       case 'cierre':    return json(apiCierre(s, p));
       case 'importar':  return json(apiImportarArchivo(s, p));
       case 'fuentes':   return json(apiFuentes(s, p));
+      case 'trozo':     return json(apiTrozo(s, p));
       case 'cerrarmes': return json(apiCerrarMes(s, p));
       case 'salir':     return json(apiSalir(p.token));
       default:          return json({ ok: false, error: 'Acción desconocida: ' + accion });
@@ -876,11 +877,68 @@ function apiCerrarMes(s, p) {
  * El crudo igual queda archivado en su pestaña _Import_*, porque es lo
  * que permite rehacer una importación cuando un mapeo se corrige.
  */
+/**
+ * Recibe un pedazo de archivo y lo guarda en el caché.
+ *
+ * Un archivo entero en una sola petición no llega: Google rechaza la
+ * petición antes de que el script se entere —no aparece ni en el
+ * registro de ejecuciones— y el navegador solo ve un 404 que no explica
+ * nada. Por eso el archivo viaja partido, y se arma aquí.
+ *
+ * Los pedazos son de 30 KB. No porque el caché no admita más —admite
+ * 100 KB— sino porque no sabemos dónde corta Google exactamente: 72 KB
+ * en una sola petición no pasa, 80 bytes sí. 30 KB queda lejos de la duda.
+ *
+ * Viven 10 minutos: lo suficiente para terminar de subir, y no tanto
+ * como para que un archivo abandonado se quede ocupando espacio.
+ */
+function apiTrozo(s, p) {
+  const clave = claveSubida(s, p.clave);
+  const i = parseInt(p.indice, 10);
+  if (!clave || isNaN(i)) return { ok: false, error: 'Trozo mal identificado.' };
+  const t = String(p.trozo || '');
+  if (t.length > 100000) return { ok: false, error: 'Trozo demasiado grande.' };
+
+  CacheService.getScriptCache().put(clave + '_' + i, t, 600);
+  return { ok: true, indice: i, bytes: t.length };
+}
+
+/** La clave lleva el correo: nadie puede armar la subida de otra persona. */
+function claveSubida(s, clave) {
+  const c = String(clave || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 40);
+  if (!c) return '';
+  return 'sub_' + String(s.email).replace(/[^a-z0-9]/g, '') + '_' + c;
+}
+
+/** Junta los pedazos. Si falta alguno, se dice cuál: no se importa a medias. */
+function armarSubida(s, clave, trozos) {
+  const base = claveSubida(s, clave);
+  const cache = CacheService.getScriptCache();
+  const partes = [];
+  for (let i = 0; i < trozos; i++) {
+    const t = cache.get(base + '_' + i);
+    if (t === null) {
+      throw new Error('Se perdió la parte ' + (i + 1) + ' de ' + trozos +
+        ' mientras subía. Vuelve a intentarlo.');
+    }
+    partes.push(t);
+  }
+  for (let i = 0; i < trozos; i++) cache.remove(base + '_' + i);
+  return partes.join('');
+}
+
 function apiImportarArchivo(s, p) {
   const fuente = String(p.fuente || '').trim();
   const tienda = String(p.tienda || '').trim();
   const nombre = String(p.nombre || 'archivo').trim();
-  const b64 = String(p.contenido || '');
+
+  let b64;
+  if (p.clave && p.trozos) {
+    try { b64 = armarSubida(s, p.clave, parseInt(p.trozos, 10)); }
+    catch (err) { return { ok: false, error: err.message }; }
+  } else {
+    b64 = String(p.contenido || '');
+  }
 
   if (!FUENTES[fuente]) return { ok: false, error: 'Fuente desconocida: ' + fuente };
   if (s.tiendas.indexOf(tienda) === -1) {

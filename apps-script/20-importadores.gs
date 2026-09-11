@@ -50,7 +50,21 @@ const FUENTES = {
       actualizado:      ['ultima actualizacion'],
       direccion:        ['direccion', 'address'],
       sku:              ['sku', 'codigo'],
-      costo_envio:      ['flete', 'costo envio', 'envio'],
+      // VERIFICADO contra ordenes_productos_20260911 (53 columnas, Nutrea
+      // EC). Ese export nombra el flete "precio flete" y el costo del
+      // producto "precio proveedor": sin estos dos, el margen por pedido
+      // sale mal y no hay aviso de que falte nada.
+      costo_envio:      ['flete', 'costo envio', 'envio', 'precio flete'],
+      costo_producto:   ['precio proveedor', 'costo proveedor',
+                         'precio proveedor x cantidad'],
+      departamento:     ['departamento destino', 'departamento', 'provincia'],
+      correo:           ['email', 'correo'],
+      cedula:           ['nro de identificacion', 'numero de identificacion',
+                         'identificacion', 'cedula', 'documento'],
+      // Va a `observacion`, NO a `nota`: nota es de la gestora y el
+      // importador tiene prohibido pisarla. Además de aquí se saca el
+      // segundo número cuando la clienta pidió que la llamen a otro.
+      observacion:      ['notas', 'nota', 'observacion'],
     },
   },
 
