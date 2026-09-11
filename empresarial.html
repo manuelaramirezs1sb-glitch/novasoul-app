@@ -2801,9 +2801,10 @@ async function cargarReales() {
     marcarOrigen(true);
     cargarHistorialFuentes();
     // Cada lista se conecta por su cuenta: que Novedades esté vacía no
-    // puede dejar a Pedidos sin cargar.
-    cargarPedidosReales();
-    cargarNovedadesReales();
+    // puede dejar a Pedidos sin cargar. Se esperan las dos para saber
+    // cuándo la pantalla terminó de ponerse al día.
+    await Promise.all([cargarPedidosReales(), cargarNovedadesReales()]);
+    return true;
   } catch (e) { marcarOrigen(false, 'sin conexión'); }
 }
 
@@ -3313,9 +3314,12 @@ async function subirArchivo(input, z) {
       return;
     }
 
-    impEstado(z, r.resumen || ('Importadas ' + r.filas + ' filas.'), 'ok');
-    cargarReales();
-    cargarHistorialFuentes();
+    const resumen = r.resumen || ('Importadas ' + r.filas + ' filas.');
+    impEstado(z, resumen + '\n\nActualizando la pantalla…', 'ok');
+    await cargarReales();
+    await cargarHistorialFuentes();
+    impEstado(z, resumen, 'ok');
+    showToast('Pantalla actualizada con lo que acabas de subir');
   } catch (e) {
     impEstado(z, 'Falló la subida: ' + e.message, 'mal');
   } finally {
@@ -3455,9 +3459,12 @@ async function confirmarMapeo(z) {
       envio));
     if (!r.ok) { impEstado(z, r.error || 'No se pudo importar.', 'mal'); return; }
     delete PENDIENTE[z];
-    impEstado(z, r.resumen || ('Importadas ' + r.filas + ' filas.'), 'ok');
-    cargarReales();
-    cargarHistorialFuentes();
+    const resumen = r.resumen || ('Importadas ' + r.filas + ' filas.');
+    impEstado(z, resumen + '\n\nActualizando la pantalla…', 'ok');
+    await cargarReales();
+    await cargarHistorialFuentes();
+    impEstado(z, resumen, 'ok');
+    showToast('Pantalla actualizada con tu histórico');
   } catch (e) {
     impEstado(z, 'Falló la importación: ' + e.message, 'mal');
   }

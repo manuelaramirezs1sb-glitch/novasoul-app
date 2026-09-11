@@ -491,6 +491,24 @@ function apiListar(s, p) {
 
   filas = filtrarPorRol(s, entidad, filas, enc);
 
+  /**
+   * Lo más reciente primero.
+   *
+   * Antes salían en el orden de la hoja, y como el importador agrega al
+   * final, los pedidos de septiembre quedaban debajo de los doscientos de
+   * agosto. Pidiendo las primeras trescientas filas, el mes en curso
+   * podía no aparecer nunca: la pantalla mostraba datos viejos y parecía
+   * que la importación no había servido de nada.
+   */
+  if (cF !== -1) {
+    filas.sort(function (a, b) {
+      const fa = aISO(a[cF], 'UTC') || '';
+      const fb = aISO(b[cF], 'UTC') || '';
+      if (fa === fb) return 0;
+      return fa < fb ? 1 : -1;
+    });
+  }
+
   const total = filas.length;
   const desde = Math.max(0, parseInt(p.offset || 0, 10));
   const cuantas = Math.min(500, Math.max(1, parseInt(p.limite || 200, 10)));
