@@ -2916,12 +2916,42 @@ function pintarPedidosReales(filas, total) {
   const ests = ['pendiente','confirmado','en_transito','en_oficina','novedad',
                 'entregado','devolucion','cancelado'];
 
+  // Las bandas de trabajo. El servidor ya manda las filas ordenadas por
+  // urgencia; aquí solo se rotula dónde empieza cada grupo, para que no
+  // parezca una lista corrida donde todo pesa igual.
+  const banda = function (p) {
+    const e = String(p.estado_canonico || '').trim();
+    if (['novedad','pendiente','en_oficina'].indexOf(e) !== -1 || !COLOR_ESTADO[e]) return 0;
+    if (['entregado','devolucion','cancelado'].indexOf(e) !== -1) return 2;
+    return 1;
+  };
+  const TITULO_BANDA = [
+    ['NECESITAN ACCIÓN', 'Novedades abiertas, sin confirmar y esperando en oficina. Lo más viejo primero.'],
+    ['EN CURSO', 'Despachados y en camino. No hay nada que hacer todavía.'],
+    ['CERRADOS', 'Entregados, devueltos y cancelados.'],
+  ];
+  const cuenta = [0, 0, 0];
+  filas.forEach(function (p) { cuenta[banda(p)]++; });
+  let bandaActual = -1;
+
   document.getElementById('pedlist').innerHTML = filas.map(function (p, i) {
     const e = fichaEstado(p);
+    let cabecera = '';
+    const bp = banda(p);
+    if (bp !== bandaActual) {
+      bandaActual = bp;
+      cabecera =
+        '<div style="margin:' + (i ? '18px' : '2px') + ' 0 2px;">' +
+          '<div class="slbl">' + TITULO_BANDA[bp][0] + ' · ' + cuenta[bp] + '</div>' +
+          '<div style="font:500 11.5px/1.5 \'DM Sans\';color:var(--t-mut2);">' +
+            TITULO_BANDA[bp][1] + '</div></div>';
+    }
     const val = S + ' ' + Math.round(Number(p.valor) || 0).toLocaleString(LOC());
     const tel = p.telefono || p.telefono_norm || '—';
     const tel2 = p.telefono_2 || p.telefono_2_norm || '';
-    return '<div class="orow" id="prow' + i + '" onclick="togPedReal(' + i + ')" style="cursor:pointer;">' +
+    return cabecera +
+      '<div class="orow' + (bp === 0 ? ' urg' : '') + '" id="prow' + i + '" ' +
+        'onclick="togPedReal(' + i + ')" style="cursor:pointer;">' +
       '<div class="otop"><div><span class="onm">' + esc(p.cliente || 'Sin nombre') + '</span>&ensp;' +
         '<span class="oid">#' + esc(p.id_externo || p.id) + '</span></div>' +
         '<span class="bd" style="color:' + e[0] + ';background:' + e[1] + ';">' + esc(e[2]) + '</span></div>' +
@@ -2954,8 +2984,10 @@ function pintarPedidosReales(filas, total) {
 
   const cab = document.querySelector('#v-pedidos > p');
   if (cab) {
-    cab.textContent = 'Los pedidos de esta tienda en tu hoja. ' +
-      (total > filas.length ? 'Mostrando ' + filas.length + ' de ' + total + '.' : filas.length + ' en total.');
+    cab.textContent = cuenta[0]
+      ? cuenta[0] + ' pedido' + (cuenta[0] === 1 ? '' : 's') + ' necesitan a alguien hoy. ' +
+        'Debajo, lo que está en curso y lo que ya cerró.'
+      : 'Nada pendiente por resolver. ' + filas.length + ' pedidos en esta tienda.';
   }
 }
 

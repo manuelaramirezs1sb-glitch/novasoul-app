@@ -3064,6 +3064,26 @@ function puede(s, accion, entidad) {
   return lista.indexOf(entidad) !== -1;
 }
 
+/**
+ * Qué tan arriba va cada estado en una lista de trabajo.
+ *
+ * 0 a 2 es lo que necesita a alguien hoy. 3 es lo que Nova no reconoció:
+ * va arriba a propósito, porque un estado desconocido es justo lo que hay
+ * que mirar. De 4 en adelante está en curso, y de 7 ya terminó.
+ */
+const PRIORIDAD_ESTADO = {
+  novedad: 0, pendiente: 1, en_oficina: 2,
+  novedad_resuelta: 4, confirmado: 5, en_bodega: 5, en_transito: 6,
+  entregado: 7, devolucion: 8, cancelado: 9,
+};
+
+function prioridadEstado(v) {
+  const e = String(v || '').trim();
+  if (!e) return 3;
+  const p = PRIORIDAD_ESTADO[e];
+  return p === undefined ? 3 : p;
+}
+
 /** La gestora solo ve lo suyo. Se aplica al leer, no al pintar. */
 function filtrarPorRol(s, entidad, filas, enc) {
   if (s.rol !== 'gestora') return filas;
@@ -3123,20 +3143,34 @@ function apiListar(s, p) {
   filas = filtrarPorRol(s, entidad, filas, enc);
 
   /**
-   * Lo más reciente primero.
+   * El orden manda, y no es la fecha.
    *
    * Antes salían en el orden de la hoja, y como el importador agrega al
    * final, los pedidos de septiembre quedaban debajo de los doscientos de
-   * agosto. Pidiendo las primeras trescientas filas, el mes en curso
-   * podía no aparecer nunca: la pantalla mostraba datos viejos y parecía
-   * que la importación no había servido de nada.
+   * agosto: pidiendo las primeras trescientas filas, el mes en curso
+   * podía no aparecer nunca.
+   *
+   * Pero ordenar por fecha tampoco sirve. Una lista de pedidos es una
+   * lista de trabajo: lo primero tiene que ser lo que hay que resolver
+   * hoy —una novedad abierta, un pedido sin confirmar, uno esperando en
+   * oficina— y lo último, lo que ya terminó. Un entregado de esta mañana
+   * no le gana a una novedad de hace tres días.
+   *
+   * Y dentro de lo que necesita acción, primero lo más viejo: ahí la
+   * antigüedad es deuda, no historia.
    */
-  if (cF !== -1) {
+  const cE = enc.indexOf('estado_canonico');
+  if (cE !== -1 || cF !== -1) {
     filas.sort(function (a, b) {
+      const pa = cE === -1 ? 5 : prioridadEstado(a[cE]);
+      const pb = cE === -1 ? 5 : prioridadEstado(b[cE]);
+      if (pa !== pb) return pa - pb;
+      if (cF === -1) return 0;
       const fa = aISO(a[cF], 'UTC') || '';
       const fb = aISO(b[cF], 'UTC') || '';
       if (fa === fb) return 0;
-      return fa < fb ? 1 : -1;
+      // Lo pendiente: primero lo más viejo. Lo cerrado: lo más reciente.
+      return pa <= 2 ? (fa < fb ? -1 : 1) : (fa < fb ? 1 : -1);
     });
   }
 
