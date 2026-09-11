@@ -1164,3 +1164,22 @@ function probarApi(email) {
   Logger.log(msg);
   return msg;
 }
+
+/**
+ * Existe solo para pedirle a Google el permiso de salir a internet.
+ *
+ * La conversión de Excel usa la API de Drive por HTTP, y ese permiso no
+ * se concede solo: Apps Script lo pide la primera vez que se ejecuta
+ * algo que lo use, desde el editor. Si nunca se corre desde ahí, la
+ * aplicación web falla con "No tienes permiso para llamar a
+ * UrlFetchApp.fetch" — que es cierto, y no dice qué hacer.
+ *
+ * Correr esto una vez y aceptar resuelve eso para siempre.
+ */
+function autorizar() {
+  UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+    muteHttpExceptions: true,
+  });
+  return 'Permiso concedido. Ya puedes subir archivos de Excel.';
+}
