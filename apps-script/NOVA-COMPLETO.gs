@@ -191,8 +191,14 @@ const ESQUEMA_EMPRESARIAL = {
              'extension','agente','telefono','telefono_norm','pedido_id',
              'seg_conversado','seg_espera','seg_total','campana','grabacion',
              'etiqueta','observacion'],
-  Pauta: ['fecha','tienda','plataforma','cuenta','campana','conjunto','gasto',
-          'moneda_gasto','gasto_normalizado','impresiones','clics','resultados','cpm','cpa'],
+  // `fecha_fin` existe porque Meta no siempre exporta por día: el informe
+  // de conjuntos trae una sola fila por todo el periodo. Sin esa columna,
+  // un reporte de agosto a septiembre se leería como si todo el gasto
+  // hubiera ocurrido el 1 de agosto.
+  Pauta: ['id','fecha','fecha_fin','tienda','plataforma','cuenta','campana','conjunto',
+          'entrega','presupuesto','gasto','moneda_gasto','gasto_normalizado',
+          'impresiones','alcance','frecuencia','clics','ctr','cpc','cpm',
+          'resultados','compras','cpa','roas','valor_conv','visitas_lp'],
   Inventario: ['sku','producto','tienda','fuente','stock','costo_unitario','precio',
                'dias_cobertura','ultimo_conteo','actualizado_en','actualizado_por'],
   // "permisos" es lo que la dueña decide que esta persona puede hacer,
@@ -3907,6 +3913,26 @@ function importar(fuenteId, tienda, cliente) {
     }
   }
 
+  /**
+   * Una fila de pauta que cubre dos meses no se puede repartir sin
+   * inventar: el gasto de una campaña no se distribuye parejo por día.
+   *
+   * Así que no se reparte — se avisa. Si no, todo el gasto de agosto a
+   * septiembre se contaría en agosto y septiembre saldría en cero, que
+   * es peor que un número que falta: es un número que miente.
+   */
+  if (r.tipo === 'pauta') {
+    const cruzan = preparadas.filter(function (p) {
+      return p.fecha_fin && String(p.fecha).slice(0, 7) !== String(p.fecha_fin).slice(0, 7);
+    });
+    if (cruzan.length) {
+      extra += '\n⚠ ' + cruzan.length + ' fila(s) cubren más de un mes (' +
+        preparadas[0].fecha + ' a ' + preparadas[0].fecha_fin + ').\n' +
+        '   Todo ese gasto se contará en el primer mes. Para que cada mes ' +
+        'reciba lo suyo,\n   vuelve a exportar en Meta con Desglose → Por día.';
+    }
+  }
+
   const msg = [
     'Importado: ' + fuenteId + ' → ' + destino + ' (tienda ' + tienda + ')',
     '  filas leídas   : ' + r.filas.length,
@@ -3967,6 +3993,18 @@ function prepararFila(f, tipo, fuenteId, tienda, pais, ss) {
   }
   if (tipo === 'pauta') {
     o.plataforma = fuenteId;
+    /**
+     * Una fila de pauta no trae identificador propio, así que se arma uno
+     * con lo que la hace única: plataforma, tienda, periodo y conjunto.
+     *
+     * El periodo entra entero —inicio y fin— porque Meta exporta el mismo
+     * conjunto para rangos distintos. Sin el fin, volver a exportar con
+     * otro rango pisaría la fila anterior y el gasto del mes cambiaría
+     * solo, sin que nadie hubiera tocado nada.
+     */
+    o.id = [fuenteId, tienda, o.fecha || '', o.fecha_fin || '',
+            norm(o.conjunto || o.campana || '')].join('-')
+           .replace(/\s+/g, '_').slice(0, 180);
     const mon = String(o.moneda_gasto || (FUENTES[fuenteId] || {}).moneda_default || '').toUpperCase();
     o.moneda_gasto = mon;
     const destino = monedaReporte(ss);

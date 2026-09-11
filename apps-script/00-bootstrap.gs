@@ -198,8 +198,14 @@ const ESQUEMA_EMPRESARIAL = {
              'extension','agente','telefono','telefono_norm','pedido_id',
              'seg_conversado','seg_espera','seg_total','campana','grabacion',
              'etiqueta','observacion'],
-  Pauta: ['fecha','tienda','plataforma','cuenta','campana','conjunto','gasto',
-          'moneda_gasto','gasto_normalizado','impresiones','clics','resultados','cpm','cpa'],
+  // `fecha_fin` existe porque Meta no siempre exporta por día: el informe
+  // de conjuntos trae una sola fila por todo el periodo. Sin esa columna,
+  // un reporte de agosto a septiembre se leería como si todo el gasto
+  // hubiera ocurrido el 1 de agosto.
+  Pauta: ['id','fecha','fecha_fin','tienda','plataforma','cuenta','campana','conjunto',
+          'entrega','presupuesto','gasto','moneda_gasto','gasto_normalizado',
+          'impresiones','alcance','frecuencia','clics','ctr','cpc','cpm',
+          'resultados','compras','cpa','roas','valor_conv','visitas_lp'],
   Inventario: ['sku','producto','tienda','fuente','stock','costo_unitario','precio',
                'dias_cobertura','ultimo_conteo','actualizado_en','actualizado_por'],
   // "permisos" es lo que la dueña decide que esta persona puede hacer,

@@ -75,6 +75,26 @@ function importar(fuenteId, tienda, cliente) {
     }
   }
 
+  /**
+   * Una fila de pauta que cubre dos meses no se puede repartir sin
+   * inventar: el gasto de una campaña no se distribuye parejo por día.
+   *
+   * Así que no se reparte — se avisa. Si no, todo el gasto de agosto a
+   * septiembre se contaría en agosto y septiembre saldría en cero, que
+   * es peor que un número que falta: es un número que miente.
+   */
+  if (r.tipo === 'pauta') {
+    const cruzan = preparadas.filter(function (p) {
+      return p.fecha_fin && String(p.fecha).slice(0, 7) !== String(p.fecha_fin).slice(0, 7);
+    });
+    if (cruzan.length) {
+      extra += '\n⚠ ' + cruzan.length + ' fila(s) cubren más de un mes (' +
+        preparadas[0].fecha + ' a ' + preparadas[0].fecha_fin + ').\n' +
+        '   Todo ese gasto se contará en el primer mes. Para que cada mes ' +
+        'reciba lo suyo,\n   vuelve a exportar en Meta con Desglose → Por día.';
+    }
+  }
+
   const msg = [
     'Importado: ' + fuenteId + ' → ' + destino + ' (tienda ' + tienda + ')',
     '  filas leídas   : ' + r.filas.length,
@@ -135,6 +155,18 @@ function prepararFila(f, tipo, fuenteId, tienda, pais, ss) {
   }
   if (tipo === 'pauta') {
     o.plataforma = fuenteId;
+    /**
+     * Una fila de pauta no trae identificador propio, así que se arma uno
+     * con lo que la hace única: plataforma, tienda, periodo y conjunto.
+     *
+     * El periodo entra entero —inicio y fin— porque Meta exporta el mismo
+     * conjunto para rangos distintos. Sin el fin, volver a exportar con
+     * otro rango pisaría la fila anterior y el gasto del mes cambiaría
+     * solo, sin que nadie hubiera tocado nada.
+     */
+    o.id = [fuenteId, tienda, o.fecha || '', o.fecha_fin || '',
+            norm(o.conjunto || o.campana || '')].join('-')
+           .replace(/\s+/g, '_').slice(0, 180);
     const mon = String(o.moneda_gasto || (FUENTES[fuenteId] || {}).moneda_default || '').toUpperCase();
     o.moneda_gasto = mon;
     const destino = monedaReporte(ss);
