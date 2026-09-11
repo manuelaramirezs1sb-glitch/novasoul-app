@@ -3421,18 +3421,61 @@ function leerArchivo(b64, nombre) {
 
   const blob = Utilities.newBlob(bytes,
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', nombre);
-  let temp = null;
+  let id = null;
   try {
-    temp = Drive.Files.insert({ title: 'nova_tmp_' + Date.now(),
-      mimeType: MimeType.GOOGLE_SHEETS }, blob);
-    const tmpSS = SpreadsheetApp.openById(temp.id);
-    return tmpSS.getSheets()[0].getDataRange().getValues();
+    id = convertirAHoja(blob);
+    return SpreadsheetApp.openById(id).getSheets()[0].getDataRange().getValues();
   } finally {
-    if (temp && temp.id) {
-      try { DriveApp.getFileById(temp.id).setTrashed(true); } catch (e) {}
-    }
+    if (id) { try { DriveApp.getFileById(id).setTrashed(true); } catch (e) {} }
   }
 }
+
+/**
+ * Un .xlsx se lee convirtiéndolo a hoja de cálculo. Hay dos maneras y se
+ * intentan las dos a propósito.
+ *
+ * La primera es el servicio avanzado de Drive, que es la vía documentada
+ * pero hay que activarla a mano en cada proyecto. Cuando no está, el
+ * error que salía era "Drive is not defined": cierto, inútil, y le caía
+ * a quien subía su primer archivo.
+ *
+ * La segunda es la misma API por HTTP, con el token del propio script.
+ * No hay que activar nada. Es la que hace que esto funcione recién
+ * instalado en la cuenta de un cliente, que es donde tiene que funcionar.
+ */
+function convertirAHoja(blob) {
+  if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.insert) {
+    return Drive.Files.insert({ title: 'nova_tmp_' + Date.now(),
+      mimeType: MimeType.GOOGLE_SHEETS }, blob).id;
+  }
+
+  const lim = '-nova-' + Utilities.getUuid();
+  const meta = { name: 'nova_tmp_' + Date.now(), mimeType: MimeType.GOOGLE_SHEETS };
+  const cabeza = Utilities.newBlob(
+    '--' + lim + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(meta) + '\r\n' +
+    '--' + lim + '\r\nContent-Type: ' + blob.getContentType() + '\r\n\r\n').getBytes();
+  const cola = Utilities.newBlob('\r\n--' + lim + '--').getBytes();
+
+  const r = UrlFetchApp.fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'post',
+      contentType: 'multipart/related; boundary=' + lim,
+      payload: Utilities.newBlob(cabeza.concat(blob.getBytes(), cola)).getBytes(),
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+      muteHttpExceptions: true,
+    });
+
+  if (r.getResponseCode() >= 300) {
+    throw new Error(
+      'Google no pudo convertir el Excel (' + r.getResponseCode() + '). ' +
+      'Exporta el archivo en CSV y súbelo así, que no necesita conversión.');
+  }
+  const id = JSON.parse(r.getContentText()).id;
+  if (!id) throw new Error('La conversión no devolvió un archivo.');
+  return id;
+}
+
 
 /** Coma o punto y coma: Excel en español exporta con punto y coma. */
 function detectarSeparador(texto) {
