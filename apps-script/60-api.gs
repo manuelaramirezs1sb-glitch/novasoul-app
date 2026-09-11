@@ -163,7 +163,17 @@ function sesion(token) {
   const raw = CacheService.getScriptCache().get('ses_' + String(token));
   if (!raw) return null;
   const s = JSON.parse(raw);
-  return s.vence > Date.now() ? s : null;
+  if (s.vence <= Date.now()) return null;
+
+  /**
+   * Las sesiones abiertas sobreviven a un despliegue: viven en el caché,
+   * no en el código. Una sesión creada antes de que existieran los
+   * permisos no trae el campo, y sin este respaldo la dueña se quedaba
+   * sin poder importar hasta volver a entrar — justo después de
+   * actualizar, que es cuando uno va a probar.
+   */
+  if (!s.permisos) s.permisos = permisosDe(s.rol, '');
+  return s;
 }
 
 function apiSalir(token) {
