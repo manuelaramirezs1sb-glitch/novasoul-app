@@ -57,16 +57,29 @@ function importar(fuenteId, tienda, cliente) {
                     pedidos_secundario: 'Pedidos' }[r.tipo];
   if (!destino) throw new Error('No sé dónde guardar una fuente de tipo ' + r.tipo);
 
+  let extra = '';
   const pais = paisDeTienda(ss, tienda);
   const preparadas = r.filas.map(function (f) {
     return prepararFila(f, r.tipo, fuenteId, tienda, pais, ss);
   });
 
+  /**
+   * Qué cambió respecto a la carga anterior.
+   *
+   * "206 actualizadas" no dice nada. Lo que alguien necesita saber al
+   * subir el archivo del día es qué pasó desde ayer: cuántos llegaron,
+   * cuántos se entregaron, cuántos se devolvieron y qué queda por
+   * resolver. Eso se calcula comparando el estado que había en la hoja
+   * contra el que trae el archivo, ANTES de escribir encima.
+   */
+  const antes = (r.tipo === 'pedidos') ? estadosActuales(ss, destino, tienda) : null;
+
   const res = escribirFilas(ss, destino, preparadas, fuenteId);
   registrarImportacion(ss, tienda, fuenteId, res.nuevas + res.actualizadas);
 
+  if (antes) extra = novedadesDeLaCarga(antes, preparadas) + extra;
+
   // Las novedades que vienen dentro del export de pedidos se derivan aparte
-  let extra = '';
   if (r.tipo === 'pedidos' && fuenteId === 'dropi') {
     const nov = derivarNovedades(preparadas, fuenteId, tienda);
     if (nov.length) {
@@ -109,6 +122,69 @@ function importar(fuenteId, tienda, cliente) {
     extra,
   ].filter(String).join('\n');
   Logger.log(msg);
+  return msg;
+}
+
+/** El estado que tiene hoy cada pedido en la hoja, por id. */
+function estadosActuales(ss, hoja, tienda) {
+  const sh = ss.getSheetByName(hoja);
+  if (!sh || sh.getLastRow() < 2) return {};
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const cId = e.indexOf('id'), cT = e.indexOf('tienda');
+  const cE = e.indexOf('estado_canonico'), cN = e.indexOf('estado_nova');
+  const out = {};
+  for (let i = 1; i < d.length; i++) {
+    if (cT !== -1 && String(d[i][cT]).trim() !== tienda) continue;
+    const id = String(d[i][cId]).trim();
+    if (id) out[id] = norm(d[i][cN] || d[i][cE]);
+  }
+  return out;
+}
+
+/**
+ * El resumen de lo que cambió, en la lengua de quien opera.
+ *
+ * No dice "38 filas actualizadas": dice qué pasó con los pedidos.
+ */
+function novedadesDeLaCarga(antes, ahora) {
+  let nuevos = 0, entregados = 0, devueltos = 0, cancelados = 0,
+      aNovedad = 0, pendientes = 0, sinCambio = 0;
+
+  ahora.forEach(function (p) {
+    const previo = antes[p.id];
+    const est = norm(p.estado_canonico);
+    if (previo === undefined) {
+      nuevos++;
+    } else if (previo !== est) {
+      if (est === 'entregado')  entregados++;
+      else if (est === 'devolucion') devueltos++;
+      else if (est === 'cancelado')  cancelados++;
+      else if (est === 'novedad')    aNovedad++;
+    } else {
+      sinCambio++;
+    }
+    if (['entregado','devolucion','cancelado'].indexOf(est) === -1) pendientes++;
+  });
+
+  // Uno o varios: "se devolvieron 1" delata que lo escribió una máquina
+  const pl = function (n, uno, varios) { return n === 1 ? uno : varios.replace('%', n); };
+
+  const partes = [];
+  if (nuevos)     partes.push(pl(nuevos, 'entró 1 pedido nuevo', 'entraron % pedidos nuevos'));
+  if (entregados) partes.push(pl(entregados, 'se entregó 1', 'se entregaron %'));
+  if (devueltos)  partes.push(pl(devueltos, 'se devolvió 1', 'se devolvieron %'));
+  if (cancelados) partes.push(pl(cancelados, 'se canceló 1', 'se cancelaron %'));
+  if (aNovedad)   partes.push(pl(aNovedad, '1 entró en novedad', '% entraron en novedad'));
+
+  if (!partes.length && !pendientes) return '';
+
+  let msg = '\n\nDesde la carga anterior: ';
+  msg += partes.length ? partes.join(', ') + '.' : 'ningún pedido cambió de estado.';
+  if (pendientes) {
+    msg += '\n' + pl(pendientes, 'Queda 1 pedido sin desenlace.',
+                     'Quedan % pedidos sin desenlace.');
+  }
   return msg;
 }
 

@@ -5054,6 +5054,57 @@ function applyPrefs(){
     nombre + ' · ' + ((STORES[ST]||{}).name || ST);
 }
 
+/**
+ * Volver a entrar sin pedir otro código.
+ *
+ * El token dura doce horas y estaba guardado desde el primer ingreso,
+ * pero nadie lo usaba: cada recarga mandaba a la pantalla de login y
+ * obligaba a esperar un correo nuevo. Con eso, recargar —que es lo que
+ * uno hace cuando algo se ve raro— costaba varios minutos.
+ *
+ * Ahora al abrir se le pregunta al servidor quién es el dueño de ese
+ * token. Si sigue vivo, se entra directo. Si venció, se pide correo otra
+ * vez, que es lo correcto: un token vencido no debe abrir nada.
+ */
+async function reanudarSesion() {
+  if (!TOKEN) return false;
+  let r;
+  try { r = await api('yo'); }
+  catch (e) { return false; }
+  if (!r || !r.ok || !r.sesion) return false;
+
+  CONECTADO = true;
+  SESION = r.sesion;
+  pintarTiendasPermitidas(r.sesion.tiendas);
+  aplicarPermisos();
+  entrarConSesion(r.sesion);
+  return true;
+}
+
+/** Entrar con lo que dice el servidor, no con lo que diga la pantalla. */
+function entrarConSesion(ses) {
+  ROL = ses.rol || 'gestora';
+  localStorage.setItem('ne_email', ses.email || '');
+
+  const label = ROL === 'dueno' ? 'dueña' : (ROL === 'admin' ? 'admin' : 'gestora');
+  document.getElementById('app').setAttribute('data-rol', ROL);
+  const brandRolEl = document.getElementById('brand-rol');
+  if (brandRolEl) brandRolEl.textContent = 'Nova · ' + label.charAt(0).toUpperCase() + label.slice(1);
+  document.getElementById('toprol').textContent = (ses.nombre || ses.email) + ' · ' + label;
+
+  if (ROL === 'gestora' && ses.tiendas && ses.tiendas.length) {
+    ST = typeof ses.tiendas[0] === 'string' ? ses.tiendas[0] : ses.tiendas[0].id;
+  }
+
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('app').classList.add('on');
+  applyPrefs(); buildAll(); updateSub();
+  montarImportadores();
+  cargarReales();
+  document.getElementById('chat-fab').style.display = 'flex';
+  initChat();
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   document.documentElement.setAttribute('data-tema',TM);
   if(MD==='oscuro') document.documentElement.setAttribute('data-modo','oscuro');
@@ -5061,6 +5112,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('login').setAttribute('data-tema',TM);
   if(MD==='oscuro') document.getElementById('login').setAttribute('data-modo','oscuro');
   document.querySelectorAll('.cdot').forEach(d=>d.classList.toggle('on',d.dataset.t===TM));
+  reanudarSesion();
 });
 </script>
 </body>

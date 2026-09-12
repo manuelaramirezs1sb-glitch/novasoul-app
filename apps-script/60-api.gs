@@ -63,6 +63,7 @@ function manejar(e, metodo) {
       case 'trozo':     return json(apiTrozo(s, p));
       case 'crear':     return json(apiCrear(s, p));
       case 'equipo':    return json(apiEquipo(s, p));
+      case 'productos': return json(apiProductos(s, p));
       case 'auditoria': return json(apiAuditoria(s, p));
       case 'borrar':    return json(apiBorrar(s, p));
       case 'cerrarmes': return json(apiCerrarMes(s, p));
@@ -609,6 +610,145 @@ const CREABLES = {
 
 /** Quién puede crear o quitar en cada entidad. */
 const SOLO_DUENO = ['Equipo', 'Gastos'];
+
+/**
+ * El catálogo, sacado de los pedidos.
+ *
+ * Nadie tiene que escribir una lista de productos: ya están todos en los
+ * pedidos, repetidos. Aquí se agrupan y se mide cómo le va a cada uno.
+ *
+ * Lo que la ficha agrega es lo que ningún archivo trae: el costo real,
+ * el precio de lista, la categoría, si es un testeo. Por eso la ficha y
+ * el conteo viven aparte: el conteo se recalcula solo, la ficha es tuya.
+ *
+ * Un producto que vende y no tiene ficha no se esconde: se muestra con el
+ * aviso de qué le falta. Sin ficha no se puede saber si deja plata, y un
+ * producto que no sabes si deja plata es justo el que hay que mirar.
+ */
+function apiProductos(s, p) {
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const tienda = String(p.tienda || s.tiendas[0] || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  const desde = String(p.desde || '').trim();   // 'AAAA-MM', opcional
+
+  const cat = {};
+  const shP = ss.getSheetByName('Pedidos');
+  if (shP && shP.getLastRow() > 1) {
+    const d = shP.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    for (let i = 1; i < d.length; i++) {
+      const f = d[i];
+      if (String(f[c('tienda')]).trim() !== tienda) continue;
+      const fecha = aISO(f[c('fecha')], 'UTC');
+      if (desde && (!fecha || fecha.slice(0, 7) < desde)) continue;
+
+      const nombre = String(f[c('producto')] || '').trim() || '(sin nombre)';
+      const clave = norm(nombre);
+      if (!cat[clave]) {
+        cat[clave] = { nombre: nombre, sku: String(f[c('sku')] || '').trim(),
+                       pedidos: 0, entregados: 0, devueltos: 0, cancelados: 0,
+                       ventas: 0, unidades: 0, costoProducto: 0,
+                       primera: fecha || '', ultima: fecha || '' };
+      }
+      const x = cat[clave];
+      x.pedidos++;
+      x.unidades += num(f[c('cantidad')]) || 1;
+      if (!x.sku) x.sku = String(f[c('sku')] || '').trim();
+      if (fecha) {
+        if (!x.primera || fecha < x.primera) x.primera = fecha;
+        if (!x.ultima  || fecha > x.ultima)  x.ultima  = fecha;
+      }
+      const est = norm(f[c('estado_nova')] || f[c('estado_canonico')]);
+      if (est === 'entregado') { x.entregados++; x.ventas += num(f[c('valor')]); }
+      if (est === 'devolucion') x.devueltos++;
+      if (est === 'cancelado')  x.cancelados++;
+      x.costoProducto += num(f[c('costo_producto')]);
+    }
+  }
+
+  // La ficha que completa la dueña, si existe
+  const fichas = {};
+  const shI = ss.getSheetByName('Inventario');
+  if (shI && shI.getLastRow() > 1) {
+    const d = shI.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    for (let i = 1; i < d.length; i++) {
+      const f = d[i];
+      if (String(f[c('tienda')]).trim() !== tienda) continue;
+      if (norm(f[c('activo')]) === 'no') continue;
+      fichas[norm(f[c('producto')])] = {
+        id: f[c('id')], sku: String(f[c('sku')] || ''),
+        stock: num(f[c('stock')]), minimo: num(f[c('minimo')]),
+        costo: num(f[c('costo_unitario')]), precio: num(f[c('precio')]),
+        categoria: String(f[c('origen')] || ''), nota: String(f[c('nota')] || ''),
+      };
+    }
+  }
+
+  const salida = Object.keys(cat).map(function (k) {
+    const x = cat[k];
+    const ficha = fichas[k] || null;
+    const resueltos = x.entregados + x.devueltos;
+
+    // Qué le falta a este producto para poder decidir sobre él
+    const falta = [];
+    if (!ficha) falta.push('ficha');
+    else {
+      if (!ficha.costo)  falta.push('costo');
+      if (!ficha.precio) falta.push('precio');
+      if (!ficha.categoria) falta.push('categoría');
+    }
+    if (!x.sku && (!ficha || !ficha.sku)) falta.push('sku');
+
+    return {
+      clave: k, nombre: x.nombre, sku: x.sku || (ficha ? ficha.sku : ''),
+      pedidos: x.pedidos, entregados: x.entregados, devueltos: x.devueltos,
+      cancelados: x.cancelados, unidades: x.unidades, ventas: x.ventas,
+      ticket: x.entregados ? x.ventas / x.entregados : 0,
+      entrega: resueltos ? x.entregados / resueltos * 100 : 0,
+      primera: x.primera, ultima: x.ultima,
+      ficha: ficha, falta: falta,
+      // Margen unitario solo si hay con qué calcularlo. Si no, null: un
+      // margen estimado sobre un costo inventado es peor que no tenerlo.
+      margen: (ficha && ficha.costo && x.entregados)
+        ? (x.ventas / x.entregados) - ficha.costo : null,
+    };
+  }).sort(function (a, b) { return b.pedidos - a.pedidos; });
+
+  // Fichas de productos que todavía no han vendido nada
+  Object.keys(fichas).forEach(function (k) {
+    if (cat[k]) return;
+    const fi = fichas[k];
+    salida.push({ clave: k, nombre: fi.nombre || k, sku: fi.sku, pedidos: 0,
+                  entregados: 0, devueltos: 0, cancelados: 0, unidades: 0,
+                  ventas: 0, ticket: 0, entrega: 0, primera: '', ultima: '',
+                  ficha: fi, falta: [], margen: null, sinVentas: true });
+  });
+
+  return { ok: true, tienda: tienda, productos: salida,
+           modalidad: modalidadDeTienda(ss, tienda),
+           moneda: monedaDeTienda(ss, tienda) };
+}
+
+/** Cómo consigue el stock esta tienda: catálogo público, privado o marca propia. */
+function modalidadDeTienda(ss, tienda) {
+  const sh = ss.getSheetByName('Tiendas');
+  if (!sh || sh.getLastRow() < 2) return 'catalogo_publico';
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const cId = e.indexOf('id'), cM = e.indexOf('modalidad');
+  if (cM === -1) return 'catalogo_publico';
+  for (let i = 1; i < d.length; i++) {
+    if (String(d[i][cId]).trim() === tienda) {
+      return String(d[i][cM] || '').trim() || 'catalogo_publico';
+    }
+  }
+  return 'catalogo_publico';
+}
 
 /**
  * El equipo, con lo que cada persona hizo en el mes.
