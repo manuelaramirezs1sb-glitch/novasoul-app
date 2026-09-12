@@ -205,6 +205,22 @@ const ESQUEMA_EMPRESARIAL = {
           'impresiones','alcance','frecuencia','clics','ctr','cpc','cpm',
           'resultados','compras','cpa','roas','valor_conv','visitas_lp'],
   /**
+   * Lo que la operación cuesta aunque no se venda nada.
+   *
+   * Nómina, arriendo, la central telefónica, la suscripción. No está en
+   * ningún archivo que exporte una plataforma: lo sabe la dueña y punto.
+   * Antes se escribía en la pantalla y se perdía al recargar, así que no
+   * se podía usar para nada serio — ni el punto de equilibrio ni la
+   * utilidad del mes salían de verdad.
+   *
+   * `mes` vacío significa que se repite todos los meses. Con un mes
+   * concreto, es un gasto de una sola vez: la caja de insumos de marzo no
+   * tiene por qué seguir restando en abril.
+   */
+  Gastos: ['id','tienda','mes','tipo','nombre','valor','moneda','nota',
+           'activo','actualizado_en','actualizado_por'],
+
+  /**
    * La factura no es el reporte de campañas, y por eso va aparte.
    *
    * El reporte dice lo que la plataforma contabiliza como gasto. La
@@ -2714,6 +2730,8 @@ function manejar(e, metodo) {
       case 'importar':  return json(apiImportarArchivo(s, p));
       case 'fuentes':   return json(apiFuentes(s, p));
       case 'trozo':     return json(apiTrozo(s, p));
+      case 'crear':     return json(apiCrear(s, p));
+      case 'borrar':    return json(apiBorrar(s, p));
       case 'cerrarmes': return json(apiCerrarMes(s, p));
       case 'salir':     return json(apiSalir(p.token));
       default:          return json({ ok: false, error: 'Acción desconocida: ' + accion });
@@ -3240,6 +3258,83 @@ const COLUMNAS_IMPORTADAS = [
   'cpm','cpa','gasto','impresiones','clics','resultados','tienda',
 ];
 
+/**
+ * Crea una fila nueva.
+ *
+ * Solo en las entidades que la app puede crear, y con los campos que
+ * declara cada una. Una acción genérica de "inserta lo que te manden"
+ * dejaría escribir en cualquier hoja cualquier cosa, incluidas las
+ * columnas que el importador y el equipo se reparten.
+ */
+const CREABLES = {
+  Gastos: ['tienda', 'mes', 'tipo', 'nombre', 'valor', 'moneda', 'nota'],
+};
+
+function apiCrear(s, p) {
+  const entidad = String(p.entidad || '').trim();
+  const campos = CREABLES[entidad];
+  if (!campos) return { ok: false, error: 'No se pueden crear filas en ' + entidad + '.' };
+  if (!puede(s, 'escribir', entidad) && s.rol !== 'dueno') {
+    return { ok: false, error: 'Tu rol no puede crear en ' + entidad + '.' };
+  }
+  if (ENTIDADES_DINERO.indexOf(entidad) !== -1 && s.rol !== 'dueno') {
+    return { ok: false, error: 'Solo la dueña.' };
+  }
+
+  const datos = p.datos || {};
+  const tienda = String(datos.tienda || p.tienda || '').trim();
+  if (tienda && s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'Esa tienda no es tuya.' };
+  }
+
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const sh = ss.getSheetByName(entidad);
+  if (!sh) return { ok: false, error: 'Falta la hoja ' + entidad + '. Corre bootstrapTodo().' };
+
+  const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
+  const id = entidad.toLowerCase() + '-' + Utilities.getUuid().slice(0, 8);
+  const fila = enc.map(function (col) {
+    if (col === 'id') return id;
+    if (col === 'activo') return 'si';
+    if (col === 'actualizado_en') return ahoraISO();
+    if (col === 'actualizado_por') return s.email;
+    if (campos.indexOf(col) !== -1) return datos[col] !== undefined ? datos[col] : '';
+    return '';
+  });
+  sh.appendRow(fila);
+  registrarMovimiento(s, entidad, id, 'creado', '', JSON.stringify(datos).slice(0, 200));
+  return { ok: true, id: id };
+}
+
+/**
+ * Marca una fila como inactiva. No la borra.
+ *
+ * Un gasto que se elimina de verdad se lleva consigo la explicación de
+ * por qué el margen de marzo era ese. Desactivarlo lo saca de los
+ * cálculos de aquí en adelante y deja el rastro.
+ */
+function apiBorrar(s, p) {
+  const entidad = String(p.entidad || '').trim();
+  if (!CREABLES[entidad]) return { ok: false, error: 'No se puede borrar en ' + entidad + '.' };
+  if (s.rol !== 'dueno') return { ok: false, error: 'Solo la dueña.' };
+
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const sh = ss.getSheetByName(entidad);
+  if (!sh) return { ok: false, error: 'Falta la hoja ' + entidad + '.' };
+
+  const datos = sh.getDataRange().getValues();
+  const enc = datos[0].map(norm);
+  const cId = enc.indexOf('id'), cAct = enc.indexOf('activo');
+  const id = String(p.id || '').trim();
+  for (let i = 1; i < datos.length; i++) {
+    if (String(datos[i][cId]).trim() !== id) continue;
+    if (cAct !== -1) sh.getRange(i + 1, cAct + 1).setValue('no');
+    registrarMovimiento(s, entidad, id, 'activo', 'si', 'no');
+    return { ok: true };
+  }
+  return { ok: false, error: 'No encuentro esa fila.' };
+}
+
 function apiEscribir(s, p) {
   const entidad = String(p.entidad || '').trim();
   if (!puede(s, 'escribir', entidad)) {
@@ -3464,9 +3559,39 @@ function agregarMes(ss, tienda, mes, s) {
         out.campanas[nom].resultados += num(f[c('resultados')]);
       }
     }
+    /**
+     * Los gastos fijos del mes.
+     *
+     * `mes` vacío es un gasto que se repite todos los meses; con un mes
+     * concreto, es de una sola vez. Un gasto desactivado deja de contar
+     * de aquí en adelante, pero su fila se queda: es lo que explica por
+     * qué el margen de marzo era el que era.
+     */
+    out.fijos = 0; out.detalleFijos = [];
+    const shG = ss.getSheetByName('Gastos');
+    if (shG && shG.getLastRow() > 1) {
+      const datos = shG.getDataRange().getValues();
+      const e = datos[0].map(norm);
+      const c = function (n) { return e.indexOf(n); };
+      for (let i = 1; i < datos.length; i++) {
+        const f = datos[i];
+        if (String(f[c('tienda')]).trim() !== tienda) continue;
+        if (norm(f[c('activo')]) === 'no') continue;
+        const m = String(f[c('mes')] || '').trim();
+        if (m && m !== mes) continue;   // gasto de otro mes
+        const v = num(f[c('valor')]);
+        out.fijos += v;
+        out.detalleFijos.push({ nombre: String(f[c('nombre')] || ''), valor: v,
+                                tipo: String(f[c('tipo')] || 'fijo'),
+                                recurrente: !m, id: String(f[c('id')] || '') });
+      }
+    }
+
     out.cpa  = out.entregados ? out.gasto / out.entregados : 0;
     out.roas = out.gasto ? out.ventas / out.gasto : 0;
+    // Margen: antes de los gastos fijos. Utilidad: lo que queda de verdad.
     out.margen = out.ventas - out.gasto - out.costoProducto - out.costoEnvio;
+    out.utilidad = out.margen - out.fijos;
   }
   return out;
 }

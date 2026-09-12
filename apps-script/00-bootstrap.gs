@@ -212,6 +212,22 @@ const ESQUEMA_EMPRESARIAL = {
           'impresiones','alcance','frecuencia','clics','ctr','cpc','cpm',
           'resultados','compras','cpa','roas','valor_conv','visitas_lp'],
   /**
+   * Lo que la operación cuesta aunque no se venda nada.
+   *
+   * Nómina, arriendo, la central telefónica, la suscripción. No está en
+   * ningún archivo que exporte una plataforma: lo sabe la dueña y punto.
+   * Antes se escribía en la pantalla y se perdía al recargar, así que no
+   * se podía usar para nada serio — ni el punto de equilibrio ni la
+   * utilidad del mes salían de verdad.
+   *
+   * `mes` vacío significa que se repite todos los meses. Con un mes
+   * concreto, es un gasto de una sola vez: la caja de insumos de marzo no
+   * tiene por qué seguir restando en abril.
+   */
+  Gastos: ['id','tienda','mes','tipo','nombre','valor','moneda','nota',
+           'activo','actualizado_en','actualizado_por'],
+
+  /**
    * La factura no es el reporte de campañas, y por eso va aparte.
    *
    * El reporte dice lo que la plataforma contabiliza como gasto. La

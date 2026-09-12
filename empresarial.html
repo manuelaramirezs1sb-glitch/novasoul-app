@@ -2266,53 +2266,79 @@ function buildDinero(){
   renderGastos();
 }
 
-// Gastos del mes
-const GASTOS = {
-  fijo:[
-    {nm:'Nómina',                   ec:8400000, gt:32000},
-    {nm:'Llamadas y recargas Iris', ec:1200000, gt:4800},
-    {nm:'Suscripción Nova',         ec:280000,  gt:1080},
-  ],
-  variable:[
-    {nm:'Pauta Meta',               ec:21180000, gt:84600},
-    {nm:'Fletes del mes',           ec:4200000,  gt:18400},
-  ]
-};
+/**
+ * Los gastos fijos, guardados en la hoja.
+ *
+ * Antes vivían en esta constante y en la memoria de la pestaña: lo que
+ * escribías se perdía al recargar, así que no se podía usar para el
+ * punto de equilibrio ni para la utilidad. Ahora vienen del resumen del
+ * mes, que ya los suma, y se crean y desactivan contra la hoja.
+ */
+let GASTOS_REALES = [];
+
 function renderGastos(){
-  const isEc = ST === Object.keys(POR_TIENDA)[0];
-  const sym=SYM()+' ';
-  // El gasto se guarda por id de tienda, no en dos columnas fijas: así
-  // una cuenta con cinco tiendas funciona igual que una con dos.
-  const fmt=g=>sym+NUM(g[ST]!==undefined?g[ST]:(g.custom||0));
-  ['fijo','variable'].forEach(tipo=>{
-    const id='gastos-'+tipo+'s';
-    const el=document.getElementById(id);
-    if(!el) return;
-    el.innerHTML=GASTOS[tipo].map((g,i)=>`<div class="gasto-row">
-      <span class="gasto-nm">${g.nm}</span>
-      <span class="gasto-val">${fmt(g)}</span>
-      <span class="gasto-del" onclick="delGasto('${tipo}',${i})" title="Eliminar">×</span>
-    </div>`).join('');
+  const S = SYM() + ' ';
+  ['fijo','variable'].forEach(function (tipo) {
+    const el = document.getElementById('gastos-' + tipo + 's');
+    if (!el) return;
+    const mios = GASTOS_REALES.filter(function (g) {
+      return (g.tipo || 'fijo') === tipo;
+    });
+    if (!mios.length) {
+      el.innerHTML = '<div style="font:500 12px/1.6 \'DM Sans\';color:var(--t-mut2);' +
+        'padding:8px 0;">Sin gastos ' + (tipo === 'fijo' ? 'fijos' : 'variables') +
+        ' registrados. Agrégalos abajo: se guardan en tu hoja y entran en el ' +
+        'punto de equilibrio y en la utilidad del mes.</div>';
+      return;
+    }
+    el.innerHTML = mios.map(function (g) {
+      return '<div style="display:flex;align-items:center;justify-content:space-between;' +
+        'padding:10px 0;border-bottom:1px solid var(--s-line2);">' +
+        '<div><span style="font:500 12.5px/1 \'DM Sans\';color:var(--t-ink2);">' +
+          esc(g.nombre) + '</span>' +
+          (g.recurrente ? '' : '<span style="font:500 10.5px/1 \'DM Sans\';' +
+            'color:var(--t-mut2);margin-left:6px;">solo este mes</span>') + '</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<span style="font:600 13px/1 \'DM Sans\';color:var(--t-ink);">' +
+            S + NUM(Math.round(g.valor || 0)) + '</span>' +
+          '<span onclick="quitarGasto(\'' + g.id + '\')" style="cursor:pointer;' +
+            'color:var(--t-mut2);font:600 14px/1 \'DM Sans\';" title="Quitar">×</span>' +
+        '</div></div>';
+    }).join('');
   });
 }
-function addGasto(tipo){
-  const nmId=tipo==='fijo'?'gf-nm':'gv-nm', valId=tipo==='fijo'?'gf-val':'gv-val';
-  const nm=(document.getElementById(nmId)?.value||'').trim();
-  const val=parseFloat(document.getElementById(valId)?.value||0);
-  if(!nm||!val){showToast('Completa nombre y valor');return;}
-  const isEc = ST === Object.keys(POR_TIENDA)[0];
-  const entry={nm, custom:val}; entry[ST]=val;
-  GASTOS[tipo].push(entry);
-  document.getElementById(nmId).value='';
-  document.getElementById(valId).value='';
-  renderGastos();
-  showToast('Gasto agregado ✓');
+
+async function addGasto(tipo){
+  const nmId = tipo==='fijo' ? 'gf-nm' : 'gv-nm';
+  const valId = tipo==='fijo' ? 'gf-val' : 'gv-val';
+  const nm = (document.getElementById(nmId)?.value || '').trim();
+  const val = parseFloat(document.getElementById(valId)?.value || 0);
+  if (!nm || !val) { showToast('Completa nombre y valor'); return; }
+  if (!CONECTADO) { showToast('Entra con tu correo para guardar gastos'); return; }
+
+  try {
+    const r = await api('crear', { entidad: 'Gastos', tienda: ST, datos: {
+      tienda: ST, mes: '', tipo: tipo, nombre: nm, valor: val,
+      moneda: (STORES[ST]||{}).moneda || '',
+    }});
+    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
+    document.getElementById(nmId).value = '';
+    document.getElementById(valId).value = '';
+    await cargarReales();
+    showToast('Gasto guardado en tu hoja');
+  } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
-function delGasto(tipo,i){
-  GASTOS[tipo].splice(i,1);
-  renderGastos();
-  showToast('Gasto eliminado');
+
+async function quitarGasto(id){
+  if (!CONECTADO) return;
+  try {
+    const r = await api('borrar', { entidad: 'Gastos', id: id });
+    if (!r.ok) { showToast(r.error || 'No se pudo quitar'); return; }
+    await cargarReales();
+    showToast('Gasto quitado');
+  } catch (e) { showToast('Sin conexión'); }
 }
+
 function onMetaFileViejo(inp){
   if(!inp.files||!inp.files[0]) return;
   const lbl=document.getElementById('meta-lbl');
@@ -2882,6 +2908,12 @@ function aplicarDinero(d) {
   const prod    = d.costoProducto || 0;
   const fletes  = d.costoEnvio || 0;
   const margen  = d.margen !== undefined ? d.margen : (ventas - pauta - prod - fletes);
+  const fijos   = d.fijos || 0;
+  const utilidad = d.utilidad !== undefined ? d.utilidad : (margen - fijos);
+
+  // Los gastos fijos ya vienen de la hoja: la lista de abajo los pinta
+  GASTOS_REALES = d.detalleFijos || [];
+  renderGastos();
 
   const kpis = [
     {lb:'RECAUDO DEL MES', v:S+nf(ventas),
@@ -2895,8 +2927,12 @@ function aplicarDinero(d) {
      sub:'Incluye los de devolución si vienen en el archivo', color:'var(--t-mut)'},
     {lb:'MARGEN', v:ventas ? pct(margen, ventas).toFixed(1) + '%' : '—',
      sub:'Después de pauta, producto y flete', color:margen >= 0 ? '#4c6236' : '#b8322f'},
-    {lb:'QUEDA', v:S+nf(margen),
-     sub:'Antes de nómina y gastos fijos', color:margen >= 0 ? '#6E7A55' : '#b8322f'},
+    {lb:'GASTOS FIJOS', v:S+nf(fijos),
+     sub:fijos ? (d.detalleFijos||[]).length + ' registrados' : 'Agrégalos abajo',
+     color:'var(--t-mut)'},
+    {lb:'QUEDA LIMPIO', v:S+nf(utilidad),
+     sub:'Después de todo, incluida la nómina',
+     color:utilidad >= 0 ? '#6E7A55' : '#b8322f'},
   ];
 
   const cont = document.getElementById('dinkpi2');
@@ -2911,22 +2947,20 @@ function aplicarDinero(d) {
   }
 
   /**
-   * Punto de equilibrio, solo con lo que es real.
+   * Punto de equilibrio: cuántas entregas hacen falta para no perder.
    *
    * Cada entrega deja lo que queda después del producto y el flete, y eso
-   * tiene que cubrir la pauta del mes.
+   * tiene que cubrir la pauta del mes más los gastos fijos.
    *
-   * La nómina y los demás gastos fijos NO entran, aunque estén escritos
-   * abajo: esa lista todavía es de ejemplo, sus valores están en pesos y
-   * esta tienda factura en dólares. Sumarlos daba "faltan 441.191
-   * entregas". Un número absurdo se detecta; uno apenas equivocado, no.
-   *
-   * Cuando los gastos fijos se puedan guardar de verdad, entran aquí.
+   * Los fijos vienen de la hoja y en la moneda de la tienda. Mientras
+   * vivían solo en la pantalla, con valores de ejemplo en pesos sobre una
+   * tienda que factura en dólares, esta cuenta daba "faltan 441.191
+   * entregas" — y por eso se dejaron fuera hasta ahora.
    */
   const contrib = d.entregados ? (ventas - prod - fletes) / d.entregados : 0;
-  const fijos = pauta;
+  const aCubrir = pauta + fijos;
 
-  const necesarias = contrib > 0 ? Math.ceil(fijos / contrib) : 0;
+  const necesarias = contrib > 0 ? Math.ceil(aCubrir / contrib) : 0;
   const faltan = Math.max(0, necesarias - (d.entregados || 0));
   const avance = necesarias ? Math.min(100, Math.round((d.entregados || 0) / necesarias * 100)) : 0;
 
@@ -2936,8 +2970,8 @@ function aplicarDinero(d) {
   };
   set('eq-faltan', contrib > 0 ? String(faltan) : '—');
   set('eq-sub2', contrib > 0
-    ? d.entregados + ' entregadas · ' + avance + '% para cubrir la pauta · meta: ' +
-      necesarias + ' entregas. No incluye nómina ni gastos fijos.'
+    ? d.entregados + ' entregadas · ' + avance + '% del punto de equilibrio · meta: ' +
+      necesarias + ' entregas para cubrir pauta y gastos fijos'
     : 'Sin entregas este mes todavía: no hay con qué calcular el equilibrio.');
   const barra = document.getElementById('eq-bar2');
   if (barra) barra.style.width = avance + '%';
@@ -2947,8 +2981,8 @@ function aplicarDinero(d) {
 
   const costos = document.getElementById('eq-costos');
   if (costos) {
-    // Solo la pauta: es lo único de esta tarjeta que sale de la hoja.
-    const filas = [['Pauta del mes · real', S + nf(pauta)]];
+    const filas = [['Pauta del mes', S + nf(pauta)]].concat(
+      (d.detalleFijos || []).map(function (g) { return [g.nombre, S + nf(g.valor)]; }));
     costos.innerHTML = filas.map(function (r, i) {
       return '<div style="display:flex;align-items:center;justify-content:space-between;' +
         'padding:11px 0;' + (i ? 'border-top:1px solid var(--s-line2)' : '') + ';">' +
