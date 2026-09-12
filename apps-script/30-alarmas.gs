@@ -195,7 +195,19 @@ function evaluarAlarmas(ss, tienda) {
    * después del producto y el flete. Pagar más que eso por traer un
    * pedido es perder plata en cada venta, por bien que se vea el ROAS.
    */
-  if (m.entregados > 0 && m.gasto > 0) {
+  /**
+   * Diez entregas como mínimo, y aquí está el porqué.
+   *
+   * A principios de mes la pauta ya se gastó y los pedidos todavía no
+   * llegan: el CPA se calcula sobre dos o tres entregas y sale disparado.
+   * El 12 de septiembre esta alarma decía "pagas USD 86,41 por pedido"
+   * cuando el mes cerrado anterior iba en 17,93. No era un problema de
+   * la operación, era un mes que apenas empezaba.
+   *
+   * Una alarma que grita cada primero de mes es una alarma que se ignora
+   * el resto del mes.
+   */
+  if (m.entregados >= 10 && m.gasto > 0) {
     const techo = (m.ventas - m.costoProducto - m.costoEnvio) / m.entregados;
     const pagado = m.gasto / m.entregados;
 
@@ -212,6 +224,8 @@ function evaluarAlarmas(ss, tienda) {
     if (sub !== null && sub > 0) {
       const ant = agregarMes(ss, tienda, mesAnterior(mes), sesionFalsa);
       const cpaAnt = ant.entregados ? ant.gasto / ant.entregados : 0;
+      // También el mes pasado necesita volumen: comparar contra un mes
+      // de tres entregas produce porcentajes enormes que no dicen nada.
       if (cpaAnt > 0 && ant.entregados >= 10) {
         const delta = (pagado - cpaAnt) / cpaAnt * 100;
         if (delta >= sub) {

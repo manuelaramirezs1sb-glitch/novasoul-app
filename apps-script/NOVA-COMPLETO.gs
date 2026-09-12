@@ -1,9 +1,20 @@
-
-
 /* ═══════════════════════════════════════════════════════════════
    1 · INSTALACIÓN
    ═══════════════════════════════════════════════════════════════ */
 
+/**
+ * Nova · Bootstrap de hojas
+ * ─────────────────────────────────────────────────────────────
+ * Construye todas las pestañas y encabezados de los 4 workbooks.
+ * Se corre UNA VEZ. Es idempotente: si la pestaña ya existe, no la toca.
+ *
+ * Esquemas tomados de design_handoff_nova/DATOS-Y-ALARMAS.md
+ *
+ * Cómo usarlo:
+ *   1. script.google.com → Nuevo proyecto → pega este archivo
+ *   2. Ejecutar → bootstrapTodo()
+ *   3. Autorizar cuando lo pida
+ */
 
 // ─── IDs de los workbooks ────────────────────────────────────
 /**
@@ -255,11 +266,6 @@ const ESQUEMA_EMPRESARIAL = {
   Inventario: ['id','sku','producto','tienda','fuente','origen','stock',
                'costo_unitario','precio','minimo','dias_cobertura',
                'ultimo_conteo','nota','activo','actualizado_en','actualizado_por'],
-  // "permisos" es lo que la dueña decide que esta persona puede hacer,
-  // separado por comas. Vacío = lo que el rol trae por defecto.
-  // Ver PERMISOS_POR_ROL en 60-api.gs.
-  Equipo: ['id','nombre','correo','rol','tienda','estado','casos_asignados',
-           'casos_resueltos','nota_auditoria','ultima_conexion','permisos'],
   // "permisos" es lo que la dueña decide que esta persona puede hacer,
   // separado por comas. Vacío = lo que el rol trae por defecto.
   // Ver PERMISOS_POR_ROL en 60-api.gs.
@@ -522,6 +528,17 @@ function sembrarParametros() {
    2 · ESTADOS Y TELÉFONOS
    ═══════════════════════════════════════════════════════════════ */
 
+/**
+ * Nova · Estados canónicos y normalización de teléfono
+ * ─────────────────────────────────────────────────────────────
+ * Construido a partir de los datos REALES de la carpeta QKF + NOVA:
+ *   · Dropi-Pedidos-NutreaShop.xlsx  (Maestro Ecuador, 569 pedidos)
+ *   · reporte-historial-de-pedidos-*.xlsx  (Mastershop/Effi Colombia)
+ *   · IRIS (1).csv  (central telefónica, 2.782 llamadas)
+ *
+ * Cada plataforma nombra los estados distinto. Sin una tabla canónica,
+ * la alarma de "entrega bajo 65%" cuenta mal según de qué fuente venga.
+ */
 
 // ─── ESTADOS CANÓNICOS ───────────────────────────────────────
 // Diez estados. Todo lo que llegue de cualquier plataforma cae en uno.
@@ -897,6 +914,26 @@ function extraerTelefonos(campoTelefono, textoLibre, paisDefault) {
    3 · MONEDAS
    ═══════════════════════════════════════════════════════════════ */
 
+/**
+ * Nova · Monedas y conversión
+ * ─────────────────────────────────────────────────────────────
+ * Dos cosas distintas que se confunden fácil:
+ *
+ *   1. El CATÁLOGO — cuántos decimales tiene cada moneda y cómo se muestra.
+ *      Es una tabla estática. Barata. Está completa para Latinoamérica.
+ *
+ *   2. La TASA — cuánto vale esa moneda un día concreto. Vive en la hoja
+ *      `Tasas` y hay que alimentarla. Sin tasa NO hay conversión posible,
+ *      por más completo que esté el catálogo.
+ *
+ * El spec es explícito: se convierte con "la tasa del DÍA DE LA TRANSACCIÓN,
+ * no la de hoy". Si no, los márgenes salen mal y todas las alarmas de dinero
+ * disparan en falso.
+ *
+ * Por eso, cuando falta una tasa, la conversión NO inventa un número:
+ * devuelve null y marca la fila. Un margen vacío se ve; un margen calculado
+ * con la tasa equivocada no se ve y miente.
+ */
 
 // ─── CATÁLOGO ────────────────────────────────────────────────
 // dec: decimales que usa la moneda en la práctica.
@@ -1094,9 +1131,26 @@ function tasasFaltantes(cliente, monedaDestino) {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   4 · IMPORTADORES (LEER)
+   4 · FUENTES E IMPORTADORES
    ═══════════════════════════════════════════════════════════════ */
 
+/**
+ * Nova · Importadores
+ * ─────────────────────────────────────────────────────────────
+ * Convierte las pestañas _Import_* (crudas) en filas normalizadas.
+ *
+ * Regla del spec:
+ *   "un cambio de formato rompe UNA función de importación, no seis pantallas"
+ *
+ * Por eso el mapeo es declarativo. Agregar una fuente nueva es agregar
+ * un bloque a FUENTES — no escribir un importador nuevo.
+ *
+ * ⚠ ESTADO DE LOS MAPEOS
+ *   Los alias de columna de abajo son la primera aproximación. Cada
+ *   plataforma nombra distinto la misma cosa y cambia los nombres sin avisar.
+ *   Marcados VERIFICADO los que ya se cotejaron contra un export real.
+ *   Marcados POR VERIFICAR los que hay que confirmar con un CSV de muestra.
+ */
 
 // ─── CATÁLOGO DE FUENTES ─────────────────────────────────────
 // `alias` mapea: columna_normalizada -> [posibles nombres en el export]
@@ -1654,9 +1708,29 @@ function diagnosticar(fuenteId, tienda, cliente) {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   5 · AUTO-MAPEO
+   5 · MAPEO AUTOMÁTICO
    ═══════════════════════════════════════════════════════════════ */
 
+/**
+ * Nova · Auto-mapeo de fuentes desconocidas
+ * ─────────────────────────────────────────────────────────────
+ * El problema: no siempre hay un export de muestra. TikTok hoy, y mañana
+ * cualquier plataforma nueva — o Meta renombrando una columna sin avisar.
+ *
+ * La solución no es adivinar nombres, es leer la FORMA de los datos.
+ * Una columna de gasto se reconoce porque es numérica, positiva, con
+ * decimales y magnitud media — no porque se llame "Importe gastado".
+ *
+ * Flujo:
+ *   1. Pegas el export en su pestaña _Import_*
+ *   2. Corres proponerMapeo('tiktok', 'gt')
+ *   3. Escribe sus propuestas en la hoja `Mapeos` con un nivel de confianza
+ *   4. Revisas y corriges lo que esté mal — sin tocar código
+ *   5. El importador usa `Mapeos` por encima de los alias del código
+ *
+ * Esto hace que agregar una plataforma sea trabajo tuyo de dos minutos,
+ * no un cambio de código que tienes que esperar.
+ */
 
 // ─── BANCO DE SINÓNIMOS ──────────────────────────────────────
 // Tokens en español e inglés. No hace falta el nombre exacto:
@@ -2113,9 +2187,495 @@ function aliasDesdeMapeos(ss, fuenteId) {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   6 · CLIENTES
+   6 · ALARMAS
    ═══════════════════════════════════════════════════════════════ */
 
+/**
+ * Nova · Alarmas
+ * ─────────────────────────────────────────────────────────────
+ * Las seis cosas que no pueden esperar a que alguien abra la app.
+ *
+ * ┌─ POR QUÉ LOS UMBRALES LOS PONE EL CLIENTE ─────────────────┐
+ * │                                                            │
+ * │ Una tienda que sabe que vive con 40% de devolución no      │
+ * │ necesita que le griten todos los días por eso. Otra que    │
+ * │ vende un producto de 200 dólares se hunde con un 12%.      │
+ * │                                                            │
+ * │ Un umbral inventado por mí produce una de dos cosas: una   │
+ * │ alarma que suena siempre —y que por eso se ignora— o una   │
+ * │ que nunca suena. Las dos son igual de inútiles.            │
+ * │                                                            │
+ * │ Así que cada umbral vive en la hoja Parametros, por        │
+ * │ tienda, y el dueño lo cambia desde la app. Los valores de  │
+ * │ abajo son solo el punto de partida.                        │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * El CPA es la excepción, y a propósito: su techo NO se escribe, se
+ * calcula. Es lo que deja cada entrega después del producto y el flete,
+ * porque pagar más que eso por conseguir un pedido es perder plata en
+ * cada venta. Ese número cambia solo cuando cambian los costos.
+ */
+
+const ALARMAS_DEFAULT = {
+  dias_sin_mover:     3,     // pedido sin movimiento
+  horas_novedad:      24,    // novedad sin gestionar
+  efectividad_min:    65,    // % de entrega sobre lo resuelto
+  devoluciones_max:   '',    // % — lo pone el cliente; vacío = apagada
+  cpa_aviso_pct:      85,    // % del techo a partir del cual avisa
+  cpa_subida_pct:     25,    // % de subida contra el mes pasado que avisa
+  stock_dias_min:     '',    // días de cobertura — vacío = apagada
+  alarmas_a:          '',    // correos extra, separados por coma
+  alarmas_hora:       7,     // hora local de la revisión diaria
+};
+
+/** Qué es cada alarma, en palabras de quien la va a leer. */
+const ALARMAS = [
+  { id: 'sin_mover',    nombre: 'Pedidos detenidos',
+    param: 'dias_sin_mover', unidad: 'días' },
+  { id: 'novedad_vieja', nombre: 'Novedades sin gestionar',
+    param: 'horas_novedad', unidad: 'horas' },
+  { id: 'efectividad',  nombre: 'Efectividad baja',
+    param: 'efectividad_min', unidad: '%' },
+  { id: 'devoluciones', nombre: 'Devoluciones altas',
+    param: 'devoluciones_max', unidad: '%', opcional: true },
+  { id: 'cpa',          nombre: 'CPA cerca del techo',
+    param: 'cpa_aviso_pct', unidad: '% del techo' },
+  { id: 'cpa_sube',     nombre: 'CPA subiendo',
+    param: 'cpa_subida_pct', unidad: '% vs. mes pasado', opcional: true },
+  { id: 'stock',        nombre: 'Stock por agotarse',
+    param: 'stock_dias_min', unidad: 'días de cobertura', opcional: true },
+];
+
+/** Los umbrales de una tienda: lo que diga Parametros, o el de fábrica. */
+function umbrales(ss, tienda) {
+  const out = {};
+  Object.keys(ALARMAS_DEFAULT).forEach(function (k) { out[k] = ALARMAS_DEFAULT[k]; });
+
+  const sh = ss.getSheetByName('Parametros');
+  if (!sh || sh.getLastRow() < 2) return out;
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const cT = e.indexOf('tienda'), cK = e.indexOf('clave'), cV = e.indexOf('valor');
+  for (let i = 1; i < d.length; i++) {
+    const t = String(d[i][cT] || '').trim();
+    // Un parámetro sin tienda vale para todas: sirve de valor general
+    if (t && t !== tienda) continue;
+    const k = norm(d[i][cK]);
+    if (!(k in out)) continue;
+    const v = d[i][cV];
+    out[k] = (v === '' || v === null) ? '' : v;
+  }
+  return out;
+}
+
+/**
+ * Evalúa las seis alarmas de una tienda.
+ *
+ * Devuelve una lista, no manda correos. Separarlo permite que la pantalla
+ * las muestre en vivo y que el correo diario use exactamente lo mismo:
+ * si fueran dos cálculos distintos, tarde o temprano dirían cosas
+ * distintas y no habría forma de saber cuál creer.
+ */
+function evaluarAlarmas(ss, tienda) {
+  const u = umbrales(ss, tienda);
+  const tz = zonaHorariaDe(ss, tienda);
+  const hoy = new Date();
+  const mes = Utilities.formatDate(hoy, tz || 'UTC', 'yyyy-MM');
+  const out = [];
+  const moneda = monedaDeTienda(ss, tienda);
+
+  // ── Datos del mes, una sola lectura ──
+  const sesionFalsa = { rol: 'dueno' };
+  const m = agregarMes(ss, tienda, mes, sesionFalsa);
+
+  // ── 1. Pedidos detenidos ──
+  const dias = Number(u.dias_sin_mover) || 0;
+  if (dias > 0) {
+    const detenidos = [];
+    const shP = ss.getSheetByName('Pedidos');
+    if (shP && shP.getLastRow() > 1) {
+      const d = shP.getDataRange().getValues();
+      const e = d[0].map(norm);
+      const c = function (n) { return e.indexOf(n); };
+      for (let i = 1; i < d.length; i++) {
+        const f = d[i];
+        if (String(f[c('tienda')]).trim() !== tienda) continue;
+        const est = norm(f[c('estado_nova')] || f[c('estado_canonico')]);
+        if (['entregado','devolucion','cancelado'].indexOf(est) !== -1) continue;
+        const ult = aISO(f[c('ultimo_movimiento')] || f[c('actualizado_en')] ||
+                         f[c('fecha')], 'UTC');
+        if (!ult) continue;
+        const d2 = (hoy - new Date(ult + 'T00:00:00Z')) / 86400000;
+        if (d2 >= dias) {
+          detenidos.push({ id: f[c('id_externo')] || f[c('id')],
+                           cliente: f[c('cliente')], dias: Math.floor(d2),
+                           gestora: f[c('gestora_asignada')] });
+        }
+      }
+    }
+    if (detenidos.length) {
+      detenidos.sort(function (a, b) { return b.dias - a.dias; });
+      out.push(alarma('sin_mover', 'mal',
+        pl(detenidos.length, '1 pedido lleva', '% pedidos llevan') + ' ' +
+          dias + ' días o más sin moverse',
+        'El más viejo lleva ' + detenidos[0].dias + ' días. Un pedido detenido ' +
+        'no avisa solo: o se gestiona, o se convierte en devolución.',
+        detenidos.slice(0, 10), 'Pedidos'));
+    }
+  }
+
+  // ── 2. Novedades sin gestionar ──
+  const horas = Number(u.horas_novedad) || 0;
+  if (horas > 0) {
+    const viejas = [];
+    const shN = ss.getSheetByName('Novedades');
+    if (shN && shN.getLastRow() > 1) {
+      const d = shN.getDataRange().getValues();
+      const e = d[0].map(norm);
+      const c = function (n) { return e.indexOf(n); };
+      for (let i = 1; i < d.length; i++) {
+        const f = d[i];
+        if (norm(f[c('estado')]) !== 'abierta') continue;
+        const fch = aISO(f[c('fecha')], 'UTC');
+        if (!fch) continue;
+        const h = (hoy - new Date(fch + 'T00:00:00Z')) / 3600000;
+        if (h >= horas) {
+          viejas.push({ id: f[c('pedido_id')], motivo: f[c('motivo')],
+                        horas: Math.floor(h), gestora: f[c('gestora')] });
+        }
+      }
+    }
+    if (viejas.length) {
+      viejas.sort(function (a, b) { return b.horas - a.horas; });
+      out.push(alarma('novedad_vieja', 'mal',
+        pl(viejas.length, '1 novedad lleva', '% novedades llevan') +
+          ' más de ' + horas + ' horas abierta' + (viejas.length === 1 ? '' : 's'),
+        'Una novedad sin contactar a la clienta en el primer día se vuelve ' +
+        'devolución en la mayoría de los casos.',
+        viejas.slice(0, 10), 'Novedades'));
+    }
+  }
+
+  // ── 3. Efectividad baja ──
+  const efMin = Number(u.efectividad_min) || 0;
+  if (efMin > 0 && m.resueltos >= 10 && m.efectividad < efMin) {
+    out.push(alarma('efectividad', 'mal',
+      'Efectividad en ' + m.efectividad.toFixed(1) + '%, bajo tu meta de ' + efMin + '%',
+      'De ' + m.resueltos + ' pedidos ya resueltos este mes llegaron ' +
+      m.entregados + '. Cada punto por debajo son ventas que ya pagaste en pauta ' +
+      'y no entraron.', [], 'Pedidos'));
+  }
+
+  // ── 4. Devoluciones altas (opcional) ──
+  const devMax = u.devoluciones_max === '' ? null : Number(u.devoluciones_max);
+  if (devMax !== null && devMax > 0 && m.resueltos >= 10) {
+    const tasa = m.resueltos ? m.devueltos / m.resueltos * 100 : 0;
+    if (tasa > devMax) {
+      out.push(alarma('devoluciones', 'mal',
+        'Devoluciones en ' + tasa.toFixed(1) + '%, sobre tu límite de ' + devMax + '%',
+        m.devueltos + ' de ' + m.resueltos + ' pedidos resueltos volvieron. ' +
+        'Cada uno cuesta el flete de ida y el de vuelta.', [], 'Novedades'));
+    }
+  }
+
+  /**
+   * ── 5. CPA cerca del techo ──
+   *
+   * El techo no se escribe en ninguna parte: es lo que deja cada entrega
+   * después del producto y el flete. Pagar más que eso por traer un
+   * pedido es perder plata en cada venta, por bien que se vea el ROAS.
+   */
+  /**
+   * Diez entregas como mínimo, y aquí está el porqué.
+   *
+   * A principios de mes la pauta ya se gastó y los pedidos todavía no
+   * llegan: el CPA se calcula sobre dos o tres entregas y sale disparado.
+   * El 12 de septiembre esta alarma decía "pagas USD 86,41 por pedido"
+   * cuando el mes cerrado anterior iba en 17,93. No era un problema de
+   * la operación, era un mes que apenas empezaba.
+   *
+   * Una alarma que grita cada primero de mes es una alarma que se ignora
+   * el resto del mes.
+   */
+  if (m.entregados >= 10 && m.gasto > 0) {
+    const techo = (m.ventas - m.costoProducto - m.costoEnvio) / m.entregados;
+    const pagado = m.gasto / m.entregados;
+
+    /**
+     * El techo dice si estás perdiendo. Esta otra dice si estás
+     * empeorando, que es la que avisa a tiempo: un CPA que sube 30% en un
+     * mes todavía puede estar bajo el techo, y aun así ser la señal de
+     * que la campaña se está agotando o la competencia subió la puja.
+     *
+     * Se compara con el mes pasado completo, no con el promedio: un
+     * promedio de varios meses suaviza justo lo que hay que ver.
+     */
+    const sub = u.cpa_subida_pct === '' ? null : Number(u.cpa_subida_pct);
+    if (sub !== null && sub > 0) {
+      const ant = agregarMes(ss, tienda, mesAnterior(mes), sesionFalsa);
+      const cpaAnt = ant.entregados ? ant.gasto / ant.entregados : 0;
+      // También el mes pasado necesita volumen: comparar contra un mes
+      // de tres entregas produce porcentajes enormes que no dicen nada.
+      if (cpaAnt > 0 && ant.entregados >= 10) {
+        const delta = (pagado - cpaAnt) / cpaAnt * 100;
+        if (delta >= sub) {
+          out.push(alarma('cpa_sube', 'ojo',
+            'El CPA subió ' + delta.toFixed(0) + '% contra el mes pasado',
+            'Pagabas ' + moneda + ' ' + cpaAnt.toFixed(2) + ' por pedido y ahora ' +
+            'pagas ' + moneda + ' ' + pagado.toFixed(2) + '. Todavía ' +
+            (pagado < techo ? 'estás bajo el techo, pero la tendencia se come el colchón.'
+                            : 'y además ya pasaste el techo.'),
+            [], 'Dinero'));
+        }
+      }
+    }
+    const pct = techo > 0 ? pagado / techo * 100 : 999;
+    const aviso = Number(u.cpa_aviso_pct) || 85;
+    if (techo > 0 && pct >= aviso) {
+      const grave = pct >= 100;
+      out.push(alarma('cpa', grave ? 'mal' : 'ojo',
+        grave
+          ? 'Estás pagando más por pedido de lo que deja cada entrega'
+          : 'CPA al ' + pct.toFixed(0) + '% del techo',
+        'Cada entrega deja ' + moneda + ' ' + techo.toFixed(2) + ' después del ' +
+        'producto y el flete, y estás pagando ' + moneda + ' ' + pagado.toFixed(2) +
+        ' de pauta por conseguirla. ' +
+        (grave ? 'Así, vender más es perder más.'
+               : 'Queda poco colchón: si la entrega cae unos puntos, el mes se pone rojo.'),
+        [], 'Dinero'));
+    }
+  }
+
+  // ── 6. Stock por agotarse (opcional) ──
+  const stockDias = u.stock_dias_min === '' ? null : Number(u.stock_dias_min);
+  if (stockDias !== null && stockDias > 0) {
+    const bajos = [];
+    const shI = ss.getSheetByName('Inventario');
+    if (shI && shI.getLastRow() > 1) {
+      const d = shI.getDataRange().getValues();
+      const e = d[0].map(norm);
+      const c = function (n) { return e.indexOf(n); };
+      // Ritmo de venta de cada producto en el mes, para estimar cobertura
+      const ritmo = {};
+      Object.keys(m.productos || {}).forEach(function (k) {
+        const dm = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
+        ritmo[norm(k)] = (m.productos[k].entregados || 0) / dm;
+      });
+      for (let i = 1; i < d.length; i++) {
+        const f = d[i];
+        if (String(f[c('tienda')]).trim() !== tienda) continue;
+        if (norm(f[c('activo')]) === 'no') continue;
+        const nom = String(f[c('producto')] || '').trim();
+        const stock = num(f[c('stock')]);
+        const r = ritmo[norm(nom)] || 0;
+        if (!r) continue;              // sin ventas no hay cobertura que estimar
+        const cobertura = stock / r;
+        if (cobertura <= stockDias) {
+          bajos.push({ producto: nom, stock: stock, dias: Math.floor(cobertura) });
+        }
+      }
+    }
+    if (bajos.length) {
+      bajos.sort(function (a, b) { return a.dias - b.dias; });
+      out.push(alarma('stock', 'ojo',
+        pl(bajos.length, '1 producto se acaba', '% productos se acaban') +
+          ' en ' + stockDias + ' días o menos',
+        'Al ritmo de venta de este mes. Quedarse sin stock con la pauta ' +
+        'prendida es pagar por pedidos que no puedes despachar.',
+        bajos.slice(0, 10), 'Inventario'));
+    }
+  }
+
+  return { alarmas: out, umbrales: u, tienda: tienda, mes: mes };
+}
+
+/** Uno o varios. "1 novedades" delata que lo escribió una máquina. */
+function pl(n, uno, varios) {
+  return n === 1 ? uno.replace('%', n) : varios.replace('%', n);
+}
+
+function alarma(id, nivel, titulo, detalle, casos, ir) {
+  const def = ALARMAS.filter(function (a) { return a.id === id; })[0] || {};
+  return { id: id, nivel: nivel, nombre: def.nombre || id,
+           titulo: titulo, detalle: detalle, casos: casos || [], ir: ir || '' };
+}
+
+/**
+ * La revisión diaria que manda el correo.
+ *
+ * Manda UNA vez por alarma y por día. Sin eso, una efectividad baja que
+ * dura toda la semana produce siete correos idénticos, y al tercero ya
+ * nadie los abre — que es exactamente cuando deja de servir.
+ */
+function revisarAlarmas(cliente) {
+  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const tiendas = tiendasDeCliente(ss);
+  const log = [];
+
+  tiendas.forEach(function (tienda) {
+    const r = evaluarAlarmas(ss, tienda);
+    if (!r.alarmas.length) { log.push(tienda + ': sin alarmas'); return; }
+
+    const nuevas = r.alarmas.filter(function (a) {
+      return !yaAvisada(ss, a.id + '|' + tienda);
+    });
+    if (!nuevas.length) {
+      log.push(tienda + ': ' + r.alarmas.length + ' alarmas, ya avisadas hoy');
+      return;
+    }
+
+    const destinos = destinatarios(ss, r.umbrales);
+    if (destinos.length) {
+      MailApp.sendEmail({
+        to: destinos.join(','),
+        subject: 'Nova · ' + nuevas.length + ' cosas que mirar en ' + nombreTienda(ss, tienda),
+        body: cuerpoCorreo(nuevas, tienda, nombreTienda(ss, tienda)),
+      });
+    }
+    nuevas.forEach(function (a) { marcarAvisada(ss, a.id + '|' + tienda); });
+    log.push(tienda + ': avisadas ' + nuevas.length + ' a ' + destinos.join(', '));
+  });
+
+  const msg = log.join('\n');
+  Logger.log(msg);
+  return msg;
+}
+
+/** A quién le llega: las dueñas activas, más los correos que se agreguen. */
+function destinatarios(ss, u) {
+  const out = [];
+  const sh = ss.getSheetByName('Equipo');
+  if (sh && sh.getLastRow() > 1) {
+    const d = sh.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const cC = e.indexOf('correo'), cR = e.indexOf('rol'), cE = e.indexOf('estado');
+    for (let i = 1; i < d.length; i++) {
+      if (norm(d[i][cE]) === 'inactivo') continue;
+      if (rolCanonico(d[i][cR]) !== 'dueno') continue;
+      const c = String(d[i][cC] || '').trim();
+      if (c) out.push(c);
+    }
+  }
+  String(u.alarmas_a || '').split(/[,;]/).forEach(function (c) {
+    const x = c.trim();
+    if (x && out.indexOf(x) === -1) out.push(x);
+  });
+  return out;
+}
+
+function cuerpoCorreo(alarmas, tienda, nombre) {
+  const lineas = ['Hola,', '',
+    'Esto es lo que Nova encontró hoy en ' + nombre + ':', ''];
+  alarmas.forEach(function (a, i) {
+    lineas.push((i + 1) + '. ' + a.titulo);
+    lineas.push('   ' + a.detalle);
+    if (a.casos && a.casos.length) {
+      a.casos.slice(0, 5).forEach(function (c) {
+        lineas.push('   · ' + (c.cliente || c.producto || c.id || '') +
+          (c.dias !== undefined ? ' — ' + c.dias + ' días' : '') +
+          (c.horas !== undefined ? ' — ' + c.horas + ' horas' : ''));
+      });
+      if (a.casos.length > 5) lineas.push('   · y ' + (a.casos.length - 5) + ' más');
+    }
+    lineas.push('');
+  });
+  lineas.push('Los umbrales de estas alarmas los cambias tú en Nova, ' +
+              'en Configuración.');
+  lineas.push('');
+  lineas.push('— Nova');
+  return lineas.join('\n');
+}
+
+/** Una alarma avisada hoy no se vuelve a avisar hoy. */
+function yaAvisada(ss, clave) {
+  const sh = ss.getSheetByName('Alertas_enviadas');
+  if (!sh || sh.getLastRow() < 2) return false;
+  const hoy = Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd');
+  const d = sh.getDataRange().getValues();
+  for (let i = 1; i < d.length; i++) {
+    if (String(d[i][0]).trim() !== clave) continue;
+    if (String(aISO(d[i][2], 'UTC')) === hoy) return true;
+  }
+  return false;
+}
+
+function marcarAvisada(ss, clave) {
+  const sh = ss.getSheetByName('Alertas_enviadas');
+  if (!sh) return;
+  sh.appendRow([clave, '', ahoraISO(), '']);
+}
+
+function nombreTienda(ss, tienda) {
+  const sh = ss.getSheetByName('Tiendas');
+  if (!sh || sh.getLastRow() < 2) return tienda;
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const cId = e.indexOf('id'), cN = e.indexOf('nombre');
+  for (let i = 1; i < d.length; i++) {
+    if (String(d[i][cId]).trim() === tienda) return String(d[i][cN] || tienda);
+  }
+  return tienda;
+}
+
+/**
+ * Deja la revisión diaria corriendo sola.
+ *
+ * Es lo que hace que Nova avise sin que nadie abra nada. Sin esto, las
+ * alarmas solo existen para quien ya está mirando la pantalla — que es
+ * justo quien menos las necesita.
+ */
+function instalarTriggerAlarmas() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'revisarAlarmasTodos') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  const hora = Number(ALARMAS_DEFAULT.alarmas_hora) || 7;
+  ScriptApp.newTrigger('revisarAlarmasTodos').timeBased().atHour(hora).everyDays(1).create();
+  const msg = 'Revisión diaria de alarmas instalada para las ' + hora + ':00.';
+  Logger.log(msg);
+  return msg;
+}
+
+/** Recorre todos los clientes registrados. */
+function revisarAlarmasTodos() {
+  const central = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  if (!central || central.getLastRow() < 2) return 'Sin clientes.';
+  const filas = central.getDataRange().getValues();
+  const enc = filas[0].map(norm);
+  const cId = enc.indexOf('sheet_id') !== -1 ? enc.indexOf('sheet_id') : 13;
+  const log = [];
+  for (let i = 1; i < filas.length; i++) {
+    const id = String(filas[i][cId] || '').trim();
+    if (!id) continue;
+    try { log.push(revisarAlarmas(id)); }
+    catch (e) { log.push('Cliente ' + id + ': ' + e.message); }
+  }
+  const msg = log.join('\n');
+  Logger.log(msg);
+  return msg;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   7 · CLIENTES
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Nova · Provisionar clientes
+ * ─────────────────────────────────────────────────────────────
+ * Crea la hoja de un cliente nuevo copiando el template.
+ *
+ * Es la función que Nova Central llama cuando aprietas "Crear cuenta".
+ * El cliente NUNCA entra a Apps Script ni ve su hoja: la app se la
+ * administra. Este script vive una sola vez, en la cuenta de Nova.
+ *
+ * El template se queda SIEMPRE vacío de filas. La operación de Nova
+ * (Nutrea) también es una copia, no el template — si no, cada cliente
+ * nuevo nacería con las tiendas de Nutrea adentro.
+ */
 
 // La carpeta sale de las propiedades del script, no de una constante:
 // así el mismo código sirve en cualquier cuenta.
@@ -2315,9 +2875,28 @@ function listarClientes() {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   7 · TASAS
+   8 · TASAS DE CAMBIO
    ═══════════════════════════════════════════════════════════════ */
 
+/**
+ * Nova · Tasas automáticas y efecto cambiario
+ * ─────────────────────────────────────────────────────────────
+ * El problema que resuelve, en concreto:
+ *
+ *   Operas Nutrea EC en dólares, pero vives en Colombia y tu plata es
+ *   en pesos. Si el dólar pasa de 4.000 a 3.700, tu tienda puede
+ *   facturar exactamente lo mismo en USD y aun así tu utilidad en COP
+ *   cae 7,5%. Nada pasó en la operación.
+ *
+ *   El riesgo no es perder esa plata: es no saber por qué la perdiste,
+ *   ver caer el número y ponerte a optimizar pauta cuando el problema
+ *   no está en la pauta.
+ *
+ * Por eso hay tres piezas:
+ *   1. actualizarTasas()   trae la tasa sola, todos los días
+ *   2. alarmaTasa()        avisa cuando el movimiento ya pesa
+ *   3. efectoCambiario()   separa cuánto es operación y cuánto es cambio
+ */
 
 // Celda de trabajo para GOOGLEFINANCE. Se usa y se limpia.
 const TAB_FX = '_fx_tmp';
@@ -2733,9 +3312,41 @@ function tasaPromedioMes(ss, mes, origen, destino) {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   8 · API WEB
+   9 · API WEB
    ═══════════════════════════════════════════════════════════════ */
 
+/**
+ * Nova · API web
+ * ─────────────────────────────────────────────────────────────
+ * El puente entre las hojas y las cinco pantallas.
+ *
+ * ┌─ POR QUÉ LA AUTENTICACIÓN ES ASÍ ──────────────────────────┐
+ * │                                                            │
+ * │ Una página HTML estática NO puede guardar un secreto: todo │
+ * │ lo que esté en el JavaScript lo ve cualquiera que abra la  │
+ * │ página. Un token fijo escrito en el HTML no es seguridad,  │
+ * │ es una llave pegada en la puerta.                          │
+ * │                                                            │
+ * │ Por eso:                                                   │
+ * │   · el correo se valida contra la hoja Equipo              │
+ * │   · el código de 6 dígitos llega por correo de verdad      │
+ * │   · el token se emite al verificar y vence en 12 horas     │
+ * │   · el ROL y las TIENDAS los decide el servidor            │
+ * │                                                            │
+ * │ Esto último es lo importante: si el rol lo decidiera la    │
+ * │ pantalla, bastaría abrir la consola del navegador y        │
+ * │ cambiarlo para ver el dinero. El servidor no le cree nada  │
+ * │ al cliente.                                                │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * DESPLIEGUE:
+ *   Implementar → Nueva implementación → Aplicación web
+ *   Ejecutar como:    Yo
+ *   Quién tiene acceso: Cualquier usuario
+ *   (Va a "cualquiera" porque el token es el que controla el acceso,
+ *    no la capa de Google. Sin token válido no devuelve ni una fila.)
+ */
 
 const TTL_CODIGO_M = 10;   // minutos que dura el código de 6 dígitos
 
@@ -2954,14 +3565,6 @@ function sesion(token) {
   s.ultimo = ahora;
   const quedan = Math.ceil((s.vence - ahora) / 1000);
   if (quedan > 0) cache.put('ses_' + String(token), JSON.stringify(s), quedan);
-
-  /**
-   * Las sesiones abiertas sobreviven a un despliegue: viven en el caché,
-   * no en el código. Una sesión creada antes de que existieran los
-   * permisos no trae el campo, y sin este respaldo la dueña se quedaba
-   * sin poder importar hasta volver a entrar — justo después de
-   * actualizar, que es cuando uno va a probar.
-   */
 
   /**
    * Las sesiones abiertas sobreviven a un despliegue: viven en el caché,
@@ -3419,6 +4022,24 @@ const COLUMNAS_IMPORTADAS = [
   'id','fuente','id_externo','fecha','valor','costo_producto','costo_envio',
   'cpm','cpa','gasto','impresiones','clics','resultados','tienda',
 ];
+
+/**
+ * Crea una fila nueva.
+ *
+ * Solo en las entidades que la app puede crear, y con los campos que
+ * declara cada una. Una acción genérica de "inserta lo que te manden"
+ * dejaría escribir en cualquier hoja cualquier cosa, incluidas las
+ * columnas que el importador y el equipo se reparten.
+ */
+const CREABLES = {
+  Gastos:     ['tienda', 'mes', 'tipo', 'nombre', 'valor', 'moneda', 'nota'],
+  Inventario: ['tienda', 'sku', 'producto', 'stock', 'costo_unitario', 'precio',
+               'minimo', 'origen', 'nota'],
+  Equipo:     ['nombre', 'correo', 'rol', 'tienda', 'estado', 'permisos'],
+};
+
+/** Quién puede crear o quitar en cada entidad. */
+const SOLO_DUENO = ['Equipo', 'Gastos'];
 
 /**
  * El recuento del periodo: cómo viene la tienda.
@@ -4192,7 +4813,6 @@ function apiCierre(s, p) {
     r.tasaExacta = t ? !!t.exacta : false;
   }
 
-
   // El efecto cambiario es solo de la dueña: es información de dinero
   if (s.rol === 'dueno' && monedaDeTienda(ss, tienda) !== monedaReporte(ss)) {
     try {
@@ -4261,7 +4881,6 @@ function agregarMes(ss, tienda, mes, s) {
         out.productos[prod].ventas += num(f[c('valor')]);
       }
 
-
       const t = String(f[c('transportadora')] || '').trim();
       if (t) {
         if (!out.transportadoras[t]) out.transportadoras[t] = { n: 0, entregados: 0 };
@@ -4324,6 +4943,19 @@ function agregarMes(ss, tienda, mes, s) {
         if (String(f[c('tienda')]).trim() !== tienda) continue;
         const fecha = aISO(f[c('fecha')], 'UTC');
         if (!fecha || fecha.slice(0, 7) !== mes) continue;
+        /**
+         * El gasto SOLO cuenta si está en la moneda de la tienda.
+         *
+         * Meta le cobra a Nutrea en pesos y la tienda factura en dólares.
+         * Cuando no había tasa de cambio, gasto_normalizado quedaba vacío
+         * y esto caía al gasto crudo: 1.386.315 pesos se sumaban como si
+         * fueran dólares contra ventas de 4.000. De ahí salían un CPA de
+         * 277.263 y un margen de −181.817%.
+         *
+         * Restar pesos a dólares no es un error de redondeo: es una cifra
+         * inventada con pinta de cierta. Así que si no hay conversión, no
+         * se suma — se cuenta aparte y la pantalla lo dice.
+         */
         const mon = String(f[c('moneda_gasto')] || '').toUpperCase();
         const crudo = num(f[c('gasto')]);
         let g = 0;
@@ -4783,7 +5415,6 @@ function convertirAHoja(blob) {
   return id;
 }
 
-
 /**
  * Guarda en `Mapeos` lo que la persona confirmó.
  *
@@ -4897,11 +5528,54 @@ function probarApi(email) {
   return msg;
 }
 
+/**
+ * Existe solo para pedirle a Google el permiso de salir a internet.
+ *
+ * La conversión de Excel usa la API de Drive por HTTP, y ese permiso no
+ * se concede solo: Apps Script lo pide la primera vez que se ejecuta
+ * algo que lo use, desde el editor. Si nunca se corre desde ahí, la
+ * aplicación web falla con "No tienes permiso para llamar a
+ * UrlFetchApp.fetch" — que es cierto, y no dice qué hacer.
+ *
+ * Correr esto una vez y aceptar resuelve eso para siempre.
+ */
+function autorizar() {
+  UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+    muteHttpExceptions: true,
+  });
+  return 'Permiso concedido. Ya puedes subir archivos de Excel.';
+}
+
 
 /* ═══════════════════════════════════════════════════════════════
-   9 · IMPORTAR (ESCRIBIR)
+   10 · ESCRITURA
    ═══════════════════════════════════════════════════════════════ */
 
+/**
+ * Nova · Importar (el lado que escribe)
+ * ─────────────────────────────────────────────────────────────
+ * `leerCrudo()` normaliza pero no guarda nada. Esto es lo que convierte
+ * un export pegado en filas que la app puede leer.
+ *
+ * Tres reglas que no se rompen:
+ *
+ *   1. NUNCA se sobrescribe lo que escribió el equipo.
+ *      Si una gestora puso una nota o cambió el estado, la siguiente
+ *      importación no lo borra. Se actualizan solo las columnas que
+ *      vienen de la plataforma.
+ *
+ *   2. NUNCA se borran filas.
+ *      Un pedido que desaparece del export no se elimina: el histórico
+ *      es lo que hace posibles las tendencias.
+ *
+ *   3. Deduplicación por fuente + id_externo.
+ *      Reimportar el mismo archivo dos veces no duplica nada, actualiza.
+ *
+ * USO:
+ *   1. Pega el export en su pestaña _Import_*
+ *   2. importar('dropi', 'ec')
+ */
 
 // Columnas que escribe la app y el importador jamás toca.
 const COLUMNAS_DEL_EQUIPO = [
@@ -5489,481 +6163,3 @@ function importarTodo(cliente) {
  * consola del editor:  importar('dropi', 'lima')
  */
 function importarTodoAhora() { return importarTodo(); }
-
-/**
- * Existe solo para pedirle a Google el permiso de salir a internet.
- *
- * La conversión de Excel usa la API de Drive por HTTP, y ese permiso no
- * se concede solo: Apps Script lo pide la primera vez que se ejecuta
- * algo que lo use, desde el editor. Si nunca se corre desde ahí, la
- * aplicación web falla con "No tienes permiso para llamar a
- * UrlFetchApp.fetch" — que es cierto, y no dice qué hacer.
- *
- * Correr esto una vez y aceptar resuelve eso para siempre.
- */
-function autorizar() {
-  UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
-    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
-    muteHttpExceptions: true,
-  });
-  return 'Permiso concedido. Ya puedes subir archivos de Excel.';
-}
-
-
-/* ═══════════════════════════════════════════════════════════════
-   ALARMAS
-   ═══════════════════════════════════════════════════════════════ */
-
-/**
- * Nova · Alarmas
- * ─────────────────────────────────────────────────────────────
- * Las seis cosas que no pueden esperar a que alguien abra la app.
- *
- * ┌─ POR QUÉ LOS UMBRALES LOS PONE EL CLIENTE ─────────────────┐
- * │                                                            │
- * │ Una tienda que sabe que vive con 40% de devolución no      │
- * │ necesita que le griten todos los días por eso. Otra que    │
- * │ vende un producto de 200 dólares se hunde con un 12%.      │
- * │                                                            │
- * │ Un umbral inventado por mí produce una de dos cosas: una   │
- * │ alarma que suena siempre —y que por eso se ignora— o una   │
- * │ que nunca suena. Las dos son igual de inútiles.            │
- * │                                                            │
- * │ Así que cada umbral vive en la hoja Parametros, por        │
- * │ tienda, y el dueño lo cambia desde la app. Los valores de  │
- * │ abajo son solo el punto de partida.                        │
- * │                                                            │
- * └────────────────────────────────────────────────────────────┘
- *
- * El CPA es la excepción, y a propósito: su techo NO se escribe, se
- * calcula. Es lo que deja cada entrega después del producto y el flete,
- * porque pagar más que eso por conseguir un pedido es perder plata en
- * cada venta. Ese número cambia solo cuando cambian los costos.
- */
-
-const ALARMAS_DEFAULT = {
-  dias_sin_mover:     3,     // pedido sin movimiento
-  horas_novedad:      24,    // novedad sin gestionar
-  efectividad_min:    65,    // % de entrega sobre lo resuelto
-  devoluciones_max:   '',    // % — lo pone el cliente; vacío = apagada
-  cpa_aviso_pct:      85,    // % del techo a partir del cual avisa
-  cpa_subida_pct:     25,    // % de subida contra el mes pasado que avisa
-  stock_dias_min:     '',    // días de cobertura — vacío = apagada
-  alarmas_a:          '',    // correos extra, separados por coma
-  alarmas_hora:       7,     // hora local de la revisión diaria
-};
-
-/** Qué es cada alarma, en palabras de quien la va a leer. */
-const ALARMAS = [
-  { id: 'sin_mover',    nombre: 'Pedidos detenidos',
-    param: 'dias_sin_mover', unidad: 'días' },
-  { id: 'novedad_vieja', nombre: 'Novedades sin gestionar',
-    param: 'horas_novedad', unidad: 'horas' },
-  { id: 'efectividad',  nombre: 'Efectividad baja',
-    param: 'efectividad_min', unidad: '%' },
-  { id: 'devoluciones', nombre: 'Devoluciones altas',
-    param: 'devoluciones_max', unidad: '%', opcional: true },
-  { id: 'cpa',          nombre: 'CPA cerca del techo',
-    param: 'cpa_aviso_pct', unidad: '% del techo' },
-  { id: 'cpa_sube',     nombre: 'CPA subiendo',
-    param: 'cpa_subida_pct', unidad: '% vs. mes pasado', opcional: true },
-  { id: 'stock',        nombre: 'Stock por agotarse',
-    param: 'stock_dias_min', unidad: 'días de cobertura', opcional: true },
-];
-
-/** Los umbrales de una tienda: lo que diga Parametros, o el de fábrica. */
-function umbrales(ss, tienda) {
-  const out = {};
-  Object.keys(ALARMAS_DEFAULT).forEach(function (k) { out[k] = ALARMAS_DEFAULT[k]; });
-
-  const sh = ss.getSheetByName('Parametros');
-  if (!sh || sh.getLastRow() < 2) return out;
-
-  const d = sh.getDataRange().getValues();
-  const e = d[0].map(norm);
-  const cT = e.indexOf('tienda'), cK = e.indexOf('clave'), cV = e.indexOf('valor');
-  for (let i = 1; i < d.length; i++) {
-    const t = String(d[i][cT] || '').trim();
-    // Un parámetro sin tienda vale para todas: sirve de valor general
-    if (t && t !== tienda) continue;
-    const k = norm(d[i][cK]);
-    if (!(k in out)) continue;
-    const v = d[i][cV];
-    out[k] = (v === '' || v === null) ? '' : v;
-  }
-  return out;
-}
-
-/**
- * Evalúa las seis alarmas de una tienda.
- *
- * Devuelve una lista, no manda correos. Separarlo permite que la pantalla
- * las muestre en vivo y que el correo diario use exactamente lo mismo:
- * si fueran dos cálculos distintos, tarde o temprano dirían cosas
- * distintas y no habría forma de saber cuál creer.
- */
-function evaluarAlarmas(ss, tienda) {
-  const u = umbrales(ss, tienda);
-  const tz = zonaHorariaDe(ss, tienda);
-  const hoy = new Date();
-  const mes = Utilities.formatDate(hoy, tz || 'UTC', 'yyyy-MM');
-  const out = [];
-  const moneda = monedaDeTienda(ss, tienda);
-
-  // ── Datos del mes, una sola lectura ──
-  const sesionFalsa = { rol: 'dueno' };
-  const m = agregarMes(ss, tienda, mes, sesionFalsa);
-
-  // ── 1. Pedidos detenidos ──
-  const dias = Number(u.dias_sin_mover) || 0;
-  if (dias > 0) {
-    const detenidos = [];
-    const shP = ss.getSheetByName('Pedidos');
-    if (shP && shP.getLastRow() > 1) {
-      const d = shP.getDataRange().getValues();
-      const e = d[0].map(norm);
-      const c = function (n) { return e.indexOf(n); };
-      for (let i = 1; i < d.length; i++) {
-        const f = d[i];
-        if (String(f[c('tienda')]).trim() !== tienda) continue;
-        const est = norm(f[c('estado_nova')] || f[c('estado_canonico')]);
-        if (['entregado','devolucion','cancelado'].indexOf(est) !== -1) continue;
-        const ult = aISO(f[c('ultimo_movimiento')] || f[c('actualizado_en')] ||
-                         f[c('fecha')], 'UTC');
-        if (!ult) continue;
-        const d2 = (hoy - new Date(ult + 'T00:00:00Z')) / 86400000;
-        if (d2 >= dias) {
-          detenidos.push({ id: f[c('id_externo')] || f[c('id')],
-                           cliente: f[c('cliente')], dias: Math.floor(d2),
-                           gestora: f[c('gestora_asignada')] });
-        }
-      }
-    }
-    if (detenidos.length) {
-      detenidos.sort(function (a, b) { return b.dias - a.dias; });
-      out.push(alarma('sin_mover', 'mal',
-        pl(detenidos.length, '1 pedido lleva', '% pedidos llevan') + ' ' +
-          dias + ' días o más sin moverse',
-        'El más viejo lleva ' + detenidos[0].dias + ' días. Un pedido detenido ' +
-        'no avisa solo: o se gestiona, o se convierte en devolución.',
-        detenidos.slice(0, 10), 'Pedidos'));
-    }
-  }
-
-  // ── 2. Novedades sin gestionar ──
-  const horas = Number(u.horas_novedad) || 0;
-  if (horas > 0) {
-    const viejas = [];
-    const shN = ss.getSheetByName('Novedades');
-    if (shN && shN.getLastRow() > 1) {
-      const d = shN.getDataRange().getValues();
-      const e = d[0].map(norm);
-      const c = function (n) { return e.indexOf(n); };
-      for (let i = 1; i < d.length; i++) {
-        const f = d[i];
-        if (norm(f[c('estado')]) !== 'abierta') continue;
-        const fch = aISO(f[c('fecha')], 'UTC');
-        if (!fch) continue;
-        const h = (hoy - new Date(fch + 'T00:00:00Z')) / 3600000;
-        if (h >= horas) {
-          viejas.push({ id: f[c('pedido_id')], motivo: f[c('motivo')],
-                        horas: Math.floor(h), gestora: f[c('gestora')] });
-        }
-      }
-    }
-    if (viejas.length) {
-      viejas.sort(function (a, b) { return b.horas - a.horas; });
-      out.push(alarma('novedad_vieja', 'mal',
-        pl(viejas.length, '1 novedad lleva', '% novedades llevan') +
-          ' más de ' + horas + ' horas abierta' + (viejas.length === 1 ? '' : 's'),
-        'Una novedad sin contactar a la clienta en el primer día se vuelve ' +
-        'devolución en la mayoría de los casos.',
-        viejas.slice(0, 10), 'Novedades'));
-    }
-  }
-
-  // ── 3. Efectividad baja ──
-  const efMin = Number(u.efectividad_min) || 0;
-  if (efMin > 0 && m.resueltos >= 10 && m.efectividad < efMin) {
-    out.push(alarma('efectividad', 'mal',
-      'Efectividad en ' + m.efectividad.toFixed(1) + '%, bajo tu meta de ' + efMin + '%',
-      'De ' + m.resueltos + ' pedidos ya resueltos este mes llegaron ' +
-      m.entregados + '. Cada punto por debajo son ventas que ya pagaste en pauta ' +
-      'y no entraron.', [], 'Pedidos'));
-  }
-
-  // ── 4. Devoluciones altas (opcional) ──
-  const devMax = u.devoluciones_max === '' ? null : Number(u.devoluciones_max);
-  if (devMax !== null && devMax > 0 && m.resueltos >= 10) {
-    const tasa = m.resueltos ? m.devueltos / m.resueltos * 100 : 0;
-    if (tasa > devMax) {
-      out.push(alarma('devoluciones', 'mal',
-        'Devoluciones en ' + tasa.toFixed(1) + '%, sobre tu límite de ' + devMax + '%',
-        m.devueltos + ' de ' + m.resueltos + ' pedidos resueltos volvieron. ' +
-        'Cada uno cuesta el flete de ida y el de vuelta.', [], 'Novedades'));
-    }
-  }
-
-  /**
-   * ── 5. CPA cerca del techo ──
-   *
-   * El techo no se escribe en ninguna parte: es lo que deja cada entrega
-   * después del producto y el flete. Pagar más que eso por traer un
-   * pedido es perder plata en cada venta, por bien que se vea el ROAS.
-   */
-  if (m.entregados > 0 && m.gasto > 0) {
-    const techo = (m.ventas - m.costoProducto - m.costoEnvio) / m.entregados;
-    const pagado = m.gasto / m.entregados;
-
-    /**
-     * El techo dice si estás perdiendo. Esta otra dice si estás
-     * empeorando, que es la que avisa a tiempo: un CPA que sube 30% en un
-     * mes todavía puede estar bajo el techo, y aun así ser la señal de
-     * que la campaña se está agotando o la competencia subió la puja.
-     *
-     * Se compara con el mes pasado completo, no con el promedio: un
-     * promedio de varios meses suaviza justo lo que hay que ver.
-     */
-    const sub = u.cpa_subida_pct === '' ? null : Number(u.cpa_subida_pct);
-    if (sub !== null && sub > 0) {
-      const ant = agregarMes(ss, tienda, mesAnterior(mes), sesionFalsa);
-      const cpaAnt = ant.entregados ? ant.gasto / ant.entregados : 0;
-      if (cpaAnt > 0 && ant.entregados >= 10) {
-        const delta = (pagado - cpaAnt) / cpaAnt * 100;
-        if (delta >= sub) {
-          out.push(alarma('cpa_sube', 'ojo',
-            'El CPA subió ' + delta.toFixed(0) + '% contra el mes pasado',
-            'Pagabas ' + moneda + ' ' + cpaAnt.toFixed(2) + ' por pedido y ahora ' +
-            'pagas ' + moneda + ' ' + pagado.toFixed(2) + '. Todavía ' +
-            (pagado < techo ? 'estás bajo el techo, pero la tendencia se come el colchón.'
-                            : 'y además ya pasaste el techo.'),
-            [], 'Dinero'));
-        }
-      }
-    }
-    const pct = techo > 0 ? pagado / techo * 100 : 999;
-    const aviso = Number(u.cpa_aviso_pct) || 85;
-    if (techo > 0 && pct >= aviso) {
-      const grave = pct >= 100;
-      out.push(alarma('cpa', grave ? 'mal' : 'ojo',
-        grave
-          ? 'Estás pagando más por pedido de lo que deja cada entrega'
-          : 'CPA al ' + pct.toFixed(0) + '% del techo',
-        'Cada entrega deja ' + moneda + ' ' + techo.toFixed(2) + ' después del ' +
-        'producto y el flete, y estás pagando ' + moneda + ' ' + pagado.toFixed(2) +
-        ' de pauta por conseguirla. ' +
-        (grave ? 'Así, vender más es perder más.'
-               : 'Queda poco colchón: si la entrega cae unos puntos, el mes se pone rojo.'),
-        [], 'Dinero'));
-    }
-  }
-
-  // ── 6. Stock por agotarse (opcional) ──
-  const stockDias = u.stock_dias_min === '' ? null : Number(u.stock_dias_min);
-  if (stockDias !== null && stockDias > 0) {
-    const bajos = [];
-    const shI = ss.getSheetByName('Inventario');
-    if (shI && shI.getLastRow() > 1) {
-      const d = shI.getDataRange().getValues();
-      const e = d[0].map(norm);
-      const c = function (n) { return e.indexOf(n); };
-      // Ritmo de venta de cada producto en el mes, para estimar cobertura
-      const ritmo = {};
-      Object.keys(m.productos || {}).forEach(function (k) {
-        const dm = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
-        ritmo[norm(k)] = (m.productos[k].entregados || 0) / dm;
-      });
-      for (let i = 1; i < d.length; i++) {
-        const f = d[i];
-        if (String(f[c('tienda')]).trim() !== tienda) continue;
-        if (norm(f[c('activo')]) === 'no') continue;
-        const nom = String(f[c('producto')] || '').trim();
-        const stock = num(f[c('stock')]);
-        const r = ritmo[norm(nom)] || 0;
-        if (!r) continue;              // sin ventas no hay cobertura que estimar
-        const cobertura = stock / r;
-        if (cobertura <= stockDias) {
-          bajos.push({ producto: nom, stock: stock, dias: Math.floor(cobertura) });
-        }
-      }
-    }
-    if (bajos.length) {
-      bajos.sort(function (a, b) { return a.dias - b.dias; });
-      out.push(alarma('stock', 'ojo',
-        pl(bajos.length, '1 producto se acaba', '% productos se acaban') +
-          ' en ' + stockDias + ' días o menos',
-        'Al ritmo de venta de este mes. Quedarse sin stock con la pauta ' +
-        'prendida es pagar por pedidos que no puedes despachar.',
-        bajos.slice(0, 10), 'Inventario'));
-    }
-  }
-
-  return { alarmas: out, umbrales: u, tienda: tienda, mes: mes };
-}
-
-/** Uno o varios. "1 novedades" delata que lo escribió una máquina. */
-function pl(n, uno, varios) {
-  return n === 1 ? uno.replace('%', n) : varios.replace('%', n);
-}
-
-function alarma(id, nivel, titulo, detalle, casos, ir) {
-  const def = ALARMAS.filter(function (a) { return a.id === id; })[0] || {};
-  return { id: id, nivel: nivel, nombre: def.nombre || id,
-           titulo: titulo, detalle: detalle, casos: casos || [], ir: ir || '' };
-}
-
-/**
- * La revisión diaria que manda el correo.
- *
- * Manda UNA vez por alarma y por día. Sin eso, una efectividad baja que
- * dura toda la semana produce siete correos idénticos, y al tercero ya
- * nadie los abre — que es exactamente cuando deja de servir.
- */
-function revisarAlarmas(cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
-  const tiendas = tiendasDeCliente(ss);
-  const log = [];
-
-  tiendas.forEach(function (tienda) {
-    const r = evaluarAlarmas(ss, tienda);
-    if (!r.alarmas.length) { log.push(tienda + ': sin alarmas'); return; }
-
-    const nuevas = r.alarmas.filter(function (a) {
-      return !yaAvisada(ss, a.id + '|' + tienda);
-    });
-    if (!nuevas.length) {
-      log.push(tienda + ': ' + r.alarmas.length + ' alarmas, ya avisadas hoy');
-      return;
-    }
-
-    const destinos = destinatarios(ss, r.umbrales);
-    if (destinos.length) {
-      MailApp.sendEmail({
-        to: destinos.join(','),
-        subject: 'Nova · ' + nuevas.length + ' cosas que mirar en ' + nombreTienda(ss, tienda),
-        body: cuerpoCorreo(nuevas, tienda, nombreTienda(ss, tienda)),
-      });
-    }
-    nuevas.forEach(function (a) { marcarAvisada(ss, a.id + '|' + tienda); });
-    log.push(tienda + ': avisadas ' + nuevas.length + ' a ' + destinos.join(', '));
-  });
-
-  const msg = log.join('\n');
-  Logger.log(msg);
-  return msg;
-}
-
-/** A quién le llega: las dueñas activas, más los correos que se agreguen. */
-function destinatarios(ss, u) {
-  const out = [];
-  const sh = ss.getSheetByName('Equipo');
-  if (sh && sh.getLastRow() > 1) {
-    const d = sh.getDataRange().getValues();
-    const e = d[0].map(norm);
-    const cC = e.indexOf('correo'), cR = e.indexOf('rol'), cE = e.indexOf('estado');
-    for (let i = 1; i < d.length; i++) {
-      if (norm(d[i][cE]) === 'inactivo') continue;
-      if (rolCanonico(d[i][cR]) !== 'dueno') continue;
-      const c = String(d[i][cC] || '').trim();
-      if (c) out.push(c);
-    }
-  }
-  String(u.alarmas_a || '').split(/[,;]/).forEach(function (c) {
-    const x = c.trim();
-    if (x && out.indexOf(x) === -1) out.push(x);
-  });
-  return out;
-}
-
-function cuerpoCorreo(alarmas, tienda, nombre) {
-  const lineas = ['Hola,', '',
-    'Esto es lo que Nova encontró hoy en ' + nombre + ':', ''];
-  alarmas.forEach(function (a, i) {
-    lineas.push((i + 1) + '. ' + a.titulo);
-    lineas.push('   ' + a.detalle);
-    if (a.casos && a.casos.length) {
-      a.casos.slice(0, 5).forEach(function (c) {
-        lineas.push('   · ' + (c.cliente || c.producto || c.id || '') +
-          (c.dias !== undefined ? ' — ' + c.dias + ' días' : '') +
-          (c.horas !== undefined ? ' — ' + c.horas + ' horas' : ''));
-      });
-      if (a.casos.length > 5) lineas.push('   · y ' + (a.casos.length - 5) + ' más');
-    }
-    lineas.push('');
-  });
-  lineas.push('Los umbrales de estas alarmas los cambias tú en Nova, ' +
-              'en Configuración.');
-  lineas.push('');
-  lineas.push('— Nova');
-  return lineas.join('\n');
-}
-
-/** Una alarma avisada hoy no se vuelve a avisar hoy. */
-function yaAvisada(ss, clave) {
-  const sh = ss.getSheetByName('Alertas_enviadas');
-  if (!sh || sh.getLastRow() < 2) return false;
-  const hoy = Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd');
-  const d = sh.getDataRange().getValues();
-  for (let i = 1; i < d.length; i++) {
-    if (String(d[i][0]).trim() !== clave) continue;
-    if (String(aISO(d[i][2], 'UTC')) === hoy) return true;
-  }
-  return false;
-}
-
-function marcarAvisada(ss, clave) {
-  const sh = ss.getSheetByName('Alertas_enviadas');
-  if (!sh) return;
-  sh.appendRow([clave, '', ahoraISO(), '']);
-}
-
-function nombreTienda(ss, tienda) {
-  const sh = ss.getSheetByName('Tiendas');
-  if (!sh || sh.getLastRow() < 2) return tienda;
-  const d = sh.getDataRange().getValues();
-  const e = d[0].map(norm);
-  const cId = e.indexOf('id'), cN = e.indexOf('nombre');
-  for (let i = 1; i < d.length; i++) {
-    if (String(d[i][cId]).trim() === tienda) return String(d[i][cN] || tienda);
-  }
-  return tienda;
-}
-
-/**
- * Deja la revisión diaria corriendo sola.
- *
- * Es lo que hace que Nova avise sin que nadie abra nada. Sin esto, las
- * alarmas solo existen para quien ya está mirando la pantalla — que es
- * justo quien menos las necesita.
- */
-function instalarTriggerAlarmas() {
-  ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === 'revisarAlarmasTodos') {
-      ScriptApp.deleteTrigger(t);
-    }
-  });
-  const hora = Number(ALARMAS_DEFAULT.alarmas_hora) || 7;
-  ScriptApp.newTrigger('revisarAlarmasTodos').timeBased().atHour(hora).everyDays(1).create();
-  const msg = 'Revisión diaria de alarmas instalada para las ' + hora + ':00.';
-  Logger.log(msg);
-  return msg;
-}
-
-/** Recorre todos los clientes registrados. */
-function revisarAlarmasTodos() {
-  const central = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
-  if (!central || central.getLastRow() < 2) return 'Sin clientes.';
-  const filas = central.getDataRange().getValues();
-  const enc = filas[0].map(norm);
-  const cId = enc.indexOf('sheet_id') !== -1 ? enc.indexOf('sheet_id') : 13;
-  const log = [];
-  for (let i = 1; i < filas.length; i++) {
-    const id = String(filas[i][cId] || '').trim();
-    if (!id) continue;
-    try { log.push(revisarAlarmas(id)); }
-    catch (e) { log.push('Cliente ' + id + ': ' + e.message); }
-  }
-  const msg = log.join('\n');
-  Logger.log(msg);
-  return msg;
-}

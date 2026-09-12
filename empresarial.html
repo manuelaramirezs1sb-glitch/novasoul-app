@@ -5148,7 +5148,10 @@ function aplicarPauta(d) {
       {lb:'ROAS', v:gasto ? n2(roas)+'×' : '—',
        sub:gasto ? 'Ventas entregadas sobre gasto' : 'Sube la pauta del mes', cl:roas>=2?'g':'r'},
       {lb:'CPA POR ENTREGA', v:ent ? S+n2(cpa) : '—',
-       sub:techo ? 'Techo ' + S+n2(techo) : 'Sin entregas este mes', cl:cpa<=techo?'g':'r'},
+       sub:ent < 10
+         ? 'Solo ' + ent + ' entregas: todavía no dice nada'
+         : (techo ? 'Techo ' + S+n2(techo) : 'Sin techo calculable'),
+       cl:ent < 10 ? 'a' : (cpa<=techo?'g':'r')},
       {lb:'COLCHÓN POR PEDIDO', v:techo ? S+n2(techo-cpa) : '—',
        sub:'Lo que queda después de pagar la pauta', cl:(techo-cpa)>0?'g':'r'},
     ].map(function (k) {
