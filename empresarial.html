@@ -1922,119 +1922,37 @@ function buildAll() {
   if (ROL === 'dueno') { buildPauta(); buildInventario(); buildDinero(); buildPermisos(); calcROI(); calcPre(); }
 }
 
+/**
+ * Las pantallas de la gestora antes de que lleguen sus pedidos.
+ *
+ * Aquí ya no se inventa una jornada. Lo que ve quien gestiona sale de
+ * los pedidos que tiene asignados, y eso lo pinta pintarPantallasGestora
+ * cuando la hoja responde. Mientras tanto se dice qué falta, que es más
+ * honesto que mostrarle a Camila tres clientes que no existen.
+ */
 function buildGestoraViews() {
   const nombre = document.getElementById('g-saludo');
-  if (nombre) nombre.textContent = 'Hola, ' + (nombreDe(localStorage.getItem('ne_email')||'') || 'Camila');
-  document.getElementById('g-kpi').innerHTML = [
-    {lb:'MIS PEDIDOS HOY', v:'18', sub:'6 sin actualizar hoy', cl:'w'},
-    {lb:'EN TRÁNSITO',     v:'9',  sub:'Con transportadora',   cl:'a'},
-    {lb:'NOVEDADES',       v:'3',  sub:'2 sin primer contacto',cl:'r'},
-    {lb:'EFECTIVIDAD',     v:'91%',sub:'Este mes · meta 85%',  cl:'g'},
-  ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
+  if (nombre) {
+    const h = new Date().getHours();
+    nombre.textContent = (h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches') +
+      (SESION && SESION.nombre ? ', ' + String(SESION.nombre).split(' ')[0] : '');
+  }
 
-  document.getElementById('g-urgentes').innerHTML = [
-    {nm:'Carlos Mendoza · #PE-2041', sub:'Sin actualizar 28h · Ciudad de Guatemala', badge:'Llamar hoy', cl:'r'},
-    {nm:'Ana Ruiz · #PE-2038',       sub:'Novedad abierta 18h · Quito',              badge:'Novedad',   cl:'w'},
-    {nm:'Pedro Soto · #PE-2029',     sub:'Tercer intento mañana · Guayaquil',        badge:'Intento 3', cl:'w'},
-  ].map(r=>`<div class="ped-row" onclick="go('g-pedidos',null)" style="cursor:pointer;">
-    <div class="ped-top"><span class="ped-nm">${r.nm}</span><span class="bd bd-${r.cl}">${r.badge}</span></div>
-    <span class="ped-sub">${r.sub}</span>
-  </div>`).join('');
-  document.getElementById('g-novalert').textContent = 'Ver 3 novedades →';
-
-  document.getElementById('g-pedkpi').innerHTML = [
-    {lb:'ASIGNADOS', v:'24', sub:'Esta semana',    cl:'a'},
-    {lb:'ENTREGADOS',v:'16', sub:'67% efectividad',cl:'g'},
-    {lb:'PENDIENTES',v:'5',  sub:'Sin mover hoy',  cl:'w'},
-    {lb:'DEVUELTOS', v:'3',  sub:'Este mes',       cl:'r'},
-  ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
-
-  const G_PEDS = [
-    {nm:'Carlos Mendoza',id:'PE-2041',est:'En tránsito',sub:'Proteína Vainilla 1kg · Guatemala City',  cl:'a', tel:'+502 4567 8910', dir:'Zona 10, Ciudad de Guatemala', intento:1},
-    {nm:'Ana Ruiz',      id:'PE-2038',est:'Novedad',    sub:'Colágeno 300g · Quito',                   cl:'r', tel:'+593 98 234 5678',dir:'Av. Amazonas 123, Quito',       intento:2},
-    {nm:'Jorge Lima',    id:'PE-2035',est:'Entregado',  sub:'Omega 3 120caps · Quito',                 cl:'g', tel:'+593 99 345 6789',dir:'Cdla. Bellavista, Quito',        intento:3},
-    {nm:'María Salazar', id:'PE-2031',est:'En tránsito',sub:'Multivitamínico 60cap · Guayaquil',       cl:'a', tel:'+593 98 456 7890',dir:'Urdesa Norte, Guayaquil',        intento:1},
-    {nm:'Pedro Soto',    id:'PE-2029',est:'Novedad',    sub:'Proteína Chocolate 1kg · Guayaquil',      cl:'r', tel:'+593 97 567 8901',dir:'Los Ceibos, Guayaquil',           intento:3},
-  ];
-  const GEST_ESTS = ['Por confirmar','En gestión','Confirmado','En tránsito','Novedad','Devuelto','Entregado'];
-  document.getElementById('g-pedlist').innerHTML = G_PEDS.map((r,i)=>`
-    <div class="ped-row" id="gprow${i}" onclick="togGPed(${i})">
-      <div class="ped-top">
-        <div><span class="ped-nm">${r.nm}</span><span class="oid" style="margin-left:6px;">#${r.id}</span></div>
-        <span class="bd bd-${r.cl}">${r.est}</span>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-        <span class="ped-sub">${r.sub}</span>
-        <span class="ntog" id="gptog${i}" style="font:500 11px/1 'DM Sans';color:var(--acc-d);">Ver detalle ▾</span>
-      </div>
-      <div class="ped-dtl" id="gpd${i}">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div><div class="dlbl">TELÉFONO</div><div class="dtxt">${r.tel}</div></div>
-          <div><div class="dlbl">DIRECCIÓN</div><div class="dtxt">${r.dir}</div></div>
-        </div>
-        <div>
-          <div class="dlbl" style="margin-bottom:6px;">INTENTOS DE CONTACTO</div>
-          <div class="ped-intentos">
-            <div class="ped-int${r.intento>=1?' on':''}">1er intento</div>
-            <div class="ped-int${r.intento>=2?' on':''}">2do intento</div>
-            <div class="ped-int${r.intento>=3?' on':''}">3er intento</div>
-          </div>
-        </div>
-        <div><div class="dlbl" style="margin-bottom:6px;">CAMBIAR ESTADO</div>
-          <div class="nstates">${GEST_ESTS.map(e=>`<div class="nst${e===r.est?' on':''}" onclick="event.stopPropagation();this.closest('.nstates').querySelectorAll('.nst').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${e}</div>`).join('')}</div>
-        </div>
-        <textarea class="narea" placeholder="Nota sobre este pedido…" onclick="event.stopPropagation()"></textarea>
-        <div class="nsavebtn" onclick="event.stopPropagation();showToast('Cambios guardados ✓')">Guardar</div>
-      </div>
-    </div>`).join('');
-
-  const G_NOVS = [
-    {nm:'Ana Ruiz',   id:'PE-2038', tipo:'Dirección incorrecta', nota:'Intenté 2 veces. No contesta. Próximo intento mañana 10am.', cl:'r', hrs:'18h abierta', resuelta:false},
-    {nm:'Pedro Soto', id:'PE-2029', tipo:'No había nadie',        nota:'Tercer intento coordinado. Vendré el viernes.',              cl:'w', hrs:'3d abierta',  resuelta:false},
-    {nm:'Luis Torres',id:'PE-2021', tipo:'Producto dañado',       nota:'Enviando reposición. Cliente notificado.',                   cl:'g', hrs:'Resuelta',    resuelta:true},
-  ];
-  const NOV_ESTS = ['Sin gestión','Primer contacto','Sin respuesta','Reprogramado','Resuelta'];
-  document.getElementById('g-novlist').innerHTML = G_NOVS.map((n,i)=>`
-    <div class="nov-card" id="gncrow${i}" onclick="togGNov(${i})">
-      <div class="nov-top"><span class="nov-nm">${n.nm} · #${n.id}</span><span class="bd bd-${n.cl}">${n.hrs}</span></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span class="nov-tipo">${n.tipo}</span>
-        <span style="font:500 11px/1 'DM Sans';color:var(--acc-d);" id="gntog${i}">Ver ▾</span>
-      </div>
-      <span class="nov-nota">${n.nota}</span>
-      <div class="nov-dtl" id="gnd${i}">
-        <div><div class="dlbl" style="margin-bottom:6px;">ACTUALIZAR ESTADO</div>
-          <div class="nstates">${NOV_ESTS.map(e=>`<div class="nst${e===n.hrs||(n.resuelta&&e==='Resuelta')?' on':''}" onclick="event.stopPropagation();this.closest('.nstates').querySelectorAll('.nst').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${e}</div>`).join('')}</div>
-        </div>
-        <textarea class="narea" placeholder="Nota de gestión (se guarda con marca de tiempo)…" onclick="event.stopPropagation()"></textarea>
-        <div${n.resuelta?' style="opacity:.5;pointer-events:none;"':''} class="nov-resolve" onclick="event.stopPropagation();markNovResuelta(${i})">${n.resuelta?'Ya resuelta':'Marcar como resuelta'}</div>
-      </div>
-    </div>`).join('');
+  // Con sesión abierta el texto no puede decir "entra con tu correo": ya
+  // entró. Si después no aparece nada es que no tiene pedidos asignados,
+  // y eso lo dice pintarPantallasGestora con sus propias palabras.
+  const espera = SESION
+    ? 'Buscando los pedidos que tienes asignados…'
+    : 'Entra con tu correo para ver los pedidos que tienes asignados.';
+  ['g-kpi', 'g-urgentes', 'g-pedkpi', 'g-pedlist', 'g-novlist'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<div class="eq-vacio">' + espera + '</div>';
+  });
+  const al = document.getElementById('g-novalert');
+  if (al) al.textContent = 'Ver mis novedades →';
 
   // Aplicar permisos al nav gestora
   applyGestoraPerms();
-}
-function togGPed(i){
-  const d=document.getElementById('gpd'+i),t=document.getElementById('gptog'+i),row=document.getElementById('gprow'+i);
-  const open=row.classList.contains('open');
-  document.querySelectorAll('[id^="gprow"]').forEach((r,j)=>{r.classList.remove('open');const dj=document.getElementById('gpd'+j);if(dj)dj.style.display='';const tj=document.getElementById('gptog'+j);if(tj)tj.textContent='Ver detalle ▾';});
-  if(!open){row.classList.add('open');d.style.display='flex';t.textContent='Cerrar ▴';event.stopPropagation();}
-}
-function togGNov(i){
-  const d=document.getElementById('gnd'+i),t=document.getElementById('gntog'+i),row=document.getElementById('gncrow'+i);
-  const open=row.classList.contains('open');
-  document.querySelectorAll('[id^="gncrow"]').forEach((r,j)=>{r.classList.remove('open');const dj=document.getElementById('gnd'+j);if(dj)dj.style.display='';const tj=document.getElementById('gntog'+j);if(tj)tj.textContent='Ver ▾';});
-  if(!open){row.classList.add('open');d.style.display='flex';t.textContent='Cerrar ▴';}
-}
-function markNovResuelta(i){
-  const row=document.getElementById('gncrow'+i);
-  if(!row) return;
-  row.querySelector('.bd').textContent='Resuelta';
-  row.querySelector('.bd').className='bd bd-g';
-  row.querySelector('.nov-resolve').textContent='Ya resuelta';
-  row.querySelector('.nov-resolve').style.cssText='opacity:.5;pointer-events:none;';
-  togGNov(-1);
-  showToast('Novedad marcada como resuelta ✓');
 }
 function applyGestoraPerms(){
   const P = permsSt.gestora || {};
@@ -3175,6 +3093,10 @@ async function cargarReales() {
     await Promise.all([cargarPedidosReales(), cargarNovedadesReales(),
                        cargarEquipo(), cargarAuditoria(), cargarAlarmas(),
                        cargarRecuento()]);
+    // Una gestora sin pedidos asignados también merece respuesta. Si las
+    // listas vinieron vacías nadie la habría pintado, y se quedaría
+    // mirando un "buscando…" que ya terminó.
+    if (ROL === 'gestora') pintarPantallasGestora();
     return { mes: mes, pedidos: PEDS_REALES.length, novedades: NOVS_REALES.length };
   } catch (e) { marcarOrigen(false, 'sin conexión'); }
 }
@@ -3450,6 +3372,7 @@ async function cargarPedidosReales() {
   PEDS_REALES = r.filas;
   PEDS_TOTAL = r.total;
   cargarOficina();
+  pintarPantallasGestora();
   pintarFiltrosPedidos(r.filas);
   pintarPedidosReales(r.filas, r.total);
   pintarEstadosReales(r.filas);
@@ -3630,6 +3553,7 @@ async function cargarNovedadesReales() {
 
   NOVS_REALES = r.filas;
   pintarNovedadesReales(r.filas);
+  pintarPantallasGestora();
   desellar(['novlist', 'novkpi']);
   return true;
 }
@@ -4221,8 +4145,6 @@ const SIN_FUENTE = [
   'commlist',      // comisiones
   // Dinero
   'invlist', 'invriesgo',   // inventario
-  // Las tres pantallas de la gestora
-  'g-kpi', 'g-urgentes', 'g-pedkpi', 'g-pedlist', 'g-novlist',
 ];
 
 function sellarEjemplo(conectado) {
@@ -4905,6 +4827,194 @@ function pintarConfig() {
       : '<div class="eq-vacio">Tus tiendas salen de la hoja Tiendas. ' +
         'Si falta alguna, se agrega ahí.</div>';
   }
+}
+
+// ─── PANTALLAS DE LA GESTORA ──────────────────────────────────
+/**
+ * Lo que ve quien gestiona, con sus propios pedidos.
+ *
+ * No hace falta pedir nada aparte: el servidor ya filtra por rol, así
+ * que PEDS_REALES y NOVS_REALES traen solo lo asignado a esa persona.
+ * Pedirlo de nuevo sería otra llamada para obtener exactamente lo mismo.
+ *
+ * La diferencia con el panel de la dueña no es el dato, es la pregunta.
+ * La dueña pregunta cómo va el mes; la gestora, a quién llamo ahora. Por
+ * eso aquí no hay totales ni dinero: hay una fila de trabajo.
+ */
+function pintarPantallasGestora() {
+  const S = SYM() + ' ';
+  const nf = function (n) { return NUM(Math.round(n || 0)); };
+
+  const saludo = document.getElementById('g-saludo');
+  if (saludo && SESION) {
+    const h = new Date().getHours();
+    saludo.textContent = (h < 12 ? 'Buenos días, ' : h < 19 ? 'Buenas tardes, ' : 'Buenas noches, ') +
+      (SESION.nombre || '').split(' ')[0];
+  }
+
+  const mios = PEDS_REALES || [];
+  const abierto = function (p) {
+    return ['entregado','devolucion','cancelado']
+      .indexOf(String(p.estado_canonico || '').trim()) === -1;
+  };
+  const pendientes = mios.filter(abierto);
+  const enNovedad = mios.filter(function (p) {
+    return String(p.estado_canonico || '').trim() === 'novedad';
+  });
+  const entregados = mios.filter(function (p) {
+    return String(p.estado_canonico || '').trim() === 'entregado';
+  });
+  const devueltos = mios.filter(function (p) {
+    return String(p.estado_canonico || '').trim() === 'devolucion';
+  });
+  const resueltos = entregados.length + devueltos.length;
+
+  // Lo que lleva más tiempo quieto es lo que hay que tocar primero
+  const quietos = pendientes.map(function (p) {
+    const ref = p.ultimo_movimiento || p.fecha;
+    const d = new Date(ref);
+    return { p: p, dias: isNaN(d) ? 0 : Math.floor((Date.now() - d.getTime()) / 86400000) };
+  }).sort(function (a, b) { return b.dias - a.dias; });
+
+  const kpis = [
+    {lb:'ME FALTAN', v:pendientes.length, sub:'Pedidos sin desenlace', cl:pendientes.length?'w':'g'},
+    {lb:'EN NOVEDAD', v:enNovedad.length, sub:'Necesitan que llames', cl:enNovedad.length?'r':'g'},
+    {lb:'ENTREGADOS', v:entregados.length, sub:'Este mes', cl:'g'},
+    {lb:'MI EFECTIVIDAD', v:resueltos ? Math.round(entregados.length/resueltos*100)+'%' : '—',
+     sub:resueltos ? entregados.length+' de '+resueltos+' resueltos' : 'Sin pedidos resueltos aún',
+     cl:resueltos && entregados.length/resueltos>=0.65 ? 'g' : 'w'},
+  ];
+  const tarjeta = function (k) {
+    return '<div class="kc ' + k.cl + '"><div class="klbl">' + k.lb + '</div>' +
+      '<div class="kval">' + k.v + '</div><div class="ksub">' + k.sub + '</div></div>';
+  };
+
+  ['g-kpi', 'g-pedkpi'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = kpis.map(tarjeta).join('');
+  });
+
+  // ── Lo urgente de hoy ──
+  const urg = document.getElementById('g-urgentes');
+  if (urg) {
+    const top = quietos.filter(function (x) { return x.dias >= 1; }).slice(0, 6);
+    urg.innerHTML = top.length
+      ? top.map(function (x) {
+          const p = x.p, e = fichaEstado(p);
+          return '<div class="ped-row urg" onclick="go(\'g-pedidos\',null)" style="cursor:pointer;">' +
+            '<div class="ped-top"><span class="ped-nm">' + esc(p.cliente || '—') + ' · #' +
+              esc(p.id_externo || p.id) + '</span>' +
+              '<span class="bd" style="color:' + e[0] + ';background:' + e[1] + ';">' +
+              esc(e[2]) + '</span></div>' +
+            '<div class="ometa"><span>' + esc(p.ciudad || '') + '</span>' +
+              '<b>' + S + nf(p.valor) + '</b>' +
+              '<span style="color:#b8322f;">' + x.dias + ' días sin moverse</span></div></div>';
+        }).join('')
+      : '<div class="eq-vacio">Nada urgente ahora mismo. Todos tus pedidos se ' +
+        'movieron en el último día.</div>';
+  }
+
+  // ── Mis pedidos ──
+  const lista = document.getElementById('g-pedlist');
+  if (lista) {
+    G_VISTA = quietos.map(function (x) { return x.p; })
+      .concat(mios.filter(function (p) { return !abierto(p); }));
+
+    lista.innerHTML = mios.length
+      ? G_VISTA.map(function (p, i) {
+          const e = fichaEstado(p);
+          const ref = p.ultimo_movimiento || p.fecha;
+          const dd = new Date(ref);
+          const dias = isNaN(dd) ? null : Math.floor((Date.now() - dd.getTime()) / 86400000);
+          const vivo = abierto(p);
+          return '<div class="orow" id="gprow' + i + '" onclick="togGPed(' + i + ')" ' +
+            'style="cursor:pointer;">' +
+            '<div class="otop"><div><span class="onm">' + esc(p.cliente || '—') + '</span>&ensp;' +
+              '<span class="oid">#' + esc(p.id_externo || p.id) + '</span></div>' +
+              '<span class="bd" style="color:' + e[0] + ';background:' + e[1] + ';">' +
+              esc(e[2]) + '</span></div>' +
+            '<div class="ometa"><span>' + esc(p.producto || '') + '</span>' +
+              '<span>' + esc(p.ciudad || '') + '</span>' +
+              (vivo && dias !== null && dias >= 1
+                ? '<span style="color:#b8322f;">' + dias + ' días</span>' : '') +
+              '<span class="ntog gtog">Ver detalle ▾</span></div>' +
+            '<div class="ped-dtl" id="gpd' + i + '" style="display:none;flex-direction:column;gap:10px;">' +
+              '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;' +
+                'border-top:1px solid var(--s-line2);padding-top:10px;">' +
+                '<div><div class="dlbl">TELÉFONO</div><div class="dtxt">' +
+                  esc(p.telefono || '—') +
+                  (p.telefono_2 ? '<br><span style="color:var(--t-mut2);">2º: ' +
+                    esc(p.telefono_2) + '</span>' : '') + '</div></div>' +
+                '<div><div class="dlbl">DIRECCIÓN</div><div class="dtxt">' +
+                  esc(p.direccion || '—') + '</div></div>' +
+              '</div>' +
+              '<textarea class="narea" id="gnota' + i + '" placeholder="Qué pasó, qué ' +
+                'acordaste con la clienta y qué sigue.">' + esc(p.nota || '') + '</textarea>' +
+              '<div class="nsavebtn" onclick="event.stopPropagation();guardarNotaGestora(' +
+                i + ')">Guardar nota</div>' +
+            '</div></div>';
+        }).join('')
+      : '<div class="eq-vacio">No tienes pedidos asignados. Cuando la dueña o la ' +
+        'admin te asigne alguno, aparece aquí.</div>';
+  }
+
+  // ── Mis novedades ──
+  const nov = document.getElementById('g-novlist');
+  const abiertas = (NOVS_REALES || []).filter(function (n) {
+    return norm2(n.estado) === 'abierta';
+  });
+  const al = document.getElementById('g-novalert');
+  if (al) {
+    al.textContent = abiertas.length
+      ? 'Ver ' + abiertas.length + ' novedad' + (abiertas.length === 1 ? '' : 'es') + ' →'
+      : 'Sin novedades abiertas';
+  }
+  if (nov) {
+    nov.innerHTML = abiertas.length
+      ? abiertas.map(function (n) {
+          return '<div class="nrow urg">' +
+            '<div class="nh"><div><span class="ncl">' + esc(n.pedido_id || n.id) + '</span></div>' +
+              '<span class="bd" style="color:#b8322f;background:#f6e3db;">abierta</span></div>' +
+            '<div class="nmeta"><span>' + esc(n.motivo || 'Sin motivo') + '</span>' +
+              '<span>' + esc(n.grupo || '') + '</span>' +
+              '<span class="ntime">' + fechaCorta(n.fecha) + '</span></div></div>';
+        }).join('')
+      : '<div class="eq-vacio">No tienes novedades abiertas. ' +
+        'Cuando entre una de tus pedidos, aparece aquí.</div>';
+  }
+
+  desellar(['g-kpi', 'g-urgentes', 'g-pedkpi', 'g-pedlist', 'g-novlist']);
+}
+
+let G_VISTA = [];
+
+function togGPed(i) {
+  const d = document.getElementById('gpd' + i);
+  const t = document.querySelector('#gprow' + i + ' .gtog');
+  if (!d) return;
+  const abierto = d.style.display !== 'none';
+  d.style.display = abierto ? 'none' : 'flex';
+  if (t) t.textContent = abierto ? 'Ver detalle ▾' : 'Cerrar ▴';
+}
+
+/**
+ * La gestora escribe la nota, no el estado.
+ *
+ * El estado lo manda la transportadora en cada importación; si lo
+ * cambiara a mano, la siguiente carga lo pisaría y parecería que se
+ * perdió su trabajo. La nota, en cambio, es suya y nada la sobrescribe.
+ */
+async function guardarNotaGestora(i) {
+  const p = G_VISTA[i];
+  if (!p) return;
+  const nota = document.getElementById('gnota' + i).value;
+  try {
+    const r = await api('escribir', { entidad: 'Pedidos', id: p.id,
+                                      campos: { nota: nota } });
+    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
+    p.nota = nota;
+    showToast('Nota guardada');
+  } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
 
 // ─── VER COMO ─────────────────────────────────────────────────
