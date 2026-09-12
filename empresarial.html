@@ -2858,6 +2858,108 @@ async function cargarReales() {
   } catch (e) { marcarOrigen(false, 'sin conexión'); }
 }
 
+/**
+ * Dinero, con las cifras de la hoja.
+ *
+ * Estos cuadros eran los últimos que seguían mostrando el guion de
+ * demostración teniendo los datos al lado. Una pantalla que dice
+ * "actualizada" y sigue enseñando el mismo número inventado enseña a no
+ * mirarla.
+ *
+ * Todo sale del resumen del mes, que ya calcula ventas, pauta, costo de
+ * producto y fletes sobre los pedidos de verdad. Lo único que sigue
+ * viniendo de la lista de gastos que escribes a mano es la nómina y lo
+ * demás fijo: eso no está en ningún archivo, lo sabes tú.
+ */
+function aplicarDinero(d) {
+  if (ROL !== 'dueno') return;
+  const S = SYM() + ' ';
+  const nf = function (n) { return NUM(Math.round(n || 0)); };
+  const pct = function (a, b) { return b ? (a / b * 100) : 0; };
+
+  const ventas  = d.ventas || 0;
+  const pauta   = d.gasto || 0;
+  const prod    = d.costoProducto || 0;
+  const fletes  = d.costoEnvio || 0;
+  const margen  = d.margen !== undefined ? d.margen : (ventas - pauta - prod - fletes);
+
+  const kpis = [
+    {lb:'RECAUDO DEL MES', v:S+nf(ventas),
+     sub:d.entregados + ' entregados · ticket ' + S + nf(d.ticket), color:'#4c6236'},
+    {lb:'PAUTA DEL MES', v:S+nf(pauta),
+     sub:ventas ? pct(pauta, ventas).toFixed(0) + '% del recaudo' : 'Sin recaudo aún',
+     color:'var(--acc-d)'},
+    {lb:'COSTO DE PRODUCTO', v:S+nf(prod),
+     sub:ventas ? pct(prod, ventas).toFixed(0) + '% del recaudo' : '—', color:'var(--t-mut)'},
+    {lb:'FLETES', v:S+nf(fletes),
+     sub:'Incluye los de devolución si vienen en el archivo', color:'var(--t-mut)'},
+    {lb:'MARGEN', v:ventas ? pct(margen, ventas).toFixed(1) + '%' : '—',
+     sub:'Después de pauta, producto y flete', color:margen >= 0 ? '#4c6236' : '#b8322f'},
+    {lb:'QUEDA', v:S+nf(margen),
+     sub:'Antes de nómina y gastos fijos', color:margen >= 0 ? '#6E7A55' : '#b8322f'},
+  ];
+
+  const cont = document.getElementById('dinkpi2');
+  if (cont) {
+    cont.innerHTML = kpis.map(function (k) {
+      return '<div class="kc" style="border-left:4px solid ' + k.color + '">' +
+        '<div class="klbl">' + k.lb + '</div>' +
+        '<div style="font:700 22px/1.1 \'Fraunces\',serif;color:' + k.color +
+          ';font-variant-numeric:tabular-nums;">' + k.v + '</div>' +
+        '<div class="ksub">' + k.sub + '</div></div>';
+    }).join('');
+  }
+
+  /**
+   * Punto de equilibrio, solo con lo que es real.
+   *
+   * Cada entrega deja lo que queda después del producto y el flete, y eso
+   * tiene que cubrir la pauta del mes.
+   *
+   * La nómina y los demás gastos fijos NO entran, aunque estén escritos
+   * abajo: esa lista todavía es de ejemplo, sus valores están en pesos y
+   * esta tienda factura en dólares. Sumarlos daba "faltan 441.191
+   * entregas". Un número absurdo se detecta; uno apenas equivocado, no.
+   *
+   * Cuando los gastos fijos se puedan guardar de verdad, entran aquí.
+   */
+  const contrib = d.entregados ? (ventas - prod - fletes) / d.entregados : 0;
+  const fijos = pauta;
+
+  const necesarias = contrib > 0 ? Math.ceil(fijos / contrib) : 0;
+  const faltan = Math.max(0, necesarias - (d.entregados || 0));
+  const avance = necesarias ? Math.min(100, Math.round((d.entregados || 0) / necesarias * 100)) : 0;
+
+  const set = function (id, txt) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  };
+  set('eq-faltan', contrib > 0 ? String(faltan) : '—');
+  set('eq-sub2', contrib > 0
+    ? d.entregados + ' entregadas · ' + avance + '% para cubrir la pauta · meta: ' +
+      necesarias + ' entregas. No incluye nómina ni gastos fijos.'
+    : 'Sin entregas este mes todavía: no hay con qué calcular el equilibrio.');
+  const barra = document.getElementById('eq-bar2');
+  if (barra) barra.style.width = avance + '%';
+  set('eq-contrib', contrib > 0 ? S + nf(contrib) : '—');
+  set('eq-nota', 'Lo que deja cada entrega después del producto y el flete, ' +
+    'sobre ' + (d.entregados || 0) + ' entregas de este mes.');
+
+  const costos = document.getElementById('eq-costos');
+  if (costos) {
+    // Solo la pauta: es lo único de esta tarjeta que sale de la hoja.
+    const filas = [['Pauta del mes · real', S + nf(pauta)]];
+    costos.innerHTML = filas.map(function (r, i) {
+      return '<div style="display:flex;align-items:center;justify-content:space-between;' +
+        'padding:11px 0;' + (i ? 'border-top:1px solid var(--s-line2)' : '') + ';">' +
+        '<span style="font:500 12px/1 \'DM Sans\';color:var(--t-ink2);">' + esc(r[0]) + '</span>' +
+        '<span style="font:600 13px/1 \'DM Sans\';color:var(--t-ink);">' + r[1] + '</span></div>';
+    }).join('');
+  }
+
+  desellar(['dinkpi2', 'eq-costos']);
+}
+
 /** Reemplaza los KPIs de Hoy con los de la hoja. */
 function aplicarReales(d) {
   const S = (STORES[ST]||STORES.ec).sym;
@@ -2875,6 +2977,7 @@ function aplicarReales(d) {
     tarjetas.push({lb:'CPA', v:S+nf(d.cpa), sub:'ROAS '+(d.roas||0).toFixed(2)+'x',
                    cl:(d.roas||0)>=2?'g':'r'});
   }
+  aplicarDinero(d);
   cont.innerHTML = tarjetas.map(k=>
     '<div class="kc '+k.cl+'"><div class="klbl">'+k.lb+'</div>'+
     '<div class="kval">'+k.v+'</div><div class="ksub">'+k.sub+'</div></div>').join('');
@@ -3761,7 +3864,7 @@ const SIN_FUENTE = [
   'pedlist', 'novkpi', 'novlist', 'prodlist', 'jlist', 'tlist',
   'caslist', 'audqlist', 'commlist',
   // Dinero
-  'dinkpi', 'roaslist', 'pautabar', 'cpalist', 'invlist', 'invriesgo',
+  'dinkpi', 'dinkpi2', 'eq-costos', 'roaslist', 'pautabar', 'cpalist', 'invlist', 'invriesgo',
   // Vistas de la gestora
   'g-kpi', 'g-urgentes', 'g-pedkpi', 'g-pedlist', 'g-novlist',
 ];
