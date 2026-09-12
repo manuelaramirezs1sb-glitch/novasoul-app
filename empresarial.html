@@ -2687,6 +2687,25 @@ let REAL = null;   // resumen que devolvió la hoja
  * dispara un preflight OPTIONS que Apps Script no sabe responder.
  */
 /**
+ * Lo que Google contestó, en algo que se pueda leer.
+ *
+ * Cuando falla devuelve una página HTML entera. Antes eso solo iba a la
+ * consola del navegador, así que para saber la causa había que abrir las
+ * herramientas de desarrollo — y el dato que hace falta para arreglar
+ * algo tiene que estar donde ocurre el problema, no escondido.
+ */
+function legible(html) {
+  const t = String(html || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return t ? t.slice(0, 220) : '(una respuesta vacía)';
+}
+
+/**
  * Las acciones que se pueden repetir sin consecuencia.
  *
  * Leer no cambia nada, y `trozo` guarda el mismo pedazo bajo la misma
@@ -2722,7 +2741,8 @@ async function api(accion, datos, intento) {
     }
     console.error('[Nova] respuesta no-JSON:', texto.slice(0, 400));
     throw new Error('la hoja respondió algo que no es JSON (HTTP ' + r.status +
-      '). Si acabas de publicar una versión nueva, espera un minuto: ' +
+      ').\n\nGoogle dijo: ' + legible(texto) +
+      '\n\nSi acabas de publicar una versión nueva, espera un minuto: ' +
       'Google tarda en activarla.');
   }
   if (j && j.reautenticar) { TOKEN=''; localStorage.removeItem('ne_token'); }
