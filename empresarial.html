@@ -3060,7 +3060,11 @@ async function pedirCodigo() {
   btn.textContent='Enviando…'; btn.style.opacity='.6';
   try {
     const r = await api('login', { email: email });
-    if (!r.ok) { errLogin('lg-err', r.error||'No se pudo enviar el código.'); return; }
+    if (!r.ok) {
+      errLogin('lg-err', (r.error||'No se pudo enviar el código.') +
+        (r.diagnostico ? '\n' + JSON.stringify(r.diagnostico) : ''));
+      return;
+    }
     document.getElementById('em-show').textContent = email;
     step(2);
     setTimeout(()=>{ const c=document.getElementById('cod'); if(c) c.focus(); }, 80);
@@ -3081,7 +3085,13 @@ async function verificarCodigo() {
   btn.textContent='Verificando…'; btn.style.opacity='.6';
   try {
     const r = await api('verificar', { email: email, codigo: codigo });
-    if (!r.ok) { errLogin('lg-err2', r.error||'Código incorrecto.'); return; }
+    if (!r.ok) {
+      // Si el servidor mandó diagnóstico, se muestra: es lo que evita
+      // tener que abrir la consola para saber qué pasó.
+      errLogin('lg-err2', (r.error||'Código incorrecto.') +
+        (r.diagnostico ? '\n' + JSON.stringify(r.diagnostico) : ''));
+      return;
+    }
     TOKEN = r.token;
     localStorage.setItem('ne_token', TOKEN);
     localStorage.setItem('ne_email', email);

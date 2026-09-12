@@ -2759,7 +2759,24 @@ function manejar(e, metodo) {
   try {
     const p = leerParams(e, metodo);
     const accion = String(p.accion || '').trim();
-    if (!accion) return json({ ok: false, error: 'Falta la acción.' });
+    if (!accion) {
+      /**
+       * "Falta la acción" a secas no deja avanzar: dice que el cuerpo
+       * llegó sin acción, pero no si llegó vacío, si llegó con otra cosa
+       * o si ni siquiera era un POST. Sin eso hay que adivinar, y adivinar
+       * sobre una petición que no se ve cuesta horas.
+       */
+      const crudo = (e && e.postData && e.postData.contents) || '';
+      return json({ ok: false, error: 'Falta la acción.',
+        diagnostico: {
+          metodo: metodo,
+          hubo_cuerpo: !!crudo,
+          largo: crudo.length,
+          empieza: String(crudo).slice(0, 120),
+          tipo: (e && e.postData && e.postData.type) || '',
+          parametros: Object.keys((e && e.parameter) || {}),
+        } });
+    }
 
     // Las únicas dos que no piden token
     if (accion === 'login')     return json(apiLogin(p));
