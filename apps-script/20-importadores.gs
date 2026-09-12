@@ -413,9 +413,20 @@ function aISO(v, zonaHoraria) {
   let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);           // ya ISO
   if (m) return m[1] + '-' + m[2] + '-' + m[3];
 
-  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/); // DD/MM/AAAA
+  /**
+   * Día primero. En toda América Latina 03/09 es 3 de septiembre.
+   *
+   * Si el primer número pasa de 12 no hay duda; si no, manda la
+   * convención de la región. Lo que NO se hace es dejárselo a new Date(),
+   * que asume el formato de Estados Unidos y convierte medio mes de
+   * pedidos en fechas de otro mes sin avisar.
+   */
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
   if (m) {
-    return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+    let dia = parseInt(m[1], 10), mesN = parseInt(m[2], 10);
+    // Un "mes" mayor que 12 solo puede ser un día: el archivo venía al revés
+    if (mesN > 12 && dia <= 12) { const t = dia; dia = mesN; mesN = t; }
+    return m[3] + '-' + ('0' + mesN).slice(-2) + '-' + ('0' + dia).slice(-2);
   }
 
   const d = new Date(s);

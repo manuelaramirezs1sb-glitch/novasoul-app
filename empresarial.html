@@ -3264,6 +3264,7 @@ function aplicarDinero(d) {
     }).join('');
   }
 
+  avisoSinTasa(d, 'dinero-aviso', document.getElementById('dinkpi2'));
   desellar(['dinkpi2', 'eq-costos']);
 }
 
@@ -5008,6 +5009,32 @@ async function confirmarOficina() {
  * gasto total, que es el que paga la nómina— y por campaña se muestra
  * el costo por resultado, que es lo que el archivo sí sabe.
  */
+/**
+ * El aviso de gasto sin convertir, donde toque.
+ *
+ * Un gasto en otra moneda sin tasa de cambio no se suma —sumarlo daría
+ * una cifra inventada— pero tampoco se esconde: el hueco tiene que verse
+ * justo al lado del número que le falta.
+ */
+function avisoSinTasa(d, id, antes) {
+  const viejo = document.getElementById(id);
+  if (viejo) viejo.remove();
+  if (!d.gastoSinConvertir || !antes) return;
+
+  const monedas = Object.keys(d.monedasSinTasa || {}).map(function (m) {
+    return NUM(Math.round(d.monedasSinTasa[m])) + ' ' + m;
+  }).join(' · ');
+
+  const div = document.createElement('div');
+  div.id = id;
+  div.className = 'inf-falta';
+  div.innerHTML = 'Falta la tasa de cambio para ' + esc(monedas) +
+    ' de pauta, así que ese gasto <b>no está sumado arriba</b>. Los números ' +
+    'de esta pantalla se quedan cortos hasta que la tasa exista. ' +
+    'Se arregla corriendo <b>actualizarTasas</b> una vez en Apps Script.';
+  antes.parentNode.insertBefore(div, antes.nextSibling);
+}
+
 function aplicarPauta(d) {
   if (ROL !== 'dueno') return;
   const S = SYM() + ' ';
@@ -5040,6 +5067,14 @@ function aplicarPauta(d) {
 
   const lbl = document.getElementById('cpa-techo-lbl');
   if (lbl) lbl.textContent = techo ? S + n2(techo) + ' por pedido · calculado' : 'sin datos';
+
+  /**
+   * Si hubo gasto que no se pudo convertir, se dice.
+   *
+   * Callarlo dejaría un CPA que parece bueno solo porque le falta la
+   * mitad del gasto — y ese número se usa para decidir presupuesto.
+   */
+  avisoSinTasa(d, 'pauta-aviso', cont);
 
   // ── Por campaña: lo que el archivo de Meta sí sabe ──
   const camps = Object.keys(d.campanas || {}).map(function (c) {

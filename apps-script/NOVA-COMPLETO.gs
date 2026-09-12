@@ -1495,9 +1495,20 @@ function aISO(v, zonaHoraria) {
   let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);           // ya ISO
   if (m) return m[1] + '-' + m[2] + '-' + m[3];
 
-  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/); // DD/MM/AAAA
+  /**
+   * Día primero. En toda América Latina 03/09 es 3 de septiembre.
+   *
+   * Si el primer número pasa de 12 no hay duda; si no, manda la
+   * convención de la región. Lo que NO se hace es dejárselo a new Date(),
+   * que asume el formato de Estados Unidos y convierte medio mes de
+   * pedidos en fechas de otro mes sin avisar.
+   */
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
   if (m) {
-    return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+    let dia = parseInt(m[1], 10), mesN = parseInt(m[2], 10);
+    // Un "mes" mayor que 12 solo puede ser un día: el archivo venía al revés
+    if (mesN > 12 && dia <= 12) { const t = dia; dia = mesN; mesN = t; }
+    return m[3] + '-' + ('0' + mesN).slice(-2) + '-' + ('0' + dia).slice(-2);
   }
 
   const d = new Date(s);
@@ -4252,6 +4263,8 @@ function agregarMes(ss, tienda, mes, s) {
   if (s.rol === 'dueno') {
     const shPa = ss.getSheetByName('Pauta');
     out.gasto = 0; out.campanas = {}; out.gastoPorDia = {};
+    out.gastoSinConvertir = 0; out.monedasSinTasa = {};
+    const monTienda = monedaDeTienda(ss, tienda);
     if (shPa && shPa.getLastRow() > 1) {
       const datos = shPa.getDataRange().getValues();
       const e = datos[0].map(norm);
@@ -4261,12 +4274,28 @@ function agregarMes(ss, tienda, mes, s) {
         if (String(f[c('tienda')]).trim() !== tienda) continue;
         const fecha = aISO(f[c('fecha')], 'UTC');
         if (!fecha || fecha.slice(0, 7) !== mes) continue;
-        const g = num(f[c('gasto_normalizado')]) || num(f[c('gasto')]);
+        const mon = String(f[c('moneda_gasto')] || '').toUpperCase();
+        const crudo = num(f[c('gasto')]);
+        let g = 0;
+        if (!mon || mon === monTienda) {
+          g = crudo;                       // ya viene en la moneda de la tienda
+        } else {
+          // Con la tasa del día del gasto, no la de hoy: una campaña de
+          // agosto se pagó al dólar de agosto.
+          const t = buscarTasa(ss, fecha, mon, monTienda);
+          if (t && t.tasa) {
+            g = crudo * t.tasa;
+          } else {
+            out.gastoSinConvertir += crudo;
+            out.monedasSinTasa[mon] = (out.monedasSinTasa[mon] || 0) + crudo;
+          }
+        }
         out.gasto += g;
         // Conjunto si lo hay: es donde de verdad se decide el presupuesto
         const nom = String(f[c('conjunto')] || f[c('campana')] || 'Sin nombre').trim();
-        if (!out.campanas[nom]) out.campanas[nom] = { gasto: 0, resultados: 0 };
+        if (!out.campanas[nom]) out.campanas[nom] = { gasto: 0, resultados: 0, sinTasa: 0 };
         out.campanas[nom].gasto += g;
+        if (!g && crudo) out.campanas[nom].sinTasa += crudo;
         out.campanas[nom].resultados += num(f[c('resultados')]);
 
         /**
@@ -4569,6 +4598,19 @@ function apiImportarArchivo(s, p) {
     while (r.length < ancho) r.push('');
     return r;
   });
+  /**
+   * La pestaña cruda se escribe como TEXTO, a la fuerza.
+   *
+   * Sin esto, Google Sheets reinterpreta lo que escribimos según el
+   * idioma de la hoja: "03-09-2026" se vuelve 9 de marzo en vez de 3 de
+   * septiembre, y el daño ocurre al guardar, no al leer. Un pedido de
+   * esta semana aparecía con 187 días de espera.
+   *
+   * Como texto, lo que entra es exactamente lo que traía el archivo, y
+   * quien decide cómo se lee es el importador —que sabe que en América
+   * Latina el día va primero— y no el idioma de la hoja.
+   */
+  sh.getRange(1, 1, rect.length, ancho).setNumberFormat('@');
   sh.getRange(1, 1, rect.length, ancho).setValues(rect);
   SpreadsheetApp.flush();
 
