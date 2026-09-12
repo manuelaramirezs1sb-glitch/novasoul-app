@@ -622,6 +622,44 @@ input.li:focus{border-color:var(--acc-d);}
 .gasto-val:hover{border-color:var(--s-line2);}
 .gasto-val:focus{border-color:var(--acc-d);outline:none;background:var(--s-card);}
 
+/* ─── ALARMAS Y UMBRALES ────────────────────────────── */
+.al-ok{font:500 12.5px/1.6 'DM Sans';color:#3f5330;background:#e6efe8;
+  border-radius:12px;padding:13px 16px;max-width:74ch;}
+.al-row{border-radius:12px;padding:13px 16px;margin-bottom:9px;
+  border-left:4px solid var(--s-line2);background:var(--s-card);}
+.al-row.mal{border-left-color:#b8322f;background:#f6e3db;}
+.al-row.ojo{border-left-color:#8a6a13;background:#f6ecd0;}
+.al-cab{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+.al-tit{font:600 13.5px/1.35 'DM Sans';color:var(--t-ink);}
+.al-row.mal .al-tit{color:#8e2b28;} .al-row.ojo .al-tit{color:#7a5c10;}
+.al-ir{font:600 11.5px/1 'DM Sans';cursor:pointer;color:var(--acc-d);white-space:nowrap;}
+.al-det{font:500 12.5px/1.55 'DM Sans';color:var(--t-mut);margin:5px 0 0;max-width:72ch;}
+.al-casos{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+.al-caso{font:500 11px/1 'DM Sans';background:rgba(255,255,255,.6);
+  border-radius:20px;padding:5px 9px;color:var(--t-ink2);}
+.al-caso.mas{background:transparent;color:var(--t-mut2);}
+
+.um-tabla{display:flex;flex-direction:column;margin-top:4px;}
+.um-row{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;
+  padding:13px 0;border-bottom:1px solid var(--s-line2);}
+.um-row:last-child{border-bottom:none;}
+.um-row.off{opacity:.62;}
+.um-nm{font:600 13px/1.35 'DM Sans';color:var(--t-ink);display:flex;
+  flex-direction:column;gap:3px;max-width:62ch;}
+.um-nm span{font:500 11.5px/1.5 'DM Sans';color:var(--t-mut2);}
+.um-nm .eq-tag{align-self:flex-start;}
+.um-val{display:flex;align-items:center;gap:7px;flex:none;}
+.um-val input{width:92px;text-align:right;font:600 13px/1 'DM Sans';
+  color:var(--t-ink);background:var(--s-bg);border:1px solid var(--s-line2);
+  border-radius:9px;padding:9px 10px;font-variant-numeric:tabular-nums;}
+.um-val.ancho input{width:230px;text-align:left;font-weight:500;}
+.um-val input:focus{border-color:var(--acc-d);outline:none;}
+.um-val span{font:500 11.5px/1 'DM Sans';color:var(--t-mut2);white-space:nowrap;}
+@media(max-width:640px){
+  .um-row{flex-direction:column;gap:9px;}
+  .um-val.ancho input{width:100%;}
+}
+
 /* ─── EQUIPO Y AUDITORÍA ────────────────────────────── */
 .eq-vacio{font:500 12.5px/1.65 'DM Sans';color:var(--t-mut2);padding:14px 0;max-width:62ch;}
 .eq-tabla{display:flex;flex-direction:column;}
@@ -961,16 +999,8 @@ input.li:focus{border-color:var(--acc-d);}
       <!-- ════ HOY ════ -->
       <div class="view on" id="v-hoy">
 
-        <!-- Alerta crítica -->
-        <div class="acrit" id="acrit">
-          <div class="acrit-dot"></div>
-          <div class="acrit-txt">
-            <div class="acrit-h">CPA superó el techo · Colágeno Premium</div>
-            <div class="acrit-s">CPA actual <span id="acrit-cpa">$14.80</span> vs. techo <span id="acrit-techo">$10.00</span>. Lleva 2 días sobre el límite.</div>
-          </div>
-          <div class="acrit-btn" onclick="go('pauta',null)">Ver pauta →</div>
-          <div class="acrit-x" onclick="this.parentElement.style.display='none'">×</div>
-        </div>
+        <!-- Alarmas · mismo cálculo que el correo diario -->
+        <div id="alarmas"></div>
 
         <!-- Recuento (banner periódico de evaluación) -->
         <div class="recuento" id="recuento">
@@ -1336,6 +1366,18 @@ input.li:focus{border-color:var(--acc-d);}
 
       <!-- ════ CONFIGURACIÓN ════ -->
       <div class="view ro-dueno" id="v-config">
+        <div class="card">
+          <div class="card-h"><span class="ct">Alarmas</span>
+            <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">
+              Revisión diaria · te llegan por correo</span></div>
+          <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);margin:0;max-width:74ch;">
+            Estos umbrales son tuyos, no míos. Una tienda que sabe que vive con
+            40% de devolución no necesita que le griten por eso todos los días;
+            otra que vende un producto de 200 dólares se hunde con un 12%. Las
+            que puedas dejar vacías quedan apagadas.</p>
+          <div class="um-tabla" id="umbrales"></div>
+        </div>
+
         <div class="g2">
           <div class="card">
             <div class="card-h"><span class="ct">Tu cuenta</span></div>
@@ -1970,12 +2012,8 @@ function buildHoy() {
   document.getElementById('eqflt').textContent = eq.faltan + ' para equilibrio';
   document.getElementById('eqbar').style.width = eq.pct;
   document.getElementById('eqsub').textContent = eq.hechas + ' · ' + eq.sub;
-  // Alerta CPA
-  const badCpa = d.cpa ? d.cpa.find(c=>!c.ok) : null;
-  if(badCpa){
-    document.getElementById('acrit-cpa').textContent   = badCpa.cpa;
-    document.getElementById('acrit-techo').textContent = SYM()+' '+NUM((STORES[ST]||{}).cpaTecho||10);
-  }
+  // La alerta de CPA ya no vive aquí: es una de las seis alarmas, y sale
+  // del mismo cálculo que el correo diario en vez de un umbral fijo.
   // Recuento
   document.getElementById('rec-ventas').textContent = d.mes?.[0]?.v || '';
   document.getElementById('rec-nom').textContent    = DEMO().nomina || (SYM()+' —');
@@ -3056,7 +3094,7 @@ async function cargarReales() {
     // puede dejar a Pedidos sin cargar. Se esperan las dos para saber
     // cuándo la pantalla terminó de ponerse al día.
     await Promise.all([cargarPedidosReales(), cargarNovedadesReales(),
-                       cargarEquipo(), cargarAuditoria()]);
+                       cargarEquipo(), cargarAuditoria(), cargarAlarmas()]);
     return { mes: mes, pedidos: PEDS_REALES.length, novedades: NOVS_REALES.length };
   } catch (e) { marcarOrigen(false, 'sin conexión'); }
 }
@@ -4717,6 +4755,123 @@ async function buildCierre(){
   document.getElementById('cm-doc').innerHTML = pintarInforme(d, p, real);
 }
 
+
+// ─── ALARMAS ──────────────────────────────────────────────────
+/**
+ * Las alarmas en pantalla salen del mismo cálculo que el correo diario.
+ *
+ * Si fueran dos, tarde o temprano dirían cosas distintas y no habría
+ * forma de saber a cuál creerle — que es peor que no tener ninguna.
+ */
+let ALARMAS_HOY = [];
+let UMBRALES = null;
+let CATALOGO_ALARMAS = [];
+
+async function cargarAlarmas() {
+  if (!CONECTADO) return false;
+  let r;
+  try { r = await api('alarmas', { tienda: ST }); }
+  catch (e) { return false; }
+  if (!r || !r.ok) return false;
+
+  ALARMAS_HOY = r.alarmas || [];
+  UMBRALES = r.umbrales;
+  CATALOGO_ALARMAS = r.catalogo || [];
+  pintarAlarmas();
+  pintarUmbrales();
+  return true;
+}
+
+function pintarAlarmas() {
+  const cont = document.getElementById('alarmas');
+  if (!cont) return;
+
+  if (!ALARMAS_HOY.length) {
+    cont.innerHTML = '<div class="al-ok">Sin alarmas. Ningún pedido detenido, ' +
+      'ninguna novedad vieja, y las métricas dentro de tus umbrales.</div>';
+    return;
+  }
+
+  cont.innerHTML = ALARMAS_HOY.map(function (a) {
+    const casos = (a.casos || []).slice(0, 4).map(function (c) {
+      return '<span class="al-caso">' + esc(c.cliente || c.producto || c.id || '') +
+        (c.dias !== undefined ? ' · ' + c.dias + 'd' : '') +
+        (c.horas !== undefined ? ' · ' + c.horas + 'h' : '') + '</span>';
+    }).join('');
+    return '<div class="al-row ' + a.nivel + '">' +
+      '<div class="al-cab">' +
+        '<span class="al-tit">' + esc(a.titulo) + '</span>' +
+        (a.ir ? '<span class="al-ir" onclick="go(\'' + a.ir.toLowerCase() +
+          '\',null)">Ver ' + esc(a.ir) + ' →</span>' : '') +
+      '</div>' +
+      '<p class="al-det">' + esc(a.detalle) + '</p>' +
+      (casos ? '<div class="al-casos">' + casos +
+        ((a.casos || []).length > 4 ? '<span class="al-caso mas">y ' +
+          (a.casos.length - 4) + ' más</span>' : '') + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+/**
+ * Los umbrales, editables.
+ *
+ * Dos de las seis se pueden dejar vacías y quedan apagadas: una tienda
+ * que sabe que vive con 40% de devolución no necesita que le griten por
+ * eso todos los días, y una de catálogo público no lleva stock propio.
+ */
+function pintarUmbrales() {
+  const cont = document.getElementById('umbrales');
+  if (!cont) return;
+  if (!UMBRALES) {
+    cont.innerHTML = '<div class="eq-vacio">Solo la dueña cambia los umbrales.</div>';
+    return;
+  }
+
+  const AYUDA = {
+    dias_sin_mover: 'Días que un pedido puede estar quieto antes de avisar.',
+    horas_novedad: 'Horas que una novedad puede estar abierta sin gestionar.',
+    efectividad_min: 'Por debajo de este % de entrega, avisa.',
+    devoluciones_max: 'Por encima de este % de devolución, avisa. Déjalo vacío si tu operación vive con una tasa alta y no quieres el aviso.',
+    cpa_aviso_pct: 'El techo del CPA no se escribe: es lo que deja cada entrega después del producto y el flete. Esto es a qué % de ese techo quieres que te avise.',
+    stock_dias_min: 'Avisa cuando a un producto le queden estos días de venta. Vacío si no llevas stock propio.',
+  };
+
+  cont.innerHTML = CATALOGO_ALARMAS.map(function (a) {
+    const v = UMBRALES[a.param];
+    const apagada = a.opcional && (v === '' || v === null || v === undefined);
+    return '<div class="um-row' + (apagada ? ' off' : '') + '">' +
+      '<div class="um-nm">' + esc(a.nombre) +
+        (apagada ? '<span class="eq-tag">apagada</span>' : '') +
+        '<span>' + esc(AYUDA[a.param] || '') + '</span></div>' +
+      '<div class="um-val">' +
+        '<input type="number" id="um-' + a.param + '" value="' +
+          (v === '' || v === null ? '' : v) + '" ' +
+          'placeholder="' + (a.opcional ? 'sin alarma' : '') + '" ' +
+          'onchange="guardarUmbral(\'' + a.param + '\')">' +
+        '<span>' + esc(a.unidad) + '</span>' +
+      '</div></div>';
+  }).join('') +
+  '<div class="um-row">' +
+    '<div class="um-nm">Avisar también a<span>Además de las dueñas. ' +
+      'Separa varios correos con comas.</span></div>' +
+    '<div class="um-val ancho"><input type="text" id="um-alarmas_a" value="' +
+      esc(UMBRALES.alarmas_a || '') + '" placeholder="nadie más" ' +
+      'onchange="guardarUmbral(\'alarmas_a\')"></div></div>';
+}
+
+async function guardarUmbral(clave) {
+  const inp = document.getElementById('um-' + clave);
+  if (!inp) return;
+  const cambios = {};
+  cambios[clave] = inp.value.trim();
+  try {
+    const r = await api('parametros', { tienda: ST, cambios: cambios });
+    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
+    UMBRALES = r.umbrales;
+    await cargarAlarmas();
+    showToast('Umbral guardado · alarmas recalculadas');
+  } catch (e) { showToast('Sin conexión: no se guardó'); }
+}
 
 // ─── EQUIPO ───────────────────────────────────────────────────
 /**

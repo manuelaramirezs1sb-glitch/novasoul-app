@@ -64,6 +64,8 @@ function manejar(e, metodo) {
       case 'crear':     return json(apiCrear(s, p));
       case 'equipo':    return json(apiEquipo(s, p));
       case 'productos': return json(apiProductos(s, p));
+      case 'alarmas':   return json(apiAlarmas(s, p));
+      case 'parametros':return json(apiParametros(s, p));
       case 'auditoria': return json(apiAuditoria(s, p));
       case 'borrar':    return json(apiBorrar(s, p));
       case 'cerrarmes': return json(apiCerrarMes(s, p));
@@ -610,6 +612,90 @@ const CREABLES = {
 
 /** Quién puede crear o quitar en cada entidad. */
 const SOLO_DUENO = ['Equipo', 'Gastos'];
+
+/**
+ * Las alarmas de la tienda, calculadas al momento.
+ *
+ * La pantalla y el correo diario usan exactamente esta función. Si
+ * fueran dos cálculos distintos, tarde o temprano dirían cosas distintas
+ * y no habría forma de saber a cuál creerle.
+ */
+function apiAlarmas(s, p) {
+  const tienda = String(p.tienda || s.tiendas[0] || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const r = evaluarAlarmas(ss, tienda);
+
+  // La de dinero es solo de la dueña
+  const alarmas = s.rol === 'dueno'
+    ? r.alarmas
+    : r.alarmas.filter(function (a) { return a.id !== 'cpa'; });
+
+  return { ok: true, tienda: tienda, alarmas: alarmas,
+           umbrales: s.rol === 'dueno' ? r.umbrales : null,
+           catalogo: ALARMAS };
+}
+
+/**
+ * Leer y cambiar los umbrales.
+ *
+ * Solo la dueña: son las reglas con las que su propia operación se
+ * juzga, y cualquiera que pudiera moverlas podría apagar la alarma que
+ * lo señala.
+ */
+function apiParametros(s, p) {
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const tienda = String(p.tienda || s.tiendas[0] || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+
+  if (!p.cambios) {
+    return { ok: true, tienda: tienda, umbrales: umbrales(ss, tienda),
+             catalogo: ALARMAS, defaults: ALARMAS_DEFAULT };
+  }
+
+  if (s.rol !== 'dueno') {
+    return { ok: false, error: 'Solo la dueña cambia los umbrales de las alarmas.' };
+  }
+
+  let sh = ss.getSheetByName('Parametros');
+  if (!sh) return { ok: false, error: 'Falta la hoja Parametros. Corre bootstrapTodo().' };
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const cT = e.indexOf('tienda'), cK = e.indexOf('clave'), cV = e.indexOf('valor');
+  const cA = e.indexOf('actualizado_en'), cP = e.indexOf('actualizado_por');
+
+  Object.keys(p.cambios).forEach(function (clave) {
+    if (!(clave in ALARMAS_DEFAULT)) return;   // nada fuera del catálogo
+    const valor = p.cambios[clave];
+    let fila = -1;
+    for (let i = 1; i < d.length; i++) {
+      if (norm(d[i][cK]) === norm(clave) &&
+          String(d[i][cT] || '').trim() === tienda) { fila = i; break; }
+    }
+    if (fila === -1) {
+      const nueva = new Array(e.length).fill('');
+      nueva[cT] = tienda; nueva[cK] = clave; nueva[cV] = valor;
+      if (cA !== -1) nueva[cA] = ahoraISO();
+      if (cP !== -1) nueva[cP] = s.email;
+      sh.appendRow(nueva);
+      registrarMovimiento(s, 'Parametros', tienda + '/' + clave, 'valor', '', valor);
+    } else {
+      const antes = d[fila][cV];
+      if (String(antes) === String(valor)) return;
+      sh.getRange(fila + 1, cV + 1).setValue(valor);
+      if (cA !== -1) sh.getRange(fila + 1, cA + 1).setValue(ahoraISO());
+      if (cP !== -1) sh.getRange(fila + 1, cP + 1).setValue(s.email);
+      registrarMovimiento(s, 'Parametros', tienda + '/' + clave, 'valor', antes, valor);
+    }
+  });
+  SpreadsheetApp.flush();
+  return { ok: true, umbrales: umbrales(ss, tienda) };
+}
 
 /**
  * El catálogo, sacado de los pedidos.
