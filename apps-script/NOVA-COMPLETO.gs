@@ -2698,9 +2698,25 @@ function carpetaNova() {
  * @param {string} plan      Opcional. Ej: 'Base'
  * @return {Object} { clienteId, sheetId, url }
  */
-function crearCliente(empresa, pais, tiendas, fuentes, plan) {
+function crearCliente(empresa, pais, tiendas, fuentes, plan, dueno) {
   if (!empresa) throw new Error('Falta el nombre de la empresa.');
   if (!tiendas || !tiendas.length) throw new Error('Hay que declarar al menos una tienda.');
+
+  /**
+   * Sin dueña no hay cliente.
+   *
+   * Una hoja recién creada sin nadie en Equipo es una cuenta a la que
+   * NADIE puede entrar: la app decide los roles leyendo esa hoja, así
+   * que sin una fila ahí no hay quien dé permisos ni quien se los dé a
+   * sí mismo. El cliente pagaría y no podría abrir su propia tienda.
+   */
+  if (!dueno || !dueno.correo || String(dueno.correo).indexOf('@') === -1) {
+    throw new Error(
+      'Falta la dueña. Se crea así:\n\n' +
+      '  crearCliente("Empresa", "EC", tiendas, fuentes, "Base",\n' +
+      '               { nombre: "Nombre", correo: "correo@dominio.com" })\n\n' +
+      'Sin una dueña en la hoja Equipo, nadie puede entrar a esa cuenta.');
+  }
 
   // Nombres de tienda duplicados romperían el filtro por tienda en toda la app
   const vistos = {};
@@ -2729,24 +2745,40 @@ function crearCliente(empresa, pais, tiendas, fuentes, plan) {
   const sheetId = copia.getId();
   const ss = SpreadsheetApp.openById(sheetId);
 
-  // ── 2. Sembrar las tiendas ──
-  const shT = ss.getSheetByName('Tiendas');
-  const filasT = tiendas.map(function (t) {
-    return [
-      t.id, t.nombre || t.id, t.marca || empresa, t.pais || pais || '',
-      t.sociedad || '', t.nit || '', t.moneda || '', t.zona || 'UTC',
-      t.corte || '16:00', 'activa',
-    ];
-  });
-  shT.getRange(2, 1, filasT.length, 10).setValues(filasT);
+  /**
+   * Las filas se arman leyendo los encabezados, no contando columnas.
+   *
+   * Cuando Tiendas ganó la columna `modalidad`, esta función seguía
+   * escribiendo diez valores en diez posiciones: 'activa' cayó en
+   * modalidad y `estado` quedó vacío. Cada cliente nuevo nacía con sus
+   * tiendas apagadas. Por posición, cualquier columna nueva corre todo
+   * lo que viene detrás; por nombre, no.
+   */
+  sembrar(ss, 'Tiendas', tiendas.map(function (t) {
+    return {
+      id: t.id, nombre: t.nombre || t.id, marca: t.marca || empresa,
+      pais: t.pais || pais || '', sociedad: t.sociedad || '', nit: t.nit || '',
+      moneda: t.moneda || '', zona_horaria: t.zona || 'UTC',
+      corte_despacho: t.corte || '16:00',
+      modalidad: t.modalidad || 'catalogo_publico',
+      estado: 'activa',
+    };
+  }), 2);
+
+  // ── 2b. La dueña, sin la cual nadie puede entrar ──
+  sembrar(ss, 'Equipo', [{
+    id: 'eq-' + Utilities.getUuid().slice(0, 8),
+    nombre: dueno.nombre || 'Dueña',
+    correo: String(dueno.correo).toLowerCase().trim(),
+    rol: 'dueno', tienda: '*', estado: 'activo', permisos: '',
+  }], 2);
 
   // ── 3. Sembrar las fuentes declaradas ──
   if (fuentes && fuentes.length) {
-    const shF = ss.getSheetByName('Fuentes');
-    const filasF = fuentes.map(function (f) {
-      return [f.tienda, f.fuente, f.tipo || 'pedidos', f.cuenta || '', 'si', '', '', ''];
-    });
-    shF.getRange(2, 1, filasF.length, 8).setValues(filasF);
+    sembrar(ss, 'Fuentes', fuentes.map(function (f) {
+      return { tienda: f.tienda, fuente: f.fuente, tipo: f.tipo || 'pedidos',
+               cuenta: f.cuenta || '', activa: 'si' };
+    }), 2);
   }
 
   // ── 4. Parámetros por defecto, uno por tienda ──
@@ -2786,6 +2818,29 @@ function crearCliente(empresa, pais, tiendas, fuentes, plan) {
   return { clienteId: clienteId, sheetId: sheetId, url: url };
 }
 
+/**
+ * Escribe filas en una hoja emparejando por nombre de columna.
+ *
+ * @param {number} desde  fila donde empieza a escribir; sin esto habría
+ *                        que saber si la hoja ya tiene datos.
+ */
+function sembrar(ss, hoja, objetos, desde) {
+  const sh = ss.getSheetByName(hoja);
+  if (!sh) throw new Error('Falta la hoja ' + hoja + '. Corre bootstrapTodo().');
+  if (!objetos || !objetos.length) return;
+
+  const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]
+    .map(function (h) { return String(h || '').trim().toLowerCase(); });
+
+  const filas = objetos.map(function (o) {
+    return enc.map(function (col) {
+      return o[col] !== undefined ? o[col] : '';
+    });
+  });
+  const inicio = desde || (sh.getLastRow() + 1);
+  sh.getRange(inicio, 1, filas.length, enc.length).setValues(filas);
+}
+
 /** Fecha-hora ISO en la zona del script. */
 function ahoraISO() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
@@ -2817,7 +2872,8 @@ function crearNutrea() {
       { tienda: 'ec', fuente: 'meta',    tipo: 'pauta'    },
       { tienda: 'ec', fuente: 'iris',    tipo: 'llamadas' },
     ],
-    'Interno'
+    'Interno',
+    { nombre: 'Manuela', correo: 'nutreashop@gmail.com' }
   );
 }
 
