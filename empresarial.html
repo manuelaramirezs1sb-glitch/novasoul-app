@@ -2854,7 +2854,7 @@ async function cargarReales() {
     // puede dejar a Pedidos sin cargar. Se esperan las dos para saber
     // cuándo la pantalla terminó de ponerse al día.
     await Promise.all([cargarPedidosReales(), cargarNovedadesReales()]);
-    return true;
+    return { mes: mes, pedidos: PEDS_REALES.length, novedades: NOVS_REALES.length };
   } catch (e) { marcarOrigen(false, 'sin conexión'); }
 }
 
@@ -3302,6 +3302,28 @@ async function guardarNovedad(i) {
   } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
 
+/**
+ * Qué se actualizó de verdad, sección por sección.
+ *
+ * Antes decía "Pantalla actualizada" y ya. Pero solo se actualiza lo que
+ * está conectado —los KPIs del mes, Pedidos y Novedades— y quien estaba
+ * mirando Dinero veía los mismos números de ejemplo de siempre y
+ * concluía, con razón, que no había pasado nada.
+ *
+ * Un mensaje que promete más de lo que hace enseña a no creerle.
+ */
+function queSeActualizo(ref) {
+  if (!ref || !ref.mes) return 'No se pudo refrescar la pantalla. Vuelve a entrar.';
+
+  const partes = ['KPIs de ' + ref.mes];
+  if (ref.pedidos)   partes.push(ref.pedidos + ' pedidos');
+  if (ref.novedades) partes.push(ref.novedades + ' novedades');
+
+  return 'Actualizado: ' + partes.join(' · ') + '.\n' +
+    'Las secciones con el sello EJEMPLO siguen sin conectar, y los KPIs ' +
+    'son del mes en curso: si subiste datos de otro mes, míralos en Cierre de mes.';
+}
+
 /** Lo que ya trae datos reales deja de llevar el sello. */
 function desellar(ids) {
   ids.forEach(function (id) {
@@ -3483,10 +3505,10 @@ async function subirArchivo(input, z) {
 
     const resumen = r.resumen || ('Importadas ' + r.filas + ' filas.');
     impEstado(z, resumen + '\n\nActualizando la pantalla…', 'ok');
-    await cargarReales();
+    const ref = await cargarReales();
     await cargarHistorialFuentes();
-    impEstado(z, resumen, 'ok');
-    showToast('Pantalla actualizada con lo que acabas de subir');
+    impEstado(z, resumen + '\n\n' + queSeActualizo(ref), 'ok');
+    showToast('Pantalla actualizada');
   } catch (e) {
     impEstado(z, 'Falló la subida: ' + e.message, 'mal');
   } finally {
@@ -3628,10 +3650,10 @@ async function confirmarMapeo(z) {
     delete PENDIENTE[z];
     const resumen = r.resumen || ('Importadas ' + r.filas + ' filas.');
     impEstado(z, resumen + '\n\nActualizando la pantalla…', 'ok');
-    await cargarReales();
+    const ref = await cargarReales();
     await cargarHistorialFuentes();
-    impEstado(z, resumen, 'ok');
-    showToast('Pantalla actualizada con tu histórico');
+    impEstado(z, resumen + '\n\n' + queSeActualizo(ref), 'ok');
+    showToast('Pantalla actualizada');
   } catch (e) {
     impEstado(z, 'Falló la importación: ' + e.message, 'mal');
   }
