@@ -3121,7 +3121,10 @@ async function cargarPedidosReales() {
   pintarFiltrosPedidos(r.filas);
   pintarPedidosReales(r.filas, r.total);
   pintarEstadosReales(r.filas);
-  desellar(['pedlist', 'stlist', 'barchart']);
+  // barchart NO se desella: sigue mostrando el guion porque nadie lo
+  // llena con datos reales todavía. Quitarle el sello sería peor que
+  // dejarlo: pasaría por cierto sin serlo.
+  desellar(['pedlist', 'stlist']);
   return true;
 }
 
@@ -3608,6 +3611,7 @@ async function subirArchivo(input, z) {
 
     const resumen = r.resumen || ('Importadas ' + r.filas + ' filas.');
     impEstado(z, resumen + '\n\nActualizando la pantalla…', 'ok');
+    Object.keys(CIERRE_CACHE).forEach(function (k) { delete CIERRE_CACHE[k]; });
     const ref = await cargarReales();
     await cargarHistorialFuentes();
     impEstado(z, resumen + '\n\n' + queSeActualizo(ref), 'ok');
@@ -3753,6 +3757,7 @@ async function confirmarMapeo(z) {
     delete PENDIENTE[z];
     const resumen = r.resumen || ('Importadas ' + r.filas + ' filas.');
     impEstado(z, resumen + '\n\nActualizando la pantalla…', 'ok');
+    Object.keys(CIERRE_CACHE).forEach(function (k) { delete CIERRE_CACHE[k]; });
     const ref = await cargarReales();
     await cargarHistorialFuentes();
     impEstado(z, resumen + '\n\n' + queSeActualizo(ref), 'ok');
@@ -4019,6 +4024,84 @@ function mesesDisponibles(n){
 }
 
 /** Datos del mes. Hoy sintéticos y deterministas; mañana los trae la API. */
+/**
+ * El cierre del mes, con las cifras de la hoja.
+ *
+ * Esta pantalla generaba números pseudoaleatorios. Servía para enseñar la
+ * forma del informe mientras no había datos, pero es la pantalla con la
+ * que se cierra un mes y se le rinde cuentas a alguien: un informe con
+ * cifras inventadas no es un borrador, es una trampa.
+ *
+ * El endpoint existía desde el principio; lo que faltaba era llamarlo.
+ */
+const CIERRE_CACHE = {};
+
+async function cierreReal(mes, tienda) {
+  const clave = mes + '|' + tienda;
+  if (CIERRE_CACHE[clave]) return CIERRE_CACHE[clave];
+  if (!CONECTADO) return null;
+
+  let r;
+  try { r = await api('cierre', { mes: mes, tienda: tienda }); }
+  catch (e) { return null; }
+  if (!r || !r.ok) return null;
+
+  const d = mapearCierre(r.actual, mes, tienda, r);
+  d.anterior = mapearCierre(r.anterior, mesAnterior(mes), tienda, r);
+  d.cerrado = r.cerrado;
+  d.cerrado_en = r.cerrado_en;
+  d.provisional = r.provisional;
+  d.pendientes = r.pendientes;
+  d.cambiario = r.cambiario;
+  CIERRE_CACHE[clave] = d;
+  return d;
+}
+
+/** Del formato del servidor al que la pantalla ya sabe pintar. */
+function mapearCierre(a, mes, tienda, r) {
+  a = a || {};
+  const f = STORES[tienda] || STORES.ec;
+  const enLista = function (obj, kn, kv) {
+    return Object.keys(obj || {}).map(function (k) {
+      const o = {}; o[kn] = k; o[kv] = obj[k]; return o;
+    }).sort(function (x, y) { return y[kv] - x[kv]; });
+  };
+
+  return {
+    mes: mes, tienda: tienda, sym: f.sym, nombre: f.name,
+    pedidos: a.pedidos || 0,
+    despachados: a.despachados || 0,
+    entregados: a.entregados || 0,
+    devueltos: a.devueltos || 0,
+    ventas: a.ventas || 0,
+    gasto: a.gasto || 0,
+    costoProd: a.costoProducto || 0,
+    envio: a.costoEnvio || 0,
+    // Los gastos fijos todavía no viven en ninguna hoja: no se inventan.
+    fijos: 0,
+    margen: a.margen !== undefined
+      ? a.margen
+      : (a.ventas || 0) - (a.gasto || 0) - (a.costoProducto || 0) - (a.costoEnvio || 0),
+    efectividad: a.efectividad || 0,
+    tasaDevol: a.tasaDevolucion || 0,
+    cpa: a.cpa || 0,
+    roas: a.roas || 0,
+    ticket: a.ticket || 0,
+    novedades: a.novedades || 0,
+    sinMover: a.sinMover || 0,
+    sinNota: 0,
+    grupos: enLista(a.grupos, 'g', 'n'),
+    transp: Object.keys(a.transportadoras || {}).map(function (t) {
+      const x = a.transportadoras[t];
+      return { t: t, n: x.n, ent: x.n ? x.entregados / x.n * 100 : 0 };
+    }).sort(function (x, y) { return y.n - x.n; }),
+    campanas: Object.keys(a.campanas || {}).map(function (c) {
+      const x = a.campanas[c];
+      return { c: c, g: x.gasto, v: 0, roas: 0, resultados: x.resultados };
+    }).sort(function (x, y) { return y.g - x.g; }),
+  };
+}
+
 function cierreDatos(mes, tienda){
   let h=2166136261; const k=mes+tienda;
   for(let i=0;i<k.length;i++){ h=Math.imul(h^k.charCodeAt(i),16777619); }
@@ -4066,6 +4149,31 @@ function cierreDatos(mes, tienda){
     sinMover: Math.round(r(3,26,28)),
     sinNota:  Math.round(r(0,13,29)),
   };
+}
+
+function origenCierre(d, real) {
+  let color, texto;
+  if (!real) {
+    color = ['#f6ecd0', '#7a5c10'];
+    texto = 'CIFRAS DE EJEMPLO — entra con tu correo para ver las de tu tienda. ' +
+      'No tomes decisiones con estos números.';
+  } else if (d.cerrado) {
+    color = ['#e2ead6', '#3f5330'];
+    texto = 'MES CERRADO el ' + (d.cerrado_en || '').slice(0, 10) +
+      '. Estas cifras están congeladas: no cambian aunque después se ' +
+      'resuelva un pedido viejo.';
+  } else if (d.provisional) {
+    color = ['#f6ecd0', '#7a5c10'];
+    texto = 'MES PROVISIONAL — quedan ' + d.pendientes + ' pedidos sin desenlace. ' +
+      'Las cifras van a moverse hasta que se resuelvan o cierres el mes.';
+  } else {
+    color = ['#e6efe8', '#2f5738'];
+    texto = 'Cifras reales de tu hoja. Ningún pedido del mes quedó sin ' +
+      'desenlace, así que ya se puede cerrar.';
+  }
+  return '<div style="background:' + color[0] + ';color:' + color[1] + ';' +
+    'border-radius:11px;padding:11px 14px;margin-bottom:14px;' +
+    'font:600 11.5px/1.55 \'DM Sans\';">' + texto + '</div>';
 }
 
 function mesAnterior(mes){
@@ -4154,7 +4262,7 @@ function cierreFalencias(d, p){
   return F.sort((a,b)=>({mal:0,ojo:1,ok:2})[a.n]-({mal:0,ojo:1,ok:2})[b.n]);
 }
 
-function buildCierre(){
+async function buildCierre(){
   const selM=document.getElementById('cm-mes'), selT=document.getElementById('cm-tienda');
   if(!selM.options.length){
     selM.innerHTML=mesesDisponibles(12).map(m=>'<option value="'+m.v+'">'+m.t+'</option>').join('');
@@ -4162,7 +4270,11 @@ function buildCierre(){
       '<option value="'+k+'"'+(k===ST?' selected':'')+'>'+STORES[k].name+'</option>').join('');
   }
   const mes=selM.value, tienda=selT.value;
-  const d=cierreDatos(mes,tienda), p=cierreDatos(mesAnterior(mes),tienda);
+
+  // Lo real manda. El ejemplo solo aparece sin sesión, y va rotulado.
+  const real = await cierreReal(mes, tienda);
+  const d = real || cierreDatos(mes,tienda);
+  const p = real ? real.anterior : cierreDatos(mesAnterior(mes),tienda);
   const F=cierreFalencias(d,p);
   const S=d.sym, esDueno = ROL==='dueno';
   const nf=n=>Math.round(n).toLocaleString(LOC());
@@ -4179,6 +4291,15 @@ function buildCierre(){
     '<div class="cm-meta">Generado '+new Date().toLocaleDateString('es')+'<br>'+
       (nombreDe(localStorage.getItem('ne_email')||'')||'Manuela')+' · '+
       (esDueno?'Dueña':'Admin')+'</div></div>';
+
+  /**
+   * De dónde salen estas cifras, dicho arriba del todo.
+   *
+   * Este informe se imprime y se le enseña a alguien. Quien lo lea tiene
+   * derecho a saber si las cifras están cerradas, si todavía pueden
+   * moverse porque quedan pedidos sin desenlace, o si es un ejemplo.
+   */
+  h += origenCierre(d, real);
 
   h+='<div class="cm-vacio">Datos de ejemplo. Cuando se conecte la hoja de Google, '+
      'este mismo documento se llena con tu operación real.</div>';
