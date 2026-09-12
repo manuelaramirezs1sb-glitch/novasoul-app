@@ -635,6 +635,10 @@ input.li:focus{border-color:var(--acc-d);}
 .rec-nada{font:500 12px/1.55 'DM Sans';color:var(--t-ondark-mut);border-top:1px solid var(--s-dark3);
   padding-top:10px;margin-top:8px;}
 
+.cfg-f{display:flex;flex-direction:column;gap:3px;font:500 13px/1.4 'DM Sans';color:var(--t-ink);}
+.cfg-f span{font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);}
+.cfg-nota{font:500 11.5px/1.5 'DM Sans';color:var(--t-mut2);margin:4px 0 0;}
+
 /* ─── VER COMO ──────────────────────────────────────── */
 .vsel{display:flex;gap:5px;}
 .vchip{font:600 11px/1 'DM Sans';border-radius:20px;padding:7px 11px;cursor:pointer;
@@ -1425,17 +1429,11 @@ input.li:focus{border-color:var(--acc-d);}
         <div class="g2">
           <div class="card">
             <div class="card-h"><span class="ct">Tu cuenta</span></div>
-            <div style="display:flex;flex-direction:column;gap:10px;">
-              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">NOMBRE</span><input class="li" value="Manuela" style="background:var(--s-bg);"></div>
-              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">CORREO</span><input class="li" value="manuela@nutrea.co" style="background:var(--s-bg);" readonly></div>
-            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;" id="cfg-cuenta"></div>
           </div>
           <div class="card">
             <div class="card-h"><span class="ct">Tiendas conectadas</span></div>
-            <div style="display:flex;flex-direction:column;gap:9px;">
-              <div class="jcard"><div class="jtop"><span style="font:600 13px/1.2 'DM Sans';color:var(--t-ink);">Nutrea EC</span><span class="bd bd-g">Activa</span></div><span style="font:500 11.5px/1 'DM Sans';color:var(--t-mut2);">Shopify + Dropi · USD</span></div>
-              <div class="jcard"><div class="jtop"><span style="font:600 13px/1.2 'DM Sans';color:var(--t-ink);">Nutrea GT</span><span class="bd bd-g">Activa</span></div><span style="font:500 11.5px/1 'DM Sans';color:var(--t-mut2);">Dropi · GTQ</span></div>
-            </div>
+            <div style="display:flex;flex-direction:column;gap:9px;" id="cfg-tiendas"></div>
           </div>
         </div>
         <div class="card">
@@ -3158,9 +3156,18 @@ async function cargarReales() {
     const r = await api('resumen', { tienda: ST, mes: mes });
     if (!r.ok) { marcarOrigen(false, r.error); return; }
     REAL = r.datos;
+    /**
+     * El sello va PRIMERO y el desello después.
+     *
+     * Estaba al revés: se pintaban los datos reales —que quitan el
+     * sello— y justo después marcarOrigen volvía a sellarlo todo. Dinero
+     * y Pauta quedaban con la etiqueta EJEMPLO sobre cifras que eran de
+     * verdad, que es la peor forma de equivocarse: enseña a desconfiar
+     * de lo que sí se puede creer.
+     */
+    marcarOrigen(true);
     aplicarReales(r.datos);
     pintarEstadoCierre(r.datos);
-    marcarOrigen(true);
     cargarHistorialFuentes();
     // Cada lista se conecta por su cuenta: que Novedades esté vacía no
     // puede dejar a Pedidos sin cargar. Se esperan las dos para saber
@@ -4193,16 +4200,28 @@ async function cargarHistorialFuentes() {
  *
  * Cuando cada sección se conecte, se saca de esta lista.
  */
+/**
+ * Lo que todavía dibuja el guion de demostración.
+ *
+ * Solo va aquí lo que de verdad es inventado. Marcar como ejemplo algo
+ * que ya salió de la hoja enseña a desconfiar de lo que sí se puede
+ * creer, y entonces el sello deja de servir para lo único que existe:
+ * avisar cuando un número no es tuyo.
+ *
+ * Al conectar una sección se saca de esta lista. Lo que queda:
+ */
 const SIN_FUENTE = [
-  // Hoy — lo que todavía dibuja el guion
-  'palist', 'eqhoy', 'barchart',
+  // Hoy
+  'palist',        // qué escalar y qué frenar
+  'eqhoy',         // el equipo de hoy
+  'barchart',      // la jornada · necesita movimientos con hora
   // Operación
-  'pedlist', 'novkpi', 'novlist', 'stlist', 'prodlist', 'tlist',
-  'caslist', 'audqlist', 'commlist', 'ofikpi', 'ofirows',
+  'prodlist',      // productos · falta la ficha editable
+  'caslist',       // CAS en operación
+  'commlist',      // comisiones
   // Dinero
-  'dinkpi', 'dinkpi2', 'eq-costos', 'roaslist', 'pautabar', 'cpalist',
-  'invlist', 'invriesgo',
-  // Vistas de la gestora — siguen sin conectar
+  'invlist', 'invriesgo',   // inventario
+  // Las tres pantallas de la gestora
   'g-kpi', 'g-urgentes', 'g-pedkpi', 'g-pedlist', 'g-novlist',
 ];
 
@@ -4838,6 +4857,55 @@ async function buildCierre(){
   document.getElementById('cm-doc').innerHTML = pintarInforme(d, p, real);
 }
 
+
+/**
+ * Configuración: tu cuenta y tus tiendas, como las tiene la hoja.
+ *
+ * Estaba escrito a mano: decía "Manuela" y "manuela@nutrea.co", un correo
+ * que ni siquiera existe. La pantalla que le explica a alguien cómo está
+ * montada su cuenta no puede ser la que le miente sobre ella.
+ *
+ * El nombre y el rol se cambian en Permisos, no aquí: son los mismos
+ * campos y tener dos sitios donde editar lo mismo es pedir que se
+ * desincronicen.
+ */
+function pintarConfig() {
+  const cuenta = document.getElementById('cfg-cuenta');
+  const tiendas = document.getElementById('cfg-tiendas');
+
+  if (cuenta) {
+    cuenta.innerHTML = SESION
+      ? '<div class="cfg-f"><span>NOMBRE</span>' + esc(SESION.nombre || '—') + '</div>' +
+        '<div class="cfg-f"><span>CORREO</span>' + esc(SESION.email || '—') + '</div>' +
+        '<div class="cfg-f"><span>ROL</span>' +
+          (SESION.rol === 'dueno' ? 'Dueña' :
+           SESION.rol === 'admin' ? 'Admin' : 'Gestora') + '</div>' +
+        '<div class="cfg-f"><span>TU SESIÓN DURA</span>' + (SESION.horas || 4) +
+          ' horas · se cierra sola tras ' + (SESION.inactividad_min || 90) +
+          ' min sin actividad</div>' +
+        '<p class="cfg-nota">Para cambiar tu nombre o el de alguien del equipo, ' +
+          've a Permisos.</p>'
+      : '<div class="eq-vacio">Entra con tu correo para ver tu cuenta.</div>';
+  }
+
+  if (tiendas) {
+    const fichas = (SESION && SESION.fichas) || [];
+    tiendas.innerHTML = fichas.length
+      ? fichas.map(function (f) {
+          const id = f.id || f;
+          const st = STORES[id] || {};
+          return '<div class="jcard"><div class="jtop">' +
+            '<span style="font:600 13px/1.2 \'DM Sans\';color:var(--t-ink);">' +
+              esc(f.nombre || st.name || id) + '</span>' +
+            '<span class="bd bd-g">' + esc(f.estado || 'Activa') + '</span></div>' +
+            '<span style="font:500 11.5px/1 \'DM Sans\';color:var(--t-mut2);">' +
+              esc([f.pais, f.moneda, f.modalidad ? f.modalidad.replace(/_/g, ' ') : '']
+                .filter(Boolean).join(' · ')) + '</span></div>';
+        }).join('')
+      : '<div class="eq-vacio">Tus tiendas salen de la hoja Tiendas. ' +
+        'Si falta alguna, se agrega ahí.</div>';
+  }
+}
 
 // ─── VER COMO ─────────────────────────────────────────────────
 /**
@@ -5834,6 +5902,7 @@ function entrarConSesion(ses) {
   ROL_REAL = ROL;
   pintarSelectorVista();
   pintarBannerVista();
+  pintarConfig();
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
