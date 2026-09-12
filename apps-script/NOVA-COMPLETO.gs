@@ -2793,8 +2793,22 @@ function manejar(e, metodo) {
     if (accion === 'login')     return json(apiLogin(p));
     if (accion === 'verificar') return json(apiVerificar(p));
 
-    const s = sesion(p.token);
-    if (!s) return json({ ok: false, error: 'Sesión vencida o inválida.', reautenticar: true });
+    const real = sesion(p.token);
+    if (!real) return json({ ok: false, error: 'Sesión vencida o inválida.', reautenticar: true });
+
+    /**
+     * "Ver como" baja de nivel, nunca sube.
+     *
+     * La dueña ya puede verlo todo, así que ponerse la vista de gestora
+     * no le da nada nuevo: le quita. Es un filtro sobre lo que ya tiene
+     * derecho a ver, no una llave nueva. Por eso dueña → admin → gestora
+     * se permite y al revés jamás.
+     *
+     * Lo que NO cambia es quién es: el correo y el nombre siguen siendo
+     * los suyos, así que la auditoría dice "Manuela", no "Katherin". Si
+     * cambiara, la bitácora dejaría de servir justo para lo que existe.
+     */
+    const s = vistaEfectiva(real, p.vista);
 
     switch (accion) {
       case 'yo':        return json({ ok: true, sesion: publico(s) });
@@ -2960,6 +2974,35 @@ function sesion(token) {
   return s;
 }
 
+/** Jerarquía de roles. Solo se puede mirar hacia abajo. */
+const NIVEL_ROL = { gestora: 1, admin: 2, dueno: 3 };
+
+function vistaEfectiva(s, vista) {
+  const v = String(vista || '').trim();
+  if (!v || v === s.rol) return s;
+  if (!NIVEL_ROL[v]) return s;
+  if (!puedeVerComo(s)) return s;
+  // Hacia arriba, nunca
+  if (NIVEL_ROL[v] >= NIVEL_ROL[s.rol]) return s;
+
+  const copia = JSON.parse(JSON.stringify(s));
+  copia.rol = v;
+  copia.rolReal = s.rol;
+  copia.vistaComo = v;
+  // Los permisos de dinero se van con el rol: una vista de gestora que
+  // siguiera viendo la pauta no simularía nada.
+  if (v === 'gestora') copia.permisos = ['subir_pedidos', 'subir_novedades'];
+  return copia;
+}
+
+/** Mirar con menos permisos es un permiso más, y se puede quitar. */
+function puedeVerComo(s) {
+  if (s.rol === 'gestora') return false;
+  const p = s.permisos || [];
+  if (p.indexOf('-ver_como') !== -1) return false;
+  return true;
+}
+
 function apiSalir(token) {
   CacheService.getScriptCache().remove('ses_' + String(token));
   return { ok: true };
@@ -3027,7 +3070,9 @@ function publico(s, ss) {
               // Para que la pantalla avise antes de cortar, en vez de
               // cortar en mitad de algo sin explicación
               vence: s.vence, horas: s.horas || TTL_POR_ROL[s.rol] || 4,
-              inactividad_min: INACTIVIDAD_MIN };
+              inactividad_min: INACTIVIDAD_MIN,
+              puede_ver_como: puedeVerComo(s),
+              rol_real: s.rolReal || s.rol };
   // La ficha va con moneda y país para que la pantalla no tenga que adivinarlos
   try {
     o.fichas = fichasDe(ss || SpreadsheetApp.openById(s.sheetId), s.tiendas);
@@ -4085,7 +4130,12 @@ function apiEscribir(s, p) {
 function registrarMovimiento(s, entidad, entidadId, campo, antes, ahora) {
   try {
     const sh = SpreadsheetApp.openById(s.sheetId).getSheetByName('Movimientos');
-    if (sh) sh.appendRow([ahoraISO(), s.email, entidad, entidadId, campo, antes, ahora]);
+    // Si estaba mirando con otra vista, queda dicho: sigue siendo ella,
+    // pero conviene saber desde dónde lo hizo.
+    const quien = s.vistaComo
+      ? s.email + ' (viendo como ' + s.vistaComo + ')'
+      : s.email;
+    if (sh) sh.appendRow([ahoraISO(), quien, entidad, entidadId, campo, antes, ahora]);
   } catch (err) {
     // Que falle la bitácora no puede tumbar la operación
     Logger.log('No se pudo registrar el movimiento: ' + err.message);

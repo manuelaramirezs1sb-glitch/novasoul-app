@@ -635,6 +635,18 @@ input.li:focus{border-color:var(--acc-d);}
 .rec-nada{font:500 12px/1.55 'DM Sans';color:var(--t-ondark-mut);border-top:1px solid var(--s-dark3);
   padding-top:10px;margin-top:8px;}
 
+/* ─── VER COMO ──────────────────────────────────────── */
+.vsel{display:flex;gap:5px;}
+.vchip{font:600 11px/1 'DM Sans';border-radius:20px;padding:7px 11px;cursor:pointer;
+  border:1px solid var(--s-line2);background:transparent;color:var(--t-mut);}
+.vchip:hover{border-color:var(--t-mut2);}
+.vchip.on{background:var(--acc-d);color:#f1f4e8;border-color:var(--acc-d);}
+.vbanner{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  flex-wrap:wrap;background:#f6ecd0;color:#7a5c10;padding:10px 18px;
+  font:600 12px/1.5 'DM Sans';border-bottom:1px solid #e6d5a8;}
+.vbanner b{font-weight:700;}
+@media(max-width:640px){ .vsel{display:none;} }
+
 /* ─── SEGUIMIENTO A OFICINA ─────────────────────────── */
 .ofi-mes{font:600 10px/1 'DM Sans';letter-spacing:1.1px;text-transform:uppercase;
   color:var(--t-mut2);margin:16px 0 6px;}
@@ -1015,6 +1027,7 @@ input.li:focus{border-color:var(--acc-d);}
         <div class="psub" id="psub"></div>
       </div>
       <div class="tbar-r">
+        <div id="vista-sel" class="vsel"></div>
         <span class="uchip" id="toprol">Manuela · dueña</span>
         <div class="mtoggle">
           <div class="mbtn on" id="bcl" onclick="setModo('claro')">Claro</div>
@@ -1029,6 +1042,7 @@ input.li:focus{border-color:var(--acc-d);}
         <div class="outbtn" onclick="logout()">Salir</div>
       </div>
     </div>
+    <div id="vista-banner" class="vbanner" style="display:none;"></div>
 
     <div class="content">
 
@@ -2949,7 +2963,8 @@ const REINTENTABLES = ['login', 'verificar', 'yo', 'resumen', 'listar',
 
 async function api(accion, datos, intento) {
   intento = intento || 0;
-  const cuerpo = Object.assign({ accion: accion, token: TOKEN }, datos || {});
+  const cuerpo = Object.assign({ accion: accion, token: TOKEN },
+    VISTA ? { vista: VISTA } : {}, datos || {});
   const r = await fetch(NOVA_API, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -4824,6 +4839,83 @@ async function buildCierre(){
 }
 
 
+// ─── VER COMO ─────────────────────────────────────────────────
+/**
+ * Mirar Nova con menos permisos de los que tienes.
+ *
+ * No es entrar como otra persona: es ponerse su lente. El servidor sigue
+ * sabiendo quién eres —la auditoría dice tu nombre— y solo acepta bajar
+ * de nivel, nunca subir.
+ *
+ * Existe porque en una tienda que empieza la dueña ES la gestora, y
+ * obligarla a un segundo correo para hacer su propio trabajo diario es
+ * fricción sin ningún beneficio. Y porque cuando alguien del equipo dice
+ * "no me aparece tal cosa", hay que poder ver su pantalla en vez de
+ * imaginársela.
+ */
+let VISTA = '';
+
+const VISTAS = [
+  ['', 'Tu panel'],
+  ['admin', 'Como admin'],
+  ['gestora', 'Como gestora'],
+];
+
+function pintarSelectorVista() {
+  const cont = document.getElementById('vista-sel');
+  if (!cont) return;
+  const puede = SESION && SESION.puede_ver_como;
+  const rolReal = (SESION && SESION.rol_real) || ROL_REAL || ROL;
+
+  if (!puede || rolReal === 'gestora') { cont.innerHTML = ''; return; }
+
+  const disponibles = VISTAS.filter(function (v) {
+    if (!v[0]) return true;
+    if (rolReal === 'admin') return v[0] === 'gestora';
+    return true;                       // la dueña puede las dos
+  });
+
+  cont.innerHTML = disponibles.map(function (v) {
+    return '<button class="vchip' + (VISTA === v[0] ? ' on' : '') + '" ' +
+      'onclick="cambiarVista(\'' + v[0] + '\')">' + v[1] + '</button>';
+  }).join('');
+}
+
+function pintarBannerVista() {
+  const b = document.getElementById('vista-banner');
+  if (!b) return;
+  if (!VISTA) { b.style.display = 'none'; return; }
+  const nombre = VISTA === 'gestora' ? 'gestora' : 'admin';
+  b.style.display = 'flex';
+  b.innerHTML = '<span>Estás viendo Nova como <b>' + nombre + '</b>. ' +
+    'Lo que cambies queda a tu nombre.</span>' +
+    '<button class="vchip on" onclick="cambiarVista(\'\')">Volver a tu panel</button>';
+}
+
+let ROL_REAL = '';
+
+async function cambiarVista(v) {
+  if (!ROL_REAL) ROL_REAL = ROL;
+  VISTA = v || '';
+  ROL = VISTA || ROL_REAL;
+
+  document.getElementById('app').setAttribute('data-rol', ROL);
+  const label = ROL === 'dueno' ? 'dueña' : (ROL === 'admin' ? 'admin' : 'gestora');
+  const top = document.getElementById('toprol');
+  if (top && SESION) {
+    top.textContent = (SESION.nombre || SESION.email) + ' · ' + label +
+      (VISTA ? ' (vista)' : '');
+  }
+
+  pintarSelectorVista();
+  pintarBannerVista();
+  // La vista cambia lo que el servidor devuelve, así que hay que volver
+  // a pedirlo todo: si no, quedarían en pantalla datos de la vista anterior.
+  go(ROL === 'gestora' ? 'g-hoy' : 'hoy', null);
+  buildAll();
+  await cargarReales();
+}
+
 // ─── SEGUIMIENTO A OFICINA ────────────────────────────────────
 /**
  * Los pedidos que la clienta tiene que ir a recoger.
@@ -5736,6 +5828,9 @@ function entrarConSesion(ses) {
   document.getElementById('chat-fab').style.display = 'flex';
   initChat();
   vigilarSesion();
+  ROL_REAL = ROL;
+  pintarSelectorVista();
+  pintarBannerVista();
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
