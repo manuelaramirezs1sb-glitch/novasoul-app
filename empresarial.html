@@ -2985,8 +2985,63 @@ async function api(accion, datos, intento) {
       '\n\nSi acabas de publicar una versión nueva, espera un minuto: ' +
       'Google tarda en activarla.');
   }
-  if (j && j.reautenticar) { TOKEN=''; localStorage.removeItem('ne_token'); }
+  if (j && j.reautenticar) { sesionVencida(); }
   return j;
+}
+
+/**
+ * La sesión se acabó: se dice por qué y se vuelve al login.
+ *
+ * Sin esto, la pantalla se quedaba con datos viejos en pantalla y cada
+ * acción fallaba en silencio. Peor que cortar es cortar sin avisar: la
+ * persona sigue trabajando creyendo que guarda.
+ */
+function sesionVencida() {
+  TOKEN = '';
+  CONECTADO = false;
+  SESION = null;
+  localStorage.removeItem('ne_token');
+  if (RELOJ_SESION) { clearInterval(RELOJ_SESION); RELOJ_SESION = null; }
+
+  const app = document.getElementById('app');
+  const login = document.getElementById('login');
+  if (app) app.classList.remove('on');
+  if (login) {
+    login.style.display = '';
+    const err = document.getElementById('lg-err');
+    if (err) {
+      err.style.display = 'block';
+      err.textContent = 'Tu sesión se cerró por seguridad. Pide un código ' +
+        'nuevo para volver a entrar.';
+    }
+  }
+}
+
+/**
+ * El aviso antes de que se acabe.
+ *
+ * A los diez minutos se avisa una vez. No se renueva sola: el tope existe
+ * justamente para que una sesión no dure para siempre, y renovarla en
+ * silencio lo volvería decorativo.
+ */
+let RELOJ_SESION = null;
+let AVISADA_SESION = false;
+
+function vigilarSesion() {
+  if (RELOJ_SESION) clearInterval(RELOJ_SESION);
+  AVISADA_SESION = false;
+  if (!SESION || !SESION.vence) return;
+
+  RELOJ_SESION = setInterval(function () {
+    if (!SESION || !SESION.vence) return;
+    const min = (SESION.vence - Date.now()) / 60000;
+    if (min <= 0) { sesionVencida(); return; }
+    if (min <= 10 && !AVISADA_SESION) {
+      AVISADA_SESION = true;
+      showToast('Tu sesión se cierra en ' + Math.ceil(min) +
+        ' minutos. Guarda lo que tengas a medias.');
+    }
+  }, 60000);
 }
 
 function errLogin(id, msg) {
@@ -3035,6 +3090,7 @@ async function verificarCodigo() {
     // Las tiendas que la hoja autoriza mandan sobre las que muestra el HTML
     pintarTiendasPermitidas(r.sesion.tiendas);
     aplicarPermisos();
+    vigilarSesion();
     step(3);
   } catch (e) {
     // Un mensaje genérico esconde la causa y deja a todos adivinando.
@@ -5259,6 +5315,7 @@ function entrarConSesion(ses) {
   cargarReales();
   document.getElementById('chat-fab').style.display = 'flex';
   initChat();
+  vigilarSesion();
 }
 
 document.addEventListener('DOMContentLoaded',()=>{

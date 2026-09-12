@@ -31,8 +31,29 @@
  *    no la capa de Google. Sin token válido no devuelve ni una fila.)
  */
 
-const TTL_SESION_H = 12;   // horas que dura un token
 const TTL_CODIGO_M = 10;   // minutos que dura el código de 6 dígitos
+
+/**
+ * Cuánto dura una sesión, y por qué son dos límites y no uno.
+ *
+ * ┌────────────────────────────────────────────────────────────┐
+ * │ TOPE: desde que entras, pase lo que pase. Una jornada de   │
+ * │ gestora es un turno; el de la dueña, un día de trabajo.    │
+ * │ Que una sesión no dure para siempre es lo que impide que   │
+ * │ un token robado sirva un mes después.                      │
+ * │                                                            │
+ * │ INACTIVIDAD: desde la última vez que hiciste algo. Este    │
+ * │ es el que de verdad protege, porque el riesgo en una       │
+ * │ tienda no es el tiempo: es el computador compartido que    │
+ * │ alguien dejó abierto y se fue.                             │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * Recargar la página NO cuenta como volver a entrar: el token sigue
+ * vivo y la sesión se reanuda sola. Pedir código en cada recarga
+ * enseñaría a no recargar nunca, que es peor para todos.
+ */
+const TTL_POR_ROL = { dueno: 12, admin: 6, gestora: 4 };   // horas de tope
+const INACTIVIDAD_MIN = 90;                                // minutos sin hacer nada
 
 // ─── ENTRADA ─────────────────────────────────────────────────
 
@@ -148,6 +169,7 @@ function apiVerificar(p) {
   const persona = buscarPersona(email);
   if (!persona) return { ok: false, error: 'Esta cuenta ya no tiene acceso.' };
 
+  const horas = TTL_POR_ROL[persona.rol] || 4;
   const token = Utilities.getUuid();
   const s = {
     email: email,
@@ -158,9 +180,11 @@ function apiVerificar(p) {
     tiendas: persona.tiendas,
     modulos: persona.modulos,
     permisos: persona.permisos,
-    vence: Date.now() + TTL_SESION_H * 3600000,
+    vence: Date.now() + horas * 3600000,
+    ultimo: Date.now(),
+    horas: horas,
   };
-  cache.put('ses_' + token, JSON.stringify(s), TTL_SESION_H * 3600);
+  cache.put('ses_' + token, JSON.stringify(s), horas * 3600);
 
   registrarMovimiento(s, 'Equipo', persona.id, 'ultima_conexion', '', ahoraISO());
   return { ok: true, token: token, sesion: publico(s) };
@@ -168,10 +192,30 @@ function apiVerificar(p) {
 
 function sesion(token) {
   if (!token) return null;
-  const raw = CacheService.getScriptCache().get('ses_' + String(token));
+  const cache = CacheService.getScriptCache();
+  const raw = cache.get('ses_' + String(token));
   if (!raw) return null;
   const s = JSON.parse(raw);
-  if (s.vence <= Date.now()) return null;
+  const ahora = Date.now();
+
+  // Tope: se cumplió el turno
+  if (s.vence <= ahora) return null;
+
+  // Inactividad: se fue y dejó la pantalla abierta
+  const quieto = (ahora - (s.ultimo || s.vence)) / 60000;
+  if (s.ultimo && quieto > INACTIVIDAD_MIN) {
+    cache.remove('ses_' + String(token));
+    return null;
+  }
+
+  /**
+   * Cada acción corre el reloj de inactividad, pero NUNCA el del tope.
+   * Si el tope se moviera también, una sesión activa sería eterna y la
+   * regla de las horas no serviría de nada.
+   */
+  s.ultimo = ahora;
+  const quedan = Math.ceil((s.vence - ahora) / 1000);
+  if (quedan > 0) cache.put('ses_' + String(token), JSON.stringify(s), quedan);
 
   /**
    * Las sesiones abiertas sobreviven a un despliegue: viven en el caché,
@@ -247,7 +291,11 @@ function permisosDe(rol, celda) {
 function publico(s, ss) {
   const o = { email: s.email, nombre: s.nombre, rol: s.rol,
               tiendas: s.tiendas, modulos: s.modulos || ['empresarial'],
-              permisos: s.permisos || [] };
+              permisos: s.permisos || [],
+              // Para que la pantalla avise antes de cortar, en vez de
+              // cortar en mitad de algo sin explicación
+              vence: s.vence, horas: s.horas || TTL_POR_ROL[s.rol] || 4,
+              inactividad_min: INACTIVIDAD_MIN };
   // La ficha va con moneda y país para que la pantalla no tenga que adivinarlos
   try {
     o.fichas = fichasDe(ss || SpreadsheetApp.openById(s.sheetId), s.tiendas);
