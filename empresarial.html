@@ -4754,7 +4754,7 @@ async function cargarEquipo() {
   PUEDE_EDITAR_EQUIPO = !!r.puedeEditar;
   pintarEquipo();
   pintarGestoras();
-  desellar(['eqlista', 'caslist']);
+  desellar(['eqlista', 'tlist']);
   return true;
 }
 
@@ -4802,7 +4802,10 @@ function pintarEquipo() {
 
 /** Las gestoras, con lo suyo. Es la misma gente, mirada por su trabajo. */
 function pintarGestoras() {
-  const cont = document.getElementById('caslist');
+  // tlist es "Estado de cada integrante", dentro de Gestoras.
+  // caslist NO: ese vive en Seguimiento a oficina y pintarlo aquí
+  // borraría ese panel con datos que no le corresponden.
+  const cont = document.getElementById('tlist');
   if (!cont) return;
   const gs = MI_EQUIPO.filter(function (x) {
     return x.rol === 'gestora' && x.estado === 'activo';
