@@ -2677,7 +2677,19 @@ let REAL = null;   // resumen que devolvió la hoja
  * POST en text/plain a propósito: con application/json el navegador
  * dispara un preflight OPTIONS que Apps Script no sabe responder.
  */
-async function api(accion, datos) {
+/**
+ * Las acciones que se pueden repetir sin consecuencia.
+ *
+ * Leer no cambia nada, y `trozo` guarda el mismo pedazo bajo la misma
+ * clave. Importar y escribir NO están aquí: aunque el importador
+ * deduplica, repetir una escritura a ciegas es la clase de atajo que un
+ * día borra el trabajo de alguien.
+ */
+const REINTENTABLES = ['login', 'verificar', 'yo', 'resumen', 'listar',
+                       'fuentes', 'cierre', 'trozo'];
+
+async function api(accion, datos, intento) {
+  intento = intento || 0;
   const cuerpo = Object.assign({ accion: accion, token: TOKEN }, datos || {});
   const r = await fetch(NOVA_API, {
     method: 'POST',
@@ -2689,11 +2701,20 @@ async function api(accion, datos) {
   try {
     j = JSON.parse(texto);
   } catch (err) {
-    // Google devuelve HTML cuando algo falla del lado del despliegue.
-    // Sin esto, el error real quedaba tapado por "no hay conexión".
+    /**
+     * Google devuelve una página de error, no JSON, mientras publica una
+     * versión nueva: unos minutos en los que toda llamada responde 404
+     * aunque el código esté perfecto. Es pasajero y se cura solo, así que
+     * la pantalla espera y reintenta en vez de acusar a la implementación.
+     */
+    if (REINTENTABLES.indexOf(accion) !== -1 && intento < 3) {
+      await new Promise(function (ok) { setTimeout(ok, 2000 * Math.pow(2, intento)); });
+      return api(accion, datos, intento + 1);
+    }
     console.error('[Nova] respuesta no-JSON:', texto.slice(0, 400));
     throw new Error('la hoja respondió algo que no es JSON (HTTP ' + r.status +
-      '). Revisa que la implementación esté como "Cualquier usuario".');
+      '). Si acabas de publicar una versión nueva, espera un minuto: ' +
+      'Google tarda en activarla.');
   }
   if (j && j.reautenticar) { TOKEN=''; localStorage.removeItem('ne_token'); }
   return j;
