@@ -204,6 +204,18 @@ const ESQUEMA_EMPRESARIAL = {
           'entrega','presupuesto','gasto','moneda_gasto','gasto_normalizado',
           'impresiones','alcance','frecuencia','clics','ctr','cpc','cpm',
           'resultados','compras','cpa','roas','valor_conv','visitas_lp'],
+  /**
+   * La factura no es el reporte de campañas, y por eso va aparte.
+   *
+   * El reporte dice lo que la plataforma contabiliza como gasto. La
+   * factura dice lo que te cobraron de verdad, cuándo y en qué moneda —
+   * que para quien opera en un país y vive en otro es justo el número que
+   * define la utilidad. Guardar solo uno de los dos deja sin respuesta la
+   * pregunta de por qué no cuadran.
+   */
+  Facturacion: ['id','fuente','id_externo','fecha','tienda','plataforma','concepto',
+                'gasto','moneda_gasto','gasto_normalizado','moneda_reporte'],
+
   Inventario: ['sku','producto','tienda','fuente','stock','costo_unitario','precio',
                'dias_cobertura','ultimo_conteo','actualizado_en','actualizado_por'],
   // "permisos" es lo que la dueña decide que esta persona puede hacer,
@@ -3064,7 +3076,7 @@ const PERMISOS = {
 
 // Entidades con plata adentro: nunca para gestora, y para admin solo
 // las que no son de dinero.
-const ENTIDADES_DINERO = ['Pauta','Tasas'];
+const ENTIDADES_DINERO = ['Pauta','Tasas','Facturacion'];
 
 function puede(s, accion, entidad) {
   const p = PERMISOS[s.rol] || PERMISOS.gestora;
@@ -3958,6 +3970,7 @@ function importar(fuenteId, tienda, cliente) {
 
   const destino = { pedidos: 'Pedidos', novedades: 'Novedades',
                     llamadas: 'Llamadas', pauta: 'Pauta',
+                    facturacion: 'Facturacion',
                     pedidos_secundario: 'Pedidos' }[r.tipo];
   if (!destino) throw new Error('No sé dónde guardar una fuente de tipo ' + r.tipo);
 
@@ -4058,6 +4071,20 @@ function prepararFila(f, tipo, fuenteId, tienda, pais, ss) {
     // IRIS no dice de qué tienda es la llamada: se cruza por teléfono
     o.tienda = '';
   }
+  if (tipo === 'facturacion') {
+    o.plataforma = fuenteId.replace('_facturacion', '');
+    o.id = fuenteId + '-' + (o.id_externo || Utilities.getUuid().slice(0, 8));
+    const mon = String(o.moneda_gasto || (FUENTES[fuenteId] || {}).moneda_default || '').toUpperCase();
+    o.moneda_gasto = mon;
+    const destino = monedaReporte(ss);
+    o.moneda_reporte = destino;
+    if (mon && o.fecha) {
+      const c = convertir(ss, o.gasto, o.fecha, mon, destino);
+      // Sin tasa no se inventa un número: queda vacío y visible
+      o.gasto_normalizado = c.valor === null ? '' : c.valor;
+    }
+  }
+
   if (tipo === 'pauta') {
     o.plataforma = fuenteId;
     /**

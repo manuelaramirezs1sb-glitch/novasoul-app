@@ -423,7 +423,7 @@ const PERMISOS = {
 
 // Entidades con plata adentro: nunca para gestora, y para admin solo
 // las que no son de dinero.
-const ENTIDADES_DINERO = ['Pauta','Tasas'];
+const ENTIDADES_DINERO = ['Pauta','Tasas','Facturacion'];
 
 function puede(s, accion, entidad) {
   const p = PERMISOS[s.rol] || PERMISOS.gestora;

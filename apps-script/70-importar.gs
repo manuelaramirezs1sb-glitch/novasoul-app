@@ -53,6 +53,7 @@ function importar(fuenteId, tienda, cliente) {
 
   const destino = { pedidos: 'Pedidos', novedades: 'Novedades',
                     llamadas: 'Llamadas', pauta: 'Pauta',
+                    facturacion: 'Facturacion',
                     pedidos_secundario: 'Pedidos' }[r.tipo];
   if (!destino) throw new Error('No sé dónde guardar una fuente de tipo ' + r.tipo);
 
@@ -153,6 +154,20 @@ function prepararFila(f, tipo, fuenteId, tienda, pais, ss) {
     // IRIS no dice de qué tienda es la llamada: se cruza por teléfono
     o.tienda = '';
   }
+  if (tipo === 'facturacion') {
+    o.plataforma = fuenteId.replace('_facturacion', '');
+    o.id = fuenteId + '-' + (o.id_externo || Utilities.getUuid().slice(0, 8));
+    const mon = String(o.moneda_gasto || (FUENTES[fuenteId] || {}).moneda_default || '').toUpperCase();
+    o.moneda_gasto = mon;
+    const destino = monedaReporte(ss);
+    o.moneda_reporte = destino;
+    if (mon && o.fecha) {
+      const c = convertir(ss, o.gasto, o.fecha, mon, destino);
+      // Sin tasa no se inventa un número: queda vacío y visible
+      o.gasto_normalizado = c.valor === null ? '' : c.valor;
+    }
+  }
+
   if (tipo === 'pauta') {
     o.plataforma = fuenteId;
     /**

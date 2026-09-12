@@ -211,6 +211,18 @@ const ESQUEMA_EMPRESARIAL = {
           'entrega','presupuesto','gasto','moneda_gasto','gasto_normalizado',
           'impresiones','alcance','frecuencia','clics','ctr','cpc','cpm',
           'resultados','compras','cpa','roas','valor_conv','visitas_lp'],
+  /**
+   * La factura no es el reporte de campañas, y por eso va aparte.
+   *
+   * El reporte dice lo que la plataforma contabiliza como gasto. La
+   * factura dice lo que te cobraron de verdad, cuándo y en qué moneda —
+   * que para quien opera en un país y vive en otro es justo el número que
+   * define la utilidad. Guardar solo uno de los dos deja sin respuesta la
+   * pregunta de por qué no cuadran.
+   */
+  Facturacion: ['id','fuente','id_externo','fecha','tienda','plataforma','concepto',
+                'gasto','moneda_gasto','gasto_normalizado','moneda_reporte'],
+
   Inventario: ['sku','producto','tienda','fuente','stock','costo_unitario','precio',
                'dias_cobertura','ultimo_conteo','actualizado_en','actualizado_por'],
   // "permisos" es lo que la dueña decide que esta persona puede hacer,
