@@ -4189,6 +4189,22 @@ function cierreGuardado(ss, tienda, mes) {
  * lo prohíbe: a veces hay que cerrar contra una fecha aunque falten dos
  * guías perdidas.
  */
+/**
+ * El mes anterior a uno dado, en formato AAAA-MM.
+ *
+ * Existía solo en la pantalla. El servidor la llamaba desde apiCierre sin
+ * tenerla, así que TODA petición del cierre fallaba con "mesAnterior is
+ * not defined" — la pantalla lo interpretaba como "no hay datos" y caía
+ * al ejemplo. Un error que se disfrazaba de falta de información.
+ */
+function mesAnterior(mes) {
+  const a = parseInt(String(mes).slice(0, 4), 10);
+  const m = parseInt(String(mes).slice(5, 7), 10);
+  if (!a || !m) return String(mes);
+  const d = new Date(Date.UTC(a, m - 2, 1));
+  return Utilities.formatDate(d, 'UTC', 'yyyy-MM');
+}
+
 /** El último día real del mes: 28, 30 o 31 según toque. */
 function ultimoDiaDelMes(mes) {
   const a = parseInt(mes.slice(0, 4), 10), m = parseInt(mes.slice(5, 7), 10);
@@ -5247,6 +5263,7 @@ const ALARMAS_DEFAULT = {
   efectividad_min:    65,    // % de entrega sobre lo resuelto
   devoluciones_max:   '',    // % — lo pone el cliente; vacío = apagada
   cpa_aviso_pct:      85,    // % del techo a partir del cual avisa
+  cpa_subida_pct:     25,    // % de subida contra el mes pasado que avisa
   stock_dias_min:     '',    // días de cobertura — vacío = apagada
   alarmas_a:          '',    // correos extra, separados por coma
   alarmas_hora:       7,     // hora local de la revisión diaria
@@ -5264,6 +5281,8 @@ const ALARMAS = [
     param: 'devoluciones_max', unidad: '%', opcional: true },
   { id: 'cpa',          nombre: 'CPA cerca del techo',
     param: 'cpa_aviso_pct', unidad: '% del techo' },
+  { id: 'cpa_sube',     nombre: 'CPA subiendo',
+    param: 'cpa_subida_pct', unidad: '% vs. mes pasado', opcional: true },
   { id: 'stock',        nombre: 'Stock por agotarse',
     param: 'stock_dias_min', unidad: 'días de cobertura', opcional: true },
 ];
@@ -5411,6 +5430,33 @@ function evaluarAlarmas(ss, tienda) {
   if (m.entregados > 0 && m.gasto > 0) {
     const techo = (m.ventas - m.costoProducto - m.costoEnvio) / m.entregados;
     const pagado = m.gasto / m.entregados;
+
+    /**
+     * El techo dice si estás perdiendo. Esta otra dice si estás
+     * empeorando, que es la que avisa a tiempo: un CPA que sube 30% en un
+     * mes todavía puede estar bajo el techo, y aun así ser la señal de
+     * que la campaña se está agotando o la competencia subió la puja.
+     *
+     * Se compara con el mes pasado completo, no con el promedio: un
+     * promedio de varios meses suaviza justo lo que hay que ver.
+     */
+    const sub = u.cpa_subida_pct === '' ? null : Number(u.cpa_subida_pct);
+    if (sub !== null && sub > 0) {
+      const ant = agregarMes(ss, tienda, mesAnterior(mes), sesionFalsa);
+      const cpaAnt = ant.entregados ? ant.gasto / ant.entregados : 0;
+      if (cpaAnt > 0 && ant.entregados >= 10) {
+        const delta = (pagado - cpaAnt) / cpaAnt * 100;
+        if (delta >= sub) {
+          out.push(alarma('cpa_sube', 'ojo',
+            'El CPA subió ' + delta.toFixed(0) + '% contra el mes pasado',
+            'Pagabas ' + moneda + ' ' + cpaAnt.toFixed(2) + ' por pedido y ahora ' +
+            'pagas ' + moneda + ' ' + pagado.toFixed(2) + '. Todavía ' +
+            (pagado < techo ? 'estás bajo el techo, pero la tendencia se come el colchón.'
+                            : 'y además ya pasaste el techo.'),
+            [], 'Dinero'));
+        }
+      }
+    }
     const pct = techo > 0 ? pagado / techo * 100 : 999;
     const aviso = Number(u.cpa_aviso_pct) || 85;
     if (techo > 0 && pct >= aviso) {

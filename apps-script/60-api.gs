@@ -1510,6 +1510,22 @@ function cierreGuardado(ss, tienda, mes) {
  * lo prohíbe: a veces hay que cerrar contra una fecha aunque falten dos
  * guías perdidas.
  */
+/**
+ * El mes anterior a uno dado, en formato AAAA-MM.
+ *
+ * Existía solo en la pantalla. El servidor la llamaba desde apiCierre sin
+ * tenerla, así que TODA petición del cierre fallaba con "mesAnterior is
+ * not defined" — la pantalla lo interpretaba como "no hay datos" y caía
+ * al ejemplo. Un error que se disfrazaba de falta de información.
+ */
+function mesAnterior(mes) {
+  const a = parseInt(String(mes).slice(0, 4), 10);
+  const m = parseInt(String(mes).slice(5, 7), 10);
+  if (!a || !m) return String(mes);
+  const d = new Date(Date.UTC(a, m - 2, 1));
+  return Utilities.formatDate(d, 'UTC', 'yyyy-MM');
+}
+
 /** El último día real del mes: 28, 30 o 31 según toque. */
 function ultimoDiaDelMes(mes) {
   const a = parseInt(mes.slice(0, 4), 10), m = parseInt(mes.slice(5, 7), 10);
