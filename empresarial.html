@@ -112,6 +112,14 @@ input.li:focus{border-color:var(--acc-d);}
 .stores{margin-top:auto;padding-top:14px;border-top:1px solid var(--s-deep);display:flex;flex-direction:column;gap:7px;}
 .stores-lbl{font:600 9px/1 'DM Sans';letter-spacing:1px;color:var(--t-ondark-mut);}
 .schip{border-radius:12px;padding:9px 12px;cursor:pointer;transition:background .12s;}
+/* Filtros de la lista de pedidos */
+.fchip{font:600 11.5px/1 'DM Sans';border-radius:20px;padding:8px 12px;cursor:pointer;
+  border:1px solid var(--s-line2);color:var(--t-mut);background:transparent;
+  display:inline-flex;align-items:center;gap:6px;transition:all .12s;}
+.fchip:hover{border-color:var(--t-mut2);}
+.fchip.on{background:var(--acc-d);color:#f1f4e8;border-color:var(--acc-d);}
+.fchip .fn{font-weight:700;opacity:.75;}
+.fchip.on .fn{opacity:1;}
 .schip.on{background:var(--a-chip);}
 .schip:not(.on){background:var(--s-deep);}
 .schip strong{display:block;font:600 12px/1.1 'DM Sans';}
@@ -906,6 +914,7 @@ input.li:focus{border-color:var(--acc-d);}
       <div class="view" id="v-pedidos">
         <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Los pedidos del día en esta tienda. Ves quién los tiene y en qué van.</p>
         <div class="imp-slot" data-tipo="pedidos"></div>
+        <div id="pedfiltros" style="display:none;flex-wrap:wrap;gap:6px;margin:2px 0 4px;"></div>
         <div style="display:flex;flex-direction:column;gap:9px;" id="pedlist"></div>
       </div>
 
@@ -2917,6 +2926,65 @@ function fechaCorta(v) {
 }
 
 let PEDS_REALES = [];
+let PEDS_TOTAL = 0;
+let PEDS_VISTA = [];
+let FILTRO_PED = 'accion';   // al entrar, lo que hay que resolver
+
+/**
+ * Los filtros de la lista.
+ *
+ * Trescientas filas seguidas no son una pantalla de trabajo: para
+ * encontrar los tres pedidos sin confirmar hay que recorrerlas todas.
+ * Cada filtro trae su conteo, así que el número se ve sin tener que
+ * entrar, y arranca en "necesitan acción" porque es a lo que se entra.
+ *
+ * Un filtro sin nada detrás no se dibuja: un botón que lleva a una lista
+ * vacía solo hace dudar de si el dato falta o si de verdad no hay.
+ */
+const FILTROS_PED = [
+  ['accion',    'Necesitan acción', function (p) { return bandaDe(p) === 0; }],
+  ['novedad',   'Con novedad',      function (p) { return p.estado_canonico === 'novedad'; }],
+  ['pendiente', 'Sin confirmar',    function (p) { return p.estado_canonico === 'pendiente'; }],
+  ['oficina',   'En oficina',       function (p) { return p.estado_canonico === 'en_oficina'; }],
+  ['curso',     'En curso',         function (p) { return bandaDe(p) === 1; }],
+  ['entregado', 'Entregados',       function (p) { return p.estado_canonico === 'entregado'; }],
+  ['devuelto',  'Devueltos',        function (p) { return p.estado_canonico === 'devolucion'; }],
+  ['cancelado', 'Cancelados',       function (p) { return p.estado_canonico === 'cancelado'; }],
+  ['raro',      'Estado desconocido', function (p) { return !COLOR_ESTADO[String(p.estado_canonico||'').trim()]; }],
+  ['todos',     'Todos',            function () { return true; }],
+];
+
+function bandaDe(p) {
+  const e = String(p.estado_canonico || '').trim();
+  if (['novedad','pendiente','en_oficina'].indexOf(e) !== -1 || !COLOR_ESTADO[e]) return 0;
+  if (['entregado','devolucion','cancelado'].indexOf(e) !== -1) return 2;
+  return 1;
+}
+
+function pintarFiltrosPedidos(filas) {
+  const cont = document.getElementById('pedfiltros');
+  if (!cont) return;
+
+  const hay = FILTROS_PED.map(function (f) {
+    return { id: f[0], nombre: f[1], n: filas.filter(f[2]).length };
+  }).filter(function (f) { return f.n > 0; });
+
+  // Si lo que está seleccionado se quedó sin filas, se cae a Todos
+  if (!hay.some(function (f) { return f.id === FILTRO_PED; })) FILTRO_PED = 'todos';
+
+  cont.style.display = 'flex';
+  cont.innerHTML = hay.map(function (f) {
+    return '<button class="fchip' + (f.id === FILTRO_PED ? ' on' : '') + '" ' +
+      'onclick="filtrarPedidos(\'' + f.id + '\')">' + f.nombre +
+      '<span class="fn">' + f.n + '</span></button>';
+  }).join('');
+}
+
+function filtrarPedidos(id) {
+  FILTRO_PED = id;
+  pintarFiltrosPedidos(PEDS_REALES);
+  pintarPedidosReales(PEDS_REALES, PEDS_TOTAL);
+}
 
 async function cargarPedidosReales() {
   if (!CONECTADO) return false;
@@ -2926,26 +2994,29 @@ async function cargarPedidosReales() {
   if (!r.ok || !r.filas || !r.filas.length) return false;
 
   PEDS_REALES = r.filas;
+  PEDS_TOTAL = r.total;
+  pintarFiltrosPedidos(r.filas);
   pintarPedidosReales(r.filas, r.total);
   pintarEstadosReales(r.filas);
   desellar(['pedlist', 'stlist', 'barchart']);
   return true;
 }
 
-function pintarPedidosReales(filas, total) {
+function pintarPedidosReales(todas, total) {
   const S = (STORES[ST]||STORES.ec).sym;
+
+  // Solo lo que pide el filtro. Se guarda aparte porque los detalles y el
+  // guardado se indexan contra lo que está pintado, no contra todo.
+  const def = FILTROS_PED.filter(function (f) { return f[0] === FILTRO_PED; })[0];
+  const filas = def ? todas.filter(def[2]) : todas;
+  PEDS_VISTA = filas;
   const ests = ['pendiente','confirmado','en_transito','en_oficina','novedad',
                 'entregado','devolucion','cancelado'];
 
   // Las bandas de trabajo. El servidor ya manda las filas ordenadas por
   // urgencia; aquí solo se rotula dónde empieza cada grupo, para que no
   // parezca una lista corrida donde todo pesa igual.
-  const banda = function (p) {
-    const e = String(p.estado_canonico || '').trim();
-    if (['novedad','pendiente','en_oficina'].indexOf(e) !== -1 || !COLOR_ESTADO[e]) return 0;
-    if (['entregado','devolucion','cancelado'].indexOf(e) !== -1) return 2;
-    return 1;
-  };
+  const banda = bandaDe;
   const TITULO_BANDA = [
     ['NECESITAN ACCIÓN', 'Novedades abiertas, sin confirmar y esperando en oficina. Lo más viejo primero.'],
     ['EN CURSO', 'Despachados y en camino. No hay nada que hacer todavía.'],
@@ -3005,10 +3076,12 @@ function pintarPedidosReales(filas, total) {
 
   const cab = document.querySelector('#v-pedidos > p');
   if (cab) {
-    cab.textContent = cuenta[0]
-      ? cuenta[0] + ' pedido' + (cuenta[0] === 1 ? '' : 's') + ' necesitan a alguien hoy. ' +
-        'Debajo, lo que está en curso y lo que ya cerró.'
-      : 'Nada pendiente por resolver. ' + filas.length + ' pedidos en esta tienda.';
+    const accion = todas.filter(function (p) { return bandaDe(p) === 0; }).length;
+    cab.textContent = (accion
+      ? accion + ' pedido' + (accion === 1 ? '' : 's') + ' necesitan a alguien hoy.'
+      : 'Nada pendiente por resolver.') +
+      ' Mostrando ' + filas.length + ' de ' + todas.length +
+      (total > todas.length ? ' (los ' + todas.length + ' más urgentes de ' + total + ')' : '') + '.';
   }
 }
 
@@ -3028,7 +3101,7 @@ function togPedReal(i) {
   const d = document.getElementById('pd' + i);
   const t = document.querySelector('#prow' + i + ' .ptog');
   const abierto = d.style.display !== 'none';
-  PEDS_REALES.forEach(function (_, j) {
+  PEDS_VISTA.forEach(function (_, j) {
     if (j === i) return;
     const dj = document.getElementById('pd' + j);
     const tj = document.querySelector('#prow' + j + ' .ptog');
@@ -3043,7 +3116,7 @@ function togPedReal(i) {
 }
 
 async function guardarPedido(i) {
-  const p = PEDS_REALES[i];
+  const p = PEDS_VISTA[i];
   if (!p) return;
   const sel = document.querySelector('#pd' + i + ' .nstates .nst.on');
   const campos = { nota: document.getElementById('nota' + i).value };
