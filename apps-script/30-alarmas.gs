@@ -256,44 +256,70 @@ function evaluarAlarmas(ss, tienda) {
     }
   }
 
-  // ── 6. Stock por agotarse (opcional) ──
+  /**
+   * ── 6. Stock por agotarse ──
+   *
+   * Dos formas de quedarse corto, y las dos avisan en la misma alarma.
+   *
+   * La primera es el mínimo que la dueña le puso a ese producto en su
+   * ficha: un número que ella eligió sabiendo cuánto tarda su proveedor.
+   * Esa no depende de ningún umbral global — si se molestó en escribirlo,
+   * es porque quiere que le avisen.
+   *
+   * La segunda es la cobertura en días, que sí es opcional y global: al
+   * ritmo de venta de este mes, cuántos días aguanta. Sirve para el
+   * producto al que nadie le puso mínimo.
+   *
+   * Van juntas en un solo aviso porque la pregunta es una sola: qué hay
+   * que reponer. Dos correos por lo mismo se vuelven ruido, y el ruido
+   * termina en la carpeta de no leídos.
+   */
   const stockDias = u.stock_dias_min === '' ? null : Number(u.stock_dias_min);
-  if (stockDias !== null && stockDias > 0) {
-    const bajos = [];
-    const shI = ss.getSheetByName('Inventario');
-    if (shI && shI.getLastRow() > 1) {
-      const d = shI.getDataRange().getValues();
-      const e = d[0].map(norm);
-      const c = function (n) { return e.indexOf(n); };
-      // Ritmo de venta de cada producto en el mes, para estimar cobertura
-      const ritmo = {};
-      Object.keys(m.productos || {}).forEach(function (k) {
-        const dm = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
-        ritmo[norm(k)] = (m.productos[k].entregados || 0) / dm;
-      });
-      for (let i = 1; i < d.length; i++) {
-        const f = d[i];
-        if (String(f[c('tienda')]).trim() !== tienda) continue;
-        if (norm(f[c('activo')]) === 'no') continue;
-        const nom = String(f[c('producto')] || '').trim();
-        const stock = num(f[c('stock')]);
-        const r = ritmo[norm(nom)] || 0;
-        if (!r) continue;              // sin ventas no hay cobertura que estimar
-        const cobertura = stock / r;
-        if (cobertura <= stockDias) {
-          bajos.push({ producto: nom, stock: stock, dias: Math.floor(cobertura) });
-        }
+  const bajos = [];
+  const shI = ss.getSheetByName('Inventario');
+  if (shI && shI.getLastRow() > 1) {
+    const d = shI.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    // Ritmo de venta de cada producto en el mes, para estimar cobertura
+    const ritmo = {};
+    Object.keys(m.productos || {}).forEach(function (k) {
+      const dm = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
+      ritmo[norm(k)] = (m.productos[k].entregados || 0) / dm;
+    });
+    for (let i = 1; i < d.length; i++) {
+      const f = d[i];
+      if (String(f[c('tienda')]).trim() !== tienda) continue;
+      if (norm(f[c('activo')]) === 'no') continue;
+      const nom = String(f[c('producto')] || '').trim();
+      if (!nom) continue;
+      const stock = num(f[c('stock')]);
+      const minimo = c('minimo') !== -1 ? num(f[c('minimo')]) : 0;
+      const r = ritmo[norm(nom)] || 0;
+      const cobertura = r ? Math.floor(stock / r) : null;
+
+      let motivo = '';
+      if (minimo > 0 && stock <= minimo) {
+        motivo = stock <= 0 ? 'sin stock' : 'bajo su mínimo de ' + minimo;
+      } else if (stockDias !== null && stockDias > 0 && cobertura !== null &&
+                 cobertura <= stockDias) {
+        motivo = 'alcanza ' + cobertura + ' días';
       }
+      if (!motivo) continue;
+      bajos.push({ producto: nom, stock: stock, dias: cobertura, motivo: motivo });
     }
-    if (bajos.length) {
-      bajos.sort(function (a, b) { return a.dias - b.dias; });
-      out.push(alarma('stock', 'ojo',
-        pl(bajos.length, '1 producto se acaba', '% productos se acaban') +
-          ' en ' + stockDias + ' días o menos',
-        'Al ritmo de venta de este mes. Quedarse sin stock con la pauta ' +
-        'prendida es pagar por pedidos que no puedes despachar.',
-        bajos.slice(0, 10), 'Inventario'));
-    }
+  }
+  if (bajos.length) {
+    // Primero lo que menos aguanta; lo que no se puede estimar, al final
+    bajos.sort(function (a, b) {
+      const da = a.dias === null ? 9999 : a.dias, db = b.dias === null ? 9999 : b.dias;
+      return da - db;
+    });
+    out.push(alarma('stock', 'ojo',
+      pl(bajos.length, '1 producto se está acabando', '% productos se están acabando'),
+      'Quedarse sin stock con la pauta prendida es pagar por pedidos que no ' +
+      'puedes despachar.',
+      bajos.slice(0, 10), 'Inventario'));
   }
 
   return { alarmas: out, umbrales: u, tienda: tienda, mes: mes };

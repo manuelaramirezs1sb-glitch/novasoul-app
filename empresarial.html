@@ -355,11 +355,15 @@ input.li:focus{border-color:var(--acc-d);}
 .inv-lbl{font:600 10px/1 'DM Sans';letter-spacing:1.1px;color:var(--t-mut2);}
 .inv-inp{background:var(--s-bg);border:1px solid var(--s-line);border-radius:9px;padding:8px 11px;font:500 12.5px/1 'DM Sans';color:var(--t-ink);outline:none;width:100%;box-sizing:border-box;}
 .inv-inp:focus{border-color:var(--acc-d);}
-.sku-form{background:var(--s-dark);border:1px dashed var(--s-line);border-radius:14px;padding:16px;display:none;flex-direction:column;gap:11px;}
-.sku-form.on{display:flex;}
-.sku-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .inv-addbtn{display:flex;align-items:center;gap:7px;background:var(--acc-d);color:#f1f4e8;font:600 12px/1 'DM Sans';padding:10px 15px;border-radius:11px;cursor:pointer;align-self:flex-start;}
 .inv-addbtn svg{opacity:.85;}
+/* Cómo se cuenta el stock en esta tienda: contexto, no alarma */
+.inv-nota{font:500 11.5px/1.55 'DM Sans';color:var(--t-mut);background:var(--s-dark);border-radius:11px;padding:11px 13px;}
+/* Lo que le falta a esta ficha, dicho dentro de la ficha */
+.inv-aviso{font:500 11.5px/1.55 'DM Sans';color:#8a6a13;background:#f6ecd0;border-radius:10px;padding:10px 12px;}
+.inv-pie{font:500 10.5px/1.4 'DM Sans';color:var(--t-mut2);}
+.prod-falta{font:600 11px/1.4 'DM Sans';color:var(--acc-d);cursor:pointer;margin-top:2px;}
+.prod-falta:hover{text-decoration:underline;}
 /* ─── GASTOS (Dinero) ───────────────────────────────── */
 .gasto-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--s-line2);}
 .gasto-row:last-child{border-bottom:none;}
@@ -2180,156 +2184,39 @@ function buildPauta() {
   document.getElementById('cpalist').innerHTML = POR_TIENDA[ST].cpa.map(c=>`<div class="roas-row"><div class="roas-nm">${c.nm}</div><span class="bd ${c.cl}">CPA ${c.cpa}</span></div>`).join('');
 }
 
-const INV_DATA = [
-  {nm:'Colágeno Premium 300g', sku:'NE-001',stock:18, dias:3,  rep:8,  cl:'r', a:'Pedir hoy',       costo:38,    prov:'NutraSource',  desc:'Base del portafolio. Mayor margen neto del catálogo. Se vende solo con pauta mínima.'},
-  {nm:'Proteína Vainilla 1kg', sku:'NE-002',stock:142,dias:28, rep:10, cl:'g', a:'OK',               costo:62,    prov:'ProteinLab',   desc:'Sabor que más convierte. 3 tallas disponibles. Menor devolución del portafolio.'},
-  {nm:'Omega 3 120 caps',      sku:'NE-003',stock:48, dias:34, rep:12, cl:'w', a:'Sin rotación 31d', costo:22,    prov:'OmegaCo',      desc:'Sin pauta activa desde agosto. El stock no rota. Revisar si merece presupuesto.'},
-  {nm:'Multivitamínico 60cap', sku:'NE-004',stock:76, dias:19, rep:10, cl:'g', a:'OK',               costo:18,    prov:'VitaPlus',     desc:'Complemento recurrente. Bajo costo de traída. Cliente repite en el 34% de los casos.'},
-  {nm:'Proteína Chocolate 1kg',sku:'NE-005',stock:94, dias:22, rep:10, cl:'g', a:'OK',               costo:60,    prov:'ProteinLab',   desc:'Segunda más vendida. Funciona bien en EC. En GT no convierte igual.'},
-  {nm:'Vitamina C 1000mg',     sku:'NE-006',stock:210,dias:42, rep:14, cl:'g', a:'OK',               costo:14,    prov:'VitaPlus',     desc:'Producto de bajo precio que sube el ticket promedio. Muy bajo costo de holding.'},
-  {nm:'Zinc + Selenio',        sku:'NE-007',stock:32, dias:8,  rep:10, cl:'w', a:'Revisar pedido',   costo:20,    prov:'VitaPlus',     desc:'Poca rotación histórica. Evaluar si conviene seguir pidiendo o liquidar stock.'},
-];
-let skuFormOpen = false;
+/**
+ * El inventario antes de que lleguen las fichas.
+ *
+ * Ya no hay siete SKUs inventados con sus proveedores y su cobertura.
+ * Lo que se ve sale de los pedidos y de las fichas que la dueña escribe,
+ * y eso lo pinta pintarInventario cuando la hoja responde.
+ */
 function buildInventario() {
-  document.getElementById('invkpi').innerHTML = [
-    {lb:'SKUs ACTIVOS',     v:'12', sub:'4 estrella · 8 complementos', cl:'a'},
-    {lb:'EN RIESGO',        v:'2',  sub:'Menos de 5 días de stock',    cl:'r'},
-    {lb:'SIN ROTACIÓN',     v:'1',  sub:'30+ días sin venta',          cl:'w'},
-    {lb:'VALOR INVENTARIO', v:C(28400), sub:'Precio de costo total',   cl:'a'},
-  ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
-
-  const bc=r=>r.cl==='r'?'bd-r':r.cl==='w'?'bd-w':'bd-g';
-  document.getElementById('invlist').innerHTML = INV_DATA.map((r,i)=>`
-    <div class="irow" id="irow${i}" onclick="togInv(${i})">
-      <div class="irow-top">
-        <div><div class="inm">${r.nm}</div><div class="isub">${r.sku} · ${r.stock} unid. · ${r.dias}d cobertura</div></div>
-        <div style="display:flex;align-items:center;gap:8px;"><span class="bd ${bc(r)}">${r.a}</span><span class="itog" id="itog${i}">Editar ▾</span></div>
-      </div>
-      <div class="inv-dtl" id="idtl${i}">
-        <p style="font:500 12px/1.5 'DM Sans';color:var(--t-mut2);margin:0;">${r.desc}</p>
-        <div class="inv-grid">
-          <div class="inv-field"><div class="inv-lbl">STOCK ACTUAL</div><input class="inv-inp" value="${r.stock}" type="number" onclick="event.stopPropagation()"></div>
-          <div class="inv-field"><div class="inv-lbl">PUNTO DE REPOSICIÓN (días)</div><input class="inv-inp" value="${r.rep}" type="number" onclick="event.stopPropagation()"></div>
-          <div class="inv-field"><div class="inv-lbl">COSTO UNITARIO (${SYM()})</div><input class="inv-inp" value="${r.costo}" type="number" onclick="event.stopPropagation()"></div>
-          <div class="inv-field"><div class="inv-lbl">PROVEEDOR</div><input class="inv-inp" value="${r.prov}" onclick="event.stopPropagation()"></div>
-        </div>
-        <div class="nsavebtn" style="align-self:flex-start;" onclick="event.stopPropagation();showToast('SKU actualizado ✓')">Guardar cambios</div>
-      </div>
-    </div>`).join('');
-
-  // Nuevo SKU form
-  document.getElementById('invlist').innerHTML += `
-    <div class="inv-addbtn" onclick="togNuevoSku()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Nuevo SKU
-    </div>
-    <div class="sku-form" id="sku-form">
-      <div style="font:600 13px/1 'DM Sans';color:var(--t-ink);">Agregar producto al inventario</div>
-      <div class="sku-form-grid">
-        <div class="inv-field"><div class="inv-lbl">NOMBRE DEL PRODUCTO</div><input class="inv-inp" placeholder="Ej: Colágeno Marino 250g"></div>
-        <div class="inv-field"><div class="inv-lbl">SKU / CÓDIGO</div><input class="inv-inp" placeholder="Ej: NE-008"></div>
-        <div class="inv-field"><div class="inv-lbl">STOCK INICIAL</div><input class="inv-inp" type="number" placeholder="0"></div>
-        <div class="inv-field"><div class="inv-lbl">COSTO UNITARIO</div><input class="inv-inp" type="number" placeholder="0"></div>
-        <div class="inv-field"><div class="inv-lbl">PROVEEDOR</div><input class="inv-inp" placeholder="Nombre del proveedor"></div>
-        <div class="inv-field"><div class="inv-lbl">DÍAS DE REPOSICIÓN</div><input class="inv-inp" type="number" placeholder="10"></div>
-      </div>
-      <div class="inv-field" style="grid-column:span 2;"><div class="inv-lbl">DESCRIPCIÓN / PARA QUÉ SIRVE</div><textarea class="narea" style="min-height:54px;" placeholder="Descripción del producto, público objetivo, beneficio principal…"></textarea></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <div class="nsavebtn" onclick="showToast('Producto agregado al inventario ✓');togNuevoSku()">Guardar SKU</div>
-        <div class="nsavebtn" style="background:var(--s-dark);color:var(--t-mut2);" onclick="togNuevoSku()">Cancelar</div>
-      </div>
-    </div>`;
-}
-function togInv(i){
-  const dtl=document.getElementById('idtl'+i),tog=document.getElementById('itog'+i),row=document.getElementById('irow'+i);
-  const open=row.classList.contains('open');
-  INV_DATA.forEach((_,j)=>{const r2=document.getElementById('irow'+j);if(r2)r2.classList.remove('open');const t2=document.getElementById('itog'+j);if(t2)t2.textContent='Editar ▾';});
-  if(!open){row.classList.add('open');if(tog)tog.textContent='Cerrar ▴';}
-}
-function togNuevoSku(){
-  skuFormOpen=!skuFormOpen;
-  const f=document.getElementById('sku-form');
-  if(f) f.classList.toggle('on',skuFormOpen);
+  const espera = CONECTADO
+    ? 'Contando lo que hay…'
+    : 'Entra con tu correo para ver tu inventario.';
+  ['invkpi', 'invlist'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<div class="eq-vacio">' + espera + '</div>';
+  });
 }
 
 // ─── PRODUCTOS ────────────────────────────────────────
-const D_PRODS = {
-  ec:[
-    {nm:'Tag Recede',       ver:'Escalar', por:'Cada entrega deja $ 68.110 y la pauta cuesta $ 32.000. Aguanta el doble de presupuesto.', stock:'Stock 210 · alcanza 13 días', cl:'g',
-     desc:'Suero facial anti-envejecimiento. Actúa sobre manchas, arrugas finas y poros. Ideal para mujeres 30-55. El más recurrente del portafolio.',
-     beneficios:'Reduce manchas en 4 semanas · Hidratación profunda sin grasa · Sin fragancia · Para todo tipo de piel',
-     landing:'https://nutreashop.com/tag-recede',promo:'2×1 en la segunda unidad · válido hasta el 15 de sep.',
-     aud:'Mujeres 30-55, piel mixta-grasa, ciudades medianas'},
-    {nm:'Dr. Melaxin Spray', ver:'Frenar',  por:'Cuesta $ 49.200 traer una entrega que solo deja $ 25.760. Cada pedido nace perdiendo.', stock:'Stock 78 · 60% de devolución', cl:'r',
-     desc:'Spray despigmentante con ácido kójico. Prometía alto margen pero la tasa de devolución lo destruye.',
-     beneficios:'Reduce hiperpigmentación · Resultado visible en 6 semanas · Sin hidroquinona',
-     landing:'https://nutreashop.com/dr-melaxin',promo:'Sin promoción activa — pauta pausada',
-     aud:'Mujeres 25-45 con manchas solares'},
-    {nm:'Truly Rosa',       ver:'Escalar', por:'El más barato de traer: $ 16.800 por entrega. Está subvendido, casi no tiene pauta.', stock:'Stock 164 · sin quiebres', cl:'g',
-     desc:'Crema facial con rosa mosqueta y vitamina C. Bajo costo de adquisición, alto margen. Oportunidad desaprovechada.',
-     beneficios:'Cicatrización leve · Luminosidad · Hidratación 24h · Apto embarazo',
-     landing:'https://nutreashop.com/truly-rosa',promo:'Envío gratis por compra de 2 unidades',
-     aud:'Mujeres 20-40, piel seca-normal'},
-    {nm:'Crema Evil Goods', ver:'Pausado', por:'Sin pauta este mes. Queda el inventario quieto.', stock:'Stock 42 · sin movimiento', cl:'m',
-     desc:'Crema multiusos con extracto de carbón activado. Sin tracción en anuncios. Evaluar si vale la pena relanzar.',
-     beneficios:'Control de grasa · Poros menos visibles · Textura ligera',
-     landing:'https://nutreashop.com/evil-goods',promo:'Sin promoción activa',
-     aud:'Piel grasa, hombres y mujeres 18-35'},
-  ],
-  gt:[
-    {nm:'Tag Recede',      ver:'Escalar', por:'88% de entrega con solo 13 órdenes. Es el único donde Forza no falla.', stock:'Stock 178 · alcanza 10 días', cl:'g',
-     desc:'Suero facial anti-envejecimiento. Funciona perfectamente en GT. Forza tiene excelente cobertura en zona.',
-     beneficios:'Reduce manchas en 4 semanas · Hidratación profunda · Sin fragancia',
-     landing:'https://nutreashop.com.gt/tag-recede',promo:'Combos de 3 con descuento del 10%',
-     aud:'Mujeres 30-55, Ciudad de Guatemala y Xela'},
-    {nm:'Truly Rosa',      ver:'Escalar', por:'Buena conversión en Quetzaltenango. Bajo costo de flete por zona.', stock:'Stock 89 · sin quiebres', cl:'g',
-     desc:'Crema rosa mosqueta. Ideal para el perfil de cliente GT. Costo de traída bajo con proveedor local.',
-     beneficios:'Cicatrización · Luminosidad · Hidratación 24h',
-     landing:'https://nutreashop.com.gt/truly-rosa',promo:'Sin promoción activa · oportunidad de lanzar combo',
-     aud:'Mujeres 20-40, Quetzaltenango y Quiché'},
-    {nm:'Evil Goods',      ver:'Revisar', por:'Devolución sube desde el viernes. Forza reporta 3 devoluciones en tránsito.', stock:'Stock 54 · alerta devoluciones', cl:'w',
-     desc:'Crema carbón activado. Empezó bien pero las devoluciones de esta semana encienden la alarma.',
-     beneficios:'Control de grasa · Poros menos visibles',
-     landing:'https://nutreashop.com.gt/evil-goods',promo:'Sin promoción activa — revisar primero',
-     aud:'Piel grasa, ambos géneros 18-35'},
-  ]
-};
-function buildProductos(){
-  const prods = POR_TIENDA[ST].productos||[];
-  const ficha = D_PRODS[ST]||[];
-  document.getElementById('prodkpi').innerHTML=[
-    {lb:'SKUs ACTIVOS',v:prods.length+'',sub:'Con pauta este mes',cl:'a'},
-    {lb:'PARA ESCALAR',v:prods.filter(p=>p.ver==='Escalar').length+'',sub:'Margen positivo',cl:'g'},
-    {lb:'PARA FRENAR', v:prods.filter(p=>p.ver==='Frenar'||p.ver==='Revisar').length+'',sub:'Revisar urgente',cl:'r'},
-  ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
-  document.getElementById('prodlist').innerHTML=ficha.map((p,i)=>`
-    <div class="prod-card" id="pcard${i}" onclick="togProd(${i})">
-      <div class="prod-head">
-        <span class="prod-nm">${p.nm}</span>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="bd" style="background:${prods[i]?.vBg||'var(--s-dark)'};color:${prods[i]?.vInk||'var(--t-mut2)'};">${p.ver}</span>
-          <span style="font:500 11px/1 'DM Sans';color:var(--acc-d);" id="ptog${i}">Ver ficha ▾</span>
-        </div>
-      </div>
-      <p style="font:500 12px/1.5 'DM Sans';color:var(--t-mut);margin:8px 0 0;">${p.por}</p>
-      <div class="prod-dtl" id="pdtl${i}">
-        <div class="prod-sec"><div class="prod-sec-lbl">DESCRIPCIÓN DEL PRODUCTO</div><div class="prod-sec-txt">${p.desc}</div></div>
-        <div class="prod-sec"><div class="prod-sec-lbl">BENEFICIOS CLAVE</div><div class="prod-sec-txt">${p.beneficios}</div></div>
-        <div class="prod-sec"><div class="prod-sec-lbl">AUDIENCIA OBJETIVO</div><div class="prod-sec-txt">${p.aud}</div></div>
-        <div class="prod-sec"><div class="prod-sec-lbl">LANDING PAGE</div><a class="prod-url" href="${p.landing}" target="_blank" onclick="event.stopPropagation()">${p.landing}</a></div>
-        <div class="prod-sec"><div class="prod-sec-lbl">PROMOCIÓN ACTIVA</div><div class="prod-promo">${p.promo}</div></div>
-        <div class="prod-sec"><div class="prod-sec-lbl">STOCK · ${prods[i]?.stock||''}</div></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <div class="nsavebtn" style="font-size:11px;padding:10px 14px;" onclick="event.stopPropagation();showToast('Ficha de producto actualizada ✓')">Guardar cambios</div>
-        </div>
-      </div>
-    </div>`).join('');
-}
-function togProd(i){
-  const dtl=document.getElementById('pdtl'+i),tog=document.getElementById('ptog'+i),card=document.getElementById('pcard'+i);
-  const open=card.classList.contains('open');
-  document.querySelectorAll('[id^="pcard"]').forEach((_,j)=>{const c2=document.getElementById('pcard'+j);if(c2)c2.classList.remove('open');const t2=document.getElementById('ptog'+j);if(t2)t2.textContent='Ver ficha ▾';});
-  if(!open){card.classList.add('open');if(tog)tog.textContent='Cerrar ▴';}
+/**
+ * Productos antes de que lleguen los pedidos.
+ *
+ * Ya no hay fichas de ejemplo con landing y promoción inventadas. El
+ * catálogo sale de los pedidos que importaste, y lo pinta pintarProductos
+ * cuando la hoja responde.
+ */
+function buildProductos() {
+  const espera = CONECTADO
+    ? 'Armando el catálogo desde tus pedidos…'
+    : 'Entra con tu correo para ver tus productos.';
+  ['prodkpi', 'prodlist', 'prodinv'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<div class="eq-vacio">' + espera + '</div>';
+  });
 }
 
 // ─── DINERO ───────────────────────────────────────────
@@ -3092,7 +2979,7 @@ async function cargarReales() {
     // cuándo la pantalla terminó de ponerse al día.
     await Promise.all([cargarPedidosReales(), cargarNovedadesReales(),
                        cargarEquipo(), cargarAuditoria(), cargarAlarmas(),
-                       cargarRecuento()]);
+                       cargarRecuento(), cargarProductos()]);
     // Una gestora sin pedidos asignados también merece respuesta. Si las
     // listas vinieron vacías nadie la habría pintado, y se quedaría
     // mirando un "buscando…" que ya terminó.
@@ -4140,11 +4027,8 @@ const SIN_FUENTE = [
   'eqhoy',         // el equipo de hoy
   'barchart',      // la jornada · necesita movimientos con hora
   // Operación
-  'prodlist',      // productos · falta la ficha editable
   'caslist',       // CAS en operación
   'commlist',      // comisiones
-  // Dinero
-  'invlist', 'invriesgo',   // inventario
 ];
 
 function sellarEjemplo(conectado) {
@@ -5017,6 +4901,490 @@ async function guardarNotaGestora(i) {
   } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
 
+// ─── INVENTARIO Y PRODUCTOS ───────────────────────────────────
+/**
+ * Una sola llamada para dos pantallas.
+ *
+ * Inventario y Productos miran lo mismo desde ángulos distintos:
+ * Inventario pregunta cuánto queda, Productos pregunta cuánto deja. El
+ * servidor ya junta los pedidos con las fichas y devuelve las dos cosas
+ * en la misma respuesta, así que pedirlo dos veces sería pedir lo mismo.
+ */
+let PRODS = [];
+let PROD_MODALIDAD = '';
+let INV_VISTA = [];      // el orden en que se pintó: los onclick van por índice
+let FICHA_ABIERTA = -1;  // índice dentro de INV_VISTA, o -1, o 'nuevo'
+
+const CATEGORIAS = [
+  ['estrella',    'Estrella',    'Sostiene el negocio'],
+  ['complemento', 'Complemento', 'Sube el ticket'],
+  ['testeo',      'Testeo',      'Todavía lo estás probando'],
+  ['frenado',     'Frenado',     'No lo estás pautando'],
+];
+
+/** Cómo se llena el stock según cómo trabaje la tienda. */
+const COMO_SE_CUENTA = {
+  catalogo_publico: 'Trabajas con catálogo público: el stock es del proveedor, ' +
+    'no tuyo. Lo que escribas acá es lo que confirmaste que hay para vender.',
+  catalogo_privado: 'Tu proveedor te pasa las existencias. Mientras no subas ese ' +
+    'archivo, el número que vale es el que escribas acá.',
+  marca_propia: 'La marca es tuya y el stock también. Lo que escribas acá es tu conteo.',
+};
+
+/** Dinero en la moneda de la tienda activa. */
+function M(n) { return SYM() + ' ' + NUM(n); }
+
+async function cargarProductos() {
+  if (!CONECTADO) return false;
+  let r;
+  try { r = await api('productos', { tienda: ST }); }
+  catch (e) { return false; }
+  if (!r.ok) return false;
+
+  PRODS = r.productos || [];
+  PROD_MODALIDAD = r.modalidad || '';
+  pintarInventario();
+  pintarProductos();
+  pintarInvRiesgo();
+  desellar(['invkpi', 'invlist', 'invriesgo', 'prodkpi', 'prodlist', 'prodinv']);
+  return true;
+}
+
+/** Lo que hay que mirar hoy: sin stock, bajo mínimo o a punto de acabarse. */
+function riesgoDe(p) {
+  const f = p.ficha;
+  if (!f) return null;
+  if (f.stock <= 0)                    return 'Sin stock';
+  if (f.minimo && f.stock <= f.minimo) return 'Bajo el mínimo';
+  if (p.coberturaDias !== null && p.coberturaDias <= 7) {
+    return 'Se acaba en ' + p.coberturaDias + ' d';
+  }
+  return null;
+}
+
+/**
+ * Cuánto queda, dicho de la única forma que el dato permite.
+ *
+ * La cobertura en días solo aparece cuando hay con qué calcularla. Con
+ * una semana de historia, tres entregas darían "alcanza 4 días" y eso no
+ * es un dato, es una casualidad con formato de dato.
+ */
+function textoCobertura(p) {
+  const f = p.ficha;
+  if (!f) return 'Sin ficha';
+  const stock = NUM(f.stock) + ' unid.';
+  if (p.coberturaDias !== null) return stock + ' · alcanza ' + p.coberturaDias + ' días';
+  if (p.ventanaDias && p.ventanaDias < 14) {
+    return stock + ' · muy pronto para saber cuánto dura';
+  }
+  if (!p.unidadesEntregadas) return stock + ' · todavía no ha entregado nada';
+  return stock;
+}
+
+function pintarInventario() {
+  const kpi = document.getElementById('invkpi');
+  const lista = document.getElementById('invlist');
+  if (!lista) return;
+
+  const conFicha = PRODS.filter(function (p) { return !!p.ficha; });
+  const sinFicha = PRODS.filter(function (p) { return !p.ficha; });
+  const enRiesgo = conFicha.filter(function (p) { return !!riesgoDe(p); });
+
+  // El valor solo suma lo que tiene costo. Un producto sin costo no vale
+  // cero: es que no se sabe cuánto vale, y sumarlo como cero mentiría.
+  let valor = 0, sinCosto = 0;
+  conFicha.forEach(function (p) {
+    if (p.ficha.costo) valor += p.ficha.costo * p.ficha.stock;
+    else sinCosto++;
+  });
+
+  if (kpi) {
+    const porCat = {};
+    conFicha.forEach(function (p) {
+      const c = norm2(p.ficha.categoria || '');
+      if (c) porCat[c] = (porCat[c] || 0) + 1;
+    });
+    const detCat = Object.keys(porCat).map(function (c) {
+      return porCat[c] + ' ' + c;
+    }).join(' · ');
+
+    kpi.innerHTML = [
+      { lb: 'CON FICHA', v: conFicha.length,
+        sub: detCat || 'Sin categorizar todavía', cl: conFicha.length ? 'a' : 'w' },
+      { lb: 'SIN FICHA', v: sinFicha.length,
+        sub: sinFicha.length ? 'Venden y no sabes si dejan plata' : 'Todos tienen ficha',
+        cl: sinFicha.length ? 'w' : 'g' },
+      { lb: 'EN RIESGO', v: enRiesgo.length,
+        sub: enRiesgo.length ? 'Sin stock o bajo el mínimo' : 'Nada bajo el mínimo',
+        cl: enRiesgo.length ? 'r' : 'g' },
+      { lb: 'VALOR EN BODEGA', v: valor ? M(valor) : '—',
+        sub: sinCosto ? (sinCosto === 1 ? 'Falta 1 costo' : 'Faltan ' + sinCosto + ' costos')
+                      : 'A precio de costo',
+        cl: 'a' },
+    ].map(function (k) {
+      return '<div class="kc ' + k.cl + '"><div class="klbl">' + k.lb + '</div>' +
+        '<div class="kval">' + k.v + '</div><div class="ksub">' + esc(k.sub) + '</div></div>';
+    }).join('');
+  }
+
+  // Primero lo que se está acabando, después lo que más vende, y al final
+  // lo que ni siquiera tiene ficha: ese es el orden en que hay que actuar.
+  INV_VISTA = conFicha.slice().sort(function (a, b) {
+    const ra = riesgoDe(a) ? 0 : 1, rb = riesgoDe(b) ? 0 : 1;
+    if (ra !== rb) return ra - rb;
+    return b.entregados - a.entregados;
+  }).concat(sinFicha.slice().sort(function (a, b) {
+    return b.entregados - a.entregados;
+  }));
+
+  const nota = COMO_SE_CUENTA[PROD_MODALIDAD] || '';
+  lista.innerHTML =
+    (nota ? '<div class="inv-nota">' + esc(nota) + '</div>' : '') +
+    (INV_VISTA.length
+      ? INV_VISTA.map(filaInventario).join('')
+      : '<div class="eq-vacio">Todavía no hay productos. Aparecen solos en cuanto ' +
+        'importes pedidos, o puedes agregar uno a mano aquí abajo.</div>') +
+    botonNuevoProducto();
+}
+
+function filaInventario(p, i) {
+  const f = p.ficha;
+  const r = riesgoDe(p);
+  const abierta = FICHA_ABIERTA === i;
+  const marca = r
+    ? '<span class="bd" style="color:#b8322f;background:#f6e3db;">' + esc(r) + '</span>'
+    : f
+      ? '<span class="bd" style="color:#3f5330;background:#d3e0c2;">OK</span>'
+      : '<span class="bd" style="color:#8a6a13;background:#f6ecd0;">Falta ficha</span>';
+
+  const sub = [
+    p.sku ? esc(p.sku) : null,
+    textoCobertura(p),
+    p.entregados ? p.entregados + (p.entregados === 1 ? ' entrega' : ' entregas') : null,
+    f && f.categoria ? esc(f.categoria) : null,
+  ].filter(Boolean).join(' · ');
+
+  return '<div class="irow' + (abierta ? ' open' : '') + '" id="irow' + i + '">' +
+    '<div class="irow-top" onclick="abrirFicha(' + i + ')" style="cursor:pointer;">' +
+      '<div><div class="inm">' + esc(p.nombre) + '</div>' +
+        '<div class="isub">' + sub + '</div></div>' +
+      '<div style="display:flex;align-items:center;gap:8px;">' + marca +
+        '<span class="itog">' + (abierta ? 'Cerrar ▴' : (f ? 'Editar ▾' : 'Crear ficha ▾')) +
+        '</span></div>' +
+    '</div>' +
+    (abierta ? editorFicha(p) : '') +
+    '</div>';
+}
+
+/**
+ * El formulario de la ficha.
+ *
+ * Solo se arma para la fila abierta. Hacerlo para las treinta a la vez
+ * llenaba la pantalla de campos que nadie iba a tocar, y en el teléfono
+ * el teclado se abría sobre la fila equivocada.
+ */
+function editorFicha(p) {
+  const f = p.ficha || {};
+  const esNueva = !p.ficha;
+  const campo = function (id, lbl, valor, tipo, ph) {
+    const v = (valor === 0 || valor) ? String(valor) : '';
+    return '<div class="inv-field"><div class="inv-lbl">' + lbl + '</div>' +
+      '<input class="inv-inp" id="fi-' + id + '" type="' + (tipo || 'text') + '" ' +
+      (tipo === 'number' ? 'inputmode="decimal" min="0" ' : '') +
+      'value="' + esc(v) + '" placeholder="' + esc(ph || '') + '"></div>';
+  };
+
+  const chips = CATEGORIAS.map(function (c) {
+    const on = norm2(f.categoria || '') === c[0];
+    return '<div class="nst' + (on ? ' on' : '') + '" title="' + esc(c[2]) + '" ' +
+      'onclick="elegirCategoria(this)" data-cat="' + c[0] + '">' + c[1] + '</div>';
+  }).join('');
+
+  return '<div class="inv-dtl" style="display:flex;">' +
+    (esNueva && p.entregados
+      ? '<div class="inv-aviso">Este producto ya lleva ' + p.entregados +
+        (p.entregados === 1 ? ' entrega' : ' entregas') + ' y no tiene ficha, así que ' +
+        'Nova no puede decirte si deja plata. Lo que escribas aquí es justo lo que falta.' +
+        '</div>'
+      : '') +
+    '<div class="inv-grid">' +
+      campo('producto', 'NOMBRE', f.nombre || p.nombre, 'text', 'Como aparece en los pedidos') +
+      campo('sku', 'SKU / CÓDIGO', f.sku || p.sku, 'text', 'Opcional') +
+      campo('stock', 'STOCK ACTUAL', f.stock, 'number', '0') +
+      campo('minimo', 'AVISARME CUANDO BAJE DE', f.minimo, 'number', 'Unidades') +
+      campo('costo_unitario', 'COSTO UNITARIO (' + SYM() + ')', f.costo, 'number', 'Lo que te cuesta') +
+      campo('precio', 'PRECIO DE VENTA (' + SYM() + ')', f.precio, 'number', 'Precio de lista') +
+      campo('proveedor', 'PROVEEDOR', f.proveedor, 'text', 'Quién te lo trae') +
+    '</div>' +
+    '<div><div class="inv-lbl" style="margin-bottom:6px;">QUÉ ES ESTE PRODUCTO</div>' +
+      '<div class="nstates" id="fi-cats">' + chips + '</div></div>' +
+    '<div class="inv-field"><div class="inv-lbl">NOTA</div>' +
+      '<textarea class="narea" style="min-height:54px;" id="fi-nota" ' +
+      'placeholder="Para qué sirve, a quién le sirve, qué hay que saber al venderlo.">' +
+      esc(f.nota || '') + '</textarea></div>' +
+    (f.ultimoConteo
+      ? '<div class="inv-pie">Último conteo: ' + fechaCorta(f.ultimoConteo) + '</div>'
+      : '') +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+      '<div class="nsavebtn" onclick="guardarFicha()">' +
+        (esNueva ? 'Crear ficha' : 'Guardar cambios') + '</div>' +
+      (esNueva ? '' :
+        '<div class="nsavebtn" style="background:var(--s-dark);color:#b8322f;" ' +
+        'onclick="quitarFicha()">Quitar del inventario</div>') +
+    '</div></div>';
+}
+
+function botonNuevoProducto() {
+  const abierta = FICHA_ABIERTA === 'nuevo';
+  return '<div class="inv-addbtn" onclick="abrirFicha(\'nuevo\')">' +
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/>' +
+    '<line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+    (abierta ? 'Cancelar' : 'Producto que todavía no has vendido') + '</div>' +
+    (abierta
+      ? '<div class="irow open" id="irow-nuevo">' +
+        editorFicha({ nombre: '', sku: '', entregados: 0, ficha: null }) + '</div>'
+      : '');
+}
+
+function abrirFicha(i) {
+  FICHA_ABIERTA = (FICHA_ABIERTA === i) ? -1 : i;
+  pintarInventario();
+  if (FICHA_ABIERTA === -1) return;
+  const el = document.getElementById('irow' + (i === 'nuevo' ? '-nuevo' : i));
+  if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function elegirCategoria(el) {
+  const ya = el.classList.contains('on');
+  el.parentNode.querySelectorAll('.nst').forEach(function (x) { x.classList.remove('on'); });
+  if (!ya) el.classList.add('on');
+}
+
+/**
+ * Lo que escribió la dueña.
+ *
+ * Los números vacíos se mandan vacíos, no como cero. Un costo en blanco
+ * dice "todavía no lo sé" y hace que Nova se calle el margen; un cero
+ * diría que el producto no te cuesta nada, y el margen saldría redondo
+ * y falso.
+ */
+function leerFicha() {
+  const v = function (id) {
+    const el = document.getElementById('fi-' + id);
+    return el ? String(el.value).trim() : '';
+  };
+  const cat = document.querySelector('#fi-cats .nst.on');
+  return {
+    producto: v('producto'), sku: v('sku'), stock: v('stock'), minimo: v('minimo'),
+    costo_unitario: v('costo_unitario'), precio: v('precio'),
+    proveedor: v('proveedor'), nota: v('nota'),
+    categoria: cat ? cat.dataset.cat : '',
+  };
+}
+
+async function guardarFicha() {
+  const d = leerFicha();
+  if (!d.producto) { showToast('Ponle nombre al producto'); return; }
+
+  const p = FICHA_ABIERTA === 'nuevo' ? null : INV_VISTA[FICHA_ABIERTA];
+  const ficha = p && p.ficha;
+
+  try {
+    let r;
+    if (ficha) {
+      r = await api('escribir', { entidad: 'Inventario', id: ficha.id, campos: d });
+    } else {
+      d.tienda = ST;
+      r = await api('crear', { entidad: 'Inventario', datos: d, tienda: ST });
+    }
+    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
+    if (r.rechazados && r.rechazados.length) {
+      showToast('Guardado, menos: ' + r.rechazados.join(', '));
+    } else {
+      showToast(ficha ? 'Ficha actualizada' : 'Ficha creada');
+    }
+    FICHA_ABIERTA = -1;
+    await cargarProductos();
+  } catch (e) { showToast('Sin conexión: no se guardó'); }
+}
+
+async function quitarFicha() {
+  const p = INV_VISTA[FICHA_ABIERTA];
+  if (!p || !p.ficha) return;
+  if (!confirm('¿Quitar "' + p.nombre + '" del inventario?\n\n' +
+               'La ficha deja de contarse, pero sus pedidos siguen intactos.')) return;
+  try {
+    const r = await api('borrar', { entidad: 'Inventario', id: p.ficha.id });
+    if (!r.ok) { showToast(r.error || 'No se pudo quitar'); return; }
+    showToast('Quitado del inventario');
+    FICHA_ABIERTA = -1;
+    await cargarProductos();
+  } catch (e) { showToast('Sin conexión: no se quitó'); }
+}
+
+/** Lo que se está acabando, en la pantalla de Hoy. */
+function pintarInvRiesgo() {
+  const cont = document.getElementById('invriesgo');
+  if (!cont) return;
+
+  const riesgo = PRODS.filter(function (p) { return !!riesgoDe(p); })
+    .sort(function (a, b) { return (a.ficha.stock || 0) - (b.ficha.stock || 0); })
+    .slice(0, 5);
+  const conFicha = PRODS.filter(function (p) { return !!p.ficha; }).length;
+  const sinFicha = PRODS.filter(function (p) { return !p.ficha && p.entregados; }).length;
+
+  cont.innerHTML = riesgo.length
+    ? riesgo.map(function (p) {
+        return '<div class="invr-row"><div class="invr-top">' +
+          '<span class="invr-nm">' + esc(p.nombre) + '</span>' +
+          '<span class="bd" style="color:#b8322f;background:#f6e3db;">' +
+          esc(riesgoDe(p)) + '</span></div>' +
+          '<span class="invr-sub">' + textoCobertura(p) + '</span></div>';
+      }).join('')
+    : '<div class="eq-vacio">' +
+      (conFicha
+        ? 'Nada bajo el mínimo.' + (sinFicha
+            ? (sinFicha === 1
+                ? ' Queda 1 producto sin ficha: de ese no se sabe.'
+                : ' Quedan ' + sinFicha + ' productos sin ficha: de esos no se sabe.')
+            : '')
+        : 'Todavía no has hecho fichas de inventario. Se crean en Inventario, y ' +
+          'desde ahí esta tarjeta avisa lo que se esté acabando.') + '</div>';
+}
+
+/**
+ * Productos: la misma lista, preguntando cuánto deja cada uno.
+ *
+ * Aquí no se decide por intuición. Un producto se escala si cada entrega
+ * deja más de lo que cuesta conseguir la siguiente, y eso solo se puede
+ * decir cuando hay costo real. Sin costo, Nova dice que falta el costo —
+ * no inventa un margen.
+ */
+function pintarProductos() {
+  const kpi = document.getElementById('prodkpi');
+  const lista = document.getElementById('prodlist');
+  const inv = document.getElementById('prodinv');
+
+  const conVentas = PRODS.filter(function (p) { return p.entregados > 0; });
+  const conMargen = conVentas.filter(function (p) { return p.margen !== null; });
+  const incompletos = PRODS.filter(function (p) { return p.falta && p.falta.length; });
+  const testeos = PRODS.filter(function (p) {
+    return p.ficha && norm2(p.ficha.categoria || '') === 'testeo';
+  });
+
+  if (kpi) {
+    const mejor = conMargen.slice().sort(function (a, b) { return b.margen - a.margen; })[0];
+    kpi.innerHTML = [
+      { lb: 'PRODUCTOS QUE VENDEN', v: conVentas.length,
+        sub: PRODS.length + ' en total', cl: 'a' },
+      { lb: 'CON MARGEN CALCULABLE', v: conMargen.length,
+        sub: conMargen.length ? 'Tienen el costo cargado' : 'Ninguno tiene costo todavía',
+        cl: conMargen.length ? 'g' : 'w' },
+      { lb: 'EL QUE MÁS DEJA', v: mejor ? M(mejor.margen) : '—',
+        sub: mejor ? mejor.nombre : 'Falta cargar costos', cl: mejor ? 'g' : 'w' },
+      { lb: 'EN TESTEO', v: testeos.length,
+        sub: testeos.length ? 'Todavía los estás probando' : 'Ninguno marcado como testeo',
+        cl: 'w' },
+    ].map(function (k) {
+      return '<div class="kc ' + k.cl + '"><div class="klbl">' + k.lb + '</div>' +
+        '<div class="kval">' + k.v + '</div><div class="ksub">' + esc(k.sub) +
+        '</div></div>';
+    }).join('');
+  }
+
+  if (lista) {
+    // Primero lo que más plata mueve, y solo se puede ordenar por plata lo
+    // que tiene costo. El resto va detrás, por volumen.
+    const orden = PRODS.slice().sort(function (a, b) {
+      if ((a.margen !== null) !== (b.margen !== null)) return a.margen === null ? 1 : -1;
+      if (a.margen !== null) return b.margen * b.entregados - a.margen * a.entregados;
+      return b.entregados - a.entregados;
+    });
+
+    lista.innerHTML = orden.length
+      ? orden.map(function (p) {
+          const v = veredicto(p);
+          const i = INV_VISTA.indexOf(p);
+          return '<div class="invr-row"><div class="invr-top">' +
+            '<span class="invr-nm">' + esc(p.nombre) + '</span>' +
+            '<span class="bd" style="color:' + v[1] + ';background:' + v[2] + ';">' +
+            esc(v[0]) + '</span></div>' +
+            '<span class="invr-sub">' + esc(v[3]) + '</span>' +
+            (p.falta && p.falta.length && i !== -1
+              ? '<span class="prod-falta" onclick="irAFicha(' + i + ')">Falta ' +
+                esc(p.falta.join(', ')) + ' · completar ficha →</span>'
+              : '') +
+            '</div>';
+        }).join('')
+      : '<div class="eq-vacio">Los productos salen de tus pedidos. En cuanto ' +
+        'importes el primer archivo, aparecen aquí.</div>';
+  }
+
+  if (inv) {
+    const conFicha = PRODS.filter(function (p) { return !!p.ficha; });
+    inv.innerHTML = conFicha.length
+      ? conFicha.slice(0, 8).map(function (p) {
+          return '<div class="invr-row"><div class="invr-top">' +
+            '<span class="invr-nm">' + esc(p.nombre) + '</span>' +
+            '<span class="invr-sub">' + NUM(p.ficha.stock) + ' unid.</span></div>' +
+            '<span class="invr-sub">' + textoCobertura(p) + '</span></div>';
+        }).join('')
+      : '<div class="eq-vacio">Sin fichas de inventario todavía. ' +
+        (incompletos.length
+          ? (incompletos.length === 1
+              ? 'Hay 1 producto esperando una. '
+              : 'Hay ' + incompletos.length + ' productos esperando una. ')
+          : '') +
+        'Se crean en Inventario.</div>';
+  }
+}
+
+/**
+ * Qué hacer con este producto.
+ *
+ * El veredicto no es una opinión: sale de comparar lo que deja cada
+ * entrega contra lo que cuesta conseguirla. Si falta cualquiera de los
+ * dos números, el veredicto es que falta saber, que es la verdad.
+ */
+function veredicto(p) {
+  const S = SYM() + ' ';
+  if (!p.entregados) {
+    return ['Sin entregas', '#5b5b55', '#e6e4de',
+      p.pedidos ? p.pedidos + ' pedidos, ninguno entregado todavía'
+                : 'Todavía no ha salido en ningún pedido'];
+  }
+  if (p.margen === null) {
+    return ['Falta el costo', '#8a6a13', '#f6ecd0',
+      p.entregados + ' entregas · ticket ' + S + NUM(p.ticket) +
+      ' · sin costo no se puede decir si deja plata'];
+  }
+
+  const cpa = REAL && REAL.cpa ? REAL.cpa : null;
+  const base = p.entregados + ' entregas · deja ' + S + NUM(p.margen) + ' por entrega' +
+    (cpa ? ' · la pauta cuesta ' + S + NUM(cpa) + ' por entrega' : '');
+
+  if (cpa && p.margen > cpa * 1.8) return ['Escalar', '#3f5330', '#d3e0c2', base];
+  if (cpa && p.margen < cpa) {
+    return ['Frenar', '#b8322f', '#f6e3db',
+      base + ' · cada entrega pierde ' + S + NUM(cpa - p.margen)];
+  }
+  if (p.entrega < 65) {
+    return ['Revisar', '#8a6a13', '#f6ecd0',
+      base + ' · solo entrega el ' + Math.round(p.entrega) + '%'];
+  }
+  return ['Sostiene', '#3f5330', '#d3e0c2', base];
+}
+
+/** Desde Productos, ir a completar la ficha que falta. */
+function irAFicha(i) {
+  FICHA_ABIERTA = i;
+  go('inventario', document.querySelector('.ni[data-v="inventario"]'));
+  pintarInventario();
+  const el = document.getElementById('irow' + i);
+  if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
 // ─── VER COMO ─────────────────────────────────────────────────
 /**
  * Mirar Nova con menos permisos de los que tienes.
@@ -5543,9 +5911,14 @@ function pintarAlarmas() {
 
   cont.innerHTML = ALARMAS_HOY.map(function (a) {
     const casos = (a.casos || []).slice(0, 4).map(function (c) {
-      return '<span class="al-caso">' + esc(c.cliente || c.producto || c.id || '') +
-        (c.dias !== undefined ? ' · ' + c.dias + 'd' : '') +
-        (c.horas !== undefined ? ' · ' + c.horas + 'h' : '') + '</span>';
+      // El porqué, cuando el servidor lo trae; si no, el tiempo. Un caso
+      // sin ninguno de los dos se queda con su nombre y ya: antes decía
+      // "nulld", que es peor que no decir nada.
+      const cola = c.motivo ? ' · ' + c.motivo
+        : (c.dias !== undefined && c.dias !== null) ? ' · ' + c.dias + 'd'
+        : (c.horas !== undefined && c.horas !== null) ? ' · ' + c.horas + 'h' : '';
+      return '<span class="al-caso">' +
+        esc(c.cliente || c.producto || c.id || '') + esc(cola) + '</span>';
     }).join('');
     return '<div class="al-row ' + a.nivel + '">' +
       '<div class="al-cab">' +
@@ -5583,7 +5956,7 @@ function pintarUmbrales() {
     devoluciones_max: 'Por encima de este % de devolución, avisa. Déjalo vacío si tu operación vive con una tasa alta y no quieres el aviso.',
     cpa_aviso_pct: 'El techo del CPA no se escribe: es lo que deja cada entrega después del producto y el flete. Esto es a qué % de ese techo quieres que te avise.',
     cpa_subida_pct: 'Avisa cuando el CPA suba este % contra el mes pasado. El techo dice si estás perdiendo; esto dice si estás empeorando, que suele verse antes. Vacío para no avisar por tendencia.',
-    stock_dias_min: 'Avisa cuando a un producto le queden estos días de venta. Vacío si no llevas stock propio.',
+    stock_dias_min: 'Avisa cuando a un producto le queden estos días de venta, al ritmo de este mes. Déjalo vacío si prefieres avisar por unidades: el mínimo que le pongas a cada producto en su ficha de Inventario avisa igual, esté esto lleno o no.',
   };
 
   cont.innerHTML = CATALOGO_ALARMAS.map(function (a) {

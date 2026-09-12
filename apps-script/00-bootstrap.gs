@@ -258,10 +258,17 @@ const ESQUEMA_EMPRESARIAL = {
    * `id` para poder editar una fila desde la app, y `origen` para saber
    * si ese número lo contó una persona o lo trajo un archivo. Mezclarlos
    * sin distinguir hace imposible saber en cuál confiar.
+   *
+   * `categoria` es lo que la dueña decide que es ese producto —estrella,
+   * complemento, testeo, frenado— y no tiene nada que ver con `origen`.
+   * Estuvieron en la misma columna un tiempo, y eso obligaba a elegir
+   * entre saber de dónde salió el número o saber qué papel juega el
+   * producto. Son dos preguntas distintas y ahora tienen dos columnas.
    */
-  Inventario: ['id','sku','producto','tienda','fuente','origen','stock',
-               'costo_unitario','precio','minimo','dias_cobertura',
-               'ultimo_conteo','nota','activo','actualizado_en','actualizado_por'],
+  Inventario: ['id','sku','producto','tienda','fuente','origen','categoria',
+               'proveedor','stock','costo_unitario','precio','minimo',
+               'dias_cobertura','ultimo_conteo','nota','activo',
+               'actualizado_en','actualizado_por'],
   // "permisos" es lo que la dueña decide que esta persona puede hacer,
   // separado por comas. Vacío = lo que el rol trae por defecto.
   // Ver PERMISOS_POR_ROL en 60-api.gs.

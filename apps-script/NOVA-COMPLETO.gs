@@ -262,10 +262,17 @@ const ESQUEMA_EMPRESARIAL = {
    * `id` para poder editar una fila desde la app, y `origen` para saber
    * si ese número lo contó una persona o lo trajo un archivo. Mezclarlos
    * sin distinguir hace imposible saber en cuál confiar.
+   *
+   * `categoria` es lo que la dueña decide que es ese producto —estrella,
+   * complemento, testeo, frenado— y no tiene nada que ver con `origen`.
+   * Estuvieron en la misma columna un tiempo, y eso obligaba a elegir
+   * entre saber de dónde salió el número o saber qué papel juega el
+   * producto. Son dos preguntas distintas y ahora tienen dos columnas.
    */
-  Inventario: ['id','sku','producto','tienda','fuente','origen','stock',
-               'costo_unitario','precio','minimo','dias_cobertura',
-               'ultimo_conteo','nota','activo','actualizado_en','actualizado_por'],
+  Inventario: ['id','sku','producto','tienda','fuente','origen','categoria',
+               'proveedor','stock','costo_unitario','precio','minimo',
+               'dias_cobertura','ultimo_conteo','nota','activo',
+               'actualizado_en','actualizado_por'],
   // "permisos" es lo que la dueña decide que esta persona puede hacer,
   // separado por comas. Vacío = lo que el rol trae por defecto.
   // Ver PERMISOS_POR_ROL en 60-api.gs.
@@ -2448,44 +2455,70 @@ function evaluarAlarmas(ss, tienda) {
     }
   }
 
-  // ── 6. Stock por agotarse (opcional) ──
+  /**
+   * ── 6. Stock por agotarse ──
+   *
+   * Dos formas de quedarse corto, y las dos avisan en la misma alarma.
+   *
+   * La primera es el mínimo que la dueña le puso a ese producto en su
+   * ficha: un número que ella eligió sabiendo cuánto tarda su proveedor.
+   * Esa no depende de ningún umbral global — si se molestó en escribirlo,
+   * es porque quiere que le avisen.
+   *
+   * La segunda es la cobertura en días, que sí es opcional y global: al
+   * ritmo de venta de este mes, cuántos días aguanta. Sirve para el
+   * producto al que nadie le puso mínimo.
+   *
+   * Van juntas en un solo aviso porque la pregunta es una sola: qué hay
+   * que reponer. Dos correos por lo mismo se vuelven ruido, y el ruido
+   * termina en la carpeta de no leídos.
+   */
   const stockDias = u.stock_dias_min === '' ? null : Number(u.stock_dias_min);
-  if (stockDias !== null && stockDias > 0) {
-    const bajos = [];
-    const shI = ss.getSheetByName('Inventario');
-    if (shI && shI.getLastRow() > 1) {
-      const d = shI.getDataRange().getValues();
-      const e = d[0].map(norm);
-      const c = function (n) { return e.indexOf(n); };
-      // Ritmo de venta de cada producto en el mes, para estimar cobertura
-      const ritmo = {};
-      Object.keys(m.productos || {}).forEach(function (k) {
-        const dm = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
-        ritmo[norm(k)] = (m.productos[k].entregados || 0) / dm;
-      });
-      for (let i = 1; i < d.length; i++) {
-        const f = d[i];
-        if (String(f[c('tienda')]).trim() !== tienda) continue;
-        if (norm(f[c('activo')]) === 'no') continue;
-        const nom = String(f[c('producto')] || '').trim();
-        const stock = num(f[c('stock')]);
-        const r = ritmo[norm(nom)] || 0;
-        if (!r) continue;              // sin ventas no hay cobertura que estimar
-        const cobertura = stock / r;
-        if (cobertura <= stockDias) {
-          bajos.push({ producto: nom, stock: stock, dias: Math.floor(cobertura) });
-        }
+  const bajos = [];
+  const shI = ss.getSheetByName('Inventario');
+  if (shI && shI.getLastRow() > 1) {
+    const d = shI.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    // Ritmo de venta de cada producto en el mes, para estimar cobertura
+    const ritmo = {};
+    Object.keys(m.productos || {}).forEach(function (k) {
+      const dm = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
+      ritmo[norm(k)] = (m.productos[k].entregados || 0) / dm;
+    });
+    for (let i = 1; i < d.length; i++) {
+      const f = d[i];
+      if (String(f[c('tienda')]).trim() !== tienda) continue;
+      if (norm(f[c('activo')]) === 'no') continue;
+      const nom = String(f[c('producto')] || '').trim();
+      if (!nom) continue;
+      const stock = num(f[c('stock')]);
+      const minimo = c('minimo') !== -1 ? num(f[c('minimo')]) : 0;
+      const r = ritmo[norm(nom)] || 0;
+      const cobertura = r ? Math.floor(stock / r) : null;
+
+      let motivo = '';
+      if (minimo > 0 && stock <= minimo) {
+        motivo = stock <= 0 ? 'sin stock' : 'bajo su mínimo de ' + minimo;
+      } else if (stockDias !== null && stockDias > 0 && cobertura !== null &&
+                 cobertura <= stockDias) {
+        motivo = 'alcanza ' + cobertura + ' días';
       }
+      if (!motivo) continue;
+      bajos.push({ producto: nom, stock: stock, dias: cobertura, motivo: motivo });
     }
-    if (bajos.length) {
-      bajos.sort(function (a, b) { return a.dias - b.dias; });
-      out.push(alarma('stock', 'ojo',
-        pl(bajos.length, '1 producto se acaba', '% productos se acaban') +
-          ' en ' + stockDias + ' días o menos',
-        'Al ritmo de venta de este mes. Quedarse sin stock con la pauta ' +
-        'prendida es pagar por pedidos que no puedes despachar.',
-        bajos.slice(0, 10), 'Inventario'));
-    }
+  }
+  if (bajos.length) {
+    // Primero lo que menos aguanta; lo que no se puede estimar, al final
+    bajos.sort(function (a, b) {
+      const da = a.dias === null ? 9999 : a.dias, db = b.dias === null ? 9999 : b.dias;
+      return da - db;
+    });
+    out.push(alarma('stock', 'ojo',
+      pl(bajos.length, '1 producto se está acabando', '% productos se están acabando'),
+      'Quedarse sin stock con la pauta prendida es pagar por pedidos que no ' +
+      'puedes despachar.',
+      bajos.slice(0, 10), 'Inventario'));
   }
 
   return { alarmas: out, umbrales: u, tienda: tienda, mes: mes };
@@ -4089,8 +4122,12 @@ const COLUMNAS_IMPORTADAS = [
  */
 const CREABLES = {
   Gastos:     ['tienda', 'mes', 'tipo', 'nombre', 'valor', 'moneda', 'nota'],
+  // `origen` no está: lo pone el servidor. Es el rastro de quién dio ese
+  // número —una persona contando o un archivo importado— y dejar que lo
+  // mande el cliente sería dejar que un conteo a mano se firme como si
+  // hubiera venido de la plataforma.
   Inventario: ['tienda', 'sku', 'producto', 'stock', 'costo_unitario', 'precio',
-               'minimo', 'origen', 'nota'],
+               'minimo', 'categoria', 'proveedor', 'nota'],
   Equipo:     ['nombre', 'correo', 'rol', 'tienda', 'estado', 'permisos'],
 };
 
@@ -4286,6 +4323,48 @@ function apiParametros(s, p) {
   return { ok: true, umbrales: umbrales(ss, tienda) };
 }
 
+/** Las categorías que la dueña puede ponerle a un producto. */
+const CATEGORIAS_PRODUCTO = ['estrella', 'complemento', 'testeo', 'frenado'];
+
+/**
+ * Lo que una ficha de inventario tiene que cumplir para entrar.
+ *
+ * El nombre es lo único imprescindible: es la llave con la que la ficha se
+ * encuentra con los pedidos. Sin él la ficha existe pero no se junta con
+ * nada, y el producto sigue apareciendo como si no tuviera ficha.
+ */
+function validarFicha(d) {
+  if (d.producto !== undefined && !String(d.producto || '').trim()) {
+    return 'La ficha necesita el nombre del producto: es con lo que se ' +
+           'encuentra con los pedidos.';
+  }
+  const cat = norm(d.categoria || '');
+  if (cat && CATEGORIAS_PRODUCTO.indexOf(cat) === -1) {
+    return 'La categoría debe ser una de: ' + CATEGORIAS_PRODUCTO.join(', ') + '.';
+  }
+  const negativo =['stock', 'minimo', 'costo_unitario', 'precio'].filter(function (k) {
+    return d[k] !== undefined && d[k] !== '' && num(d[k]) < 0;
+  });
+  if (negativo.length) return 'No puede haber números negativos en ' + negativo.join(', ') + '.';
+  return '';
+}
+
+/** Lo que puede decir `origen`: de dónde salió el número, no qué es. */
+const ORIGENES_INVENTARIO = ['manual', 'importado', 'archivo', 'plataforma'];
+
+/**
+ * La categoría de una ficha, tolerando las hojas viejas.
+ *
+ * Antes `origen` hacía los dos trabajos. Si esa columna todavía guarda una
+ * categoría se respeta; si guarda una procedencia, no se confunde con una.
+ */
+function categoriaDeFicha(categoria, origen) {
+  const cat = String(categoria || '').trim();
+  if (cat) return cat;
+  const org = String(origen || '').trim();
+  return ORIGENES_INVENTARIO.indexOf(norm(org)) === -1 ? org : '';
+}
+
 /**
  * El catálogo, sacado de los pedidos.
  *
@@ -4301,6 +4380,14 @@ function apiParametros(s, p) {
  * producto que no sabes si deja plata es justo el que hay que mirar.
  */
 function apiProductos(s, p) {
+  /**
+   * El catálogo se arma leyendo TODOS los pedidos de la tienda, no solo
+   * los de quien pregunta. Para una gestora eso sería ver el negocio
+   * entero por una puerta lateral, así que esta puerta no es suya.
+   */
+  if (!puede(s, 'leer', 'Inventario')) {
+    return { ok: false, error: 'Tu rol no ve el catálogo de productos.' };
+  }
   const ss = SpreadsheetApp.openById(s.sheetId);
   const tienda = String(p.tienda || s.tiendas[0] || '').trim();
   if (s.tiendas.indexOf(tienda) === -1) {
@@ -4325,19 +4412,29 @@ function apiProductos(s, p) {
       if (!cat[clave]) {
         cat[clave] = { nombre: nombre, sku: String(f[c('sku')] || '').trim(),
                        pedidos: 0, entregados: 0, devueltos: 0, cancelados: 0,
-                       ventas: 0, unidades: 0, costoProducto: 0,
+                       ventas: 0, unidades: 0, unidadesEntregadas: 0,
+                       costoProducto: 0,
                        primera: fecha || '', ultima: fecha || '' };
       }
       const x = cat[clave];
+      const unids = num(f[c('cantidad')]) || 1;
       x.pedidos++;
-      x.unidades += num(f[c('cantidad')]) || 1;
+      x.unidades += unids;
       if (!x.sku) x.sku = String(f[c('sku')] || '').trim();
       if (fecha) {
         if (!x.primera || fecha < x.primera) x.primera = fecha;
         if (!x.ultima  || fecha > x.ultima)  x.ultima  = fecha;
       }
       const est = norm(f[c('estado_nova')] || f[c('estado_canonico')]);
-      if (est === 'entregado') { x.entregados++; x.ventas += num(f[c('valor')]); }
+      // Del inventario solo salen las unidades que se entregaron. Una
+      // devolución vuelve a la bodega y un cancelado nunca salió: contarlos
+      // como consumo haría creer que el stock se agota más rápido de lo que
+      // se agota, y mandaría a reponer de más.
+      if (est === 'entregado') {
+        x.entregados++;
+        x.ventas += num(f[c('valor')]);
+        x.unidadesEntregadas += unids;
+      }
       if (est === 'devolucion') x.devueltos++;
       if (est === 'cancelado')  x.cancelados++;
       x.costoProducto += num(f[c('costo_producto')]);
@@ -4355,19 +4452,60 @@ function apiProductos(s, p) {
       const f = d[i];
       if (String(f[c('tienda')]).trim() !== tienda) continue;
       if (norm(f[c('activo')]) === 'no') continue;
-      fichas[norm(f[c('producto')])] = {
+      const nombreFicha = String(f[c('producto')] || '').trim();
+      fichas[norm(nombreFicha)] = {
         id: f[c('id')], sku: String(f[c('sku')] || ''),
+        // El nombre tal como lo escribió la dueña. Sin esto, un producto
+        // con ficha pero sin ventas salía en pantalla con su clave
+        // normalizada —minúsculas y sin tildes— como si fuera su nombre.
+        nombre: nombreFicha,
         stock: num(f[c('stock')]), minimo: num(f[c('minimo')]),
         costo: num(f[c('costo_unitario')]), precio: num(f[c('precio')]),
-        categoria: String(f[c('origen')] || ''), nota: String(f[c('nota')] || ''),
+        // `categoria` es nueva. Las hojas escritas antes guardaban esto en
+        // `origen`, así que se lee de ahí mientras nadie la haya llenado —
+        // pero solo si lo que dice no es una palabra de procedencia, que
+        // es para lo que `origen` sirve de ahora en adelante.
+        categoria: categoriaDeFicha(c('categoria') !== -1 ? f[c('categoria')] : '',
+                                    f[c('origen')]),
+        proveedor: String((c('proveedor') !== -1 ? f[c('proveedor')] : '') || ''),
+        nota: String(f[c('nota')] || ''),
+        ultimoConteo: aISO(f[c('ultimo_conteo')], 'UTC') || '',
       };
     }
   }
+
+  /**
+   * A cuántos días de stock estás.
+   *
+   * El ritmo sale de las unidades que de verdad se entregaron, repartidas
+   * entre los días que van desde el primer pedido hasta hoy —no hasta el
+   * último pedido: si hace dos semanas que no vende, esas dos semanas son
+   * parte del ritmo, y esconderlas diría que rota más rápido de lo que rota.
+   *
+   * Con menos de 14 días de historia no se calcula. Tres entregas en dos
+   * días darían un ritmo de 1,5 al día y una cobertura que se derrumba
+   * sola; es mejor decir que todavía no se sabe.
+   */
+  const hoyISO = new Date().toISOString().slice(0, 10);
+  const MIN_DIAS_RITMO = 14;
+  const cobertura = function (x, ficha) {
+    const base = { ritmo: null, dias: null, ventana: 0 };
+    if (!x || !x.primera) return base;
+    const ini = new Date(x.primera + 'T00:00:00Z').getTime();
+    const fin = new Date(hoyISO + 'T00:00:00Z').getTime();
+    const ventana = Math.floor((fin - ini) / 86400000) + 1;
+    base.ventana = ventana;
+    if (ventana < MIN_DIAS_RITMO || !x.unidadesEntregadas) return base;
+    base.ritmo = x.unidadesEntregadas / ventana;
+    if (ficha && ficha.stock > 0) base.dias = Math.floor(ficha.stock / base.ritmo);
+    return base;
+  };
 
   const salida = Object.keys(cat).map(function (k) {
     const x = cat[k];
     const ficha = fichas[k] || null;
     const resueltos = x.entregados + x.devueltos;
+    const cob = cobertura(x, ficha);
 
     // Qué le falta a este producto para poder decidir sobre él
     const falta = [];
@@ -4383,10 +4521,12 @@ function apiProductos(s, p) {
       clave: k, nombre: x.nombre, sku: x.sku || (ficha ? ficha.sku : ''),
       pedidos: x.pedidos, entregados: x.entregados, devueltos: x.devueltos,
       cancelados: x.cancelados, unidades: x.unidades, ventas: x.ventas,
+      unidadesEntregadas: x.unidadesEntregadas,
       ticket: x.entregados ? x.ventas / x.entregados : 0,
       entrega: resueltos ? x.entregados / resueltos * 100 : 0,
       primera: x.primera, ultima: x.ultima,
       ficha: ficha, falta: falta,
+      ritmo: cob.ritmo, coberturaDias: cob.dias, ventanaDias: cob.ventana,
       // Margen unitario solo si hay con qué calcularlo. Si no, null: un
       // margen estimado sobre un costo inventado es peor que no tenerlo.
       margen: (ficha && ficha.costo && x.entregados)
@@ -4400,8 +4540,11 @@ function apiProductos(s, p) {
     const fi = fichas[k];
     salida.push({ clave: k, nombre: fi.nombre || k, sku: fi.sku, pedidos: 0,
                   entregados: 0, devueltos: 0, cancelados: 0, unidades: 0,
+                  unidadesEntregadas: 0,
                   ventas: 0, ticket: 0, entrega: 0, primera: '', ultima: '',
-                  ficha: fi, falta: [], margen: null, sinVentas: true });
+                  ficha: fi, falta: [], margen: null,
+                  ritmo: null, coberturaDias: null, ventanaDias: 0,
+                  sinVentas: true });
   });
 
   return { ok: true, tienda: tienda, productos: salida,
@@ -4580,6 +4723,17 @@ function apiCrear(s, p) {
     if (!p.datos.estado) p.datos.estado = 'activo';
   }
 
+  // Una categoría mal escrita no rompe nada hoy, pero mañana ese producto
+  // no aparece en ningún filtro y nadie entiende por qué.
+  if (entidad === 'Inventario') {
+    if (!String((p.datos || {}).producto || '').trim()) {
+      return { ok: false, error: 'La ficha necesita el nombre del producto: es ' +
+               'con lo que se encuentra con los pedidos.' };
+    }
+    const err = validarFicha(p.datos || {});
+    if (err) return { ok: false, error: err };
+  }
+
   const datos = p.datos || {};
   const tienda = String(datos.tienda || p.tienda || '').trim();
   if (tienda && s.tiendas.indexOf(tienda) === -1) {
@@ -4592,11 +4746,16 @@ function apiCrear(s, p) {
 
   const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
   const id = entidad.toLowerCase() + '-' + Utilities.getUuid().slice(0, 8);
+  const hoy = new Date().toISOString().slice(0, 10);
   const fila = enc.map(function (col) {
     if (col === 'id') return id;
     if (col === 'activo') return 'si';
     if (col === 'actualizado_en') return ahoraISO();
     if (col === 'actualizado_por') return s.email;
+    // Una ficha creada desde la app la escribió una persona, y el stock
+    // con el que nace es el conteo del día.
+    if (entidad === 'Inventario' && col === 'origen') return 'manual';
+    if (entidad === 'Inventario' && col === 'ultimo_conteo') return hoy;
     if (campos.indexOf(col) !== -1) return datos[col] !== undefined ? datos[col] : '';
     return '';
   });
@@ -4777,6 +4936,11 @@ function apiEscribir(s, p) {
     if (campos.rol !== undefined) campos.rol = rolNuevo;
   }
 
+  if (entidad === 'Inventario') {
+    const err = validarFicha(campos);
+    if (err) return { ok: false, error: err };
+  }
+
   const escritos = [], rechazados = [];
   Object.keys(campos).forEach(function (k) {
     const col = enc.indexOf(norm(k));
@@ -4793,6 +4957,21 @@ function apiEscribir(s, p) {
     registrarMovimiento(s, entidad, id, norm(k), antes, ahora);
     escritos.push(k);
   });
+
+  /**
+   * Tocar el stock a mano es hacer un conteo, y queda fechado.
+   *
+   * Sin esto, una ficha que alguien corrigió hace tres meses y otra que
+   * se contó esta mañana se ven igual, y la alarma de stock no sabe a
+   * cuál de las dos creerle.
+   */
+  if (entidad === 'Inventario' && escritos.indexOf('stock') !== -1) {
+    const hoy = new Date().toISOString().slice(0, 10);
+    [['ultimo_conteo', hoy], ['origen', 'manual']].forEach(function (par) {
+      const col = enc.indexOf(par[0]);
+      if (col !== -1) sh.getRange(fila + 1, col + 1).setValue(par[1]);
+    });
+  }
 
   // Rastro de frescura: varias alarmas dependen de esto
   ['actualizado_en', 'actualizado_por'].forEach(function (k, i) {
