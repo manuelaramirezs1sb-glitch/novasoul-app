@@ -102,6 +102,7 @@ function manejar(e, metodo) {
       case 'crear':     return json(apiCrear(s, p));
       case 'equipo':    return json(apiEquipo(s, p));
       case 'productos': return json(apiProductos(s, p));
+      case 'recuento':  return json(apiRecuento(s, p));
       case 'alarmas':   return json(apiAlarmas(s, p));
       case 'parametros':return json(apiParametros(s, p));
       case 'auditoria': return json(apiAuditoria(s, p));
@@ -677,6 +678,111 @@ const CREABLES = {
 
 /** Quién puede crear o quitar en cada entidad. */
 const SOLO_DUENO = ['Equipo', 'Gastos'];
+
+/**
+ * El recuento del periodo: cómo viene la tienda.
+ *
+ * Mira los últimos meses COMPLETOS, no el que está corriendo: comparar
+ * un mes a medias contra uno entero siempre dice que vas peor, y no es
+ * verdad, es que todavía no termina.
+ *
+ * Si hay tres o más, habla de trimestre. Si hay menos —una tienda que
+ * apenas empieza— habla del último mes cerrado y lo dice, en vez de
+ * inventar un trimestre con un mes adentro.
+ *
+ * Lo que avanzó no se escribe a mano: sale de comparar el primer mes
+ * del periodo contra el último.
+ */
+function apiRecuento(s, p) {
+  const tienda = String(p.tienda || s.tiendas[0] || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const tz = zonaHorariaDe(ss, tienda) || 'UTC';
+  const mesActual = Utilities.formatDate(new Date(), tz, 'yyyy-MM');
+
+  // Hasta seis meses atrás, quedándonos con los que tienen movimiento
+  const conDatos = [];
+  let m = mesAnterior(mesActual);
+  for (let i = 0; i < 6 && conDatos.length < 3; i++) {
+    const d = agregarMes(ss, tienda, m, s);
+    if (d.pedidos > 0) conDatos.push({ mes: m, d: d });
+    m = mesAnterior(m);
+  }
+  if (!conDatos.length) {
+    return { ok: true, tienda: tienda, vacio: true, mesActual: mesActual };
+  }
+
+  conDatos.reverse();                      // del más viejo al más nuevo
+  const periodo = conDatos.length >= 3 ? 'trimestre' : 'mes';
+  const usados = periodo === 'trimestre' ? conDatos : [conDatos[conDatos.length - 1]];
+
+  const t = { pedidos: 0, entregados: 0, devueltos: 0, resueltos: 0,
+              ventas: 0, gasto: 0, fijos: 0, costoProducto: 0, costoEnvio: 0 };
+  usados.forEach(function (x) {
+    ['pedidos','entregados','devueltos','resueltos','ventas','gasto','fijos',
+     'costoProducto','costoEnvio'].forEach(function (k) {
+      t[k] += x.d[k] || 0;
+    });
+  });
+  t.efectividad = t.resueltos ? t.entregados / t.resueltos * 100 : 0;
+  t.roas = t.gasto ? t.ventas / t.gasto : 0;
+
+  // Con qué comparamos: el periodo anterior de la misma longitud
+  const previos = [];
+  let pm = mesAnterior(usados[0].mes);
+  for (let i = 0; i < usados.length; i++) { previos.push(pm); pm = mesAnterior(pm); }
+  const ant = { ventas: 0, entregados: 0, resueltos: 0, gasto: 0, fijos: 0 };
+  previos.forEach(function (mm) {
+    const d = agregarMes(ss, tienda, mm, s);
+    ant.ventas += d.ventas || 0; ant.entregados += d.entregados || 0;
+    ant.resueltos += d.resueltos || 0; ant.gasto += d.gasto || 0;
+    ant.fijos += d.fijos || 0;
+  });
+  ant.efectividad = ant.resueltos ? ant.entregados / ant.resueltos * 100 : 0;
+
+  /**
+   * Lo que avanzó: se comparan el primer y el último mes del periodo y se
+   * queda lo que más se movió. Sin datos anteriores no se dice nada: un
+   * "creció 100%" contra un mes que no existió es ruido.
+   */
+  const avances = [];
+  const pri = usados[0].d, ult = usados[usados.length - 1].d;
+  if (usados.length > 1) {
+    const dEf = (ult.efectividad || 0) - (pri.efectividad || 0);
+    if (Math.abs(dEf) >= 3) {
+      avances.push({ signo: dEf > 0 ? '+' : '', valor: dEf.toFixed(0) + ' pts',
+        titulo: 'La tasa de entrega ' + (dEf > 0 ? 'mejoró' : 'cayó') + ' de ' +
+          (pri.efectividad||0).toFixed(0) + '% a ' + (ult.efectividad||0).toFixed(0) + '%',
+        detalle: 'Entre ' + usados[0].mes + ' y ' + usados[usados.length-1].mes + '.',
+        bueno: dEf > 0 });
+    }
+    const dV = (ult.ventas || 0) - (pri.ventas || 0);
+    if (pri.ventas && Math.abs(dV / pri.ventas) >= 0.1) {
+      avances.push({ signo: dV > 0 ? '+' : '', valor: Math.round(dV / pri.ventas * 100) + '%',
+        titulo: 'Las ventas ' + (dV > 0 ? 'subieron' : 'bajaron') + ' de ' +
+          Math.round(pri.ventas) + ' a ' + Math.round(ult.ventas),
+        detalle: 'Mes a mes dentro del periodo.', bueno: dV > 0 });
+    }
+  }
+  if (ant.ventas) {
+    const dv = (t.ventas - ant.ventas) / ant.ventas * 100;
+    if (Math.abs(dv) >= 5) {
+      avances.push({ signo: dv > 0 ? '+' : '', valor: dv.toFixed(0) + '%',
+        titulo: 'Ingresos ' + (dv > 0 ? 'por encima' : 'por debajo') + ' del ' +
+          (periodo === 'mes' ? 'mes' : 'trimestre') + ' anterior',
+        detalle: Math.round(t.ventas) + ' contra ' + Math.round(ant.ventas) + '.',
+        bueno: dv > 0 });
+    }
+  }
+
+  return { ok: true, tienda: tienda, periodo: periodo,
+           meses: usados.map(function (x) { return x.mes; }),
+           total: t, anterior: ant, avances: avances.slice(0, 3),
+           moneda: monedaDeTienda(ss, tienda), mesActual: mesActual,
+           mesesConDatos: conDatos.length };
+}
 
 /**
  * Las alarmas de la tienda, calculadas al momento.

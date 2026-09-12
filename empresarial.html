@@ -622,6 +622,17 @@ input.li:focus{border-color:var(--acc-d);}
 .gasto-val:hover{border-color:var(--s-line2);}
 .gasto-val:focus{border-color:var(--acc-d);outline:none;background:var(--s-card);}
 
+.rec-v{font:700 22px/1 'Fraunces',serif;color:var(--t-ondark);font-variant-numeric:tabular-nums;}
+.rec-s{color:var(--t-ondark-mut);}
+.rec-av{display:flex;align-items:flex-start;gap:12px;border-top:1px solid var(--s-dark3);padding-top:10px;margin-top:8px;}
+.rec-chip{font:700 10px/1 'DM Sans';color:#232c19;background:var(--a-chip);border-radius:99px;
+  padding:5px 9px;white-space:nowrap;flex:none;}
+.rec-chip.mal{background:#e0a89c;color:#5a1a12;}
+.rec-av-t{font:600 13px/1.35 'DM Sans';color:var(--t-ondark);}
+.rec-av-d{font:500 11.5px/1.4 'DM Sans';color:var(--t-ondark-mut);margin-top:3px;}
+.rec-nada{font:500 12px/1.55 'DM Sans';color:var(--t-ondark-mut);border-top:1px solid var(--s-dark3);
+  padding-top:10px;margin-top:8px;}
+
 /* ─── ALARMAS Y UMBRALES ────────────────────────────── */
 .al-ok{font:500 12.5px/1.6 'DM Sans';color:#3f5330;background:#e6efe8;
   border-radius:12px;padding:13px 16px;max-width:74ch;}
@@ -1005,26 +1016,19 @@ input.li:focus{border-color:var(--acc-d);}
         <!-- Recuento (banner periódico de evaluación) -->
         <div class="recuento" id="recuento">
           <div class="rec-h">
-            <div><div class="rec-period">TU RECUENTO · AGOSTO 2026</div>
-            <div class="rec-title">Así estuvo el trimestre</div></div>
+            <div><div class="rec-period" id="rec-period">TU RECUENTO</div>
+            <div class="rec-title" id="rec-title">Así estuvo el periodo</div></div>
             <span class="rec-close" onclick="document.getElementById('recuento').style.display='none'">Ahora no</span>
           </div>
           <div class="rec-grid">
-            <div class="rec-kc"><div class="klbl">VENTAS</div><div style="font:700 22px/1 'Fraunces',serif;color:var(--t-ondark);font-variant-numeric:tabular-nums;" id="rec-ventas">$33,600</div><div class="ksub" style="color:var(--t-ondark-mut);">vs. $28,400 trim. anterior</div></div>
-            <div class="rec-kc"><div class="klbl">ENTREGAS</div><div style="font:700 22px/1 'Fraunces',serif;color:var(--t-ondark);">79%</div><div class="ksub" style="color:var(--t-ondark-mut);">638 de 808 pedidos</div></div>
-            <div class="rec-kc"><div class="klbl">ROAS</div><div style="font:700 22px/1 'Fraunces',serif;color:var(--t-ondark);">3.8x</div><div class="ksub" style="color:var(--t-ondark-mut);">Mínimo 2.0 · todo el trim.</div></div>
-            <div class="rec-kc"><div class="klbl">NÓMINA</div><div style="font:700 22px/1 'Fraunces',serif;color:var(--t-ondark);" id="rec-nom">$4.0M</div><div class="ksub" style="color:var(--t-ondark-mut);">+8% vs. trim. anterior</div></div>
+            <div class="rec-kc"><div class="klbl">VENTAS</div><div class="rec-v" id="rec-ventas">—</div><div class="ksub rec-s" id="rec-ventas-s"></div></div>
+            <div class="rec-kc"><div class="klbl">ENTREGAS</div><div class="rec-v" id="rec-entregas">—</div><div class="ksub rec-s" id="rec-entregas-s"></div></div>
+            <div class="rec-kc"><div class="klbl">ROAS</div><div class="rec-v" id="rec-roas">—</div><div class="ksub rec-s" id="rec-roas-s"></div></div>
+            <div class="rec-kc"><div class="klbl">GASTOS FIJOS</div><div class="rec-v" id="rec-nom">—</div><div class="ksub rec-s" id="rec-nom-s"></div></div>
           </div>
           <div style="display:flex;flex-direction:column;gap:8px;">
-            <div class="slbl" style="color:var(--t-mut2);">LO QUE MÁS AVANZÓ</div>
-            <div style="display:flex;align-items:flex-start;gap:12px;border-top:1px solid var(--s-dark3);padding-top:10px;">
-              <span style="font:700 10px/1 'DM Sans';color:#232c19;background:var(--a-chip);border-radius:99px;padding:5px 9px;white-space:nowrap;flex:none;">+18%</span>
-              <div><div style="font:600 13px/1.35 'DM Sans';color:var(--t-ondark);">Tasa de entrega mejoró de 68% a 79%</div><div style="font:500 11.5px/1.4 'DM Sans';color:var(--t-ondark-mut);margin-top:3px;">Camila lideró la recuperación de novedades en Quito.</div></div>
-            </div>
-            <div style="display:flex;align-items:flex-start;gap:12px;border-top:1px solid var(--s-dark3);padding-top:10px;">
-              <span style="font:700 10px/1 'DM Sans';color:#232c19;background:var(--a-chip);border-radius:99px;padding:5px 9px;white-space:nowrap;flex:none;">+$5.2k</span>
-              <div><div style="font:600 13px/1.35 'DM Sans';color:var(--t-ondark);">Ingresos crecieron $5,200 trimestre a trimestre</div><div style="font:500 11.5px/1.4 'DM Sans';color:var(--t-ondark-mut);margin-top:3px;">Proteína Vainilla fue el producto estrella con ROAS 5.2x.</div></div>
-            </div>
+            <div class="slbl" style="color:var(--t-mut2);" id="rec-lbl">LO QUE MÁS SE MOVIÓ</div>
+            <div id="rec-avances"></div>
           </div>
           <div class="rec-cta" id="rec-cta" onclick="cerrarMesActual()"
             style="cursor:pointer;">Cerrar el mes →</div>
@@ -3160,7 +3164,8 @@ async function cargarReales() {
     // puede dejar a Pedidos sin cargar. Se esperan las dos para saber
     // cuándo la pantalla terminó de ponerse al día.
     await Promise.all([cargarPedidosReales(), cargarNovedadesReales(),
-                       cargarEquipo(), cargarAuditoria(), cargarAlarmas()]);
+                       cargarEquipo(), cargarAuditoria(), cargarAlarmas(),
+                       cargarRecuento()]);
     return { mes: mes, pedidos: PEDS_REALES.length, novedades: NOVS_REALES.length };
   } catch (e) { marcarOrigen(false, 'sin conexión'); }
 }
@@ -4179,7 +4184,7 @@ async function cargarHistorialFuentes() {
  */
 const SIN_FUENTE = [
   // Hoy
-  'recuento', 'palist', 'eqhoy', 'barchart', 'stlist',
+  'palist', 'eqhoy', 'barchart', 'stlist',
   // Operación: las listas todavía no llaman a la API, son del guion demo
   'pedlist', 'novkpi', 'novlist', 'prodlist', 'jlist', 'tlist',
   'caslist', 'audqlist', 'commlist',
@@ -4821,6 +4826,99 @@ async function buildCierre(){
   document.getElementById('cm-doc').innerHTML = pintarInforme(d, p, real);
 }
 
+
+// ─── RECUENTO DEL PERIODO ─────────────────────────────────────
+/**
+ * Cómo viene la tienda, sobre meses COMPLETOS.
+ *
+ * El mes en curso no entra: comparar un mes a medias contra uno entero
+ * siempre dice que vas peor, y no es verdad — es que todavía no termina.
+ *
+ * Con tres meses cerrados habla de trimestre. Con menos, del último mes,
+ * y lo dice. Una tienda que lleva tres semanas no tiene trimestre, y
+ * fabricarle uno con un mes adentro es mentirle en su primera pantalla.
+ */
+async function cargarRecuento() {
+  if (!CONECTADO) return false;
+  let r;
+  try { r = await api('recuento', { tienda: ST }); }
+  catch (e) { return false; }
+  if (!r || !r.ok) return false;
+
+  const caja = document.getElementById('recuento');
+  const S = SYM() + ' ';
+  const set = function (id, txt) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  };
+
+  if (r.vacio) {
+    set('rec-period', 'TU RECUENTO');
+    const tit = document.getElementById('rec-title');
+    if (tit) tit.textContent = 'Todavía no hay un mes cerrado';
+    ['rec-ventas','rec-entregas','rec-roas','rec-nom'].forEach(function (id) { set(id, '—'); });
+    set('rec-ventas-s', 'Sube los pedidos de un mes anterior y aparece aquí.');
+    ['rec-entregas-s','rec-roas-s','rec-nom-s'].forEach(function (id) { set(id, ''); });
+    const av = document.getElementById('rec-avances');
+    if (av) av.innerHTML = '';
+    const lbl = document.getElementById('rec-lbl');
+    if (lbl) lbl.style.display = 'none';
+    desellar(['recuento']);
+    return true;
+  }
+
+  const t = r.total, a = r.anterior;
+  const esTrim = r.periodo === 'trimestre';
+  const nf = function (n) { return NUM(Math.round(n || 0)); };
+
+  set('rec-period', 'TU RECUENTO · ' + r.meses.join(' · ').toUpperCase());
+  const tit = document.getElementById('rec-title');
+  if (tit) {
+    tit.textContent = esTrim
+      ? 'Así estuvo el trimestre'
+      : 'Así estuvo ' + nombreMes(r.meses[0]);
+  }
+
+  set('rec-ventas', S + nf(t.ventas));
+  set('rec-ventas-s', a.ventas
+    ? 'vs. ' + S + nf(a.ventas) + ' el periodo anterior'
+    : 'Primer periodo con datos');
+
+  set('rec-entregas', (t.efectividad || 0).toFixed(0) + '%');
+  set('rec-entregas-s', t.entregados + ' de ' + t.resueltos + ' resueltos');
+
+  set('rec-roas', t.gasto ? (t.roas || 0).toFixed(1) + 'x' : '—');
+  set('rec-roas-s', t.gasto
+    ? S + nf(t.gasto) + ' de pauta'
+    : 'Sube la pauta para verlo');
+
+  set('rec-nom', t.fijos ? S + nf(t.fijos) : '—');
+  set('rec-nom-s', t.fijos
+    ? (esTrim ? 'Suma de los tres meses' : 'Del mes')
+    : 'Regístralos en Dinero');
+
+  const av = document.getElementById('rec-avances');
+  const lbl = document.getElementById('rec-lbl');
+  if (av) {
+    if (!r.avances.length) {
+      av.innerHTML = '<div class="rec-nada">Sin cambios grandes contra el periodo ' +
+        'anterior. Cuando algo se mueva de verdad, aparece aquí.</div>';
+      if (lbl) lbl.style.display = '';
+    } else {
+      av.innerHTML = r.avances.map(function (x) {
+        return '<div class="rec-av">' +
+          '<span class="rec-chip' + (x.bueno ? '' : ' mal') + '">' +
+            esc(x.signo + x.valor) + '</span>' +
+          '<div><div class="rec-av-t">' + esc(x.titulo) + '</div>' +
+          '<div class="rec-av-d">' + esc(x.detalle) + '</div></div></div>';
+      }).join('');
+      if (lbl) lbl.style.display = '';
+    }
+  }
+
+  desellar(['recuento']);
+  return true;
+}
 
 // ─── ALARMAS ──────────────────────────────────────────────────
 /**
