@@ -62,6 +62,8 @@ function manejar(e, metodo) {
       case 'fuentes':   return json(apiFuentes(s, p));
       case 'trozo':     return json(apiTrozo(s, p));
       case 'crear':     return json(apiCrear(s, p));
+      case 'equipo':    return json(apiEquipo(s, p));
+      case 'auditoria': return json(apiAuditoria(s, p));
       case 'borrar':    return json(apiBorrar(s, p));
       case 'cerrarmes': return json(apiCerrarMes(s, p));
       case 'salir':     return json(apiSalir(p.token));
@@ -417,7 +419,8 @@ function modulosDelPlan(plan) {
  * div no impide que alguien llame la API directamente.
  */
 const PERMISOS = {
-  dueno:   { leer: '*', escribir: ['Pedidos','Novedades','Inventario','Equipo','Parametros','Tiendas','Fuentes'] },
+  dueno:   { leer: '*', escribir: ['Pedidos','Novedades','Inventario','Equipo',
+                                   'Parametros','Tiendas','Fuentes','Gastos'] },
   admin:   { leer: ['Pedidos','Novedades','Llamadas','Inventario','Equipo','Tiendas','Fuentes'],
              escribir: ['Pedidos','Novedades','Equipo'] },
   gestora: { leer: ['Pedidos','Novedades','Llamadas'], escribir: ['Pedidos','Novedades'] },
@@ -598,18 +601,168 @@ const COLUMNAS_IMPORTADAS = [
  * columnas que el importador y el equipo se reparten.
  */
 const CREABLES = {
-  Gastos: ['tienda', 'mes', 'tipo', 'nombre', 'valor', 'moneda', 'nota'],
+  Gastos:     ['tienda', 'mes', 'tipo', 'nombre', 'valor', 'moneda', 'nota'],
+  Inventario: ['tienda', 'sku', 'producto', 'stock', 'costo_unitario', 'precio',
+               'minimo', 'origen', 'nota'],
+  Equipo:     ['nombre', 'correo', 'rol', 'tienda', 'estado', 'permisos'],
 };
+
+/** Quién puede crear o quitar en cada entidad. */
+const SOLO_DUENO = ['Equipo', 'Gastos'];
+
+/**
+ * El equipo, con lo que cada persona hizo en el mes.
+ *
+ * El rendimiento no se escribe en ninguna parte: se cuenta sobre los
+ * pedidos y las novedades que tiene asignados. Así no hay una cifra que
+ * mantener al día a mano, y nadie puede maquillarla.
+ */
+function apiEquipo(s, p) {
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const sh = ss.getSheetByName('Equipo');
+  if (!sh || sh.getLastRow() < 2) return { ok: true, personas: [] };
+
+  const mes = String(p.mes || Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM'));
+  const tienda = String(p.tienda || '').trim();
+
+  const filas = sh.getDataRange().getValues();
+  const enc = filas[0].map(norm);
+  const c = function (n) { return enc.indexOf(n); };
+
+  const personas = [];
+  for (let i = 1; i < filas.length; i++) {
+    const f = filas[i];
+    if (!String(f[c('correo')] || '').trim()) continue;
+    const rol = rolCanonico(f[c('rol')]);
+    personas.push({
+      id: f[c('id')], nombre: f[c('nombre')], correo: f[c('correo')],
+      rol: rol || String(f[c('rol')] || ''),
+      rolLegible: rol ? '' : 'no reconocido',
+      tienda: String(f[c('tienda')] || '*'),
+      estado: norm(f[c('estado')]) === 'inactivo' ? 'inactivo' : 'activo',
+      permisos: c('permisos') === -1 ? '' : String(f[c('permisos')] || ''),
+      ultima_conexion: c('ultima_conexion') === -1 ? '' : f[c('ultima_conexion')],
+      pedidos: 0, entregados: 0, novedades: 0, resueltas: 0, sinMover: 0,
+    });
+  }
+
+  const porNombre = {};
+  personas.forEach(function (x) { porNombre[norm(x.nombre)] = x; });
+
+  // Pedidos del mes, por gestora asignada
+  const shP = ss.getSheetByName('Pedidos');
+  if (shP && shP.getLastRow() > 1) {
+    const d = shP.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const cc = function (n) { return e.indexOf(n); };
+    const hoy = new Date();
+    for (let i = 1; i < d.length; i++) {
+      const f = d[i];
+      if (tienda && String(f[cc('tienda')]).trim() !== tienda) continue;
+      const fecha = aISO(f[cc('fecha')], 'UTC');
+      if (!fecha || fecha.slice(0, 7) !== mes) continue;
+      const g = porNombre[norm(f[cc('gestora_asignada')])];
+      if (!g) continue;
+      g.pedidos++;
+      const est = norm(f[cc('estado_nova')] || f[cc('estado_canonico')]);
+      if (est === 'entregado') g.entregados++;
+      if (['entregado','devolucion','cancelado'].indexOf(est) === -1) {
+        const ult = aISO(f[cc('ultimo_movimiento')] || f[cc('actualizado_en')], 'UTC') || fecha;
+        if ((hoy - new Date(ult + 'T00:00:00Z')) / 86400000 > 3) g.sinMover++;
+      }
+    }
+  }
+
+  // Novedades del mes, por gestora
+  const shN = ss.getSheetByName('Novedades');
+  if (shN && shN.getLastRow() > 1) {
+    const d = shN.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const cF = e.indexOf('fecha'), cG = e.indexOf('gestora'), cE = e.indexOf('estado');
+    for (let i = 1; i < d.length; i++) {
+      const fecha = aISO(d[i][cF], 'UTC');
+      if (!fecha || fecha.slice(0, 7) !== mes) continue;
+      const g = porNombre[norm(d[i][cG])];
+      if (!g) continue;
+      g.novedades++;
+      if (norm(d[i][cE]) === 'resuelta') g.resueltas++;
+    }
+  }
+
+  personas.forEach(function (x) {
+    x.efectividad = x.pedidos ? x.entregados / x.pedidos * 100 : 0;
+  });
+
+  // La gestora solo se ve a sí misma
+  const salida = s.rol === 'gestora'
+    ? personas.filter(function (x) { return norm(x.nombre) === norm(s.nombre); })
+    : personas;
+
+  return { ok: true, mes: mes, personas: salida, puedeEditar: s.rol === 'dueno' };
+}
+
+/**
+ * El rastro de quién cambió qué.
+ *
+ * Sale de Movimientos, que se escribe solo en cada edición. La gestora no
+ * lo ve: es información sobre el equipo, no para el equipo.
+ */
+function apiAuditoria(s, p) {
+  if (s.rol === 'gestora') return { ok: false, error: 'No tienes acceso a la auditoría.' };
+
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const sh = ss.getSheetByName('Movimientos');
+  if (!sh || sh.getLastRow() < 2) return { ok: true, movimientos: [] };
+
+  const filas = sh.getDataRange().getValues();
+  const enc = filas[0].map(norm);
+  const c = function (n) { return enc.indexOf(n); };
+  const cuantas = Math.min(300, Math.max(1, parseInt(p.limite || 150, 10)));
+
+  const out = [];
+  for (let i = filas.length - 1; i >= 1 && out.length < cuantas; i--) {
+    const f = filas[i];
+    if (!String(f[c('fecha')] || '').trim()) continue;
+    out.push({
+      fecha: aISO(f[c('fecha')], 'UTC') || String(f[c('fecha')]),
+      hora: String(f[c('fecha')]).slice(11, 16),
+      usuario: f[c('usuario')], entidad: f[c('entidad')],
+      entidad_id: f[c('entidad_id')], campo: f[c('campo')],
+      antes: f[c('valor_anterior')], despues: f[c('valor_nuevo')],
+    });
+  }
+  return { ok: true, movimientos: out };
+}
 
 function apiCrear(s, p) {
   const entidad = String(p.entidad || '').trim();
   const campos = CREABLES[entidad];
   if (!campos) return { ok: false, error: 'No se pueden crear filas en ' + entidad + '.' };
+  if (SOLO_DUENO.indexOf(entidad) !== -1 && s.rol !== 'dueno') {
+    return { ok: false, error: 'Solo la dueña puede tocar ' + entidad + '.' };
+  }
   if (!puede(s, 'escribir', entidad) && s.rol !== 'dueno') {
     return { ok: false, error: 'Tu rol no puede crear en ' + entidad + '.' };
   }
   if (ENTIDADES_DINERO.indexOf(entidad) !== -1 && s.rol !== 'dueno') {
     return { ok: false, error: 'Solo la dueña.' };
+  }
+
+  /**
+   * Nadie entra al Equipo con un rol que el sistema no entiende, ni con
+   * un correo que ya está adentro.
+   *
+   * Un rol mal escrito dejaría a esa persona sin acceso y sin explicación
+   * el día que intente entrar; un correo repetido haría que dos filas
+   * distintas peleen por la misma sesión.
+   */
+  if (entidad === 'Equipo') {
+    const err = validarPersona(s, p.datos || {}, '');
+    if (err) return { ok: false, error: err };
+    // "asesora" y "propietaria" entran igual, pero en la hoja queda una
+    // sola palabra por rol: así se puede filtrar y contar sin sorpresas.
+    p.datos.rol = rolCanonico(p.datos.rol);
+    if (!p.datos.estado) p.datos.estado = 'activo';
   }
 
   const datos = p.datos || {};
@@ -644,10 +797,76 @@ function apiCrear(s, p) {
  * por qué el margen de marzo era ese. Desactivarlo lo saca de los
  * cálculos de aquí en adelante y deja el rastro.
  */
+/**
+ * Comprueba una persona antes de guardarla.
+ *
+ * @param {string} idActual  vacío al crear; el id de la fila al editar,
+ *                           para no chocar consigo misma.
+ */
+function validarPersona(s, datos, idActual) {
+  const correo = String(datos.correo || '').toLowerCase().trim();
+  if (!correo || correo.indexOf('@') === -1) return 'Falta un correo válido.';
+  if (!String(datos.nombre || '').trim()) return 'Falta el nombre.';
+
+  const rol = rolCanonico(datos.rol);
+  if (!rol) {
+    return 'El rol "' + datos.rol + '" no se reconoce. Tiene que ser ' +
+           'dueño, admin o gestora — se aceptan variantes como dueña, ' +
+           'administradora o asesora.';
+  }
+
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const sh = ss.getSheetByName('Equipo');
+  if (!sh || sh.getLastRow() < 2) return '';
+
+  const filas = sh.getDataRange().getValues();
+  const enc = filas[0].map(norm);
+  const cC = enc.indexOf('correo'), cId = enc.indexOf('id');
+  for (let i = 1; i < filas.length; i++) {
+    if (idActual && String(filas[i][cId]).trim() === idActual) continue;
+    if (String(filas[i][cC] || '').toLowerCase().trim() === correo) {
+      return 'Ya hay alguien en el equipo con el correo ' + correo + '.';
+    }
+  }
+  return '';
+}
+
+/**
+ * Cuántas dueñas activas quedarían si esta fila cambiara.
+ *
+ * Una cuenta sin dueña activa es una cuenta sin quién dé permisos: nadie
+ * puede volver a entrar a arreglarlo, ni siquiera desde la hoja, porque
+ * la app decide los roles leyendo justamente esa hoja.
+ */
+function duenosActivosSin(ss, idExcluido, rolNuevo) {
+  const sh = ss.getSheetByName('Equipo');
+  if (!sh || sh.getLastRow() < 2) return 0;
+  const filas = sh.getDataRange().getValues();
+  const enc = filas[0].map(norm);
+  const cId = enc.indexOf('id'), cRol = enc.indexOf('rol'), cEst = enc.indexOf('estado');
+  let n = 0;
+  for (let i = 1; i < filas.length; i++) {
+    const esta = String(filas[i][cId]).trim() === idExcluido;
+    const rol = esta ? rolNuevo : rolCanonico(filas[i][cRol]);
+    const estado = esta ? (rolNuevo ? 'activo' : 'inactivo') : norm(filas[i][cEst]);
+    if (rol === 'dueno' && estado !== 'inactivo') n++;
+  }
+  return n;
+}
+
 function apiBorrar(s, p) {
   const entidad = String(p.entidad || '').trim();
   if (!CREABLES[entidad]) return { ok: false, error: 'No se puede borrar en ' + entidad + '.' };
   if (s.rol !== 'dueno') return { ok: false, error: 'Solo la dueña.' };
+
+  // Quitar a la última dueña deja la cuenta sin quién dé permisos
+  if (entidad === 'Equipo') {
+    const ss0 = SpreadsheetApp.openById(s.sheetId);
+    if (duenosActivosSin(ss0, String(p.id || '').trim(), '') === 0) {
+      return { ok: false, error: 'No puedes quitar a la única dueña: la cuenta ' +
+               'se quedaría sin quién dé permisos. Nombra otra dueña primero.' };
+    }
+  }
 
   const ss = SpreadsheetApp.openById(s.sheetId);
   const sh = ss.getSheetByName(entidad);
@@ -657,10 +876,17 @@ function apiBorrar(s, p) {
   const enc = datos[0].map(norm);
   const cId = enc.indexOf('id'), cAct = enc.indexOf('activo');
   const id = String(p.id || '').trim();
+  const cEstado = enc.indexOf('estado');
   for (let i = 1; i < datos.length; i++) {
     if (String(datos[i][cId]).trim() !== id) continue;
-    if (cAct !== -1) sh.getRange(i + 1, cAct + 1).setValue('no');
-    registrarMovimiento(s, entidad, id, 'activo', 'si', 'no');
+    // Equipo marca 'estado: inactivo'; el resto, 'activo: no'
+    if (entidad === 'Equipo' && cEstado !== -1) {
+      sh.getRange(i + 1, cEstado + 1).setValue('inactivo');
+      registrarMovimiento(s, entidad, id, 'estado', 'activo', 'inactivo');
+    } else if (cAct !== -1) {
+      sh.getRange(i + 1, cAct + 1).setValue('no');
+      registrarMovimiento(s, entidad, id, 'activo', 'si', 'no');
+    }
     return { ok: true };
   }
   return { ok: false, error: 'No encuentro esa fila.' };
@@ -704,6 +930,36 @@ function apiEscribir(s, p) {
   const cT = enc.indexOf('tienda');
   if (cT !== -1 && s.tiendas.indexOf(String(datos[fila][cT]).trim()) === -1) {
     return { ok: false, error: 'Ese registro es de otra tienda.' };
+  }
+
+  /**
+   * Editar a alguien del Equipo pasa por las mismas reglas que crearlo.
+   *
+   * Sin esto, bastaba con editar la fila propia y ponerse "admin" para
+   * dejar la cuenta sin dueña, o escribir un rol inventado que dejaría a
+   * esa persona fuera sin decir por qué.
+   */
+  if (entidad === 'Equipo') {
+    if (s.rol !== 'dueno') {
+      return { ok: false, error: 'Solo la dueña cambia el equipo.' };
+    }
+    const prop = {};
+    ['nombre','correo','rol','tienda','estado','permisos'].forEach(function (k) {
+      prop[k] = campos[k] !== undefined ? campos[k] : datos[fila][enc.indexOf(k)];
+    });
+    const err = validarPersona(s, prop, id);
+    if (err) return { ok: false, error: err };
+
+    const rolNuevo = rolCanonico(prop.rol);
+    const quedaActivo = norm(prop.estado) !== 'inactivo';
+    if (duenosActivosSin(ss, id, quedaActivo ? rolNuevo : '') === 0) {
+      return { ok: false, error: 'Ese cambio dejaría la cuenta sin ninguna ' +
+               'dueña activa, y nadie podría volver a dar permisos. ' +
+               'Nombra otra dueña primero.' };
+    }
+    // El rol se guarda en su forma canónica: "dueña" y "propietaria"
+    // entran igual, pero en la hoja queda una sola palabra.
+    if (campos.rol !== undefined) campos.rol = rolNuevo;
   }
 
   const escritos = [], rechazados = [];

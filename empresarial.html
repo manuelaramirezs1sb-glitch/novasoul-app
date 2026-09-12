@@ -612,6 +612,68 @@ input.li:focus{border-color:var(--acc-d);}
 .cm-vacio{font:500 12px/1.6 'DM Sans';color:var(--t-mut3);
   background:var(--s-bg);border:1px dashed var(--s-line4);border-radius:11px;padding:16px 18px;}
 
+.gasto-nm{font:500 12.5px/1.3 'DM Sans';color:var(--t-ink2);background:transparent;
+  border:1px solid transparent;border-radius:7px;padding:5px 7px;width:100%;max-width:230px;}
+.gasto-nm:hover{border-color:var(--s-line2);}
+.gasto-nm:focus{border-color:var(--acc-d);outline:none;background:var(--s-card);}
+.gasto-val{font:600 13px/1 'DM Sans';color:var(--t-ink);background:transparent;
+  border:1px solid transparent;border-radius:7px;padding:6px 8px;width:110px;text-align:right;
+  font-variant-numeric:tabular-nums;}
+.gasto-val:hover{border-color:var(--s-line2);}
+.gasto-val:focus{border-color:var(--acc-d);outline:none;background:var(--s-card);}
+
+/* ─── EQUIPO Y AUDITORÍA ────────────────────────────── */
+.eq-vacio{font:500 12.5px/1.65 'DM Sans';color:var(--t-mut2);padding:14px 0;max-width:62ch;}
+.eq-tabla{display:flex;flex-direction:column;}
+.eq-row{display:grid;grid-template-columns:1.6fr 1fr .5fr .5fr .6fr auto;gap:12px;
+  align-items:center;padding:12px 0;border-bottom:1px solid var(--s-line2);}
+.eq-row:last-child{border-bottom:none;}
+.eq-row.off{opacity:.5;}
+.eq-nm{font:600 13.5px/1.3 'DM Sans';color:var(--t-ink);display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.eq-mail{font:500 11.5px/1.4 'DM Sans';color:var(--t-mut2);}
+.eq-tag{font:600 9.5px/1 'DM Sans';letter-spacing:.5px;text-transform:uppercase;
+  background:var(--s-bg);color:var(--t-mut2);border-radius:20px;padding:4px 7px;}
+.eq-tag.mal{background:#f6e3db;color:#a8563a;}
+.eq-rol{font:500 12.5px/1.3 'DM Sans';color:var(--t-ink2);}
+.eq-rol span{display:block;font-size:11px;color:var(--t-mut3);}
+.eq-num{font:600 15px/1.1 'DM Sans';color:var(--t-ink);text-align:center;font-variant-numeric:tabular-nums;}
+.eq-num.mal{color:#b8322f;}
+.eq-num span{display:block;font:500 10px/1.3 'DM Sans';color:var(--t-mut3);font-variant-numeric:normal;}
+.eq-acc{display:flex;gap:6px;}
+.eq-btn{font:600 11px/1 'DM Sans';padding:7px 11px;border-radius:20px;cursor:pointer;
+  background:var(--s-bg);border:1px solid var(--s-line2);color:var(--t-ink2);}
+.eq-btn:hover{border-color:var(--t-mut2);}
+.eq-btn.del{color:#a8563a;}
+.eq-form{display:flex;flex-direction:column;gap:14px;}
+.eq-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:11px;}
+.eq-campos label{display:flex;flex-direction:column;gap:5px;
+  font:600 10px/1 'DM Sans';letter-spacing:1px;text-transform:uppercase;color:var(--t-mut2);}
+.eq-campos input,.eq-campos select{width:100%;}
+.eq-perms{display:flex;flex-direction:column;gap:9px;}
+.eq-chk{display:flex;gap:9px;align-items:flex-start;cursor:pointer;}
+.eq-chk input{margin-top:3px;flex:none;}
+.eq-chk span{font:500 12px/1.5 'DM Sans';color:var(--t-mut);}
+.eq-chk b{display:block;font-weight:600;color:var(--t-ink2);}
+.eq-err{display:none;font:500 12px/1.55 'DM Sans';color:#a8563a;background:#f6e3db;
+  border-radius:9px;padding:10px 13px;}
+.cm-btn.eq-sec{background:transparent;color:var(--t-mut);border:1px solid var(--s-line2);}
+.eq-roles{display:flex;flex-direction:column;gap:11px;}
+.eq-roles div{font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);}
+.eq-roles b{color:var(--t-ink);display:block;}
+.aud-row{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:baseline;
+  padding:10px 0;border-bottom:1px solid var(--s-line2);}
+.aud-cuando{font:600 11.5px/1.3 'DM Sans';color:var(--t-ink2);white-space:nowrap;font-variant-numeric:tabular-nums;}
+.aud-cuando span{display:block;font-weight:500;color:var(--t-mut3);}
+.aud-que{font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);}
+.aud-que b{color:var(--t-ink2);font-weight:600;}
+.aud-val{font:500 11.5px/1.4 'DM Sans';color:var(--t-ink2);text-align:right;}
+.aud-val .antes{color:var(--t-mut3);text-decoration:line-through;}
+@media(max-width:720px){
+  .eq-row{grid-template-columns:1fr 1fr;gap:8px;}
+  .aud-row{grid-template-columns:1fr;gap:4px;}
+  .aud-val{text-align:left;}
+}
+
 /* ─── INFORME DE CIERRE ─────────────────────────────── */
 .inf-head{border-bottom:2px solid var(--t-ink);padding-bottom:20px;margin-bottom:22px;}
 .inf-eyebrow{font:500 10.5px/1 'DM Sans';letter-spacing:.14em;text-transform:uppercase;
@@ -1237,65 +1299,38 @@ input.li:focus{border-color:var(--acc-d);}
 
       <!-- ════ PERMISOS ════ -->
       <div class="view ro-dueno" id="v-permisos">
-        <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);max-width:78ch;">Toda la operación vive en tu panel. Lo que decides aquí es quién la controla: toca una casilla para cambiar el acceso. Lo que nadie gestiona, lo llevas tú.</p>
+        <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);max-width:78ch;">
+          Quién entra a tu tienda y qué ve cada quien. Cada persona entra con su
+          propio correo y un código que le llega a él — no hay contraseñas que
+          compartir ni que recordar.</p>
 
-        <!-- Matriz -->
         <div class="card">
-          <div class="card-h">
-            <span class="ct">Quién controla cada operación</span>
-            <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">
-              <span style="font:600 10px/1 'DM Sans';padding:5px 9px;border-radius:20px;background:var(--s-bg);border:1px solid var(--s-line2);color:var(--t-mut2);">Sin acceso</span>
-              <span style="font:600 10px/1 'DM Sans';padding:5px 9px;border-radius:20px;background:#d3e0c2;color:#4c6236;">Ver</span>
-              <span style="font:600 10px/1 'DM Sans';padding:5px 9px;border-radius:20px;background:#b9cf8e;color:#2e4a1a;">Gestionar</span>
-              <span onclick="resetMatrix()" style="font:600 10px/1 'DM Sans';color:var(--t-mut2);cursor:pointer;padding:5px 4px;">Restablecer</span>
-            </div>
-          </div>
-          <div class="mtz-table">
-            <div class="mtz-grid" id="mtz-grid">
-              <div class="mtz-head">
-                <span style="font:600 9.5px/1 'DM Sans';letter-spacing:.9px;color:var(--t-mut2);">OPERACIÓN · Y QUIÉN LA CONTROLA</span>
-                <div style="display:flex;flex-direction:column;gap:2px;align-items:center;"><span style="font:600 11.5px/1.2 'DM Sans';color:var(--t-ink);text-align:center;">Daniela R.</span><span style="font:500 10px/1.2 'DM Sans';color:var(--t-mut2);">Admin</span></div>
-                <div style="display:flex;flex-direction:column;gap:2px;align-items:center;"><span style="font:600 11.5px/1.2 'DM Sans';color:var(--t-ink);text-align:center;">Katherin M.</span><span style="font:500 10px/1.2 'DM Sans';color:var(--t-mut2);">Gestora EC</span></div>
-                <div style="display:flex;flex-direction:column;gap:2px;align-items:center;"><span style="font:600 11.5px/1.2 'DM Sans';color:var(--t-ink);text-align:center;">Solange P.</span><span style="font:500 10px/1.2 'DM Sans';color:var(--t-mut2);">Gestora GT</span></div>
-              </div>
-              <!-- rows filled by JS -->
-            </div>
-          </div>
-          <p style="font:500 11.5px/1.5 'DM Sans';color:var(--t-mut2);border-top:1px solid var(--s-line2);padding-top:12px;margin:0;">La administradora ve y gestiona todo lo que la gestora no tenga asignado. Así la herramienta sirve igual el primer día, cuando no tienes equipo, que cuando ya tienes dos gestoras y una admin.</p>
+          <div class="card-h"><span class="ct">Tu equipo</span>
+            <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);" id="eq-mes"></span></div>
+          <div class="eq-tabla" id="eqlista"></div>
         </div>
 
-        <!-- Equipo selector -->
-        <div class="g3" id="perm-eq-cards"></div>
+        <div class="card">
+          <div class="card-h"><span class="ct">Agregar o editar</span></div>
+          <div id="eq-form"></div>
+        </div>
 
-        <!-- Detalle de persona -->
-        <div class="card" id="perm-det">
-          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;">
-            <span style="font:600 17px/1.1 'Fraunces',serif;color:var(--t-ink);" id="perm-nm">Daniela R.</span>
-            <span style="font:500 12px/1 'DM Sans';color:var(--t-mut2);" id="perm-correo">daniela@nutreashop.com</span>
+        <div class="card">
+          <div class="card-h"><span class="ct">Qué ve cada rol</span></div>
+          <div class="eq-roles">
+            <div><b>Dueña</b><span>Todo, incluido el dinero. Es quien da los permisos.
+              Siempre tiene que haber al menos una: si no, nadie podría volver a
+              dar acceso a nadie.</span></div>
+            <div><b>Admin</b><span>Opera la tienda y ve al equipo. El dinero no,
+              salvo que se lo actives.</span></div>
+            <div><b>Gestora</b><span>Solo los pedidos y novedades que tiene
+              asignados. No ve los de las demás ni el dinero.</span></div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:7px;">
-            <div class="slbl">ROL</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;" id="perm-roles"></div>
-            <p style="font:500 11.5px/1.5 'DM Sans';color:var(--t-mut2);margin:0;">Cambiar el rol devuelve los permisos predeterminados de ese rol.</p>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:7px;">
-            <div class="slbl">TIENDAS ASIGNADAS</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;" id="perm-tiendas"></div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:7px;">
-            <div class="slbl">PERMISOS</div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:9px;" id="perm-lista"></div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--s-line2);padding-top:16px;">
-            <div class="slbl">SU ACCESO</div>
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-              <span class="suacceso-link" id="perm-link">nova.co/acceso/daniela-r-07f4a</span>
-              <span onclick="copyPermLink()" id="perm-copy-btn" style="font:600 12px/1 'DM Sans';color:var(--t-ondark);background:var(--s-deep);border-radius:20px;padding:12px 16px;cursor:pointer;white-space:nowrap;">Copiar link</span>
-              <span onclick="emailPermLink()" style="font:600 12px/1 'DM Sans';color:var(--t-ink);background:var(--s-bg);border:1px solid var(--s-line);border-radius:20px;padding:12px 16px;cursor:pointer;white-space:nowrap;">Mandar por correo</span>
-            </div>
-            <p style="font:500 11.5px/1.5 'DM Sans';color:var(--t-mut2);margin:0;">El link caduca a las 48 horas. Nova nunca guarda la contraseña de Dropi.</p>
-          </div>
-          <span onclick="enterAsSombra()" style="font:600 12.5px/1 'DM Sans';color:#232c19;background:var(--a-chip);border-radius:20px;padding:13px 18px;cursor:pointer;align-self:flex-start;" id="perm-entrar-btn">Entrar como Daniela R. →</span>
+          <p style="font:500 11.5px/1.55 'DM Sans';color:var(--t-mut2);
+            border-top:1px solid var(--s-line2);padding-top:12px;margin:0;">
+            Lo que nadie tenga asignado lo sigues viendo tú. Así la herramienta
+            sirve igual el primer día, sin equipo, que cuando ya tienes dos
+            gestoras y una admin.</p>
         </div>
       </div>
 
@@ -2392,13 +2427,15 @@ function renderGastos(){
     el.innerHTML = mios.map(function (g) {
       return '<div style="display:flex;align-items:center;justify-content:space-between;' +
         'padding:10px 0;border-bottom:1px solid var(--s-line2);">' +
-        '<div><span style="font:500 12.5px/1 \'DM Sans\';color:var(--t-ink2);">' +
-          esc(g.nombre) + '</span>' +
+        '<div><input class="gasto-nm" id="gn-' + g.id + '" value="' + esc(g.nombre) + '" ' +
+          'onchange="renombrarGasto(\'' + g.id + '\')">' +
           (g.recurrente ? '' : '<span style="font:500 10.5px/1 \'DM Sans\';' +
             'color:var(--t-mut2);margin-left:6px;">solo este mes</span>') + '</div>' +
         '<div style="display:flex;align-items:center;gap:10px;">' +
-          '<span style="font:600 13px/1 \'DM Sans\';color:var(--t-ink);">' +
-            S + NUM(Math.round(g.valor || 0)) + '</span>' +
+          '<input class="gasto-val" id="gv-' + g.id + '" type="number" ' +
+            'value="' + (Math.round((g.valor||0)*100)/100) + '" ' +
+            'onchange="editarGasto(\'' + g.id + '\')" ' +
+            'title="Cambia el valor y sal del campo para guardarlo">' +
           '<span onclick="quitarGasto(\'' + g.id + '\')" style="cursor:pointer;' +
             'color:var(--t-mut2);font:600 14px/1 \'DM Sans\';" title="Quitar">×</span>' +
         '</div></div>';
@@ -2424,6 +2461,38 @@ async function addGasto(tipo){
     document.getElementById(valId).value = '';
     await cargarReales();
     showToast('Gasto guardado en tu hoja');
+  } catch (e) { showToast('Sin conexión: no se guardó'); }
+}
+
+/**
+ * Cambiar un gasto es escribir encima del número y salir del campo.
+ *
+ * Sin botón de guardar: un formulario con un solo número no necesita
+ * ceremonia, y el paso extra es justo donde la gente abandona y se queda
+ * con el dato viejo.
+ */
+async function renombrarGasto(id){
+  const inp = document.getElementById('gn-' + id);
+  if (!inp || !inp.value.trim()) return;
+  try {
+    const r = await api('escribir', { entidad: 'Gastos', id: id,
+                                      campos: { nombre: inp.value.trim() } });
+    if (!r.ok) { showToast(r.error || 'No se pudo renombrar'); return; }
+    await cargarReales();
+  } catch (e) { showToast('Sin conexión'); }
+}
+
+async function editarGasto(id){
+  const inp = document.getElementById('gv-' + id);
+  if (!inp) return;
+  const val = parseFloat(inp.value);
+  if (isNaN(val) || val < 0) { showToast('Ese valor no sirve'); return; }
+  try {
+    const r = await api('escribir', { entidad: 'Gastos', id: id,
+                                      campos: { valor: val } });
+    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
+    await cargarReales();
+    showToast('Guardado');
   } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
 
@@ -2501,10 +2570,19 @@ const MTZ_CYCLE = ['no','ver','ges'];
 const MTZ_CLS = {no:'mtz-cell mtz-off',ver:'mtz-cell mtz-ver',ges:'mtz-cell mtz-ges'};
 const MTZ_LBL = {no:'—','ver':'Ver','ges':'Gestionar'};
 
+/**
+ * La pantalla de permisos ya no dibuja una matriz de ejemplo: dibuja tu
+ * equipo real. Si no hay sesión no hay equipo que mostrar, y se dice.
+ */
 function buildPermisos(){
-  buildMtzRows();
-  buildEqCards();
-  buildPermDet();
+  const el = document.getElementById('eqlista');
+  if (!CONECTADO) {
+    if (el) el.innerHTML = '<div class="eq-vacio">Entra con tu correo para ' +
+      'ver y editar tu equipo.</div>';
+    return;
+  }
+  nuevaPersona();
+  cargarEquipo();
 }
 function buildMtzRows(){
   const grid=document.getElementById('mtz-grid');
@@ -2977,7 +3055,8 @@ async function cargarReales() {
     // Cada lista se conecta por su cuenta: que Novedades esté vacía no
     // puede dejar a Pedidos sin cargar. Se esperan las dos para saber
     // cuándo la pantalla terminó de ponerse al día.
-    await Promise.all([cargarPedidosReales(), cargarNovedadesReales()]);
+    await Promise.all([cargarPedidosReales(), cargarNovedadesReales(),
+                       cargarEquipo(), cargarAuditoria()]);
     return { mes: mes, pedidos: PEDS_REALES.length, novedades: NOVS_REALES.length };
   } catch (e) { marcarOrigen(false, 'sin conexión'); }
 }
@@ -4638,6 +4717,255 @@ async function buildCierre(){
   document.getElementById('cm-doc').innerHTML = pintarInforme(d, p, real);
 }
 
+
+// ─── EQUIPO ───────────────────────────────────────────────────
+/**
+ * El equipo, editable desde el panel de la dueña.
+ *
+ * Vive aquí y no en la hoja porque quien compra Nova no tiene por qué
+ * entrar a una hoja de cálculo a escribir un rol con la ortografía
+ * exacta. Y porque el equipo cambia: gente que entra, gente que se va,
+ * una gestora que pasa a admin.
+ *
+ * Quitar a alguien no borra su fila, la marca inactiva. Los pedidos que
+ * gestionó siguen diciendo quién los gestionó.
+ */
+let MI_EQUIPO = [];
+let PUEDE_EDITAR_EQUIPO = false;
+
+const ROLES_EQ = [
+  ['dueno', 'Dueña', 'Ve todo, incluido el dinero. Es quien da los permisos.'],
+  ['admin', 'Admin', 'Opera la tienda y el equipo. No ve el dinero salvo que se lo des.'],
+  ['gestora', 'Gestora', 'Solo los pedidos y novedades que tiene asignados.'],
+];
+
+const PERMISOS_EXTRA = [
+  ['subir_pauta', 'Puede subir pauta', 'Meta y TikTok: ahí está el gasto y el margen.'],
+];
+
+async function cargarEquipo() {
+  if (!CONECTADO) return false;
+  let r;
+  try { r = await api('equipo', { tienda: ST, mes: new Date().toISOString().slice(0,7) }); }
+  catch (e) { return false; }
+  if (!r || !r.ok) return false;
+
+  MI_EQUIPO = r.personas || [];
+  PUEDE_EDITAR_EQUIPO = !!r.puedeEditar;
+  pintarEquipo();
+  pintarGestoras();
+  desellar(['eqlista', 'caslist']);
+  return true;
+}
+
+/** La tabla de personas: quién es, qué puede, y cómo va este mes. */
+function pintarEquipo() {
+  const cont = document.getElementById('eqlista');
+  if (!cont) return;
+
+  if (!MI_EQUIPO.length) {
+    cont.innerHTML = '<div class="eq-vacio">Todavía no hay nadie más en el equipo. ' +
+      'Agrega a tu admin o a tus gestoras abajo: entran con su propio correo ' +
+      'y ven solo lo que les corresponde.</div>';
+    return;
+  }
+
+  cont.innerHTML = MI_EQUIPO.map(function (x, i) {
+    const inactivo = x.estado === 'inactivo';
+    const rol = ROLES_EQ.filter(function (r) { return r[0] === x.rol; })[0];
+    return '<div class="eq-row' + (inactivo ? ' off' : '') + '">' +
+      '<div class="eq-id">' +
+        '<div class="eq-nm">' + esc(x.nombre || '(sin nombre)') +
+          (inactivo ? '<span class="eq-tag">inactiva</span>' : '') +
+          (x.rolLegible ? '<span class="eq-tag mal">rol ' + esc(x.rolLegible) + '</span>' : '') +
+        '</div>' +
+        '<div class="eq-mail">' + esc(x.correo) + '</div>' +
+      '</div>' +
+      '<div class="eq-rol">' + (rol ? rol[1] : esc(x.rol)) +
+        '<span>' + (x.tienda === '*' ? 'Todas las tiendas' : esc(x.tienda)) + '</span></div>' +
+      '<div class="eq-num">' + x.pedidos + '<span>pedidos</span></div>' +
+      '<div class="eq-num">' + (x.pedidos ? x.efectividad.toFixed(0) + '%' : '—') +
+        '<span>entrega</span></div>' +
+      '<div class="eq-num' + (x.sinMover ? ' mal' : '') + '">' + x.sinMover +
+        '<span>sin mover</span></div>' +
+      (PUEDE_EDITAR_EQUIPO
+        ? '<div class="eq-acc">' +
+            '<button class="eq-btn" onclick="editarPersona(' + i + ')">Editar</button>' +
+            (inactivo
+              ? '<button class="eq-btn" onclick="reactivarPersona(' + i + ')">Reactivar</button>'
+              : '<button class="eq-btn del" onclick="quitarPersona(' + i + ')">Quitar</button>') +
+          '</div>'
+        : '<div class="eq-acc"></div>') +
+      '</div>';
+  }).join('');
+}
+
+/** Las gestoras, con lo suyo. Es la misma gente, mirada por su trabajo. */
+function pintarGestoras() {
+  const cont = document.getElementById('caslist');
+  if (!cont) return;
+  const gs = MI_EQUIPO.filter(function (x) {
+    return x.rol === 'gestora' && x.estado === 'activo';
+  });
+  if (!gs.length) {
+    cont.innerHTML = '<div class="eq-vacio">No hay gestoras activas. ' +
+      'Cuando agregues una en Permisos, aquí verás cómo va su mes.</div>';
+    return;
+  }
+  cont.innerHTML = gs.map(function (x) {
+    const ef = x.pedidos ? x.efectividad : 0;
+    const col = ef >= 70 ? '#3f5330' : (ef >= 50 ? '#8a6a13' : '#b8322f');
+    return '<div class="ped-row">' +
+      '<div class="ped-top"><span class="ped-nm">' + esc(x.nombre) + '</span>' +
+        '<span class="bd" style="color:' + col + ';background:var(--s-bg);">' +
+        (x.pedidos ? ef.toFixed(0) + '% entrega' : 'sin pedidos este mes') + '</span></div>' +
+      '<div class="ometa">' +
+        '<span>' + x.pedidos + ' pedidos · ' + x.entregados + ' entregados</span>' +
+        '<span>' + x.novedades + ' novedades · ' + x.resueltas + ' resueltas</span>' +
+        (x.sinMover ? '<span style="color:#b8322f;">' + x.sinMover + ' sin mover 3 días</span>' : '') +
+        '<span style="color:var(--t-mut3);">' +
+          (x.ultima_conexion ? 'Entró ' + String(x.ultima_conexion).slice(0,10) : 'Nunca ha entrado') +
+        '</span></div></div>';
+  }).join('');
+}
+
+/** Alta y edición comparten formulario: es la misma información. */
+function formularioPersona(x) {
+  const v = x || { nombre:'', correo:'', rol:'gestora', tienda:'*', permisos:'', estado:'activo' };
+  const tiendas = Object.keys(STORES).map(function (k) {
+    return '<option value="' + k + '"' + (v.tienda === k ? ' selected' : '') + '>' +
+      esc(STORES[k].name) + '</option>';
+  }).join('');
+
+  return '<div class="eq-form">' +
+    '<div class="eq-campos">' +
+      '<label>Nombre<input class="add-gasto-inp" id="ep-nm" value="' + esc(v.nombre) + '"></label>' +
+      '<label>Correo<input class="add-gasto-inp" id="ep-mail" type="email" value="' +
+        esc(v.correo) + '" placeholder="con el que va a entrar"></label>' +
+      '<label>Rol<select class="cm-sel" id="ep-rol">' +
+        ROLES_EQ.map(function (r) {
+          return '<option value="' + r[0] + '"' + (v.rol === r[0] ? ' selected' : '') + '>' +
+            r[1] + '</option>';
+        }).join('') + '</select></label>' +
+      '<label>Tienda<select class="cm-sel" id="ep-tienda">' +
+        '<option value="*"' + (v.tienda === '*' ? ' selected' : '') + '>Todas</option>' +
+        tiendas + '</select></label>' +
+    '</div>' +
+    '<div class="eq-perms">' +
+      PERMISOS_EXTRA.map(function (p) {
+        const on = String(v.permisos || '').indexOf(p[0]) !== -1;
+        return '<label class="eq-chk"><input type="checkbox" id="ep-' + p[0] + '"' +
+          (on ? ' checked' : '') + '><span><b>' + p[1] + '</b>' + p[2] + '</span></label>';
+      }).join('') +
+    '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+      '<button class="cm-btn" onclick="guardarPersona(' +
+        (x ? "'" + x.id + "'" : 'null') + ')">' + (x ? 'Guardar cambios' : 'Agregar al equipo') + '</button>' +
+      (x ? '<button class="cm-btn eq-sec" onclick="cerrarFormPersona()">Cancelar</button>' : '') +
+    '</div>' +
+    '<div class="eq-err" id="ep-err"></div></div>';
+}
+
+function nuevaPersona() {
+  document.getElementById('eq-form').innerHTML = formularioPersona(null);
+}
+function editarPersona(i) {
+  document.getElementById('eq-form').innerHTML = formularioPersona(MI_EQUIPO[i]);
+  document.getElementById('eq-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function cerrarFormPersona() { nuevaPersona(); }
+
+function errPersona(msg) {
+  const el = document.getElementById('ep-err');
+  if (el) { el.textContent = msg || ''; el.style.display = msg ? 'block' : 'none'; }
+}
+
+async function guardarPersona(id) {
+  const datos = {
+    nombre:  document.getElementById('ep-nm').value.trim(),
+    correo:  document.getElementById('ep-mail').value.trim().toLowerCase(),
+    rol:     document.getElementById('ep-rol').value,
+    tienda:  document.getElementById('ep-tienda').value,
+    estado:  'activo',
+    permisos: PERMISOS_EXTRA.filter(function (p) {
+      const c = document.getElementById('ep-' + p[0]);
+      return c && c.checked;
+    }).map(function (p) { return p[0]; }).join(','),
+  };
+  if (!datos.nombre || !datos.correo) { errPersona('Falta el nombre o el correo.'); return; }
+  errPersona('');
+
+  try {
+    const r = id
+      ? await api('escribir', { entidad: 'Equipo', id: id, campos: datos })
+      : await api('crear',    { entidad: 'Equipo', datos: datos });
+    if (!r.ok) { errPersona(r.error || 'No se pudo guardar.'); return; }
+    await cargarEquipo();
+    nuevaPersona();
+    showToast(id ? 'Cambios guardados' : 'Agregada al equipo');
+  } catch (e) { errPersona('Sin conexión: no se guardó.'); }
+}
+
+async function quitarPersona(i) {
+  const x = MI_EQUIPO[i];
+  if (!x) return;
+  if (!confirm('¿Quitar a ' + x.nombre + ' del equipo?\n\n' +
+    'No pierde nada de lo que hizo: los pedidos que gestionó siguen ' +
+    'diciendo que fueron suyos. Solo deja de poder entrar.')) return;
+  try {
+    const r = await api('borrar', { entidad: 'Equipo', id: x.id });
+    if (!r.ok) { showToast(r.error || 'No se pudo quitar'); return; }
+    await cargarEquipo();
+    showToast(x.nombre + ' ya no tiene acceso');
+  } catch (e) { showToast('Sin conexión'); }
+}
+
+async function reactivarPersona(i) {
+  const x = MI_EQUIPO[i];
+  if (!x) return;
+  try {
+    const r = await api('escribir', { entidad: 'Equipo', id: x.id,
+                                      campos: { estado: 'activo' } });
+    if (!r.ok) { showToast(r.error || 'No se pudo reactivar'); return; }
+    await cargarEquipo();
+    showToast(x.nombre + ' vuelve a tener acceso');
+  } catch (e) { showToast('Sin conexión'); }
+}
+
+// ─── AUDITORÍA ────────────────────────────────────────────────
+/**
+ * Quién cambió qué y cuándo. Sale de Movimientos, que se escribe solo en
+ * cada edición: no hay nada que mantener a mano y nadie puede maquillarlo.
+ */
+async function cargarAuditoria() {
+  const cont = document.getElementById('audqlist');
+  if (!cont || !CONECTADO) return false;
+  let r;
+  try { r = await api('auditoria', { limite: 150 }); }
+  catch (e) { return false; }
+  if (!r || !r.ok) return false;
+
+  const m = r.movimientos || [];
+  if (!m.length) {
+    cont.innerHTML = '<div class="eq-vacio">Todavía no hay movimientos registrados.</div>';
+  } else {
+    const LEGIBLE = { estado_nova:'estado', nota:'nota', creado:'creó', activo:'activo',
+                      ultima_conexion:'entró', estado:'estado', importacion:'importó' };
+    cont.innerHTML = m.map(function (x) {
+      const campo = LEGIBLE[String(x.campo)] || x.campo;
+      return '<div class="aud-row">' +
+        '<div class="aud-cuando">' + esc(x.fecha) + '<span>' + esc(x.hora) + '</span></div>' +
+        '<div class="aud-que"><b>' + esc(x.usuario || '—') + '</b> cambió <b>' + esc(campo) +
+          '</b> en ' + esc(x.entidad) + ' ' + esc(x.entidad_id) + '</div>' +
+        '<div class="aud-val">' +
+          (x.antes ? '<span class="antes">' + esc(String(x.antes).slice(0,40)) + '</span> → ' : '') +
+          '<span>' + esc(String(x.despues).slice(0,40)) + '</span></div>' +
+        '</div>';
+    }).join('');
+  }
+  desellar(['audqlist']);
+  return true;
+}
 
 // ─── SIDEBAR MOBILE ───────────────────────────────────
 function openSb(){document.getElementById('sidebar').classList.add('open');document.getElementById('soblay').classList.add('open');}

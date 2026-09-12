@@ -151,8 +151,20 @@ const ESQUEMA_EMPRESARIAL = {
   // Configuración — Tiendas y Tasas no están en el spec original,
   // se agregan porque `tienda` se usa como columna en todas partes
   // y la conversión de moneda exige la tasa del día de la transacción.
+  /**
+   * `modalidad` dice de dónde sale el inventario, que cambia según cómo
+   * trabaje la tienda:
+   *
+   *   catalogo_publico  el stock es del proveedor, no tuyo. Lo que se
+   *                     registra es lo que tú confirmas que hay.
+   *   catalogo_privado  el proveedor te pasa un archivo con existencias.
+   *   marca_propia      el stock es tuyo y lo llevas tú.
+   *
+   * Sin esto habría que elegir una sola forma, y la mitad de los clientes
+   * tendría una pantalla de inventario que no corresponde a su negocio.
+   */
   Tiendas: ['id','nombre','marca','pais','sociedad','nit','moneda',
-            'zona_horaria','corte_despacho','estado'],
+            'zona_horaria','corte_despacho','modalidad','estado'],
   Parametros: ['tienda','clave','valor','actualizado_en','actualizado_por'],
   Tasas: ['fecha','moneda_origen','moneda_destino','tasa'],
 
@@ -180,6 +192,9 @@ const ESQUEMA_EMPRESARIAL = {
             'estado','estado_transportadora','estado_canonico','transportadora','guia',
             'intentos','gestora_asignada','fecha_promesa','fecha_entrega',
             'razon_cancelacion','estado_nova','nota','ultimo_movimiento',
+            // Lo de oficina: el estado lo dice la transportadora, pero el
+            // acuerdo con la clienta y el adelanto los pone el equipo.
+            'adelanto','acuerdo_oficina','confirmado_oficina',
             'actualizado_en','actualizado_por'],
 
   // `solucion` es la instrucción que se le da al courier para resolver la
@@ -239,8 +254,14 @@ const ESQUEMA_EMPRESARIAL = {
   Facturacion: ['id','fuente','id_externo','fecha','tienda','plataforma','concepto',
                 'gasto','moneda_gasto','gasto_normalizado','moneda_reporte'],
 
-  Inventario: ['sku','producto','tienda','fuente','stock','costo_unitario','precio',
-               'dias_cobertura','ultimo_conteo','actualizado_en','actualizado_por'],
+  /**
+   * `id` para poder editar una fila desde la app, y `origen` para saber
+   * si ese número lo contó una persona o lo trajo un archivo. Mezclarlos
+   * sin distinguir hace imposible saber en cuál confiar.
+   */
+  Inventario: ['id','sku','producto','tienda','fuente','origen','stock',
+               'costo_unitario','precio','minimo','dias_cobertura',
+               'ultimo_conteo','nota','activo','actualizado_en','actualizado_por'],
   // "permisos" es lo que la dueña decide que esta persona puede hacer,
   // separado por comas. Vacío = lo que el rol trae por defecto.
   // Ver PERMISOS_POR_ROL en 60-api.gs.
