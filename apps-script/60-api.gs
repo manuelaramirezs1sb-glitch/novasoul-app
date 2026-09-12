@@ -783,6 +783,16 @@ function apiCierre(s, p) {
     r.pendientes = r.actual.pendientes;
   }
 
+  // La moneda en la que la dueña piensa, y a cuánto estaba el último día
+  // del mes. Sin esto el informe solo habla en la moneda de la tienda.
+  r.monedaReporte = monedaReporte(ss);
+  if (r.monedaReporte && r.monedaReporte !== r.moneda) {
+    const t = buscarTasa(ss, ultimoDiaDelMes(mes), r.moneda, r.monedaReporte);
+    r.tasa = t && t.tasa ? t.tasa : null;
+    r.tasaFecha = t ? t.fecha_usada : '';
+    r.tasaExacta = t ? !!t.exacta : false;
+  }
+
   // El efecto cambiario es solo de la dueña: es información de dinero
   if (s.rol === 'dueno' && monedaDeTienda(ss, tienda) !== monedaReporte(ss)) {
     try {
@@ -803,9 +813,10 @@ function agregarMes(ss, tienda, mes, s) {
   const out = {
     pedidos: 0, despachados: 0, entregados: 0, devueltos: 0, cancelados: 0,
     pendientes: 0,
-    ventas: 0, costoProducto: 0, costoEnvio: 0,
+    ventas: 0, costoProducto: 0, costoEnvio: 0, costoDevolucion: 0,
+    valorAbierto: 0,
     novedades: 0, sinMover: 0,
-    grupos: {}, transportadoras: {},
+    grupos: {}, transportadoras: {}, productos: {},
   };
 
   const shP = ss.getSheetByName('Pedidos');
@@ -832,6 +843,24 @@ function agregarMes(ss, tienda, mes, s) {
       out.costoProducto += num(f[c('costo_producto')]);
       out.costoEnvio    += num(f[c('costo_envio')]);
 
+      /**
+       * El flete de una devolución se paga igual, y a veces doble. Va
+       * aparte del flete de las entregas porque son dos cosas distintas:
+       * uno es costo de vender, el otro es costo de no haber vendido.
+       */
+      if (est === 'devolucion') out.costoDevolucion += num(f[c('costo_envio')]);
+
+      // Por producto, para ver cuál se sostiene y cuál no
+      const prod = String(f[c('producto')] || 'Sin producto').trim();
+      if (!out.productos[prod]) {
+        out.productos[prod] = { pedidos: 0, entregados: 0, ventas: 0 };
+      }
+      out.productos[prod].pedidos++;
+      if (est === 'entregado') {
+        out.productos[prod].entregados++;
+        out.productos[prod].ventas += num(f[c('valor')]);
+      }
+
       const t = String(f[c('transportadora')] || '').trim();
       if (t) {
         if (!out.transportadoras[t]) out.transportadoras[t] = { n: 0, entregados: 0 };
@@ -843,6 +872,7 @@ function agregarMes(ss, tienda, mes, s) {
       // conoce: mientras haya alguno, el mes es provisional.
       if (['entregado','devolucion','cancelado'].indexOf(est) === -1) {
         out.pendientes++;
+        out.valorAbierto += num(f[c('valor')]);
         const ult = aISO(f[c('ultimo_movimiento')] || f[c('actualizado_en')], 'UTC') || fecha;
         const dias = (hoy - new Date(ult + 'T00:00:00Z')) / 86400000;
         if (dias > 3) out.sinMover++;
@@ -865,7 +895,16 @@ function agregarMes(ss, tienda, mes, s) {
     }
   }
 
-  out.efectividad = out.despachados ? out.entregados / out.despachados * 100 : 0;
+  /**
+   * La tasa de entrega se mide sobre lo RESUELTO, no sobre lo despachado.
+   *
+   * Un pedido que todavía está en ruta no ha fallado ni ha acertado: no
+   * sabe. Meterlo en el denominador hunde la tasa del mes en curso y la
+   * hace ver peor de lo que es, justo cuando más se mira.
+   */
+  out.resueltos = out.entregados + out.devueltos;
+  out.efectividad = out.resueltos ? out.entregados / out.resueltos * 100 : 0;
+  out.efectividadDespacho = out.despachados ? out.entregados / out.despachados * 100 : 0;
   out.tasaDevolucion = out.despachados ? out.devueltos / out.despachados * 100 : 0;
   out.ticket = out.entregados ? out.ventas / out.entregados : 0;
 
@@ -989,6 +1028,13 @@ function cierreGuardado(ss, tienda, mes) {
  * lo prohíbe: a veces hay que cerrar contra una fecha aunque falten dos
  * guías perdidas.
  */
+/** El último día real del mes: 28, 30 o 31 según toque. */
+function ultimoDiaDelMes(mes) {
+  const a = parseInt(mes.slice(0, 4), 10), m = parseInt(mes.slice(5, 7), 10);
+  const d = new Date(Date.UTC(a, m, 0));
+  return Utilities.formatDate(d, 'UTC', 'yyyy-MM-dd');
+}
+
 function apiCerrarMes(s, p) {
   if (s.rol !== 'dueno') {
     return { ok: false, error: 'Solo la dueña cierra un mes.' };
