@@ -4251,7 +4251,7 @@ function agregarMes(ss, tienda, mes, s) {
   // La pauta solo se agrega para la dueña
   if (s.rol === 'dueno') {
     const shPa = ss.getSheetByName('Pauta');
-    out.gasto = 0; out.campanas = {};
+    out.gasto = 0; out.campanas = {}; out.gastoPorDia = {};
     if (shPa && shPa.getLastRow() > 1) {
       const datos = shPa.getDataRange().getValues();
       const e = datos[0].map(norm);
@@ -4263,10 +4263,23 @@ function agregarMes(ss, tienda, mes, s) {
         if (!fecha || fecha.slice(0, 7) !== mes) continue;
         const g = num(f[c('gasto_normalizado')]) || num(f[c('gasto')]);
         out.gasto += g;
-        const nom = String(f[c('campana')] || 'Sin nombre').trim();
+        // Conjunto si lo hay: es donde de verdad se decide el presupuesto
+        const nom = String(f[c('conjunto')] || f[c('campana')] || 'Sin nombre').trim();
         if (!out.campanas[nom]) out.campanas[nom] = { gasto: 0, resultados: 0 };
         out.campanas[nom].gasto += g;
         out.campanas[nom].resultados += num(f[c('resultados')]);
+
+        /**
+         * Gasto por día, solo si el reporte viene por día.
+         *
+         * El informe de conjuntos de Meta trae una fila por todo el
+         * periodo. Repartirla entre los días dibujaría una curva que no
+         * existe, y una curva inventada se lee como si fuera real.
+         */
+        const fin = aISO(f[c('fecha_fin')], 'UTC');
+        if (!fin || fin === fecha) {
+          out.gastoPorDia[fecha] = (out.gastoPorDia[fecha] || 0) + g;
+        }
       }
     }
     /**

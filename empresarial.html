@@ -622,6 +622,8 @@ input.li:focus{border-color:var(--acc-d);}
 .gasto-val:hover{border-color:var(--s-line2);}
 .gasto-val:focus{border-color:var(--acc-d);outline:none;background:var(--s-card);}
 
+.roas-sub{font:500 11px/1.4 'DM Sans';color:var(--t-mut3);font-variant-numeric:tabular-nums;}
+
 .rec-v{font:700 22px/1 'Fraunces',serif;color:var(--t-ondark);font-variant-numeric:tabular-nums;}
 .rec-s{color:var(--t-ondark-mut);}
 .rec-av{display:flex;align-items:flex-start;gap:12px;border-top:1px solid var(--s-dark3);padding-top:10px;margin-top:8px;}
@@ -632,6 +634,29 @@ input.li:focus{border-color:var(--acc-d);}
 .rec-av-d{font:500 11.5px/1.4 'DM Sans';color:var(--t-ondark-mut);margin-top:3px;}
 .rec-nada{font:500 12px/1.55 'DM Sans';color:var(--t-ondark-mut);border-top:1px solid var(--s-dark3);
   padding-top:10px;margin-top:8px;}
+
+/* ─── SEGUIMIENTO A OFICINA ─────────────────────────── */
+.ofi-mes{font:600 10px/1 'DM Sans';letter-spacing:1.1px;text-transform:uppercase;
+  color:var(--t-mut2);margin:16px 0 6px;}
+.ofi-mes.viejo{color:#b8322f;}
+.ofi-d-h{font:500 11px/1 'DM Sans';color:var(--t-mut2);}
+.ofi-d-nm{font:600 19px/1.15 'Fraunces',serif;color:var(--t-ink);margin:3px 0 2px;}
+.ofi-d-sub{font:500 12px/1.45 'DM Sans';color:var(--t-mut);margin-bottom:12px;}
+.ofi-d-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;
+  border-top:1px solid var(--s-line2);padding-top:12px;margin-bottom:13px;}
+.ofi-d-grid div{font:500 13px/1.35 'DM Sans';color:var(--t-ink);}
+.ofi-d-grid span{display:block;font:600 9.5px/1 'DM Sans';letter-spacing:1px;
+  text-transform:uppercase;color:var(--t-mut2);margin-bottom:3px;}
+.ofi-campo{display:flex;flex-direction:column;gap:5px;margin-bottom:11px;}
+.ofi-campo span{font:600 9.5px/1 'DM Sans';letter-spacing:1px;text-transform:uppercase;
+  color:var(--t-mut2);}
+.ofi-campo input,.ofi-campo textarea{width:100%;font:500 12.5px/1.5 'DM Sans';
+  color:var(--t-ink);background:var(--s-bg);border:1px solid var(--s-line2);
+  border-radius:9px;padding:9px 11px;}
+.ofi-campo textarea{min-height:66px;resize:vertical;}
+.ofi-campo input:focus,.ofi-campo textarea:focus{border-color:var(--acc-d);outline:none;}
+.ofi-conf{font:600 11.5px/1.4 'DM Sans';color:#3f5330;background:#e2ead6;
+  border-radius:20px;padding:9px 13px;align-self:center;}
 
 /* ─── ALARMAS Y UMBRALES ────────────────────────────── */
 .al-ok{font:500 12.5px/1.6 'DM Sans';color:#3f5330;background:#e6efe8;
@@ -1174,6 +1199,7 @@ input.li:focus{border-color:var(--acc-d);}
         <div>
           <div style="font:600 16px/1.1 'Fraunces',serif;color:var(--t-ink);margin-bottom:4px;">Auditoría quincenal</div>
           <p style="font:500 11.5px/1.45 'DM Sans';color:var(--t-mut2);margin-bottom:12px;">Lo que le llega a cada una el día 15 y el 30</p>
+          <div class="imp-slot" data-tipo="llamadas"></div>
           <div style="display:flex;flex-direction:column;gap:10px;" id="audqlist"></div>
         </div>
       </div>
@@ -2124,34 +2150,22 @@ function buildNovedades() {
 function togNov(i){const d=document.getElementById('nd'+i),t=document.querySelector(`#nrow${i} .ntog`),op=d.style.display!=='none';d.style.display=op?'none':'flex';if(!op){d.style.flexDirection='column';d.style.gap='10px';}t.textContent=op?'Ver detalle ▾':'Cerrar ▴';}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2200);}
 
+/**
+ * Seguimiento a oficina lo pinta cargarOficina() con los pedidos reales.
+ * Esta función queda como puerta: sin sesión, dice qué falta en vez de
+ * dibujar tres pedidos inventados que nadie puede gestionar.
+ */
 function buildOficina() {
-  document.getElementById('ofikpi').innerHTML = [
-    {lb:'EN OFICINA', v:'8',  sub:'Pedidos esperando recogida', c:'#3C6684'},
-    {lb:'CONFIRMADOS',v:'5',  sub:'Entrega confirmada hoy',     c:'#6d7d4a'},
-    {lb:'CON ADELANTO',v:'3', sub:'Pago parcial registrado',    c:'var(--acc-d)'},
-    {lb:'ESPERANDO',  v:'2.4d',sub:'Promedio de espera',        c:'#8a6a13'},
-  ].map(k=>`<div class="kc" style="border-left:4px solid ${k.c};"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
-
-  const ofiData=[
-    {id:'#NE-4311',cli:'Marcela Gutiérrez',of:'Oficina Quito Norte',prod:'Colágeno Premium ×3',val:C(102),adel:C(50),dias:'3 días',est:'Pendiente',eI:'#8a6a13',eB:'#f6ecd0',nota:'La señora viene jueves por la mañana. Confirmó por WhatsApp.', ges:'Camila',conf:false},
-    {id:'#NE-4298',cli:'Rosa Medina',of:'Oficina Guayaquil',prod:'Proteína Vainilla ×2',val:C(90),adel:C(0),dias:'5 días',est:'Confirmado',eI:'#3f5330',eB:'#d3e0c2',nota:'Entrega confirmada ayer. La clienta recogió a las 15:30.',ges:'Valentina',conf:true},
-    {id:'#NE-4285',cli:'Fernanda Ríos',of:'Oficina Cuenca',prod:'Omega 3 ×4',val:C(152),adel:C(80),dias:'1 día',est:'Pendiente',eI:'#8a6a13',eB:'#f6ecd0',nota:'Pago adelantado registrado. Viene hoy entre 4 y 6 pm.',ges:'Camila',conf:false},
-  ];
-
-  document.getElementById('ofirows').innerHTML = ofiData.map((f,i)=>`<div class="ofi-row${i===SEL_OFI?' sel':''}" onclick="selOfi(${i})">
-    <div class="otop"><div><span class="onm">${f.cli}</span>&ensp;<span class="oid">${f.id}</span></div><span class="bd" style="color:${f.eI};background:${f.eB};">${f.est}</span></div>
-    <div class="ometa"><span>${f.of}</span><b>${f.val}</b><span>${f.dias} esperando</span><span style="color:var(--acc-d);">Adelanto: ${f.adel}</span></div>
-  </div>`).join('');
-
-  renderOfiDet(ofiData, SEL_OFI);
-
-  document.getElementById('caslist').innerHTML = [
-    {t:'Devolución autorizada en proceso',id:'#NE-4201',cli:'Laura Torres', est:'En trámite',dias:'4 días',nota:'Mercancía devuelta recibida. Esperando confirmación de Dropi para reembolso.', resp:'Daniela'},
-    {t:'Cambio de producto pendiente',    id:'#NE-4188',cli:'Patricia Mora', est:'Esperando',dias:'2 días', nota:'La clienta quiere cambiar Vainilla por Chocolate. Verificando stock antes de autorizar.', resp:'Camila'},
-  ].map(c=>`<div class="cas-row"><div class="nh"><div><span class="onm">${c.t}</span>&ensp;<span class="oid">${c.id} · ${c.cli}</span></div><span class="bd bd-w">${c.est} · ${c.dias}</span></div><div class="dtxt">${c.nota}</div><div style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">Responsable: ${c.resp}</div></div>`).join('');
-
-  window._ofiData = ofiData;
+  if (CONECTADO) return;
+  const kpi = document.getElementById('ofikpi');
+  if (kpi) kpi.innerHTML = '';
+  const cont = document.getElementById('ofirows');
+  if (cont) cont.innerHTML = '<div class="eq-vacio">Entra con tu correo para ver ' +
+    'los pedidos que están esperando en oficina.</div>';
+  const det = document.getElementById('ofidet');
+  if (det) det.innerHTML = '';
 }
+
 function selOfi(i){SEL_OFI=i;document.querySelectorAll('.ofi-row').forEach((r,j)=>r.classList.toggle('sel',j===i));renderOfiDet(window._ofiData,i);}
 function renderOfiDet(data,i){
   const f=data[i];
@@ -2168,55 +2182,28 @@ function renderOfiDet(data,i){
     <div style="background:${f.conf?'var(--s-line2)':'var(--acc-d)'};color:${f.conf?'var(--t-mut2)':'#f1f4e8'};font:600 13px/1 'DM Sans';padding:14px;border-radius:12px;text-align:center;cursor:${f.conf?'default':'pointer'};">${f.conf?'Entrega ya confirmada':'Confirmar entrega en oficina'}</div>`;
 }
 
+/**
+ * Gestoras lo pinta cargarEquipo() con lo que cada una hizo de verdad.
+ *
+ * La jornada —a qué hora entró, cuánto estuvo— sale de los movimientos
+ * que cada persona deja al trabajar, no de un guion. Mientras no haya
+ * movimientos registrados, se dice eso en vez de inventar horarios.
+ */
 function buildGestoras() {
-  const jornada = POR_TIENDA[ST].jornada;
-  document.getElementById('jlist').innerHTML = jornada.map(j=>`<div class="jcard" style="border-left:4px solid ${j.color};">
-    <div class="jtop"><div><span style="font:600 14px/1.1 'Fraunces',serif;color:var(--t-ink);">${j.nm}</span>&ensp;<span class="oid">${j.rol}</span></div><span class="bd" style="color:${j.color};background:var(--s-card);border:1px solid var(--s-line);">${j.est}</span></div>
-    <div class="jtimes"><span>Entró <b>${j.ent}</b></span><span>Salió <b>${j.sal}</b></span><span>Conectada <b>${j.tiempo}</b></span></div>
-    <div><div class="dlbl">QUÉ HIZO</div><div class="dtxt">${j.hizo}</div></div>
-    <div><div class="dlbl">QUÉ LE FALTÓ</div><div class="dtxt">${j.falto}</div></div>
-  </div>`).join('');
-
-  const team=[
-    {nm:'Camila Restrepo', ini:'CR',rol:'Gestora senior',desde:'mar 2024',est:'Activa',  ecl:'bd-g',jornada:'8h',horas:'148h',ent:'214',ef:'93%',eff:93},
-    {nm:'Valentina Ospina',ini:'VO',rol:'Gestora',       desde:'jun 2024',est:'Activa',  ecl:'bd-g',jornada:'8h',horas:'130h',ent:'178',ef:'81%',eff:81},
-    {nm:'Daniela Ríos',    ini:'DR',rol:'Gestora',       desde:'ago 2024',est:'Ausente', ecl:'bd-r',jornada:'8h',horas:'94h', ent:'122',ef:'76%',eff:76},
-  ];
-  document.getElementById('tlist').innerHTML = team.map(p=>`<div class="tcard">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <div class="tav">${p.ini}</div>
-      <div style="flex:1;min-width:130px;"><div style="font:600 14px/1.1 'Fraunces',serif;color:var(--t-ink);">${p.nm}</div><div style="font:500 11px/1.2 'DM Sans';color:var(--t-mut2);">${p.rol} · desde ${p.desde}</div></div>
-      <span class="bd ${p.ecl}">${p.est}</span>
-      <span style="font:600 11px/1 'DM Sans';color:var(--acc-d);cursor:pointer;white-space:nowrap;" onclick="showSombra('${p.nm}')">Ver pantalla →</span>
-    </div>
-    <div class="tstats"><span>Jornada <b>${p.jornada}</b></span><span>Horas mes <b>${p.horas}</b></span><span>Entregas <b>${p.ent}</b></span><span>Efectividad <b>${p.ef}</b></span></div>
-    <div class="effbar"><div class="efffill" style="width:${p.eff}%;background:${p.eff>=85?'#6d7d4a':p.eff>=75?'#8a6a13':'#b8322f'};"></div></div>
-    <div style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">Meta: 90% · le faltan ${(90-p.eff)>0?(90-p.eff)+'pp':'✓ superada'}</div>
-  </div>`).join('');
-
-  const comms=[
-    {nm:'Camila Restrepo', tot:C(680000/STORES[ST].f), base:C(450000/STORES[ST].f),ent:C(180000/STORES[ST].f),det:`214 × ${C(840/STORES[ST].f)}`,esc:'1',bono:C(80000/STORES[ST].f),dev:'2 devol.',desc:C(30000/STORES[ST].f)},
-    {nm:'Valentina Ospina',tot:C(540000/STORES[ST].f), base:C(400000/STORES[ST].f),ent:C(142000/STORES[ST].f),det:`178 × ${C(800/STORES[ST].f)}`,esc:'1',bono:C(20000/STORES[ST].f),dev:'5 devol.',desc:C(22000/STORES[ST].f)},
-    {nm:'Daniela Ríos',    tot:C(420000/STORES[ST].f), base:C(380000/STORES[ST].f),ent:C(98000/STORES[ST].f), det:`122 × ${C(800/STORES[ST].f)}`,esc:'0',bono:C(0),              dev:'8 devol.',desc:C(58000/STORES[ST].f)},
-  ];
-  document.getElementById('nomtot').textContent = C(1640000/STORES[ST].f);
-  document.getElementById('commlist').innerHTML = comms.map(p=>`<div class="comm-kard">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 14px/1 'Fraunces',serif;color:var(--t-ink);">${p.nm}</span><span style="font:700 20px/1 'Fraunces',serif;color:var(--t-ink);">${p.tot}</span></div>
-    <div><div class="crow"><span>Sueldo base</span><span>${p.base}</span></div>
-    <div class="crow"><span>Por entregas · ${p.det}</span><span>${p.ent}</span></div>
-    <div class="crow"><span>Bono efectividad · escalón ${p.esc}</span><span class="pos">${p.bono}</span></div>
-    <div class="crow"><span>Devoluciones mal gestionadas · ${p.dev}</span><span class="neg">−${p.desc}</span></div></div>
-  </div>`).join('');
-
-  document.getElementById('audqlist').innerHTML = team.map(p=>`<div class="tcard">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-      <span style="font:600 14px/1 'Fraunces',serif;color:var(--t-ink);">${p.nm}</span>
-      <div style="display:flex;align-items:center;gap:8px;"><span class="bd ${p.eff>=85?'bd-g':p.eff>=75?'bd-w':'bd-r'}">${p.ef}</span></div>
-    </div>
-    <div><div class="dlbl">COMENTARIO DE LA ADMINISTRADORA</div><div class="dtxt">${p.eff>=85?'Excelente trabajo este ciclo. Destaca su proactividad en novedades difíciles.':p.eff>=75?'Buen desempeño en general. Necesita mejorar tiempos de respuesta.':'No se conectó en varios turnos. Se requiere reunión urgente.'}</div></div>
-    <div class="gnote"><div class="dlbl">QUÉ NECESITA MEJORAR</div><div class="dtxt" style="margin-top:4px;">${p.eff>=85?'Documentar mejor los intentos de entrega en zonas rurales.':p.eff>=75?'Registrar notas de gestión antes de cerrar cada caso, no al final del turno.':'Conexión diaria en el horario acordado y registro de cada gestión.'}</div></div>
-  </div>`).join('');
+  const j = document.getElementById('jlist');
+  if (j) {
+    j.innerHTML = CONECTADO
+      ? '<div class="eq-vacio">La jornada se arma con los movimientos que deja ' +
+        'cada persona al usar Nova: a qué hora entró, qué cambió, qué dejó sin ' +
+        'tocar. Aparece en cuanto tu equipo empiece a trabajar desde aquí.</div>'
+      : '<div class="eq-vacio">Entra con tu correo para ver a tu equipo.</div>';
+  }
+  const t = document.getElementById('tlist');
+  if (t && !CONECTADO) {
+    t.innerHTML = '<div class="eq-vacio">Entra con tu correo para ver a tu equipo.</div>';
+  }
 }
+
 
 function buildAuditoria() {
   document.getElementById('audkpi').innerHTML = [
@@ -3298,6 +3285,7 @@ function aplicarReales(d) {
                    cl:(d.roas||0)>=2?'g':'r'});
   }
   aplicarDinero(d);
+  aplicarPauta(d);
   cont.innerHTML = tarjetas.map(k=>
     '<div class="kc '+k.cl+'"><div class="klbl">'+k.lb+'</div>'+
     '<div class="kval">'+k.v+'</div><div class="ksub">'+k.sub+'</div></div>').join('');
@@ -3438,6 +3426,7 @@ async function cargarPedidosReales() {
 
   PEDS_REALES = r.filas;
   PEDS_TOTAL = r.total;
+  cargarOficina();
   pintarFiltrosPedidos(r.filas);
   pintarPedidosReales(r.filas, r.total);
   pintarEstadosReales(r.filas);
@@ -3789,11 +3778,17 @@ const TIPOS_IMPORT = {
   },
   novedades: {
     titulo: 'Subir novedades y llamadas',
-    nota: 'Las novedades de Effi, y el reporte de llamadas de IRIS. ' +
-          'Nova cruza las llamadas con los pedidos por el número de celular, ' +
-          'así que no importa que traiga prefijo. Si trabajas con Dropi, las ' +
-          'novedades salen solas del archivo de pedidos.',
-    fuentes: [['effi_novedades','Effi · novedades'], ['iris','IRIS · llamadas']],
+    nota: 'Las novedades de Effi. Si trabajas con Dropi, las novedades salen ' +
+          'solas del archivo de pedidos y no hay que subir nada aquí.',
+    fuentes: [['effi_novedades','Effi · novedades']],
+  },
+  llamadas: {
+    titulo: 'Subir llamadas',
+    nota: 'El reporte de la central telefónica. Nova lo cruza con los pedidos ' +
+          'por el número de celular, así que no importa que traiga prefijo. ' +
+          'De aquí sale cuánto se llamó a cada cliente antes de que un pedido ' +
+          'se perdiera.',
+    fuentes: [['iris','IRIS']],
   },
   pauta: {
     titulo: 'Subir pauta y facturación',
@@ -4183,14 +4178,15 @@ async function cargarHistorialFuentes() {
  * Cuando cada sección se conecte, se saca de esta lista.
  */
 const SIN_FUENTE = [
-  // Hoy
-  'palist', 'eqhoy', 'barchart', 'stlist',
-  // Operación: las listas todavía no llaman a la API, son del guion demo
-  'pedlist', 'novkpi', 'novlist', 'prodlist', 'jlist', 'tlist',
-  'caslist', 'audqlist', 'commlist',
+  // Hoy — lo que todavía dibuja el guion
+  'palist', 'eqhoy', 'barchart',
+  // Operación
+  'pedlist', 'novkpi', 'novlist', 'stlist', 'prodlist', 'tlist',
+  'caslist', 'audqlist', 'commlist', 'ofikpi', 'ofirows',
   // Dinero
-  'dinkpi', 'dinkpi2', 'eq-costos', 'roaslist', 'pautabar', 'cpalist', 'invlist', 'invriesgo',
-  // Vistas de la gestora
+  'dinkpi', 'dinkpi2', 'eq-costos', 'roaslist', 'pautabar', 'cpalist',
+  'invlist', 'invriesgo',
+  // Vistas de la gestora — siguen sin conectar
   'g-kpi', 'g-urgentes', 'g-pedkpi', 'g-pedlist', 'g-novlist',
 ];
 
@@ -4826,6 +4822,287 @@ async function buildCierre(){
   document.getElementById('cm-doc').innerHTML = pintarInforme(d, p, real);
 }
 
+
+// ─── SEGUIMIENTO A OFICINA ────────────────────────────────────
+/**
+ * Los pedidos que la clienta tiene que ir a recoger.
+ *
+ * El estado lo dice la transportadora, pero lo que decide si se recoge o
+ * se devuelve lo pone el equipo: el acuerdo con la clienta y el adelanto.
+ * Por eso una parte se importa y la otra se escribe aquí.
+ *
+ * Van agrupados por mes y con el más viejo arriba. Un pedido de agosto
+ * que en septiembre sigue en oficina no es un pendiente más: es plata a
+ * punto de volverse devolución, y mezclado con los de esta semana no se
+ * distingue.
+ */
+let OFICINA = [];
+let OFI_SEL = 0;
+
+function cargarOficina() {
+  const enOficina = PEDS_REALES.filter(function (p) {
+    return String(p.estado_canonico || '').trim() === 'en_oficina';
+  });
+  OFICINA = enOficina.sort(function (a, b) {
+    return String(a.fecha || '') < String(b.fecha || '') ? -1 : 1;
+  });
+  pintarOficina();
+  return true;
+}
+
+function diasDesde(v) {
+  const d = new Date(v);
+  if (isNaN(d)) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+function pintarOficina() {
+  const S = SYM() + ' ';
+  const nf = function (n) { return NUM(Math.round(n || 0)); };
+
+  const conAdelanto = OFICINA.filter(function (p) { return Number(p.adelanto) > 0; });
+  const confirmados = OFICINA.filter(function (p) {
+    return String(p.confirmado_oficina || '').trim();
+  });
+  const esperas = OFICINA.map(function (p) { return diasDesde(p.fecha); })
+    .filter(function (d) { return d !== null; });
+  const prom = esperas.length
+    ? esperas.reduce(function (a, b) { return a + b; }, 0) / esperas.length : 0;
+
+  const kpi = document.getElementById('ofikpi');
+  if (kpi) {
+    kpi.innerHTML = [
+      {lb:'EN OFICINA', v:OFICINA.length, sub:'Esperando que las recojan', c:'#3C6684'},
+      {lb:'CONFIRMADOS', v:confirmados.length, sub:'Con entrega acordada', c:'#6d7d4a'},
+      {lb:'CON ADELANTO', v:conAdelanto.length,
+       sub:conAdelanto.length ? S + nf(conAdelanto.reduce(function (t, p) {
+         return t + Number(p.adelanto || 0); }, 0)) + ' registrado' : 'Ninguno', c:'var(--acc-d)'},
+      {lb:'ESPERANDO', v:prom ? prom.toFixed(1) + 'd' : '—', sub:'Promedio', c:prom>7?'#b8322f':'#8a6a13'},
+    ].map(function (k) {
+      return '<div class="kc" style="border-left:4px solid ' + k.c + ';">' +
+        '<div class="klbl">' + k.lb + '</div><div class="kval">' + k.v + '</div>' +
+        '<div class="ksub">' + k.sub + '</div></div>';
+    }).join('');
+  }
+
+  const cont = document.getElementById('ofirows');
+  if (!cont) return;
+  if (!OFICINA.length) {
+    cont.innerHTML = '<div class="eq-vacio">Ningún pedido está esperando en oficina. ' +
+      'Cuando la transportadora marque uno así, aparece aquí con los días que lleva.</div>';
+    const det = document.getElementById('ofidet');
+    if (det) det.innerHTML = '';
+    return;
+  }
+
+  // Agrupados por mes, el más viejo primero
+  let mesActual = '';
+  cont.innerHTML = OFICINA.map(function (p, i) {
+    const mes = String(p.fecha || '').slice(0, 7);
+    let cab = '';
+    if (mes !== mesActual) {
+      mesActual = mes;
+      const viejo = mes < new Date().toISOString().slice(0, 7);
+      cab = '<div class="ofi-mes' + (viejo ? ' viejo' : '') + '">' +
+        (mes ? nombreMes(mes) : 'Sin fecha') +
+        (viejo ? ' · llevan más de un mes ahí' : '') + '</div>';
+    }
+    const d = diasDesde(p.fecha);
+    const conf = String(p.confirmado_oficina || '').trim();
+    return cab + '<div class="ofi-row' + (i === OFI_SEL ? ' sel' : '') +
+      '" onclick="selOficina(' + i + ')">' +
+      '<div class="otop"><div><span class="onm">' + esc(p.cliente || '—') + '</span>&ensp;' +
+        '<span class="oid">#' + esc(p.id_externo || p.id) + '</span></div>' +
+        '<span class="bd" style="' + (conf ? 'background:#d3e0c2;color:#3f5330;'
+                                          : 'background:#f6ecd0;color:#8a6a13;') + '">' +
+        (conf ? 'Confirmado' : 'Pendiente') + '</span></div>' +
+      '<div class="ometa"><span>' + esc(p.ciudad || '') + '</span>' +
+        '<b>' + S + nf(p.valor) + '</b>' +
+        '<span>' + (d === null ? '' : d + ' días esperando') + '</span>' +
+        (Number(p.adelanto) ? '<span style="color:var(--acc-d);">Adelanto ' +
+          S + nf(p.adelanto) + '</span>' : '') +
+      '</div></div>';
+  }).join('');
+
+  pintarDetalleOficina();
+  desellar(['ofikpi', 'ofirows']);
+}
+
+function selOficina(i) { OFI_SEL = i; pintarOficina(); }
+
+/** El detalle es donde el equipo escribe lo que la plataforma no sabe. */
+function pintarDetalleOficina() {
+  const det = document.getElementById('ofidet');
+  const p = OFICINA[OFI_SEL];
+  if (!det || !p) return;
+  const S = SYM() + ' ';
+  const d = diasDesde(p.fecha);
+
+  det.innerHTML =
+    '<div class="ofi-d-h">#' + esc(p.id_externo || p.id) + '</div>' +
+    '<div class="ofi-d-nm">' + esc(p.cliente || '—') + '</div>' +
+    '<div class="ofi-d-sub">' + esc(p.ciudad || '') +
+      (p.direccion ? ' · ' + esc(p.direccion) : '') + '</div>' +
+    '<div class="ofi-d-grid">' +
+      '<div><span>Producto</span>' + esc(p.producto || '—') + '</div>' +
+      '<div><span>Valor</span>' + S + NUM(Math.round(p.valor||0)) + '</div>' +
+      '<div><span>Teléfono</span>' + esc(p.telefono || '—') + '</div>' +
+      '<div><span>Esperando</span>' + (d === null ? '—' : d + ' días') + '</div>' +
+    '</div>' +
+    '<div class="ofi-campo"><span>ADELANTO RECIBIDO</span>' +
+      '<input id="ofi-adelanto" type="number" value="' + (p.adelanto || '') + '" ' +
+      'placeholder="0"></div>' +
+    '<div class="ofi-campo"><span>QUÉ SE ACORDÓ CON LA CLIENTA</span>' +
+      '<textarea id="ofi-acuerdo" placeholder="Cuándo dijo que pasa, con quién habló, ' +
+      'qué hay que recordarle.">' + esc(p.acuerdo_oficina || '') + '</textarea></div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+      '<button class="cm-btn" onclick="guardarOficina()">Guardar</button>' +
+      (String(p.confirmado_oficina || '').trim()
+        ? '<span class="ofi-conf">Confirmado el ' +
+            esc(String(p.confirmado_oficina).slice(0,10)) + '</span>'
+        : '<button class="cm-btn eq-sec" onclick="confirmarOficina()">' +
+            'Confirmar que la recogió</button>') +
+    '</div>';
+}
+
+async function guardarOficina() {
+  const p = OFICINA[OFI_SEL];
+  if (!p) return;
+  const campos = {
+    adelanto: document.getElementById('ofi-adelanto').value || '',
+    acuerdo_oficina: document.getElementById('ofi-acuerdo').value || '',
+  };
+  try {
+    const r = await api('escribir', { entidad: 'Pedidos', id: p.id, campos: campos });
+    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
+    Object.assign(p, campos);
+    showToast('Guardado en la hoja');
+    pintarOficina();
+  } catch (e) { showToast('Sin conexión: no se guardó'); }
+}
+
+async function confirmarOficina() {
+  const p = OFICINA[OFI_SEL];
+  if (!p) return;
+  const campos = { confirmado_oficina: new Date().toISOString() };
+  try {
+    const r = await api('escribir', { entidad: 'Pedidos', id: p.id, campos: campos });
+    if (!r.ok) { showToast(r.error || 'No se pudo confirmar'); return; }
+    Object.assign(p, campos);
+    showToast('Confirmado. El estado real lo sigue mandando la transportadora.');
+    pintarOficina();
+  } catch (e) { showToast('Sin conexión'); }
+}
+
+// ─── PAUTA CON DATOS REALES ───────────────────────────────────
+/**
+ * Lo que la pauta sí puede decir, y lo que no.
+ *
+ * El archivo de Meta trae gasto, impresiones, clics y resultados por
+ * conjunto de anuncios. Trae el gasto por campaña, no las ventas: Meta
+ * cuenta una compra cuando su píxel la ve, y la tienda cuenta una venta
+ * cuando el pedido se entrega. Son dos números distintos y atribuir las
+ * ventas entregadas a una campaña concreta sería inventar.
+ *
+ * Así que el ROAS general sale de la tienda —ventas entregadas sobre
+ * gasto total, que es el que paga la nómina— y por campaña se muestra
+ * el costo por resultado, que es lo que el archivo sí sabe.
+ */
+function aplicarPauta(d) {
+  if (ROL !== 'dueno') return;
+  const S = SYM() + ' ';
+  const nf = function (n) { return NUM(Math.round(n || 0)); };
+  const n2 = function (n) { return NUM(Math.round((n || 0) * 100) / 100); };
+
+  const ventas = d.ventas || 0;
+  const gasto  = d.gasto  || 0;
+  const ent    = d.entregados || 0;
+  const techo  = ent ? (ventas - (d.costoProducto||0) - (d.costoEnvio||0)) / ent : 0;
+  const cpa    = ent ? gasto / ent : 0;
+  const roas   = gasto ? ventas / gasto : 0;
+
+  const cont = document.getElementById('dinkpi');
+  if (cont) {
+    cont.innerHTML = [
+      {lb:'GASTO PAUTA MES', v:S+nf(gasto),
+       sub:ventas ? Math.round(gasto/ventas*100) + '% del recaudo' : 'Sin recaudo aún', cl:'a'},
+      {lb:'ROAS', v:gasto ? n2(roas)+'×' : '—',
+       sub:gasto ? 'Ventas entregadas sobre gasto' : 'Sube la pauta del mes', cl:roas>=2?'g':'r'},
+      {lb:'CPA POR ENTREGA', v:ent ? S+n2(cpa) : '—',
+       sub:techo ? 'Techo ' + S+n2(techo) : 'Sin entregas este mes', cl:cpa<=techo?'g':'r'},
+      {lb:'COLCHÓN POR PEDIDO', v:techo ? S+n2(techo-cpa) : '—',
+       sub:'Lo que queda después de pagar la pauta', cl:(techo-cpa)>0?'g':'r'},
+    ].map(function (k) {
+      return '<div class="kc ' + k.cl + '"><div class="klbl">' + k.lb + '</div>' +
+        '<div class="kval">' + k.v + '</div><div class="ksub">' + k.sub + '</div></div>';
+    }).join('');
+  }
+
+  const lbl = document.getElementById('cpa-techo-lbl');
+  if (lbl) lbl.textContent = techo ? S + n2(techo) + ' por pedido · calculado' : 'sin datos';
+
+  // ── Por campaña: lo que el archivo de Meta sí sabe ──
+  const camps = Object.keys(d.campanas || {}).map(function (c) {
+    const x = d.campanas[c];
+    return { nm: c, gasto: x.gasto || 0, res: x.resultados || 0,
+             costoRes: x.resultados ? x.gasto / x.resultados : 0 };
+  }).sort(function (a, b) { return b.gasto - a.gasto; });
+
+  const roasEl = document.getElementById('roaslist');
+  if (roasEl) {
+    roasEl.innerHTML = camps.length
+      ? camps.map(function (c) {
+          return '<div class="roas-row"><div><div class="roas-nm">' + esc(c.nm) + '</div>' +
+            '<div class="roas-sub">' + S + nf(c.gasto) + ' · ' + c.res + ' resultados</div></div>' +
+            '<span class="bd">' + (c.res ? S + n2(c.costoRes) : 'sin resultados') + '</span></div>';
+        }).join('')
+      : '<div class="eq-vacio">Sin campañas este mes. Sube el reporte de Meta ' +
+        'desde Dinero.</div>';
+  }
+
+  const cpaEl = document.getElementById('cpalist');
+  if (cpaEl) {
+    cpaEl.innerHTML = camps.length
+      ? camps.map(function (c) {
+          const sobre = techo && c.costoRes > techo;
+          return '<div class="roas-row"><div class="roas-nm">' + esc(c.nm) + '</div>' +
+            '<span class="bd" style="' + (sobre ? 'background:#f6e3db;color:#a8563a;'
+                                                : 'background:#e2ead6;color:#3f5330;') + '">' +
+            (c.res ? S + n2(c.costoRes) : '—') + '</span></div>';
+        }).join('')
+      : '<div class="eq-vacio">Aquí se compara lo que cuesta cada resultado contra ' +
+        'el techo. Falta el reporte de Meta del mes.</div>';
+  }
+
+  /**
+   * El gasto diario no se dibuja si el reporte vino agregado.
+   *
+   * El informe de conjuntos de Meta trae una sola fila por todo el
+   * periodo. Repartirlo entre los días sería inventar una curva que no
+   * existe, y una curva inventada se lee como si fuera real.
+   */
+  const bar = document.getElementById('pautabar');
+  if (bar) {
+    const dias = d.gastoPorDia || {};
+    const claves = Object.keys(dias).sort();
+    if (claves.length > 1) {
+      const max = Math.max.apply(null, claves.map(function (k) { return dias[k]; }));
+      bar.innerHTML = claves.slice(-14).map(function (k) {
+        return '<div class="bcol"><div class="bfill" style="height:' +
+          Math.round(dias[k] / max * 100) + '%;background:var(--acc-d);" title="' +
+          k + ' · ' + S + nf(dias[k]) + '"></div>' +
+          '<span class="blbl">' + k.slice(-2) + '</span></div>';
+      }).join('');
+      desellar(['pautabar']);
+    } else {
+      bar.innerHTML = '<div class="eq-vacio">Tu reporte de Meta viene agregado por ' +
+        'periodo, no por día, así que no hay curva que mostrar. Para verla, ' +
+        'exporta en Meta con <b>Desglose → Por día</b>.</div>';
+    }
+  }
+
+  desellar(['dinkpi', 'roaslist', 'cpalist']);
+}
 
 // ─── RECUENTO DEL PERIODO ─────────────────────────────────────
 /**
