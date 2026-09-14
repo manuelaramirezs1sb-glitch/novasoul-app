@@ -234,7 +234,7 @@ body { margin: 0; background: var(--bg); font-family: 'DM Sans', sans-serif; min
   </div>
 
   <hr class="divider">
-  <p class="hub-note">Los datos que ves ahora son de ejemplo. La conexión en vivo a Google Sheets se activa en la siguiente fase.</p>
+  <p class="hub-note">Cargando tu plan…</p>
 </div>
 
 <button class="modo-btn" onclick="toggleModo()">☀ / ☾</button>
@@ -253,21 +253,43 @@ body { margin: 0; background: var(--bg); font-family: 'DM Sans', sans-serif; min
  */
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
-function verCards(modulos) {
+/**
+ * Por qué faltan tarjetas, dicho en la pantalla.
+ *
+ * Antes el hub se quedaba callado: sin sesión mostraba solo Empresarial
+ * y la nota hablaba de datos de ejemplo. Quien había comprado los cuatro
+ * módulos veía uno y no tenía forma de saber si era su plan, un error o
+ * que faltaba entrar. Ahora cada caso dice lo suyo.
+ */
+function verCards(modulos, razon) {
   document.querySelectorAll('.card[data-mod]').forEach(function (c) {
     c.style.display = modulos.indexOf(c.dataset.mod) !== -1 ? '' : 'none';
   });
   const n = document.querySelector('.hub-note');
-  if (n && modulos.length === 1) {
-    n.textContent = 'Estás viendo los productos incluidos en tu plan.';
+  if (!n) return;
+  const faltan = document.querySelectorAll('.card[data-mod]').length - modulos.length;
+  if (razon === 'cargando') {
+    n.textContent = 'Cargando tu plan…';
+  } else if (razon === 'sin-sesion') {
+    n.textContent = faltan
+      ? 'Entra a Nova Empresarial con tu correo y aquí aparece el resto de tu plan.'
+      : 'Estás viendo los productos incluidos en tu plan.';
+  } else if (razon === 'sin-conexion') {
+    n.textContent = 'No se pudo confirmar tu plan ahora mismo. Mientras tanto ' +
+      'ves lo mínimo; vuelve a cargar en un momento.';
+  } else {
+    n.textContent = faltan
+      ? 'Estás viendo los productos incluidos en tu plan.'
+      : 'Tu plan incluye los cuatro productos.';
   }
 }
 
 (async function () {
-  // Por defecto, lo mínimo. Si la sesión dice más, se amplía.
-  verCards(['empresarial']);
-
+  // Lo mínimo primero y sin esperar a nadie: si las cuatro tarjetas se
+  // pintan mientras la red responde, alcanzan a verse y luego desaparecen,
+  // que es justo lo contrario de lo que este hub promete.
   const token = localStorage.getItem('ne_token');
+  verCards(['empresarial'], token ? 'cargando' : 'sin-sesion');
   if (!token) return;
   try {
     const r = await fetch(NOVA_API, {
@@ -276,9 +298,10 @@ function verCards(modulos) {
       body: JSON.stringify({ accion: 'yo', token: token }),
     });
     const j = await r.json();
-    if (j && j.ok && j.sesion && j.sesion.modulos) verCards(j.sesion.modulos);
+    if (j && j.ok && j.sesion && j.sesion.modulos) verCards(j.sesion.modulos, 'plan');
+    else verCards(['empresarial'], 'sin-sesion');
   } catch (e) {
-    // Sin conexión se queda en el mínimo: nunca se abre de más por un fallo
+    verCards(['empresarial'], 'sin-conexion');
   }
 })();
 
