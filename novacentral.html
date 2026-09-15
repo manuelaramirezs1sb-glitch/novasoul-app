@@ -268,6 +268,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   .t-stats{display:none;}
   .card-row>.card{min-width:0;}
 }
+
+/* ─── Clientes y onboarding ─── */
+.nc-vacio{font:400 12.5px/1.65 'DM Sans';color:var(--ink3);padding:14px 0;}
+.nc-prob{font:500 11.5px/1.5 'DM Sans';color:#A83636;margin-top:3px;}
+.nc-abrir{font:600 11.5px/1 'DM Sans';color:var(--gold);text-decoration:none;margin-left:12px;white-space:nowrap;}
+.nc-abrir:hover{text-decoration:underline;}
+.nc-sello{font:600 10px/1.4 'DM Sans';letter-spacing:.06em;text-transform:uppercase;color:#7a5c10;background:#f7eddc;border-radius:7px;padding:6px 10px;margin-bottom:12px;}
+.onb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:11px;}
+.onb-f{display:flex;flex-direction:column;gap:5px;}
+.onb-f label{font:600 10px/1 'DM Sans';letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);}
+.onb-sec{font:600 13px/1.2 'DM Sans';color:var(--ink);margin:20px 0 6px;}
+.onb-tienda{position:relative;border:1px solid var(--rule);border-radius:11px;padding:13px;margin-bottom:9px;}
+.onb-quitar{position:absolute;top:10px;right:12px;font:600 11px/1 'DM Sans';color:#A83636;cursor:pointer;}
+.onb-quitar:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -281,11 +295,22 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   <div class="lgn-card">
     <div>
       <div class="lgn-ttl">Acceso al panel</div>
-      <div class="lgn-note" style="margin-top:5px">Solo para la administradora de plataforma</div>
+      <div class="lgn-note" style="margin-top:5px">Solo para quien opera la plataforma</div>
     </div>
-    <input class="f-inp" id="lgn-email" type="email" placeholder="correo@nova.co" value="manuela@nova.co">
-    <input class="f-inp" type="password" placeholder="••••••••" value="••••••••">
-    <button class="lgn-btn" onclick="enterApp()">Entrar a Nova Central</button>
+    <div id="lgn-p1" style="display:flex;flex-direction:column;gap:11px">
+      <input class="f-inp" id="lgn-email" type="email" autocomplete="email"
+             placeholder="tucorreo@dominio.com">
+      <button class="lgn-btn" id="lgn-btn" onclick="pedirCodigoCentral()">Enviarme el código</button>
+    </div>
+    <div id="lgn-p2" style="display:none;flex-direction:column;gap:11px">
+      <div class="lgn-note">Mandé un código de 6 dígitos a
+        <strong id="lgn-eco" style="color:var(--gold)"></strong>. Vence en 10 minutos.</div>
+      <input class="f-inp" id="lgn-cod" inputmode="numeric" maxlength="6" placeholder="······">
+      <button class="lgn-btn" id="lgn-btn2" onclick="verificarCodigoCentral()">Entrar</button>
+      <div class="lgn-note" style="cursor:pointer;text-decoration:underline"
+           onclick="pasoLogin(1)">Usar otro correo</div>
+    </div>
+    <div id="lgn-err" style="display:none;font:500 12px/1.5 'DM Sans';color:#A83636"></div>
   </div>
 </div>
 
@@ -302,8 +327,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
       <div class="ni on" data-v="dashboard" onclick="go('dashboard',this)">
         <span class="ni-ico">⬡</span> Dashboard
       </div>
-      <div class="ni" data-v="tiendas" onclick="go('tiendas',this)">
-        <span class="ni-ico">🏪</span> Tiendas
+      <div class="ni" data-v="clientes" onclick="go('clientes',this)">
+        <span class="ni-ico">🏪</span> Clientes
       </div>
       <div class="ni" data-v="equipo" onclick="go('equipo',this)">
         <span class="ni-ico">👥</span> Equipo
@@ -356,13 +381,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
         <div class="card-row" id="dash-bottom"></div>
       </div>
 
-      <!-- ─── TIENDAS ─── -->
-      <div class="view" id="v-tiendas">
+      <!-- ─── CLIENTES ─── -->
+      <div class="view" id="v-clientes">
         <div class="card">
-          <div class="card-ttl">Tiendas en plataforma</div>
-          <div id="tiendas-list"></div>
+          <div class="card-ttl">Clientes en la plataforma</div>
+          <div style="font:400 12.5px/1.6 'DM Sans';color:var(--ink3);margin-bottom:4px">
+            Cada cuenta con su plan, su estado y cuándo fue la última vez que
+            subió un archivo. Un cliente que pagó y lleva semanas sin importar
+            nada es al que hay que llamar hoy.</div>
+          <div id="clientes-list"></div>
         </div>
-        <button class="btn" onclick="showToast('Funcionalidad de nueva tienda próximamente')">+ Agregar tienda</button>
+        <button class="btn" onclick="go('onboarding',document.querySelector('[data-v=onboarding]'))">+ Nuevo cliente</button>
       </div>
 
       <!-- ─── EQUIPO ─── -->
@@ -412,23 +441,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
       <!-- ─── ONBOARDING ─── -->
       <div class="view" id="v-onboarding">
         <div class="card">
-          <div class="card-ttl">Leer archivo de negocio</div>
-          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('biz-file').click()">
-            <div class="upload-ico">📂</div>
-            <div class="upload-ttl">Subir archivo del cliente</div>
-            <div class="upload-note">Sube el CSV o Excel con la información del negocio.<br>Se usará para crear su cuenta y permisos en Nova Empresarial.</div>
-            <button class="btn" onclick="event.stopPropagation()">Seleccionar archivo</button>
-          </div>
-          <input type="file" id="biz-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="onBizFile(this)">
-          <div class="parsed-prev" id="parsed-prev">
-            <div style="height:1px;background:var(--line);margin:6px 0"></div>
-            <div style="font:600 14px/1 'DM Sans';color:var(--ink)">Datos detectados del archivo</div>
-            <div class="pf-grid" id="pf-fields"></div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
-              <button class="btn" onclick="createAccount()">Crear cuenta en Nova Empresarial</button>
-              <button class="btn-ghost" onclick="resetUpload()">Cancelar</button>
-            </div>
-          </div>
+          <div class="card-ttl">Crear una cuenta nueva</div>
+          <div style="font:400 12.5px/1.6 'DM Sans';color:var(--ink3);margin-bottom:14px">
+            Esto crea de verdad: copia la plantilla, deja lista la hoja del
+            cliente con sus tiendas, y mete a la dueña en su Equipo para que
+            pueda entrar el mismo día. Sin dueña no hay cuenta — nadie podría
+            abrirla, ni ella.</div>
+          <div id="onb-form"></div>
         </div>
       </div>
 
@@ -555,26 +574,431 @@ let demoOn  = false;
 let demoAccess = ['manuela@nova.co', 'laura@novacademy.co', 'camila@novacademy.co'];
 let activeSt = 'gt';
 
-/* ─── BOOT ─── */
-function enterApp(){
+/* ─── CONEXIÓN CON LA HOJA ─── */
+/**
+ * Nova Central habla con el mismo Web App que Empresarial, pero por su
+ * propia puerta: todas sus acciones empiezan por `nc_` y se resuelven
+ * contra la hoja Plataforma, no contra el Equipo de un cliente.
+ *
+ * Son dos preguntas distintas —quién opera la plataforma y quién trabaja
+ * en una tienda— y por eso son dos sesiones, dos tokens y dos
+ * caducidades. Si fueran la misma, un permiso de más en un cliente
+ * podría abrirle esta consola.
+ */
+const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
+
+let NC_TOKEN = localStorage.getItem('nc_token') || '';
+let NC_SESION = null;
+let CLIENTES = [];
+let PLANES = [];
+
+async function nc(accion, datos, intento) {
+  intento = intento || 0;
+  const r = await fetch(NOVA_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ accion: accion, token: NC_TOKEN }, datos || {})),
+  });
+  const texto = await r.text();
+  let j;
+  try { j = JSON.parse(texto); }
+  catch (err) {
+    // Google tarda en activar una versión recién publicada; se espera
+    if (intento < 3) {
+      await new Promise(function (ok) { setTimeout(ok, 2000 * Math.pow(2, intento)); });
+      return nc(accion, datos, intento + 1);
+    }
+    throw new Error('La hoja respondió algo que no es JSON (HTTP ' + r.status + ').');
+  }
+  // El POST convertido en GET: la publicación a medio propagar
+  if (j && j.diagnostico && j.diagnostico.metodo === 'GET' && intento < 3) {
+    await new Promise(function (ok) { setTimeout(ok, 2000 * Math.pow(2, intento)); });
+    return nc(accion, datos, intento + 1);
+  }
+  if (j && j.reautenticar) salirCentral(true);
+  return j;
+}
+
+/* ─── ENTRAR ─── */
+function errC(msg) {
+  const el = document.getElementById('lgn-err');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+
+function pasoLogin(n) {
+  ['lgn-p1', 'lgn-p2'].forEach(function (id, i) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (i + 1 === n) ? 'flex' : 'none';
+  });
+}
+
+async function pedirCodigoCentral() {
+  const email = (document.getElementById('lgn-email').value || '').trim();
+  const btn = document.getElementById('lgn-btn');
+  errC('');
+  if (!email || email.indexOf('@') === -1) { errC('Escribe un correo válido.'); return; }
+
+  btn.textContent = 'Enviando…'; btn.style.opacity = '.6';
+  try {
+    const r = await nc('nc_login', { email: email });
+    if (!r.ok) { errC(r.error || 'No se pudo enviar el código.'); return; }
+    const eco = document.getElementById('lgn-eco');
+    if (eco) eco.textContent = email;
+    pasoLogin(2);
+    setTimeout(function () {
+      const c = document.getElementById('lgn-cod');
+      if (c) c.focus();
+    }, 80);
+  } catch (e) {
+    errC('Falló la conexión: ' + (e && e.message || e));
+  } finally { btn.textContent = 'Enviarme el código'; btn.style.opacity = '1'; }
+}
+
+async function verificarCodigoCentral() {
+  const email = (document.getElementById('lgn-email').value || '').trim();
+  const codigo = (document.getElementById('lgn-cod').value || '').trim();
+  const btn = document.getElementById('lgn-btn2');
+  errC('');
+  if (codigo.length !== 6) { errC('El código son 6 dígitos.'); return; }
+
+  btn.textContent = 'Verificando…'; btn.style.opacity = '.6';
+  try {
+    const r = await nc('nc_verificar', { email: email, codigo: codigo });
+    if (!r.ok) { errC(r.error || 'Código incorrecto.'); return; }
+    NC_TOKEN = r.token;
+    localStorage.setItem('nc_token', NC_TOKEN);
+    localStorage.setItem('nc_email', email);
+    NC_SESION = r.sesion;
+    entrarCentral();
+  } catch (e) {
+    errC('Falló al verificar: ' + (e && e.message || e));
+  } finally { btn.textContent = 'Entrar'; btn.style.opacity = '1'; }
+}
+
+/** Con sesión guardada no se vuelve a pedir código en cada recarga. */
+async function reanudarCentral() {
+  const guardado = localStorage.getItem('nc_email') || '';
+  const el = document.getElementById('lgn-email');
+  if (el && guardado) el.value = guardado;
+  pasoLogin(1);
+  if (!NC_TOKEN) return;
+  try {
+    const r = await nc('nc_yo');
+    if (r && r.ok && r.sesion) { NC_SESION = r.sesion; entrarCentral(); }
+  } catch (e) { /* sin conexión se queda en el login */ }
+}
+
+function entrarCentral() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
+  const u = document.getElementById('sb-user-nm');
+  if (u) u.textContent = NC_SESION.nombre || NC_SESION.correo;
+  const rl = document.getElementById('sb-user-rol');
+  if (rl) rl.textContent = NC_SESION.rol === 'socia' ? 'Socia' : 'Operadora';
+
   buildDashboard();
-  buildTiendas();
   buildEquipo();
   buildPipeline();
   renderDemoAccess();
+  pintarOnboarding();
+  cargarClientes();
+  sellarEjemploCentral();
+
   const m = localStorage.getItem('nc_modo');
-  document.getElementById('modo-lbl').textContent = m === 'claro' ? 'Modo claro' : 'Modo oscuro';
+  const lbl = document.getElementById('modo-lbl');
+  if (lbl) lbl.textContent = m === 'claro' ? 'Modo claro' : 'Modo oscuro';
 }
-function logout(){
+
+async function salirCentral(porVencimiento) {
+  if (NC_TOKEN && !porVencimiento) { try { await nc('nc_salir'); } catch (e) {} }
+  NC_TOKEN = ''; NC_SESION = null;
+  localStorage.removeItem('nc_token');
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
+  pasoLogin(1);
+  if (porVencimiento) errC('Tu sesión se cerró por seguridad. Pide un código nuevo.');
+}
+function logout() { salirCentral(false); }
+
+/* ─── CLIENTES ─── */
+async function cargarClientes() {
+  const cont = document.getElementById('clientes-list');
+  if (cont) cont.innerHTML = '<div class="nc-vacio">Buscando tus clientes…</div>';
+  try {
+    const r = await nc('nc_clientes', { detalle: true });
+    if (!r || !r.ok) {
+      if (cont) cont.innerHTML = '<div class="nc-vacio">' +
+        escC((r && r.error) || 'No se pudieron cargar.') + '</div>';
+      return;
+    }
+    CLIENTES = r.clientes || [];
+    pintarClientes(r.verDinero);
+  } catch (e) {
+    if (cont) cont.innerHTML = '<div class="nc-vacio">Sin conexión con la hoja.</div>';
+  }
+}
+
+function escC(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function diasDesdeC(iso) {
+  if (!iso) return null;
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const d = new Date(+m[1], +m[2] - 1, +m[3]);
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+function pintarClientes(verDinero) {
+  const cont = document.getElementById('clientes-list');
+  if (!cont) return;
+  if (!CLIENTES.length) {
+    cont.innerHTML = '<div class="nc-vacio">Todavía no hay ningún cliente. ' +
+      'Se crean en Onboarding, y desde ahí queda lista su hoja y su dueña.</div>';
+    return;
+  }
+
+  cont.innerHTML = CLIENTES.map(function (c) {
+    const dias = diasDesdeC(c.ultimaImportacion);
+    // Lo que importa de un cliente no es su plan: es si lo está usando
+    const señal = c.problema ? ['Revisar', 'bd-r']
+      : c.estado === 'inactivo' ? ['Inactivo', 'bd-r']
+      : dias === null ? ['Sin importar nada', 'bd-w']
+      : dias > 14 ? [dias + ' días sin subir', 'bd-r']
+      : dias > 5 ? [dias + ' días sin subir', 'bd-w']
+      : ['Al día', 'bd-g'];
+
+    const meta = [
+      c.pais,
+      c.plan ? 'plan ' + c.plan : null,
+      c.tiendas ? c.tiendas + (c.tiendas === 1 ? ' tienda' : ' tiendas') : null,
+      c.personas !== undefined
+        ? c.personas + (c.personas === 1 ? ' persona' : ' personas') : null,
+      verDinero && c.tarifa ? 'tarifa ' + c.tarifa : null,
+    ].filter(Boolean).join(' · ');
+
+    return '<div class="row-item">' +
+      '<div class="ava ava-gold" style="width:40px;height:40px;border-radius:10px;' +
+        'font-family:\'Playfair Display\',serif;font-size:15px">' +
+        escC(String(c.empresa).slice(0, 2).toUpperCase()) + '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div class="row-nm">' + escC(c.empresa) + '</div>' +
+        '<div class="row-sub">' + escC(meta) + '</div>' +
+        (c.problema ? '<div class="nc-prob">' + escC(c.problema) + '</div>' : '') +
+      '</div>' +
+      '<span class="bd ' + señal[1] + '" style="margin-left:12px">' + escC(señal[0]) + '</span>' +
+      (c.sheetId
+        ? '<a class="nc-abrir" href="https://docs.google.com/spreadsheets/d/' +
+          escC(c.sheetId) + '/edit" target="_blank" rel="noopener">Hoja →</a>'
+        : '') +
+    '</div>';
+  }).join('');
+}
+
+/* ─── ONBOARDING ─── */
+/**
+ * Crear una cuenta, de verdad.
+ *
+ * Antes esto leía un archivo de ejemplo y decía "cuenta creada" sin
+ * crear nada. Ahora llama a la misma función que se usaba desde el
+ * editor de Apps Script: copia la plantilla, siembra las tiendas y mete
+ * a la dueña en el Equipo.
+ *
+ * Las tiendas se agregan una por una porque cada una necesita su moneda,
+ * y sin moneda Nova no puede sumar ni convertir nada de esa tienda. Es
+ * el único campo que no tiene un valor por defecto razonable.
+ */
+let ONB_TIENDAS = [{ id: '', nombre: '', moneda: '', pais: '', modalidad: 'catalogo_publico' }];
+
+const MONEDAS_COMUNES = ['USD', 'COP', 'GTQ', 'MXN', 'PEN', 'CLP', 'ARS', 'DOP', 'BOB', 'CRC'];
+const MODALIDADES = [
+  ['catalogo_publico', 'Catálogo público'],
+  ['catalogo_privado', 'Catálogo privado'],
+  ['marca_propia', 'Marca propia'],
+];
+
+function pintarOnboarding() {
+  const cont = document.getElementById('onb-form');
+  if (!cont) return;
+  if (NC_SESION && (NC_SESION.permisos || []).indexOf('crear_cliente') === -1) {
+    cont.innerHTML = '<div class="nc-vacio">Tu rol no puede crear clientes.</div>';
+    return;
+  }
+
+  const campo = function (id, lbl, ph, val) {
+    return '<div class="onb-f"><label>' + lbl + '</label>' +
+      '<input class="f-inp" id="' + id + '" placeholder="' + escC(ph) + '" ' +
+      'value="' + escC(val || '') + '"></div>';
+  };
+
+  cont.innerHTML =
+    '<div class="onb-grid">' +
+      campo('onb-empresa', 'Nombre de la empresa', 'Dilore CO') +
+      campo('onb-pais', 'País', 'CO') +
+      '<div class="onb-f"><label>Plan</label><select class="f-inp" id="onb-plan">' +
+        ['Base', 'Pro', 'Interno'].map(function (x) {
+          return '<option value="' + x + '">' + x + '</option>';
+        }).join('') + '</select></div>' +
+    '</div>' +
+    '<div class="onb-sec">La dueña</div>' +
+    '<div style="font:400 12px/1.6 \'DM Sans\';color:var(--ink3);margin-bottom:8px">' +
+      'Con este correo entra a su Nova Empresarial. Es la única persona ' +
+      'obligatoria: sin ella, la cuenta nace sin nadie que pueda abrirla.</div>' +
+    '<div class="onb-grid">' +
+      campo('onb-duena-nom', 'Nombre', 'Valentina Torres') +
+      campo('onb-duena-mail', 'Correo', 'valentina@diloreco.com') +
+    '</div>' +
+    '<div class="onb-sec">Sus tiendas</div>' +
+    '<div id="onb-tiendas"></div>' +
+    '<button class="btn-ghost" onclick="agregarTienda()" style="margin-top:8px">+ Otra tienda</button>' +
+    '<div id="onb-estado" style="display:none;margin-top:14px"></div>' +
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
+      '<button class="btn" id="onb-btn" onclick="crearClienteReal()">Crear la cuenta</button>' +
+    '</div>';
+  pintarTiendasOnb();
+}
+
+function pintarTiendasOnb() {
+  const cont = document.getElementById('onb-tiendas');
+  if (!cont) return;
+  cont.innerHTML = ONB_TIENDAS.map(function (t, i) {
+    return '<div class="onb-tienda">' +
+      '<div class="onb-grid">' +
+        '<div class="onb-f"><label>Id corto</label>' +
+          '<input class="f-inp" data-t="' + i + '" data-k="id" placeholder="ec" ' +
+          'value="' + escC(t.id) + '"></div>' +
+        '<div class="onb-f"><label>Nombre</label>' +
+          '<input class="f-inp" data-t="' + i + '" data-k="nombre" placeholder="Dilore Ecuador" ' +
+          'value="' + escC(t.nombre) + '"></div>' +
+        '<div class="onb-f"><label>Moneda</label>' +
+          '<select class="f-inp" data-t="' + i + '" data-k="moneda">' +
+          '<option value="">Elige…</option>' +
+          MONEDAS_COMUNES.map(function (m) {
+            return '<option value="' + m + '"' + (t.moneda === m ? ' selected' : '') +
+              '>' + m + '</option>';
+          }).join('') + '</select></div>' +
+        '<div class="onb-f"><label>Inventario</label>' +
+          '<select class="f-inp" data-t="' + i + '" data-k="modalidad">' +
+          MODALIDADES.map(function (m) {
+            return '<option value="' + m[0] + '"' + (t.modalidad === m[0] ? ' selected' : '') +
+              '>' + m[1] + '</option>';
+          }).join('') + '</select></div>' +
+      '</div>' +
+      (ONB_TIENDAS.length > 1
+        ? '<span class="onb-quitar" onclick="quitarTienda(' + i + ')">Quitar</span>' : '') +
+    '</div>';
+  }).join('');
+}
+
+function leerTiendasOnb() {
+  document.querySelectorAll('#onb-tiendas [data-t]').forEach(function (el) {
+    const i = +el.dataset.t;
+    if (ONB_TIENDAS[i]) ONB_TIENDAS[i][el.dataset.k] = el.value.trim();
+  });
+}
+
+function agregarTienda() {
+  leerTiendasOnb();
+  ONB_TIENDAS.push({ id: '', nombre: '', moneda: '', pais: '', modalidad: 'catalogo_publico' });
+  pintarTiendasOnb();
+}
+
+function quitarTienda(i) {
+  leerTiendasOnb();
+  ONB_TIENDAS.splice(i, 1);
+  pintarTiendasOnb();
+}
+
+function onbEstado(msg, tipo) {
+  const el = document.getElementById('onb-estado');
+  if (!el) return;
+  const c = { ok: ['#e6efe8', '#2f5738'], ojo: ['#f7eddc', '#7a5c10'],
+              mal: ['#f7e5e4', '#a8563a'] }[tipo || 'ojo'];
+  el.style.display = 'block';
+  el.style.cssText += ';background:' + c[0] + ';color:' + c[1] +
+    ';padding:12px 14px;border-radius:10px;font:500 12.5px/1.6 \'DM Sans\';white-space:pre-line;';
+  el.innerHTML = msg;
+}
+
+async function crearClienteReal() {
+  leerTiendasOnb();
+  const empresa = (document.getElementById('onb-empresa').value || '').trim();
+  const pais = (document.getElementById('onb-pais').value || '').trim();
+  const plan = document.getElementById('onb-plan').value;
+  const nom = (document.getElementById('onb-duena-nom').value || '').trim();
+  const mail = (document.getElementById('onb-duena-mail').value || '').trim();
+  const btn = document.getElementById('onb-btn');
+
+  if (!empresa) { onbEstado('Falta el nombre de la empresa.', 'mal'); return; }
+  if (!mail || mail.indexOf('@') === -1) {
+    onbEstado('Falta el correo de la dueña. Sin ella nadie puede entrar a la cuenta.', 'mal');
+    return;
+  }
+  const utiles = ONB_TIENDAS.filter(function (t) { return t.id && t.moneda; });
+  if (!utiles.length) {
+    onbEstado('Cada tienda necesita un id corto y una moneda. Sin moneda, Nova ' +
+      'no puede sumar ni convertir nada de esa tienda.', 'mal');
+    return;
+  }
+
+  btn.textContent = 'Creando…'; btn.style.opacity = '.6';
+  onbEstado('Copiando la plantilla y sembrando sus hojas. Tarda unos segundos…', 'ojo');
+  try {
+    const r = await nc('nc_crear', {
+      empresa: empresa, pais: pais, plan: plan,
+      dueno: { nombre: nom, correo: mail },
+      tiendas: utiles,
+    });
+    if (!r.ok) { onbEstado(r.error || 'No se pudo crear.', 'mal'); return; }
+
+    onbEstado('<b>' + escC(empresa) + ' ya existe.</b><br>' +
+      'Su hoja está lista y ' + escC(mail) + ' puede entrar a Nova Empresarial ' +
+      'con ese correo ahora mismo.<br><br>' +
+      '<a href="' + escC(r.url) + '" target="_blank" rel="noopener" ' +
+      'style="color:inherit;font-weight:600">Abrir su hoja →</a>', 'ok');
+    ONB_TIENDAS = [{ id: '', nombre: '', moneda: '', pais: '', modalidad: 'catalogo_publico' }];
+    ['onb-empresa', 'onb-pais', 'onb-duena-nom', 'onb-duena-mail'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    pintarTiendasOnb();
+    cargarClientes();
+    showToast('Cuenta creada');
+  } catch (e) {
+    onbEstado('Falló: ' + (e && e.message || e), 'mal');
+  } finally { btn.textContent = 'Crear la cuenta'; btn.style.opacity = '1'; }
+}
+
+/**
+ * Lo que en Nova Central todavía es ejemplo.
+ *
+ * Mismo criterio que en Empresarial: marcar lo inventado es lo único que
+ * permite creerle a lo que no lo está. Se saca de aquí al conectarlo.
+ */
+const EJEMPLO_CENTRAL = ['dash-kpis', 'dash-bottom', 'team-gt', 'team-ec',
+                         'pipe-grads', 'pipe-pos', 'meta-summary'];
+
+function sellarEjemploCentral() {
+  EJEMPLO_CENTRAL.forEach(function (id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const caja = el.closest('.card') || el;
+    if (caja.querySelector('.nc-sello')) return;
+    const s = document.createElement('div');
+    s.className = 'nc-sello';
+    s.textContent = 'EJEMPLO · esta tarjeta todavía no lee la hoja';
+    caja.insertBefore(s, caja.firstChild);
+  });
 }
 
 /* ─── NAV ─── */
 const TITLES = {
-  dashboard:'Dashboard', tiendas:'Tiendas', equipo:'Equipo',
+  dashboard:'Dashboard', clientes:'Clientes', equipo:'Equipo',
   pipeline:'Pipeline novAcademy', onboarding:'Onboarding de clientes',
   meta:'Meta Ads', demo:'Gestión de demo'
 };
@@ -629,23 +1053,6 @@ function switchStore(id){
 }
 
 /* ─── TIENDAS ─── */
-function buildTiendas(){
-  document.getElementById('tiendas-list').innerHTML = TIENDAS.map(t => `
-    <div class="row-item">
-      <div class="ava ava-gold" style="width:40px;height:40px;border-radius:10px;font-family:'Playfair Display',serif;font-size:15px">${t.ini}</div>
-      <div style="flex:1">
-        <div class="row-nm">${t.nm}</div>
-        <div class="row-sub">${t.pais} · ${t.mon}</div>
-      </div>
-      <div class="t-stats">
-        <div class="t-stat"><div class="t-stat-v">${t.sym}${t.ventas.toLocaleString('es')}</div><div class="t-stat-l">Ventas</div></div>
-        <div class="t-stat"><div class="t-stat-v">${t.pedidos}</div><div class="t-stat-l">Pedidos</div></div>
-        <div class="t-stat"><div class="t-stat-v">${t.efectividad}%</div><div class="t-stat-l">Efectividad</div></div>
-      </div>
-      <span class="bd bd-g" style="margin-left:12px">Activa</span>
-    </div>
-  `).join('');
-}
 
 /* ─── EQUIPO ─── */
 function buildEquipo(){
@@ -797,6 +1204,13 @@ function showToast(msg){
   clearTimeout(_toast);
   _toast = setTimeout(()=> el.classList.remove('show'), 2800);
 }
+
+/* ─── ARRANQUE ─── */
+/**
+ * Con sesión guardada no se vuelve a pedir código en cada recarga: la
+ * consola se abre sola y el login ni aparece.
+ */
+document.addEventListener('DOMContentLoaded', reanudarCentral);
 </script>
 </body>
 </html>

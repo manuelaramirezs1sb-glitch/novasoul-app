@@ -344,6 +344,21 @@ const ESQUEMA_CENTRAL = {
                 'fecha_solicitud','resuelta_en','resuelta_por'],
   Candidatas: ['id','nombre','pais','experiencia','equipo_disponible','estado',
                'fecha_postulacion','nota'],
+
+  /**
+   * Quién puede entrar a Nova Central.
+   *
+   * Es una hoja aparte de Equipo a propósito. Equipo son las personas de
+   * UN cliente: la dueña de Nutrea, sus admins, sus gestoras. Esto es
+   * quien opera la plataforma — quien crea cuentas, ve la facturación de
+   * todos y enciende el demo. Mezclarlas haría que darle permisos a una
+   * admin de un cliente pudiera, por un descuido, abrirle la consola de
+   * todos los clientes.
+   *
+   * `rol`: socia (todo) · operadora (crea y acompaña clientes, no toca
+   * planes ni tarifas).
+   */
+  Plataforma: ['id','nombre','correo','rol','estado','ultima_conexion','nota'],
 };
 
 const ESQUEMA_SOUL = {

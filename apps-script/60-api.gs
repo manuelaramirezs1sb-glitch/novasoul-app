@@ -83,6 +83,15 @@ function manejar(e, metodo) {
         } });
     }
 
+    /**
+     * La consola de la plataforma va por su lado.
+     *
+     * Antes de buscar una sesión de cliente: estas acciones no tienen
+     * ninguna que buscar, y hacerlo primero le respondería "sesión
+     * inválida" a quien está tratando de entrar a Nova Central.
+     */
+    if (accion.indexOf('nc_') === 0) return json(manejarCentral(accion, p));
+
     // Las únicas dos que no piden token
     if (accion === 'login')     return json(apiLogin(p));
     if (accion === 'verificar') return json(apiVerificar(p));

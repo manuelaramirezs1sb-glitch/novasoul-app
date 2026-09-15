@@ -26,7 +26,8 @@ ORDEN = [
     ('40-provisionar.gs',  '7 · CLIENTES'),
     ('50-tasas.gs',        '8 · TASAS DE CAMBIO'),
     ('60-api.gs',          '9 · API WEB'),
-    ('70-importar.gs',     '10 · ESCRITURA'),
+    ('65-central.gs',      '10 · NOVA CENTRAL'),
+    ('70-importar.gs',     '11 · ESCRITURA'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'
