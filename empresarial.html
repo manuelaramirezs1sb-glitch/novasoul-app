@@ -2782,10 +2782,22 @@ async function api(accion, datos, intento) {
       return api(accion, datos, intento + 1);
     }
     console.error('[Nova] respuesta no-JSON:', texto.slice(0, 400));
-    throw new Error('la hoja respondió algo que no es JSON (HTTP ' + r.status +
-      ').\n\nGoogle dijo: ' + legible(texto) +
-      '\n\nSi acabas de publicar una versión nueva, espera un minuto: ' +
-      'Google tarda en activarla.');
+    /**
+     * Cuando la página que devuelve Google es de Drive, la causa no es la
+     * publicación: es el Excel que acaba de convertir y todavía no deja
+     * abrir. Decir "espera a que se active la versión" ahí manda a buscar
+     * el problema al sitio equivocado.
+     */
+    const esDrive = /drive/i.test(texto) && /no se puede abrir|can't open|not found|no encontrada/i.test(texto);
+    throw new Error(esDrive
+      ? 'Google convirtió el Excel pero todavía no lo deja abrir.\n\n' +
+        'Pasa con archivos grandes, y se cura solo en un minuto. Si tienes ' +
+        'prisa, exporta el reporte en CSV: no necesita conversión y entra directo.\n\n' +
+        'Google dijo: ' + legible(texto)
+      : 'la hoja respondió algo que no es JSON (HTTP ' + r.status +
+        ').\n\nGoogle dijo: ' + legible(texto) +
+        '\n\nSi acabas de publicar una versión nueva, espera un minuto: ' +
+        'Google tarda en activarla.');
   }
   /**
    * El POST llegó como GET y sin cuerpo.

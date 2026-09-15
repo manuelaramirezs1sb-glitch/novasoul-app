@@ -2452,10 +2452,40 @@ function leerArchivo(b64, nombre) {
   let id = null;
   try {
     id = convertirAHoja(blob);
-    return SpreadsheetApp.openById(id).getSheets()[0].getDataRange().getValues();
+    return abrirConvertida(id, nombre).getSheets()[0].getDataRange().getValues();
   } finally {
     if (id) { try { DriveApp.getFileById(id).setTrashed(true); } catch (e) {} }
   }
+}
+
+/**
+ * Abrir el Excel recién convertido, esperando a que exista de verdad.
+ *
+ * Drive contesta con el id en cuanto acepta la subida, pero la hoja
+ * todavía no está lista para Sheets: hay unos segundos en que ese id
+ * existe y `openById` responde "No se puede abrir el archivo en estos
+ * momentos" con un 404 de Drive. Cuanto más grande el archivo, más dura
+ * esa ventana — un export de Meta de cuatro meses la abre de sobra.
+ *
+ * No es un error que se arregle reintentando la subida entera: es
+ * esperar. Seis intentos con pausas crecientes suman unos veinte
+ * segundos, que es mucho menos de lo que tarda la conversión misma.
+ */
+function abrirConvertida(id, nombre) {
+  const esperas = [500, 1000, 2000, 4000, 6000, 6000];
+  let ultimo = null;
+  for (let i = 0; i < esperas.length; i++) {
+    try { return SpreadsheetApp.openById(id); }
+    catch (err) {
+      ultimo = err;
+      Utilities.sleep(esperas[i]);
+    }
+  }
+  throw new Error(
+    'Google convirtió "' + nombre + '" pero todavía no lo deja abrir. ' +
+    'Suele pasar con archivos grandes: vuelve a intentarlo en un minuto, ' +
+    'o exporta el reporte en CSV, que no necesita conversión y entra directo. ' +
+    '(' + String(ultimo && ultimo.message || ultimo) + ')');
 }
 
 /**
