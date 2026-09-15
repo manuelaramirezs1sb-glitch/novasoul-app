@@ -320,9 +320,14 @@ const PERMISO_DE_FUENTE = {
   effi_guias: 'subir_pedidos', shopify: 'subir_pedidos',
   effi_novedades: 'subir_novedades', iris: 'subir_novedades',
   meta: 'subir_pauta', meta_facturacion: 'subir_pauta', tiktok: 'subir_pauta',
+  // La cartera es el extracto de la billetera: dice cuánto hay, cuánto se
+  // retiró y con qué concepto. Es dinero, así que va con su propio permiso
+  // y de entrada solo lo tiene la dueña, igual que la pauta.
+  dropi_cartera: 'subir_cartera',
 };
 
-const PERMISOS_CONOCIDOS = ['subir_pedidos', 'subir_novedades', 'subir_pauta'];
+const PERMISOS_CONOCIDOS = ['subir_pedidos', 'subir_novedades', 'subir_pauta',
+                            'subir_cartera'];
 
 /**
  * Los permisos de una persona: los de su rol, más lo que la dueña le haya
@@ -2324,8 +2329,10 @@ function apiImportarArchivo(s, p) {
   const tiene = s.permisos || [];
   if (necesita && tiene.indexOf(necesita) === -1) {
     return { ok: false, error:
-      necesita === 'subir_pauta'
-        ? 'No tienes permiso para subir pauta. La dueña lo activa en Permisos.'
+      (necesita === 'subir_pauta' || necesita === 'subir_cartera')
+        ? 'No tienes permiso para subir ' +
+          (necesita === 'subir_pauta' ? 'pauta' : 'la cartera') +
+          '. La dueña lo activa en Permisos.'
         : 'No tienes permiso para subir este tipo de archivo.' };
   }
   if (!b64) return { ok: false, error: 'El archivo llegó vacío.' };
