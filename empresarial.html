@@ -452,20 +452,19 @@ input.li:focus{border-color:var(--acc-d);}
 .bot-q{background:var(--s-dark);border:1px solid var(--s-line);border-radius:16px;padding:6px 12px;font:500 11px/1 'DM Sans';color:var(--t-mut2);cursor:pointer;}
 .bot-q:hover{border-color:var(--acc-d);color:var(--acc-d);}
 /* Nova Chat */
-.nc-msgs{flex:1;overflow-y:auto;padding:12px 12px 6px;display:flex;flex-direction:column;gap:8px;}
-.nc-msg{display:flex;flex-direction:column;gap:3px;}
-.nc-msg-head{display:flex;align-items:baseline;gap:7px;}
-.nc-who{font:600 11.5px/1 'DM Sans';color:var(--t-ink);}
-.nc-time{font:500 10px/1 'DM Sans';color:var(--t-mut2);}
-.nc-role{font:600 9px/1 'DM Sans';letter-spacing:.8px;color:var(--acc-d);background:var(--s-dark);border-radius:10px;padding:2px 7px;}
-.nc-txt{font:500 12px/1.55 'DM Sans';color:var(--t-ink2);padding-left:2px;}
-.nc-div{display:flex;align-items:center;gap:8px;margin:4px 0;}
-.nc-div-line{flex:1;height:1px;background:var(--s-line2);}
-.nc-div-lbl{font:500 10px/1 'DM Sans';color:var(--t-mut2);white-space:nowrap;}
-.nc-foot{padding:10px 12px;border-top:1px solid var(--s-line2);display:flex;gap:8px;flex-shrink:0;}
-.nc-inp{flex:1;background:var(--s-bg);border:1px solid var(--s-line);border-radius:20px;padding:9px 14px;font:500 12.5px/1 'DM Sans';color:var(--t-ink);outline:none;}
+/* Nova Chat no es un chat: es la puerta al que el equipo ya usa */
+.nc-canal{flex:1;overflow-y:auto;padding:22px 18px;display:flex;flex-direction:column;gap:14px;justify-content:center;text-align:center;}
+.nc-ttl{font:600 15px/1.3 'DM Sans';color:var(--t-ink);}
+.nc-exp{font:500 12.5px/1.65 'DM Sans';color:var(--t-mut);}
+.nc-abrir{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--acc-d);color:#f1f4e8;font:600 13px/1 'DM Sans';padding:14px 20px;border-radius:13px;cursor:pointer;text-decoration:none;align-self:center;}
+.nc-abrir:hover{filter:brightness(1.07);}
+.nc-campo{display:flex;flex-direction:column;gap:6px;text-align:left;}
+.nc-lbl{font:600 10px/1 'DM Sans';letter-spacing:1.1px;color:var(--t-mut2);}
+.nc-inp{background:var(--s-bg);border:1px solid var(--s-line);border-radius:10px;padding:10px 13px;font:500 12.5px/1 'DM Sans';color:var(--t-ink);outline:none;width:100%;box-sizing:border-box;}
 .nc-inp:focus{border-color:var(--acc-d);}
-.nc-send{background:var(--acc-d);color:#f1f4e8;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.nc-pie{font:500 11px/1.5 'DM Sans';color:var(--t-mut2);}
+.cfg-probar{font:600 12px/1 'DM Sans';color:var(--acc-d);text-decoration:none;}
+.cfg-probar:hover{text-decoration:underline;}
 /* ─── ROL: visibilidad por panel ─────────────────────── */
 [data-rol="admin"]   .ro-dueno,
 [data-rol="gestora"] .ro-dueno,
@@ -1430,6 +1429,19 @@ input.li:focus{border-color:var(--acc-d);}
           <div class="um-tabla" id="umbrales"></div>
         </div>
 
+        <div class="card">
+          <div class="card-h"><span class="ct">Canal del equipo</span>
+            <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">
+              Lo abre Nova Chat</span></div>
+          <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);margin:0;max-width:74ch;">
+            Nova no va a reemplazar el grupo donde ya hablan. Quien gestiona
+            tiene el celular abierto todo el día y no se va a mudar a otro
+            chat porque una app se lo pida. Pega aquí el enlace del grupo que
+            usan —WhatsApp, Telegram, el que sea— y queda a un clic desde
+            cualquier pantalla.</p>
+          <div style="display:flex;flex-direction:column;gap:11px;" id="cfg-canal"></div>
+        </div>
+
         <div class="g2">
           <div class="card">
             <div class="card-h"><span class="ct">Tu cuenta</span></div>
@@ -1530,7 +1542,7 @@ input.li:focus{border-color:var(--acc-d);}
     <!-- BOT PANE -->
     <div class="chat-pane on" id="cp-bot">
       <div class="bot-msgs" id="bot-msgs">
-        <div class="bot-msg bot"><div class="bot-who">NOVA BOT</div>Hola. Soy Nova, el asistente de tu tienda. Puedo responderte sobre pedidos, novedades, equipo, pauta y resultados.<br><br>¿En qué te ayudo?</div>
+        <div class="bot-msg bot"><div class="bot-who">NOVA BOT</div>Hola. Soy Nova. Contesto con los datos de tu tienda —los mismos que ves en las pantallas—, y cuando no los tengo te lo digo.<br><br>¿Qué necesitas?</div>
       </div>
       <div class="bot-qs" id="bot-qs"></div>
       <div class="bot-foot">
@@ -1542,13 +1554,7 @@ input.li:focus{border-color:var(--acc-d);}
     </div>
     <!-- CHAT PANE -->
     <div class="chat-pane" id="cp-chat">
-      <div class="nc-msgs" id="nc-msgs"></div>
-      <div class="nc-foot">
-        <input class="nc-inp" id="nc-inp" placeholder="Mensaje al equipo…" onkeydown="if(event.key==='Enter')sendChat()">
-        <div class="nc-send" onclick="sendChat()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        </div>
-      </div>
+      <div class="nc-canal" id="nc-canal"></div>
     </div>
   </div>
 </div>
@@ -2535,53 +2541,16 @@ function enterAsSombra(){
 }
 
 // ─── NOVA CHAT / NOVA BOT ─────────────────────────────
-const BOT_RESP = {
-  dueno:{
-    'pedidos de hoy':'Hoy entraron <b>24 pedidos</b> en Nutrea EC y <b>13</b> en Nutrea GT. 8 siguen sin gestión en EC. ¿Ves el panel de pedidos?',
-    'novedades':'Hay <b>5 novedades</b> activas. 2 sin primer contacto de gestora. La más antigua lleva 3 días.',
-    'cpa':'El CPA de hoy en Tag Recede está en <b>$ 9.80</b> — por debajo del techo de $ 10. Dr. Melaxin subió a <b>$ 14.20</b> y está quemando pauta.',
-    'equipo':'Camila: 91% efectividad · Katherin: 86%. Las dos están activas. Camila es la que más cierra esta semana.',
-    'inventario':'Colágeno Premium tiene cobertura para <b>3 días</b>. Hay que pedir hoy. Vitamina C alcanza para 42 días sin rotación.',
-    'default':'Puedo contarte sobre: pedidos de hoy, novedades, CPA de la pauta, tu equipo o el inventario. ¿Qué necesitas?'
-  },
-  admin:{
-    'pedidos':'Tienes 24 pedidos asignados. 6 sin actualizar en las últimas 4 horas. Camila tiene los más urgentes.',
-    'novedades':'5 novedades activas. La de Ana Ruiz lleva 18h sin contacto. ¿Quieres ver el detalle?',
-    'gestoras':'Camila R.: 91% efectividad. Katherin M.: 86%. El equipo está dentro de meta.',
-    'pauta':'ROAS general: 2.1×. Tag Recede aguanta más presupuesto. Dr. Melaxin está por encima del CPA techo.',
-    'default':'Soy Nova. Puedo contarte sobre pedidos, novedades, gestoras o resultados de pauta.'
-  },
-  gestora:{
-    'mis pedidos':'Tienes 18 pedidos asignados hoy. 3 novedades activas, 2 sin primer contacto. Empieza por Carlos Mendoza — lleva 28h sin actualizar.',
-    'novedad':'Ana Ruiz lleva 18h abierta. Pedro Soto va en el tercer intento. ¿Los ves en Mis novedades?',
-    'meta':'Tu meta del mes es 85% de efectividad. Vas en 91%. Llevas 16 entregas de 24 asignados esta semana. Excelente.',
-    'siguiente':'El siguiente urgente es Carlos Mendoza · #PE-2041. Sin actualizar 28h. Zona 10, Guatemala City.',
-    'default':'Hola. Soy Nova. Puedo decirte qué pedido atender primero, cómo va tu meta o el estado de tus novedades.'
-  }
-};
-const NC_SEED = [
-  {who:'Daniela R.',rol:'ADMIN',time:'9:02 am',txt:'Buenos días. Revisen los pedidos de ayer que quedaron en tránsito — hay 4 sin actualizar en EC.'},
-  {who:'Camila R.',rol:'GESTORA',time:'9:08 am',txt:'Visto. Los tomo ahora. Ana Ruiz no contesta desde ayer, voy al tercer intento.'},
-  {who:'Manuela', rol:'DUEÑA',time:'9:15 am',txt:'Gracias Camila. Tag Recede tiene 3 días de stock — Daniela confirma el pedido a proveedor hoy.'},
-  {who:'Daniela R.',rol:'ADMIN',time:'9:17 am',txt:'Confirmo. Pedido programado para hoy al mediodía.'},
-];
 let chatOpen = false;
 let chatActiveTab = 'bot';
 
 function initChat(){
-  const qs = {
-    dueno:['Pedidos de hoy','Novedades','CPA de la pauta','Mi equipo','Inventario urgente'],
-    admin:['Pedidos','Novedades','Gestoras hoy','Pauta y ROAS'],
-    gestora:['Mis pedidos','Mi novedad urgente','Mi meta','¿Qué sigo primero?']
-  };
-  const q = (qs[ROL]||qs.dueno);
-  document.getElementById('bot-qs').innerHTML = q.map(t=>`<div class="bot-q" onclick="askBot('${t}')">${t}</div>`).join('');
-  document.getElementById('nc-msgs').innerHTML = NC_SEED.map(m=>`
-    <div class="nc-msg">
-      <div class="nc-msg-head"><span class="nc-who">${m.who}</span><span class="nc-role">${m.rol}</span><span class="nc-time">${m.time}</span></div>
-      <div class="nc-txt">${m.txt}</div>
-    </div>`).join('');
-  const nc=document.getElementById('nc-msgs');if(nc)nc.scrollTop=nc.scrollHeight;
+  const temas = BOT_TEMAS[ROL] || BOT_TEMAS.dueno;
+  document.getElementById('bot-qs').innerHTML = temas.map(function (x) {
+    return '<div class="bot-q" onclick="askBot(\'' + x[0] + '\')">' + x[1] + '</div>';
+  }).join('');
+  pintarCanal();
+  pintarNavCanal();
 }
 function toggleChat(){
   chatOpen=!chatOpen;
@@ -2596,10 +2565,12 @@ function chatTab(tab,el){
   document.getElementById('cp-'+tab).classList.add('on');
 }
 function askBot(q){
-  const resp = BOT_RESP[ROL]||BOT_RESP.dueno;
-  const key = Object.keys(resp).find(k=>q.toLowerCase().includes(k))||'default';
-  addBotMsg(q,'user');
-  setTimeout(()=>addBotMsg(resp[key],'bot'),420);
+  // Lo que se pinta como pregunta es la etiqueta, no la clave interna:
+  // "pedidos" en el globo del usuario se lee como un error de la app.
+  const temas = BOT_TEMAS[ROL] || BOT_TEMAS.dueno;
+  const et = temas.filter(function (x) { return x[0] === q; })[0];
+  addBotMsg(et ? et[1] : q, 'user');
+  setTimeout(function () { addBotMsg(botResponde(q), 'bot'); }, 380);
 }
 function sendBot(){
   const inp=document.getElementById('bot-inp');
@@ -2613,20 +2584,6 @@ function addBotMsg(txt,who){
   if(who==='bot') div.innerHTML='<div class="bot-who">NOVA BOT</div>'+txt;
   else div.textContent=txt;
   const c=document.getElementById('bot-msgs');
-  c.appendChild(div);c.scrollTop=c.scrollHeight;
-}
-function sendChat(){
-  const inp=document.getElementById('nc-inp');
-  const txt=(inp.value||'').trim(); if(!txt) return;
-  inp.value='';
-  const nombre=nombreDe(localStorage.getItem('ne_email')||'');
-  const rolLbl={'dueno':'DUEÑA','admin':'ADMIN','gestora':'GESTORA'}[ROL]||'NOVA';
-  const now=new Date();
-  const time=(now.getHours()%12||12)+':'+(now.getMinutes()+'').padStart(2,'0')+' '+(now.getHours()<12?'am':'pm');
-  const div=document.createElement('div');
-  div.className='nc-msg';
-  div.innerHTML=`<div class="nc-msg-head"><span class="nc-who">${nombre||'Tú'}</span><span class="nc-role">${rolLbl}</span><span class="nc-time">${time}</span></div><div class="nc-txt">${txt}</div>`;
-  const c=document.getElementById('nc-msgs');
   c.appendChild(div);c.scrollTop=c.scrollHeight;
 }
 
@@ -4678,6 +4635,7 @@ async function buildCierre(){
 function pintarConfig() {
   const cuenta = document.getElementById('cfg-cuenta');
   const tiendas = document.getElementById('cfg-tiendas');
+  pintarConfigCanal();
 
   if (cuenta) {
     cuenta.innerHTML = SESION
@@ -5385,6 +5343,364 @@ function irAFicha(i) {
   if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
+/**
+ * Nova Chat no es un chat.
+ *
+ * Aquí había una conversación de ejemplo entre Daniela, Camila y Manuela,
+ * con hora y todo, y una caja para escribir que no mandaba el mensaje a
+ * ninguna parte: se pintaba en pantalla y se perdía al recargar. Peor que
+ * no tener chat es tener uno que parece funcionar.
+ *
+ * Y construir el chat de verdad tampoco era la respuesta. Quien gestiona
+ * ya tiene un grupo abierto en el celular todo el día y no se va a mudar
+ * porque una app se lo pida; un chat propio se queda vacío y el equipo
+ * sigue hablando donde siempre. Lo útil es lo contrario: que Nova tenga
+ * ese grupo a un clic desde la pantalla donde se está trabajando.
+ */
+let CANAL = { canal_nombre: '', canal_url: '' };
+
+function pintarCanal() {
+  const cont = document.getElementById('nc-canal');
+  if (!cont) return;
+
+  const url = String(CANAL.canal_url || '').trim();
+  const nombre = String(CANAL.canal_nombre || '').trim() || 'el canal del equipo';
+
+  if (url) {
+    cont.innerHTML =
+      '<div class="nc-ttl">' + esc(nombre) + '</div>' +
+      '<p class="nc-exp">Aquí hablan entre ustedes. Nova no se mete en esa ' +
+        'conversación: solo te la deja a un clic.</p>' +
+      '<a class="nc-abrir" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' +
+        'Abrir ' + esc(nombre) +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>' +
+        '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>' +
+      (ROL === 'dueno'
+        ? '<div class="nc-pie">Lo cambias en Configuración → Canal del equipo.</div>'
+        : '');
+    return;
+  }
+
+  // Sin canal puesto, cada rol necesita saber algo distinto
+  cont.innerHTML = ROL === 'dueno'
+    ? '<div class="nc-ttl">Todavía no has puesto el canal</div>' +
+      '<p class="nc-exp">Pega el enlace del grupo donde ya habla tu equipo ' +
+        '—WhatsApp, Telegram, el que sea— y aparece aquí como botón, para ti ' +
+        'y para todas.</p>' +
+      '<div class="nc-campo"><div class="nc-lbl">CÓMO LO LLAMAN</div>' +
+        '<input class="nc-inp" id="nc-nombre" placeholder="Grupo de pedidos" ' +
+        'value="' + esc(CANAL.canal_nombre || '') + '"></div>' +
+      '<div class="nc-campo"><div class="nc-lbl">ENLACE</div>' +
+        '<input class="nc-inp" id="nc-url" placeholder="https://chat.whatsapp.com/…" ' +
+        'value=""></div>' +
+      '<div class="nc-abrir" onclick="guardarCanalDesdeChat()">Guardar canal</div>'
+    : '<div class="nc-ttl">Sin canal todavía</div>' +
+      '<p class="nc-exp">Tu dueña todavía no ha puesto el enlace del grupo del ' +
+        'equipo. Cuando lo haga, aparece aquí y lo abres desde cualquier pantalla.</p>';
+}
+
+/** El mismo guardado, desde el panel de chat en vez de Configuración. */
+async function guardarCanalDesdeChat() {
+  const nombre = (document.getElementById('nc-nombre') || {}).value || '';
+  const url = (document.getElementById('nc-url') || {}).value || '';
+  await guardarCanal(String(nombre).trim(), String(url).trim());
+}
+
+/**
+ * Guardar el canal.
+ *
+ * El enlace lo valida el servidor, no la pantalla: un `javascript:` en
+ * ese campo correría código en la sesión de cualquiera del equipo que le
+ * diera clic, con su token al lado. Validar solo aquí dejaría la puerta
+ * abierta a quien llame la API de frente.
+ */
+async function guardarCanal(nombre, url) {
+  try {
+    const r = await api('parametros', { tienda: ST,
+      cambios: { canal_nombre: nombre, canal_url: url } });
+    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return false; }
+    CANAL = r.ajustes || CANAL;
+    pintarCanal();
+    pintarConfigCanal();
+    pintarNavCanal();
+    showToast(url ? 'Canal guardado' : 'Canal quitado');
+    return true;
+  } catch (e) { showToast('Sin conexión: no se guardó'); return false; }
+}
+
+/** La tarjeta de Configuración: el mismo dato, editable con calma. */
+function pintarConfigCanal() {
+  const cont = document.getElementById('cfg-canal');
+  if (!cont) return;
+  if (ROL !== 'dueno') {
+    cont.innerHTML = '<div class="eq-vacio">Solo la dueña cambia el canal del equipo.</div>';
+    return;
+  }
+  const url = String(CANAL.canal_url || '').trim();
+  cont.innerHTML =
+    '<div class="nc-campo"><div class="nc-lbl">CÓMO LO LLAMAN</div>' +
+      '<input class="nc-inp" id="cfg-canal-nombre" placeholder="Grupo de pedidos" ' +
+      'value="' + esc(CANAL.canal_nombre || '') + '"></div>' +
+    '<div class="nc-campo"><div class="nc-lbl">ENLACE</div>' +
+      '<input class="nc-inp" id="cfg-canal-url" placeholder="https://chat.whatsapp.com/…" ' +
+      'value="' + esc(url) + '"></div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+      '<div class="nsavebtn" onclick="guardarCanalDesdeConfig()">Guardar canal</div>' +
+      (url
+        ? '<div class="nsavebtn" style="background:var(--s-dark);color:#b8322f;" ' +
+          'onclick="quitarCanal()">Quitar</div>' +
+          '<a class="cfg-probar" href="' + esc(url) + '" target="_blank" ' +
+          'rel="noopener noreferrer">Probar el enlace →</a>'
+        : '') +
+    '</div>';
+}
+
+async function guardarCanalDesdeConfig() {
+  const nombre = (document.getElementById('cfg-canal-nombre') || {}).value || '';
+  const url = (document.getElementById('cfg-canal-url') || {}).value || '';
+  await guardarCanal(String(nombre).trim(), String(url).trim());
+}
+
+async function quitarCanal() {
+  if (!confirm('¿Quitar el canal?\n\nNova Chat deja de tener a dónde llevar. ' +
+               'El grupo sigue existiendo, solo se va el atajo.')) return;
+  await guardarCanal('', '');
+}
+
+/**
+ * NovaChat en el menú.
+ *
+ * Estaba como "Próximamente" en gris desde el primer día. Con un canal
+ * puesto deja de ser una promesa y se vuelve el atajo que es.
+ */
+function pintarNavCanal() {
+  const ni = document.querySelector('.ni-soon');
+  if (!ni) return;
+  const url = String(CANAL.canal_url || '').trim();
+  const nombre = String(CANAL.canal_nombre || '').trim() || 'NovaChat';
+  if (url) {
+    ni.textContent = nombre;
+    ni.style.opacity = '';
+    ni.style.cursor = 'pointer';
+    ni.title = 'Abrir ' + nombre;
+    ni.onclick = function () { window.open(url, '_blank', 'noopener'); };
+  } else {
+    ni.textContent = 'NovaChat';
+    ni.style.opacity = '.5';
+    ni.style.cursor = 'default';
+    ni.title = ROL === 'dueno'
+      ? 'Pega el enlace de tu canal en Configuración'
+      : 'Tu dueña todavía no ha puesto el canal del equipo';
+    ni.onclick = null;
+  }
+}
+
+/**
+ * Nova Bot contesta con tus datos o dice que no sabe.
+ *
+ * Aquí había un diccionario de respuestas escritas a mano: "Hay 5
+ * novedades activas, la de Ana Ruiz lleva 18h". Números inventados, con
+ * nombres inventados, en negrita y con tono de certeza. Eso es lo mismo
+ * que el sello de EJEMPLO sobre un dato real, pero al revés y peor: un
+ * dato falso vestido de dato tuyo.
+ *
+ * Ahora cada respuesta se arma con lo que ya está en memoria —el resumen
+ * del mes, tus pedidos, tus novedades, tus productos, tu equipo— y la
+ * que no se puede armar lo dice. Un asistente que admite no saber se
+ * puede usar; uno que siempre responde, no.
+ */
+const BOT_TEMAS = {
+  dueno: [
+    ['pedidos',    'Pedidos de hoy'],
+    ['novedades',  'Novedades'],
+    ['cpa',        'CPA de la pauta'],
+    ['equipo',     'Mi equipo'],
+    ['inventario', 'Inventario urgente'],
+    ['alarmas',    '¿Algo urgente?'],
+  ],
+  admin: [
+    ['pedidos',   'Pedidos'],
+    ['novedades', 'Novedades'],
+    ['equipo',    'Gestoras hoy'],
+    ['alarmas',   '¿Algo urgente?'],
+  ],
+  gestora: [
+    ['pedidos',   'Mis pedidos'],
+    ['novedades', 'Mi novedad urgente'],
+    ['siguiente', '¿Qué sigo primero?'],
+  ],
+};
+
+/** Las palabras por las que se reconoce cada tema en una pregunta libre. */
+const BOT_PISTAS = {
+  pedidos:    ['pedido', 'pedidos', 'entrega', 'entregas', 'hoy', 'ventas', 'efectividad'],
+  novedades:  ['novedad', 'novedades', 'reclamo', 'devolucion', 'devolución'],
+  cpa:        ['cpa', 'pauta', 'roas', 'publicidad', 'meta', 'anuncio', 'gasto'],
+  equipo:     ['equipo', 'gestora', 'gestoras', 'admin', 'personas'],
+  inventario: ['inventario', 'stock', 'producto', 'productos', 'sku', 'bodega'],
+  alarmas:    ['alarma', 'alarmas', 'urgente', 'pasa', 'grave', 'atencion', 'atención'],
+  siguiente:  ['siguiente', 'primero', 'empiezo', 'sigo', 'orden'],
+};
+
+function botTema(q) {
+  const t = norm2(q).replace(/_/g, ' ');
+  let mejor = '', puntos = 0;
+  Object.keys(BOT_PISTAS).forEach(function (tema) {
+    const n = BOT_PISTAS[tema].filter(function (w) {
+      return t.indexOf(norm2(w).replace(/_/g, ' ')) !== -1;
+    }).length;
+    if (n > puntos) { puntos = n; mejor = tema; }
+  });
+  return mejor;
+}
+
+/** Sin datos cargados no hay nada que contar, y hay que decirlo. */
+function botSinDatos() {
+  return 'Todavía no tengo tus datos cargados. En cuanto la hoja responda ' +
+    'te puedo contestar con números de verdad — mientras tanto prefiero no ' +
+    'inventarte ninguno.';
+}
+
+function botResponde(q) {
+  const tema = botTema(q);
+  if (!tema) {
+    const temas = (BOT_TEMAS[ROL] || BOT_TEMAS.dueno)
+      .map(function (t) { return t[1].toLowerCase(); }).join(', ');
+    return 'No estoy seguro de qué me preguntas. Puedo contarte sobre: ' +
+      temas + '.';
+  }
+  if (!CONECTADO) return botSinDatos();
+
+  const S = SYM() + ' ';
+  const b = function (x) { return '<b>' + x + '</b>'; };
+
+  if (tema === 'pedidos') {
+    if (ROL === 'gestora') {
+      const mios = PEDS_REALES || [];
+      if (!mios.length) return 'No tienes pedidos asignados ahora mismo.';
+      const abiertos = mios.filter(function (p) {
+        return ['entregado', 'devolucion', 'cancelado']
+          .indexOf(String(p.estado_canonico || '').trim()) === -1;
+      });
+      return 'Tienes ' + b(mios.length + (mios.length === 1 ? ' pedido' : ' pedidos')) +
+        ' asignado' + (mios.length === 1 ? '' : 's') + '. ' +
+        (abiertos.length
+          ? b(abiertos.length) + ' sin desenlace todavía.'
+          : 'Todos están resueltos.');
+    }
+    if (!REAL) return botSinDatos();
+    return 'Este mes llevas ' + b(NUM(REAL.pedidos) + ' pedidos') + ' en ' +
+      esc(nombreTienda()) + ': ' + b(NUM(REAL.entregados)) + ' entregados y ' +
+      NUM(REAL.despachados) + ' despachados. Efectividad ' +
+      b((REAL.efectividad || 0).toFixed(1) + '%') +
+      (REAL.sinMover ? '. Ojo: ' + b(NUM(REAL.sinMover)) + ' llevan 3 días sin moverse.' : '.');
+  }
+
+  if (tema === 'novedades') {
+    const abiertas = (NOVS_REALES || []).filter(function (n) {
+      return norm2(n.estado) === 'abierta';
+    });
+    if (!abiertas.length) {
+      return (NOVS_REALES || []).length
+        ? 'No tienes novedades abiertas. Las que hay ya están resueltas o cerradas.'
+        : 'No hay novedades cargadas para este mes.';
+    }
+    const vieja = abiertas.slice().sort(function (a, b2) {
+      return new Date(a.fecha) - new Date(b2.fecha);
+    })[0];
+    const dias = Math.floor((Date.now() - new Date(vieja.fecha).getTime()) / 86400000);
+    return 'Hay ' + b(abiertas.length + (abiertas.length === 1 ? ' novedad abierta' : ' novedades abiertas')) +
+      '. La más antigua es ' + esc(vieja.pedido_id || vieja.id) +
+      (isNaN(dias) ? '' : ', de hace ' + dias + (dias === 1 ? ' día' : ' días')) +
+      (vieja.motivo ? ' · ' + esc(vieja.motivo) : '') + '.';
+  }
+
+  if (tema === 'cpa') {
+    if (ROL !== 'dueno') return 'La pauta y el dinero los ve la dueña.';
+    if (!REAL) return botSinDatos();
+    if (!REAL.gasto) {
+      return 'Todavía no hay pauta cargada este mes, así que no puedo calcularte ' +
+        'el CPA. Sube el reporte de Meta desde Pauta y gastos.';
+    }
+    return 'Llevas ' + b(S + NUM(REAL.gasto)) + ' de pauta y ' + b(S + NUM(REAL.ventas)) +
+      ' en ventas: CPA ' + b(S + NUM(REAL.cpa)) + ' por entrega, ROAS ' +
+      b((REAL.roas || 0).toFixed(2) + '×') + '.' +
+      (REAL.gastoSinConvertir
+        ? ' Dejé fuera ' + S + NUM(REAL.gastoSinConvertir) +
+          ' de gasto que no pude convertir: falta la tasa de ese día.'
+        : '');
+  }
+
+  if (tema === 'equipo') {
+    if (ROL === 'gestora') return 'De tu equipo te cuenta tu admin o tu dueña.';
+    if (!(MI_EQUIPO || []).length) return 'Todavía no hay nadie más en tu equipo.';
+    const activas = MI_EQUIPO.filter(function (p) {
+      return norm2(p.estado || 'activo') !== 'inactivo';
+    });
+    const gestoras = activas.filter(function (p) { return norm2(p.rol) === 'gestora'; });
+    return 'Tienes ' + b(activas.length + (activas.length === 1 ? ' persona activa' : ' personas activas')) +
+      (gestoras.length
+        ? ', ' + gestoras.length + (gestoras.length === 1 ? ' gestora' : ' gestoras') + '. '
+        : '. ') +
+      'El detalle de cada una, con sus casos, está en Mi equipo.';
+  }
+
+  if (tema === 'inventario') {
+    if (ROL === 'gestora') return 'El inventario lo lleva tu dueña.';
+    if (!(PRODS || []).length) return 'Todavía no tengo productos cargados.';
+    const riesgo = PRODS.filter(function (p) { return !!riesgoDe(p); });
+    const sinFicha = PRODS.filter(function (p) { return !p.ficha && p.entregados; }).length;
+    if (!riesgo.length) {
+      return 'Nada bajo el mínimo ahora mismo.' +
+        (sinFicha ? ' Eso sí: ' + b(sinFicha) + ' productos que venden no tienen ficha, ' +
+          'y de esos no se puede saber.' : '');
+    }
+    const peor = riesgo.slice().sort(function (a, b2) {
+      return (a.ficha.stock || 0) - (b2.ficha.stock || 0);
+    })[0];
+    return b(riesgo.length + (riesgo.length === 1 ? ' producto' : ' productos')) +
+      ' bajo el mínimo. El más apretado es ' + esc(peor.nombre) + ': ' +
+      textoCobertura(peor) + '.';
+  }
+
+  if (tema === 'alarmas') {
+    if (!(ALARMAS_HOY || []).length) {
+      return 'Ninguna alarma prendida. Ningún pedido detenido, ninguna novedad ' +
+        'vieja, y las métricas dentro de tus umbrales.';
+    }
+    return 'Tienes ' + b(ALARMAS_HOY.length + (ALARMAS_HOY.length === 1 ? ' alarma' : ' alarmas')) +
+      ':<br>' + ALARMAS_HOY.slice(0, 4).map(function (a) {
+        return '· ' + esc(a.titulo);
+      }).join('<br>');
+  }
+
+  if (tema === 'siguiente') {
+    const mios = (PEDS_REALES || []).filter(function (p) {
+      return ['entregado', 'devolucion', 'cancelado']
+        .indexOf(String(p.estado_canonico || '').trim()) === -1;
+    });
+    if (!mios.length) return 'No tienes nada pendiente ahora mismo.';
+    const quieto = mios.map(function (p) {
+      const d = new Date(p.ultimo_movimiento || p.fecha);
+      return { p: p, dias: isNaN(d) ? 0 : Math.floor((Date.now() - d.getTime()) / 86400000) };
+    }).sort(function (a, b2) { return b2.dias - a.dias; })[0];
+    const p = quieto.p;
+    return 'Empieza por ' + b(esc(p.cliente || 'ese pedido')) + ' · ' +
+      esc(p.id_externo || p.id) + '. Lleva ' + b(quieto.dias + (quieto.dias === 1 ? ' día' : ' días')) +
+      ' sin moverse' + (p.ciudad ? ' · ' + esc(p.ciudad) : '') + '.';
+  }
+
+  return botSinDatos();
+}
+
+/** El nombre de la tienda activa, como lo lee una persona. */
+function nombreTienda() {
+  const st = STORES[ST] || {};
+  return st.name || st.nm || ST;
+}
+
 // ─── VER COMO ─────────────────────────────────────────────────
 /**
  * Mirar Nova con menos permisos de los que tienes.
@@ -5894,8 +6210,12 @@ async function cargarAlarmas() {
   ALARMAS_HOY = r.alarmas || [];
   UMBRALES = r.umbrales;
   CATALOGO_ALARMAS = r.catalogo || [];
+  CANAL = r.ajustes || CANAL;
   pintarAlarmas();
   pintarUmbrales();
+  pintarCanal();
+  pintarConfigCanal();
+  pintarNavCanal();
   return true;
 }
 

@@ -2255,6 +2255,71 @@ const ALARMAS = [
 ];
 
 /** Los umbrales de una tienda: lo que diga Parametros, o el de fábrica. */
+/**
+ * Ajustes de la tienda que no son alarmas.
+ *
+ * Viven en la misma hoja Parametros porque son la misma clase de cosa: un
+ * valor que la dueña elige y Nova respeta. Pero se guardan en un catálogo
+ * aparte para que la pantalla de Alarmas no tenga que esconder lo que no
+ * le corresponde, y para que cada uno valide lo suyo.
+ *
+ * El canal de comunicación es un enlace al grupo que el equipo YA usa —
+ * WhatsApp, Telegram, lo que sea. Nova no lo reemplaza: quien gestiona
+ * tiene el celular abierto todo el día y no va a mudarse a otro chat
+ * porque una app se lo pida. Lo que hace Nova es tenerlo a un clic desde
+ * la pantalla donde está trabajando.
+ */
+const AJUSTES_DEFAULT = {
+  canal_nombre: '',   // cómo lo llama el equipo: "Grupo de pedidos"
+  canal_url:    '',   // a dónde lleva
+};
+
+/** Esquemas que sí se pueden abrir desde un enlace de la app. */
+const ESQUEMAS_CANAL = ['http:', 'https:', 'whatsapp:', 'tg:', 'slack:', 'msteams:'];
+
+/**
+ * Un enlace que se pueda pegar en un href sin abrir una puerta.
+ *
+ * `javascript:` en el canal correría código en la sesión de cualquiera
+ * del equipo que le diera clic, con su token al lado. Por eso no basta
+ * con que el texto parezca un enlace: tiene que ser de un esquema que
+ * lleve a otra aplicación, nunca a este mismo documento.
+ */
+function validarCanal(url) {
+  const u = String(url || '').trim();
+  if (!u) return '';                       // vacío apaga el canal, es válido
+  const m = u.match(/^([a-z][a-z0-9+.-]*):/i);
+  if (!m) {
+    return 'El enlace tiene que empezar por https:// — así, completo, como ' +
+           'lo copias de la barra del navegador.';
+  }
+  if (ESQUEMAS_CANAL.indexOf(m[1].toLowerCase() + ':') === -1) {
+    return 'Ese tipo de enlace no se puede abrir desde Nova. Sirven los de ' +
+           'WhatsApp, Telegram, Slack, Teams o cualquier página https.';
+  }
+  return '';
+}
+
+function ajustes(ss, tienda) {
+  const out = {};
+  Object.keys(AJUSTES_DEFAULT).forEach(function (k) { out[k] = AJUSTES_DEFAULT[k]; });
+
+  const sh = ss.getSheetByName('Parametros');
+  if (!sh || sh.getLastRow() < 2) return out;
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const cT = e.indexOf('tienda'), cK = e.indexOf('clave'), cV = e.indexOf('valor');
+  for (let i = 1; i < d.length; i++) {
+    const t = String(d[i][cT] || '').trim();
+    if (t && t !== tienda) continue;
+    const k = norm(d[i][cK]);
+    if (!(k in out)) continue;
+    out[k] = String(d[i][cV] == null ? '' : d[i][cV]).trim();
+  }
+  return out;
+}
+
 function umbrales(ss, tienda) {
   const out = {};
   Object.keys(ALARMAS_DEFAULT).forEach(function (k) { out[k] = ALARMAS_DEFAULT[k]; });
@@ -4259,8 +4324,12 @@ function apiAlarmas(s, p) {
     ? r.alarmas
     : r.alarmas.filter(function (a) { return a.id !== 'cpa'; });
 
+  // Los umbrales son de la dueña; el canal del equipo es de todo el
+  // equipo. Va aquí y no en su propia llamada porque la pantalla ya hace
+  // esta, y una llamada más por un enlace sería una llamada de más.
   return { ok: true, tienda: tienda, alarmas: alarmas,
            umbrales: s.rol === 'dueno' ? r.umbrales : null,
+           ajustes: ajustes(ss, tienda),
            catalogo: ALARMAS };
 }
 
@@ -4280,11 +4349,24 @@ function apiParametros(s, p) {
 
   if (!p.cambios) {
     return { ok: true, tienda: tienda, umbrales: umbrales(ss, tienda),
+             ajustes: ajustes(ss, tienda),
              catalogo: ALARMAS, defaults: ALARMAS_DEFAULT };
   }
 
   if (s.rol !== 'dueno') {
-    return { ok: false, error: 'Solo la dueña cambia los umbrales de las alarmas.' };
+    return { ok: false, error: 'Solo la dueña cambia la configuración de la tienda.' };
+  }
+
+  /**
+   * El canal se valida antes de tocar la hoja.
+   *
+   * Si una de las dos claves está mal, no se escribe ninguna: guardar el
+   * nombre del canal y rechazar su enlace dejaría un botón con etiqueta
+   * y sin destino, que es peor que no tener botón.
+   */
+  if (p.cambios.canal_url !== undefined) {
+    const err = validarCanal(p.cambios.canal_url);
+    if (err) return { ok: false, error: err };
   }
 
   let sh = ss.getSheetByName('Parametros');
@@ -4296,7 +4378,10 @@ function apiParametros(s, p) {
   const cA = e.indexOf('actualizado_en'), cP = e.indexOf('actualizado_por');
 
   Object.keys(p.cambios).forEach(function (clave) {
-    if (!(clave in ALARMAS_DEFAULT)) return;   // nada fuera del catálogo
+    // Nada fuera de los dos catálogos: umbrales de alarma y ajustes de
+    // la tienda. Aceptar una clave cualquiera convertiría esta acción en
+    // "escribe lo que quieras en Parametros".
+    if (!(clave in ALARMAS_DEFAULT) && !(clave in AJUSTES_DEFAULT)) return;
     const valor = p.cambios[clave];
     let fila = -1;
     for (let i = 1; i < d.length; i++) {
@@ -4320,7 +4405,7 @@ function apiParametros(s, p) {
     }
   });
   SpreadsheetApp.flush();
-  return { ok: true, umbrales: umbrales(ss, tienda) };
+  return { ok: true, umbrales: umbrales(ss, tienda), ajustes: ajustes(ss, tienda) };
 }
 
 /** Las categorías que la dueña puede ponerle a un producto. */

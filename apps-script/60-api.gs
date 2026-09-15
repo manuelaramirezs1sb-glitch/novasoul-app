@@ -853,8 +853,12 @@ function apiAlarmas(s, p) {
     ? r.alarmas
     : r.alarmas.filter(function (a) { return a.id !== 'cpa'; });
 
+  // Los umbrales son de la dueña; el canal del equipo es de todo el
+  // equipo. Va aquí y no en su propia llamada porque la pantalla ya hace
+  // esta, y una llamada más por un enlace sería una llamada de más.
   return { ok: true, tienda: tienda, alarmas: alarmas,
            umbrales: s.rol === 'dueno' ? r.umbrales : null,
+           ajustes: ajustes(ss, tienda),
            catalogo: ALARMAS };
 }
 
@@ -874,11 +878,24 @@ function apiParametros(s, p) {
 
   if (!p.cambios) {
     return { ok: true, tienda: tienda, umbrales: umbrales(ss, tienda),
+             ajustes: ajustes(ss, tienda),
              catalogo: ALARMAS, defaults: ALARMAS_DEFAULT };
   }
 
   if (s.rol !== 'dueno') {
-    return { ok: false, error: 'Solo la dueña cambia los umbrales de las alarmas.' };
+    return { ok: false, error: 'Solo la dueña cambia la configuración de la tienda.' };
+  }
+
+  /**
+   * El canal se valida antes de tocar la hoja.
+   *
+   * Si una de las dos claves está mal, no se escribe ninguna: guardar el
+   * nombre del canal y rechazar su enlace dejaría un botón con etiqueta
+   * y sin destino, que es peor que no tener botón.
+   */
+  if (p.cambios.canal_url !== undefined) {
+    const err = validarCanal(p.cambios.canal_url);
+    if (err) return { ok: false, error: err };
   }
 
   let sh = ss.getSheetByName('Parametros');
@@ -890,7 +907,10 @@ function apiParametros(s, p) {
   const cA = e.indexOf('actualizado_en'), cP = e.indexOf('actualizado_por');
 
   Object.keys(p.cambios).forEach(function (clave) {
-    if (!(clave in ALARMAS_DEFAULT)) return;   // nada fuera del catálogo
+    // Nada fuera de los dos catálogos: umbrales de alarma y ajustes de
+    // la tienda. Aceptar una clave cualquiera convertiría esta acción en
+    // "escribe lo que quieras en Parametros".
+    if (!(clave in ALARMAS_DEFAULT) && !(clave in AJUSTES_DEFAULT)) return;
     const valor = p.cambios[clave];
     let fila = -1;
     for (let i = 1; i < d.length; i++) {
@@ -914,7 +934,7 @@ function apiParametros(s, p) {
     }
   });
   SpreadsheetApp.flush();
-  return { ok: true, umbrales: umbrales(ss, tienda) };
+  return { ok: true, umbrales: umbrales(ss, tienda), ajustes: ajustes(ss, tienda) };
 }
 
 /** Las categorías que la dueña puede ponerle a un producto. */
