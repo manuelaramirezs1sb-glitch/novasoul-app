@@ -1811,6 +1811,12 @@ function agregarMes(ss, tienda, mes, s) {
     pendientes: 0,
     ventas: 0, costoProducto: 0, costoEnvio: 0, costoDevolucion: 0,
     valorAbierto: 0,
+    // Qué costo trae cada estado, contado o no. Es lo que permite
+    // reconciliar el cierre de Nova contra el que el cliente hizo aparte.
+    costosPorEstado: {
+      producto: { entregado: 0, devolucion: 0, cancelado: 0, pendiente: 0 },
+      envio:    { entregado: 0, devolucion: 0, cancelado: 0, pendiente: 0 },
+    },
     novedades: 0, sinMover: 0,
     grupos: {}, transportadoras: {}, productos: {},
   };
@@ -1836,15 +1842,39 @@ function agregarMes(ss, tienda, mes, s) {
       if (est === 'cancelado')   out.cancelados++;
       if (['cancelado','pendiente'].indexOf(est) === -1) out.despachados++;
 
-      out.costoProducto += num(f[c('costo_producto')]);
-      out.costoEnvio    += num(f[c('costo_envio')]);
+      /**
+       * Un costo se cuenta cuando se incurrió, no cuando aparece en la fila.
+       *
+       * Dropi trae costo_producto y costo_envio en TODAS las filas, también
+       * en las canceladas y en las que aún no salen de bodega. Sumarlas
+       * todas era cargarle al mes el costo de mercancía que nunca se
+       * despachó y fletes que nadie pagó. La pantalla del cierre ya decía
+       * "cancelados: sin flete" mientras la suma sí se los cobraba.
+       *
+       *   producto → solo lo entregado: es la mercancía que se fue y se pagó
+       *   flete    → lo despachado: salió del almacén, la transportadora cobra
+       *   cancelado y pendiente → nada: no se despachó
+       *
+       * Se guarda además el desglose por estado, para poder mostrar en el
+       * cierre qué se contó y qué se dejó fuera. Una cifra que no se puede
+       * reconciliar contra la hoja propia del cliente no sirve de nada.
+       */
+      const cProd = num(f[c('costo_producto')]);
+      const cEnv  = num(f[c('costo_envio')]);
+      const grupoCosto = ['entregado', 'devolucion', 'cancelado'].indexOf(est) !== -1
+        ? est : 'pendiente';
+      out.costosPorEstado.producto[grupoCosto] += cProd;
+      out.costosPorEstado.envio[grupoCosto]    += cEnv;
+
+      if (est === 'entregado') out.costoProducto += cProd;
+      if (['cancelado', 'pendiente'].indexOf(est) === -1) out.costoEnvio += cEnv;
 
       /**
        * El flete de una devolución se paga igual, y a veces doble. Va
        * aparte del flete de las entregas porque son dos cosas distintas:
        * uno es costo de vender, el otro es costo de no haber vendido.
        */
-      if (est === 'devolucion') out.costoDevolucion += num(f[c('costo_envio')]);
+      if (est === 'devolucion') out.costoDevolucion += cEnv;
 
       // Por producto, para ver cuál se sostiene y cuál no
       const prod = String(f[c('producto')] || 'Sin producto').trim();
@@ -2044,6 +2074,24 @@ function cierreGuardado(ss, tienda, mes) {
     if (String(d[i][c('tienda')]).trim() !== tienda) continue;
     if (String(d[i][c('mes')]).trim() !== mes) continue;
     if (norm(d[i][c('estado')]) !== 'cerrado') continue;
+
+    /**
+     * El cierre completo si se guardó; si no, lo que quepa en las columnas.
+     *
+     * Los meses cerrados antes de que existiera `snapshot` no tienen dónde
+     * guardar el costo de mercancía ni el flete, y salían como cero: el
+     * informe mostraba ventas menos pauta y una utilidad que nunca fue.
+     * Ahora esos meses se marcan como incompletos y el informe lo dice, en
+     * vez de enseñar un número de más.
+     */
+    const crudo = c('snapshot') === -1 ? '' : String(d[i][c('snapshot')] || '');
+    if (crudo) {
+      try {
+        const snap = JSON.parse(crudo);
+        snap.congelado = true;
+        return { cerrado_en: d[i][c('cerrado_en')], datos: snap };
+      } catch (err) { /* snapshot ilegible: se cae al resumen de columnas */ }
+    }
     return {
       cerrado_en: d[i][c('cerrado_en')],
       datos: {
@@ -2053,7 +2101,8 @@ function cierreGuardado(ss, tienda, mes) {
         efectividad: num(d[i][c('efectividad')]),
         pendientes: num(d[i][c('pendientes_al_cierre')]),
         despachados: 0, cancelados: 0, novedades: 0, sinMover: 0,
-        grupos: {}, transportadoras: {}, congelado: true,
+        grupos: {}, transportadoras: {},
+        congelado: true, incompleto: true,
       },
     };
   }
@@ -2123,10 +2172,27 @@ function apiCerrarMes(s, p) {
 
   const sh = ss.getSheetByName('Cierres');
   if (!sh) return { ok: false, error: 'Falta la hoja Cierres. Corre bootstrapTodo().' };
-  sh.appendRow([tienda, mes, 'cerrado', ahoraISO(), s.email, d.pendientes,
-                d.pedidos, d.entregados, d.devueltos, d.ventas,
-                d.gasto || 0, d.margen || 0, d.efectividad,
-                p.nota || '']);
+
+  /**
+   * Se guarda el cierre entero, por nombre de columna.
+   *
+   * Antes se escribía con appendRow y una lista posicional: si alguien
+   * agregaba una columna a Cierres, todo se corría un puesto. Y el
+   * snapshot es lo que permite que un mes cerrado vuelva con sus costos
+   * —mercancía, flete, fijos, el desglose por estado— en vez de ceros.
+   */
+  const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
+  const valores = {
+    tienda: tienda, mes: mes, estado: 'cerrado', cerrado_en: ahoraISO(),
+    cerrado_por: s.email, pendientes_al_cierre: d.pendientes,
+    pedidos: d.pedidos, entregados: d.entregados, devueltos: d.devueltos,
+    ventas: d.ventas, gasto: d.gasto || 0, margen: d.margen || 0,
+    efectividad: d.efectividad, nota: p.nota || '',
+    snapshot: JSON.stringify(d),
+  };
+  sh.appendRow(enc.map(function (col) {
+    return valores[col] !== undefined ? valores[col] : '';
+  }));
   registrarMovimiento(s, 'Cierres', tienda + '/' + mes, 'estado', 'abierto', 'cerrado');
   return { ok: true, mes: mes, tienda: tienda, datos: d, cerrado_en: ahoraISO() };
 }

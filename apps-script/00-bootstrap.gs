@@ -284,9 +284,20 @@ const ESQUEMA_EMPRESARIAL = {
   // agosto que reportaste en septiembre cambiaría en octubre cuando una
   // devolución vieja por fin se resuelva — y un número que cambia solo
   // no sirve para decidir ni para rendir cuentas.
+  /**
+   * `snapshot` guarda el cierre entero, no solo el resumen.
+   *
+   * Las columnas sueltas se quedaron cortas: no había dónde poner el costo
+   * de mercancía, el flete, los gastos fijos ni el desglose por estado. Al
+   * reabrir un mes cerrado, esos costos volvían como cero y la utilidad
+   * salía enorme — el informe mostraba ventas menos pauta y nada más.
+   *
+   * Las columnas sueltas se mantienen porque son las que se leen de un
+   * vistazo en la hoja. El snapshot es la verdad completa.
+   */
   Cierres: ['tienda','mes','estado','cerrado_en','cerrado_por',
             'pendientes_al_cierre','pedidos','entregados','devueltos',
-            'ventas','gasto','margen','efectividad','nota'],
+            'ventas','gasto','margen','efectividad','nota','snapshot'],
 };
 
 // Staging crudo. Nova NUNCA lee estas pestañas — solo los importadores.

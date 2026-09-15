@@ -786,6 +786,12 @@ input.li:focus{border-color:var(--acc-d);}
 .mono{font-variant-numeric:tabular-nums;}
 .inf-sec{margin-bottom:34px;}
 .inf-lede{font:500 13.5px/1.6 'DM Sans';color:var(--t-mut);margin:0 0 16px;max-width:64ch;}
+/* Conciliación: qué contó Nova y qué pudo contar distinto tu hoja */
+.conc{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--s-line2);}
+.conc-f{display:grid;grid-template-columns:minmax(180px,1fr) 2fr;gap:14px;padding:12px 0;border-bottom:1px solid var(--s-line2);}
+.conc-k{font:600 12.5px/1.4 'DM Sans';color:var(--t-ink);}
+.conc-v{font:500 12px/1.65 'DM Sans';color:var(--t-mut);}
+@media(max-width:700px){.conc-f{grid-template-columns:1fr;gap:5px;}}
 .inf-gris{color:var(--t-mut3);font-weight:500;}
 .inf-falta{font:500 12.5px/1.6 'DM Sans';color:#8a6a13;background:#f6ecd0;
   border-radius:9px;padding:10px 13px;margin:12px 0 0;}
@@ -4221,6 +4227,10 @@ function mapearCierre(a, mes, tienda, r) {
     ticket: a.ticket || 0,
     novedades: a.novedades || 0,
     sinMover: a.sinMover || 0,
+    costosPorEstado: a.costosPorEstado || null,
+    incompleto: !!a.incompleto,
+    gastoSinConvertir: a.gastoSinConvertir || 0,
+    monedasSinTasa: a.monedasSinTasa || {},
     sinNota: 0,
     grupos: enLista(a.grupos, 'g', 'n'),
     transp: Object.keys(a.transportadoras || {}).map(function (t) {
@@ -4466,13 +4476,13 @@ function pintarInforme(d, p, real) {
       'ya no queda nada pendiente por entregar.</p></section>';
   }
 
+  h += comoSeConto(d);
+
   // ── Pie ──
   h += '<footer class="inf-foot">Calculado sobre los pedidos de ' + esc(d.mes) +
     ' de ' + esc(d.nombre) + ' que hay en tu hoja' +
     (d.tasa ? ', convertido a ' + esc(d.monedaReporte) + ' con la tasa del ' + esc(d.tasaFecha) : '') +
-    '. Los gastos fijos son los que registraste en Dinero. ' +
-    'Comisiones bancarias e impuestos de plataforma no están incluidos: no ' +
-    'vienen en ningún archivo importado.</footer>';
+    '. Los gastos fijos son los que registraste en Dinero.</footer>';
 
   return h;
 }
@@ -4491,12 +4501,92 @@ function nombreMes(mes) {
   return (M[m] || mes) + ' ' + a;
 }
 
+/**
+ * Cómo se contó este mes.
+ *
+ * Un cierre que no se puede cuadrar contra la hoja propia del cliente no
+ * sirve: si el número no coincide y nadie explica por qué, el cliente
+ * confía en el suyo y Nova sobra.
+ *
+ * Casi siempre la diferencia no es de suma, es de definición. Aquí se
+ * dicen las cuatro definiciones que más se separan de un cierre hecho a
+ * mano, con el número de este mes al lado para poder restar y llegar al
+ * otro resultado.
+ */
+function comoSeConto(d) {
+  const S = d.sym + ' ';
+  const n0 = function (v) { return NUM(Math.round(v || 0)); };
+  const cpe = d.costosPorEstado;
+  const filas = [];
+
+  filas.push(['Un pedido pertenece al mes en que se creó',
+    'Uno del 28 de agosto entregado el 3 de septiembre cuenta sus ventas en ' +
+    'agosto. Si tu hoja cuenta la plata el día que entró, ahí está la mayor ' +
+    'diferencia.']);
+
+  if (cpe) {
+    const fuera = (cpe.producto.cancelado || 0) + (cpe.producto.pendiente || 0) +
+                  (cpe.envio.cancelado || 0) + (cpe.envio.pendiente || 0);
+    filas.push(['El costo se cuenta cuando se incurrió',
+      'Mercancía: solo la entregada (' + S + n0(cpe.producto.entregado) + '). ' +
+      'Flete: todo lo que salió de bodega, entregado o devuelto (' +
+      S + n0(cpe.envio.entregado + cpe.envio.devolucion) + '). ' +
+      'Dropi trae costos también en canceladas y en las que no han salido: ' +
+      S + n0(fuera) + ' que no se cobran a este mes.']);
+    if (cpe.producto.devolucion) {
+      filas.push(['La mercancía devuelta no se resta de la venta',
+        S + n0(cpe.producto.devolucion) + ' en producto de pedidos devueltos. ' +
+        'Vuelve a tu proveedor o a tu bodega, así que no es costo de lo que sí ' +
+        'vendiste. Si tu hoja lo da por perdido, réstalo.']);
+    }
+  }
+
+  filas.push(['La tasa de entrega se mide sobre lo resuelto',
+    (d.entregados || 0) + ' entregados ÷ ' + (d.resueltos || 0) + ' resueltos = ' +
+    (d.efectividad || 0).toFixed(1) + '%. Sobre los ' + (d.pedidos || 0) +
+    ' pedidos creados daría ' +
+    (d.pedidos ? ((d.entregados || 0) / d.pedidos * 100).toFixed(1) : '0.0') +
+    '%. Las dos son ciertas; miden cosas distintas.']);
+
+  if (d.gastoSinConvertir) {
+    const mons = Object.keys(d.monedasSinTasa || {}).join(', ');
+    filas.push(['Hay pauta que no se pudo sumar',
+      n0(d.gastoSinConvertir) + ' en ' + esc(mons) + ' quedaron fuera del gasto ' +
+      'porque falta la tasa de cambio de esos días. Si tu cierre sí los incluyó, ' +
+      'tu utilidad sale más baja que esta. Se arregla cargando esas tasas.']);
+  }
+
+  filas.push(['Lo que Nova no sabe',
+    'Comisiones bancarias, impuestos de plataforma y cualquier gasto que no ' +
+    'esté en Dinero ni venga en un archivo importado. Si tu hoja los tiene, ' +
+    'tu utilidad va a ser menor que esta.']);
+
+  return '<section class="inf-sec"><p class="inf-eyebrow">Cómo se contó</p>' +
+    '<h2 class="inf-h2">Por qué puede no cuadrar con tu hoja</h2>' +
+    '<p class="inf-lede">La diferencia casi nunca es de suma: es de ' +
+      'definición. Estas son las de Nova, con el número de este mes al lado.</p>' +
+    '<div class="conc">' + filas.map(function (f) {
+      return '<div class="conc-f"><div class="conc-k">' + esc(f[0]) + '</div>' +
+        '<div class="conc-v">' + f[1] + '</div></div>';
+    }).join('') + '</div></section>';
+}
+
 function origenCierre(d, real) {
   let color, texto;
   if (!real) {
     color = ['#f6ecd0', '#7a5c10'];
     texto = 'CIFRAS DE EJEMPLO — entra con tu correo para ver las de tu tienda. ' +
       'No tomes decisiones con estos números.';
+  } else if (d.cerrado && d.incompleto) {
+    // Un cierre de antes del snapshot: solo se guardaron ventas, pauta y
+    // margen. Mostrar la utilidad con los costos en cero sería inventarla.
+    color = ['#f6ecd0', '#7a5c10'];
+    texto = 'MES CERRADO el ' + (d.cerrado_en || '').slice(0, 10) +
+      ', pero se guardó antes de que Nova archivara los costos. De este mes ' +
+      'quedaron las ventas, la pauta y el margen; la mercancía, el flete y los ' +
+      'gastos fijos NO están, así que la utilidad de abajo sale más alta de lo ' +
+      'que fue. Para recalcularlo completo, pon "abierto" en su fila de la hoja ' +
+      'Cierres y vuelve a cerrarlo.';
   } else if (d.cerrado) {
     color = ['#e2ead6', '#3f5330'];
     texto = 'MES CERRADO el ' + (d.cerrado_en || '').slice(0, 10) +
