@@ -3676,6 +3676,7 @@ function manejar(e, metodo) {
       case 'equipo':    return json(apiEquipo(s, p));
       case 'productos': return json(apiProductos(s, p));
       case 'recuento':  return json(apiRecuento(s, p));
+      case 'historial': return json(apiHistorial(s, p));
       case 'alarmas':   return json(apiAlarmas(s, p));
       case 'parametros':return json(apiParametros(s, p));
       case 'auditoria': return json(apiAuditoria(s, p));
@@ -6299,6 +6300,172 @@ function carteraDelMes(ss, tienda, mes) {
   out.devolucionPromedio = out.nDevoluciones ? out.devoluciones / out.nDevoluciones : 0;
   if (ultimo) { out.saldo = ultimo.saldo; out.ultimaFecha = ultimo.fecha; }
   return out;
+}
+
+/**
+ * Qué tiene cada mes y qué le falta para poder cerrarse.
+ *
+ * Cargar el histórico de un cliente no es subir un archivo: son cuatro
+ * cosas por mes, y si falta una el cierre sale mal sin decir por qué. La
+ * peor es la tasa de cambio — sin ella la pauta en otra moneda no se
+ * suma, y el mes aparece con una utilidad estupenda que nunca existió.
+ *
+ * Por eso esto no calcula el cierre: lo que hace es decir, mes a mes, si
+ * hay pedidos, si hay pauta, si esa pauta se puede convertir, si hay
+ * gastos fijos y si ya está cerrado. Convierte "¿por qué no me sale el
+ * trimestre?" en una lista de lo que falta.
+ *
+ * Cada hoja se lee UNA vez y se reparte por mes. Llamar a agregarMes
+ * ocho veces leería Pedidos entero ocho veces.
+ */
+function apiHistorial(s, p) {
+  const tienda = String(p.tienda || s.tiendas[0] || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  if (s.rol !== 'dueno') {
+    return { ok: false, error: 'El estado del histórico lo ve la dueña.' };
+  }
+
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const tz = zonaHorariaDe(ss, tienda) || 'UTC';
+  const monTienda = monedaDeTienda(ss, tienda);
+  const cuantos = Math.min(Math.max(parseInt(p.meses, 10) || 8, 1), 18);
+
+  // Los meses que se van a mirar: el actual y los anteriores
+  const meses = [];
+  let m = Utilities.formatDate(new Date(), tz, 'yyyy-MM');
+  for (let i = 0; i < cuantos; i++) { meses.push(m); m = mesAnterior(m); }
+  const idx = {};
+  const out = meses.map(function (mm, i) {
+    idx[mm] = i;
+    return { mes: mm, pedidos: 0, entregados: 0, ventas: 0,
+             pautaFilas: 0, pautaSinTasa: 0, monedasSinTasa: {},
+             fijos: 0, nFijos: 0, cartera: 0, cerrado: false, falta: [] };
+  });
+
+  const bucket = function (fecha) {
+    if (!fecha) return null;
+    const k = fecha.slice(0, 7);
+    return idx[k] === undefined ? null : out[idx[k]];
+  };
+
+  const shP = ss.getSheetByName('Pedidos');
+  if (shP && shP.getLastRow() > 1) {
+    const d = shP.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    for (let i = 1; i < d.length; i++) {
+      const f = d[i];
+      if (String(f[c('tienda')]).trim() !== tienda) continue;
+      const b = bucket(aISO(f[c('fecha')], tz));
+      if (!b) continue;
+      b.pedidos++;
+      if (norm(f[c('estado_nova')] || f[c('estado_canonico')]) === 'entregado') {
+        b.entregados++;
+        b.ventas += num(f[c('valor')]);
+      }
+    }
+  }
+
+  // Las tasas se cargan una vez: preguntar por cada fila de pauta
+  // volvería a leer la hoja entera cada vez.
+  const tasas = {};
+  const shT = ss.getSheetByName('Tasas');
+  if (shT && shT.getLastRow() > 1) {
+    shT.getDataRange().getValues().slice(1).forEach(function (f) {
+      const fe = aISO(f[0], 'UTC');
+      if (!fe) return;
+      tasas[fe + '|' + String(f[1]).toUpperCase() + '|' + String(f[2]).toUpperCase()] = 1;
+      tasas[fe + '|' + String(f[2]).toUpperCase() + '|' + String(f[1]).toUpperCase()] = 1;
+    });
+  }
+
+  const shPa = ss.getSheetByName('Pauta');
+  if (shPa && shPa.getLastRow() > 1) {
+    const d = shPa.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    for (let i = 1; i < d.length; i++) {
+      const f = d[i];
+      if (String(f[c('tienda')]).trim() !== tienda) continue;
+      const fecha = aISO(f[c('fecha')], tz);
+      const b = bucket(fecha);
+      if (!b) continue;
+      b.pautaFilas++;
+      const mon = String(f[c('moneda_gasto')] || '').toUpperCase();
+      if (!mon || mon === monTienda) continue;
+      if (!tasas[fecha + '|' + mon + '|' + monTienda]) {
+        b.pautaSinTasa++;
+        b.monedasSinTasa[mon] = (b.monedasSinTasa[mon] || 0) + 1;
+      }
+    }
+  }
+
+  const shG = ss.getSheetByName('Gastos');
+  if (shG && shG.getLastRow() > 1) {
+    const d = shG.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    for (let i = 1; i < d.length; i++) {
+      const f = d[i];
+      if (String(f[c('tienda')]).trim() !== tienda) continue;
+      if (norm(f[c('activo')]) === 'no') continue;
+      const v = num(f[c('valor')]);
+      const mm = String(f[c('mes')] || '').trim();
+      // Sin mes es recurrente: cuenta en todos
+      if (!mm) { out.forEach(function (b) { b.fijos += v; b.nFijos++; }); continue; }
+      const b = bucket(mm + '-01');
+      if (b) { b.fijos += v; b.nFijos++; }
+    }
+  }
+
+  const shC = ss.getSheetByName('Cartera');
+  if (shC && shC.getLastRow() > 1) {
+    const d = shC.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    if (c('fecha') !== -1) {
+      for (let i = 1; i < d.length; i++) {
+        const f = d[i];
+        if (c('tienda') !== -1 && String(f[c('tienda')]).trim() !== tienda) continue;
+        const b = bucket(aISO(f[c('fecha')], tz));
+        if (b) b.cartera++;
+      }
+    }
+  }
+
+  const shCi = ss.getSheetByName('Cierres');
+  if (shCi && shCi.getLastRow() > 1) {
+    const d = shCi.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    for (let i = 1; i < d.length; i++) {
+      if (String(d[i][c('tienda')]).trim() !== tienda) continue;
+      if (norm(d[i][c('estado')]) !== 'cerrado') continue;
+      const b = out[idx[String(d[i][c('mes')]).trim()]];
+      if (b) b.cerrado = true;
+    }
+  }
+
+  /**
+   * Qué le falta a cada mes, en el orden en que importa.
+   *
+   * Sin pedidos no hay mes: lo demás da igual. La tasa va antes que la
+   * pauta misma porque una pauta que no se puede convertir es peor que no
+   * tener pauta — no se suma, y nadie lo nota.
+   */
+  const actual = meses[0];
+  out.forEach(function (b) {
+    if (!b.pedidos) { b.falta.push('pedidos'); return; }
+    if (b.pautaSinTasa) b.falta.push('tasas');
+    else if (!b.pautaFilas) b.falta.push('pauta');
+    if (!b.nFijos) b.falta.push('gastos fijos');
+    b.listo = !b.falta.length;
+    b.enCurso = b.mes === actual;
+  });
+
+  return { ok: true, tienda: tienda, moneda: monTienda, meses: out };
 }
 
 
