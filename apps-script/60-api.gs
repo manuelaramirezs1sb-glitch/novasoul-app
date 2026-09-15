@@ -1261,8 +1261,13 @@ function apiEquipo(s, p) {
     }
   }
 
+  // La jornada de hoy sale de la bitácora, y se cruza por correo: el
+  // nombre se puede escribir de tres formas distintas en tres hojas, el
+  // correo es el mismo con el que entró.
+  const jornada = jornadaDeHoy(ss, tienda);
   personas.forEach(function (x) {
     x.efectividad = x.pedidos ? x.entregados / x.pedidos * 100 : 0;
+    x.hoy = jornada[String(x.correo || '').trim().toLowerCase()] || null;
   });
 
   // La gestora solo se ve a sí misma
@@ -1623,7 +1628,129 @@ function apiResumen(s, p) {
   const ss = SpreadsheetApp.openById(s.sheetId);
   const mes = String(p.mes || Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM'));
   const d = agregarMes(ss, tienda, mes, s);
+  d.recaudo7 = recaudoUltimosDias(ss, tienda, 7);
   return { ok: true, tienda: tienda, mes: mes, datos: d };
+}
+
+/**
+ * Lo que entró cada uno de los últimos días.
+ *
+ * Va aparte de agregarMes porque una semana no cabe dentro de un mes: el
+ * 2 de septiembre, cinco de los siete días son de agosto. Calcularlo con
+ * el agregado del mes habría dibujado media semana en cero.
+ *
+ * Recaudo es lo entregado, y se cuenta el día que se entregó, no el día
+ * que se pidió. Un pedido del lunes que llega el jueves es plata del
+ * jueves: ponerla en el lunes haría que el mejor día del gráfico fuera
+ * siempre el día en que más se vendió, no aquel en que más entró.
+ *
+ * Cuando la transportadora no da fecha de entrega, ese pedido no se
+ * reparte por ningún lado: se cuenta aparte y la pantalla lo dice. Una
+ * plata que no se sabe qué día entró no puede inventarse un día.
+ */
+function recaudoUltimosDias(ss, tienda, dias) {
+  const tz = zonaHorariaDe(ss, tienda) || 'UTC';
+  const hoy = new Date();
+  const serie = [];
+  const indice = {};
+  for (let i = dias - 1; i >= 0; i--) {
+    const d = new Date(hoy.getTime() - i * 86400000);
+    const iso = Utilities.formatDate(d, tz, 'yyyy-MM-dd');
+    indice[iso] = serie.length;
+    serie.push({ fecha: iso, total: 0, entregas: 0 });
+  }
+
+  const out = { serie: serie, sinFecha: 0, pedidosSinFecha: 0, moneda: monedaDeTienda(ss, tienda) };
+  const sh = ss.getSheetByName('Pedidos');
+  if (!sh || sh.getLastRow() < 2) return out;
+
+  const datos = sh.getDataRange().getValues();
+  const e = datos[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+  const desde = serie[0].fecha;
+
+  for (let i = 1; i < datos.length; i++) {
+    const f = datos[i];
+    if (String(f[c('tienda')]).trim() !== tienda) continue;
+    if (norm(f[c('estado_nova')] || f[c('estado_canonico')]) !== 'entregado') continue;
+
+    const valor = num(f[c('valor')]);
+    const entrega = c('fecha_entrega') !== -1 ? aISO(f[c('fecha_entrega')], tz) : '';
+    if (!entrega) {
+      // Solo cuenta como "sin fecha" si el pedido es reciente; uno de
+      // marzo sin fecha de entrega no es un hueco de esta semana.
+      const pedido = aISO(f[c('fecha')], tz);
+      if (pedido && pedido >= desde) { out.sinFecha += valor; out.pedidosSinFecha++; }
+      continue;
+    }
+    if (indice[entrega] === undefined) continue;
+    const dia = serie[indice[entrega]];
+    dia.total += valor;
+    dia.entregas++;
+  }
+  return out;
+}
+
+/**
+ * Quién estuvo trabajando hoy y desde cuándo.
+ *
+ * No hay reloj de entrada: lo que hay es la bitácora. Cada vez que
+ * alguien entra, escribe una nota, cambia un estado o sube un archivo,
+ * queda una fila en Movimientos con su correo y la hora. La jornada de
+ * una persona es su primer movimiento del día, el último, y cuántos hizo.
+ *
+ * Eso no es lo mismo que horas trabajadas y la pantalla no lo llama así.
+ * Alguien puede estar llamando dos horas sin tocar Nova; lo que se sabe
+ * es cuándo tocó Nova, y eso es lo que se dice.
+ */
+function jornadaDeHoy(ss, tienda) {
+  const tz = zonaHorariaDe(ss, tienda) || 'UTC';
+  const hoy = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+  const porCorreo = {};
+
+  const sh = ss.getSheetByName('Movimientos');
+  if (sh && sh.getLastRow() > 1) {
+    const d = sh.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const cF = e.indexOf('fecha'), cU = e.indexOf('usuario');
+    // De atrás hacia adelante: lo de hoy está al final, y así no se
+    // recorren doce mil filas de meses pasados para nada.
+    for (let i = d.length - 1; i > 0; i--) {
+      const sello = String(d[i][cF] || '');
+      const dia = sello.slice(0, 10);
+      if (dia < hoy) break;
+      if (dia !== hoy) continue;
+      // "correo (viendo como gestora)" sigue siendo la misma persona
+      const quien = String(d[i][cU] || '').split(' (')[0].trim().toLowerCase();
+      if (!quien) continue;
+      const hora = sello.slice(11, 16);
+      if (!porCorreo[quien]) {
+        porCorreo[quien] = { correo: quien, primero: hora, ultimo: hora, acciones: 0 };
+      }
+      const x = porCorreo[quien];
+      x.acciones++;
+      if (hora && hora < x.primero) x.primero = hora;
+      if (hora && hora > x.ultimo)  x.ultimo = hora;
+    }
+  }
+
+  /**
+   * Cuánto hace de eso se calcula aquí, no en el navegador.
+   *
+   * La hora que se guarda es la de la tienda —Guatemala, Ecuador— y quien
+   * mira puede estar en Colombia. Restar una contra el reloj del navegador
+   * daba una hora de diferencia en Nutrea GT: Katherin salía "activa hace
+   * un momento" cuando llevaba dos horas sin tocar nada, o al revés.
+   */
+  const ahoraMin = Number(Utilities.formatDate(new Date(), tz, 'HH')) * 60 +
+                   Number(Utilities.formatDate(new Date(), tz, 'mm'));
+  Object.keys(porCorreo).forEach(function (k) {
+    const x = porCorreo[k];
+    const p = String(x.ultimo || '').split(':');
+    const ult = Number(p[0]) * 60 + Number(p[1] || 0);
+    x.haceMin = isNaN(ult) ? null : Math.max(0, ahoraMin - ult);
+  });
+  return porCorreo;
 }
 
 /** El cierre de mes: este mes contra el anterior. */

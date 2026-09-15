@@ -238,11 +238,17 @@ input.li:focus{border-color:var(--acc-d);}
 .parow:last-child{border-bottom:none;padding-bottom:0;}
 .panm{font:600 12.5px/1.3 'DM Sans';color:var(--t-ink);}
 
-/* Equipo hoy */
-.eq-row{display:flex;align-items:center;gap:10px;}
-.eq-dot{width:9px;height:9px;border-radius:50%;flex:none;}
-.eq-name{font:600 12.5px/1.3 'DM Sans';color:var(--t-ink);flex:1;}
-.eq-time{font:500 11.5px/1 'DM Sans';color:var(--t-mut);white-space:nowrap;}
+/* Equipo hoy · prefijo propio: '.eq-row' ya existe más abajo para la
+   tabla de Mi equipo, que es un grid de seis columnas. Compartir el
+   nombre hacía que esta tarjeta heredara ese grid y se descuadrara. */
+.eqh-row{display:flex;align-items:baseline;gap:10px;}
+.eqh-dot{width:9px;height:9px;border-radius:50%;flex:none;position:relative;top:-1px;}
+.eqh-name{font:600 12.5px/1.35 'DM Sans';color:var(--t-ink);flex:none;}
+.eqh-time{font:500 11.5px/1.45 'DM Sans';color:var(--t-mut);flex:1;text-align:right;}
+/* Lo que no se puede afirmar, dicho al pie y en voz baja */
+.pa-pie{font:500 10.5px/1.5 'DM Sans';color:var(--t-mut2);border-top:1px solid var(--s-line2);padding-top:8px;margin-top:2px;}
+.pa-ir{font-weight:600;color:var(--acc-d);cursor:pointer;}
+.pa-ir:hover{text-decoration:underline;}
 
 /* Inventario riesgo */
 .invr-row{display:flex;flex-direction:column;gap:5px;padding-bottom:9px;border-bottom:1px solid var(--s-line2);}
@@ -3075,6 +3081,7 @@ function aplicarReales(d) {
   }
   aplicarDinero(d);
   aplicarPauta(d);
+  if (d.recaudo7) pintarRecaudo(d.recaudo7);
   cont.innerHTML = tarjetas.map(k=>
     '<div class="kc '+k.cl+'"><div class="klbl">'+k.lb+'</div>'+
     '<div class="kval">'+k.v+'</div><div class="ksub">'+k.sub+'</div></div>').join('');
@@ -3220,9 +3227,6 @@ async function cargarPedidosReales() {
   pintarFiltrosPedidos(r.filas);
   pintarPedidosReales(r.filas, r.total);
   pintarEstadosReales(r.filas);
-  // barchart NO se desella: sigue mostrando el guion porque nadie lo
-  // llena con datos reales todavía. Quitarle el sello sería peor que
-  // dejarlo: pasaría por cierto sin serlo.
   desellar(['pedlist', 'stlist']);
   return true;
 }
@@ -3979,10 +3983,6 @@ async function cargarHistorialFuentes() {
  * Al conectar una sección se saca de esta lista. Lo que queda:
  */
 const SIN_FUENTE = [
-  // Hoy
-  'palist',        // qué escalar y qué frenar
-  'eqhoy',         // el equipo de hoy
-  'barchart',      // la jornada · necesita movimientos con hora
   // Operación
   'caslist',       // CAS en operación
   'commlist',      // comisiones
@@ -4904,7 +4904,9 @@ async function cargarProductos() {
   pintarInventario();
   pintarProductos();
   pintarInvRiesgo();
-  desellar(['invkpi', 'invlist', 'invriesgo', 'prodkpi', 'prodlist', 'prodinv']);
+  pintarEscalarFrenar();
+  desellar(['invkpi', 'invlist', 'invriesgo', 'prodkpi', 'prodlist', 'prodinv',
+            'palist']);
   return true;
 }
 
@@ -5701,6 +5703,199 @@ function nombreTienda() {
   return st.name || st.nm || ST;
 }
 
+// ─── LOS TRES BLOQUES DE HOY ──────────────────────────────────
+/**
+ * Escalar o frenar, en la pantalla de Hoy.
+ *
+ * Es el mismo veredicto de Productos, resumido: aquí no cabe el detalle
+ * y tampoco hace falta. Lo que se necesita de un vistazo es qué producto
+ * aguanta más pauta y cuál la está quemando.
+ *
+ * Solo entran los que tienen veredicto de verdad. Un producto sin costo
+ * no se muestra como "revisar" —no se sabe—, se cuenta aparte al pie.
+ */
+function pintarEscalarFrenar() {
+  const cont = document.getElementById('palist');
+  if (!cont) return;
+
+  const decididos = (PRODS || []).filter(function (p) {
+    return p.margen !== null && p.entregados > 0;
+  });
+  if (!decididos.length) {
+    const venden = (PRODS || []).filter(function (p) { return p.entregados > 0; }).length;
+    cont.innerHTML = '<div class="eq-vacio">' +
+      (venden
+        ? 'Para decir si escalar o frenar hace falta el costo de cada producto. ' +
+          (venden === 1
+            ? 'El único que vende no lo tiene todavía · '
+            : 'Ninguno de los ' + venden + ' que venden lo tiene todavía · ') +
+          '<span class="pa-ir" onclick="event.stopPropagation();go(\'inventario\',null)">' +
+          'ir a Inventario →</span>'
+        : 'Aparece cuando tengas pedidos entregados y sus costos cargados.') +
+      '</div>';
+    return;
+  }
+
+  // Lo que más plata mueve arriba: un producto que deja mucho pero vende
+  // tres unidades no es la decisión del día.
+  const orden = decididos.slice().sort(function (a, b) {
+    return b.margen * b.entregados - a.margen * a.entregados;
+  }).slice(0, 5);
+
+  const sinCosto = (PRODS || []).filter(function (p) {
+    return p.entregados > 0 && p.margen === null;
+  }).length;
+
+  cont.innerHTML = orden.map(function (p) {
+    const v = veredicto(p);
+    return '<div class="parow"><span class="panm">' + esc(p.nombre) + '</span>' +
+      '<span class="bd" style="background:' + v[2] + ';color:' + v[1] + ';">' +
+      esc(v[0]) + '</span></div>';
+  }).join('') +
+  (sinCosto
+    ? '<div class="pa-pie">' + sinCosto +
+      (sinCosto === 1 ? ' producto más vende y no tiene costo: de ese no se puede decir.'
+                      : ' productos más venden y no tienen costo: de esos no se puede decir.') +
+      '</div>'
+    : '');
+}
+
+/**
+ * El equipo hoy.
+ *
+ * Aquí no hay reloj de entrada, y decir "6h 12m de jornada" sería
+ * inventarlo. Lo que sí existe es la bitácora: a qué hora tocó Nova cada
+ * persona por primera vez hoy, a qué hora por última, y cuántas cosas
+ * hizo. Eso es lo que se muestra, y con esas palabras.
+ *
+ * Alguien puede llevar dos horas llamando sin tocar la app. Por eso el
+ * punto verde dice "activa hace poco", no "trabajando".
+ */
+function pintarEquipoHoy() {
+  const cont = document.getElementById('eqhoy');
+  if (!cont) return;
+
+  const gente = (MI_EQUIPO || []).filter(function (p) {
+    return p.estado !== 'inactivo';
+  });
+  if (!gente.length) {
+    cont.innerHTML = '<div class="eq-vacio">Todavía no hay nadie más en tu equipo. ' +
+      'Se agregan en Mi equipo.</div>';
+    return;
+  }
+
+  // "Hace cuánto" viene calculado del servidor: la hora guardada es la de
+  // la tienda y quien mira puede estar en otro país. Restarla contra el
+  // reloj del navegador daba una hora de diferencia en Nutrea GT.
+
+  // Primero quien estuvo hoy, y de esos quien tocó Nova más reciente
+  const orden = gente.slice().sort(function (a, b) {
+    const ha = a.hoy ? 1 : 0, hb = b.hoy ? 1 : 0;
+    if (ha !== hb) return hb - ha;
+    if (!a.hoy) return 0;
+    return b.hoy.ultimo.localeCompare(a.hoy.ultimo);
+  });
+
+  cont.innerHTML = orden.map(function (p) {
+    const h = p.hoy;
+    if (!h) {
+      return '<div class="eqh-row"><span class="eqh-dot" style="background:var(--t-mut4);"></span>' +
+        '<span class="eqh-name">' + esc(p.nombre || p.correo) + '</span>' +
+        '<span class="eqh-time">Sin entrar hoy</span></div>';
+    }
+    const min = (h.haceMin === undefined || h.haceMin === null) ? null : h.haceMin;
+    const color = min === null ? 'var(--t-mut4)'
+      : min <= 30 ? '#6d7d4a' : min <= 120 ? 'var(--acc-d)' : 'var(--t-mut4)';
+    const cuando = min === null ? 'última vez a las ' + esc(h.ultimo)
+      : min < 5 ? 'ahora mismo'
+      : min < 60 ? 'hace ' + min + ' min'
+      : 'hace ' + Math.floor(min / 60) + ' h';
+    return '<div class="eqh-row"><span class="eqh-dot" style="background:' + color + ';"></span>' +
+      '<span class="eqh-name">' + esc(p.nombre || p.correo) + '</span>' +
+      '<span class="eqh-time">Desde las ' + esc(h.primero) + ' · ' + h.acciones +
+      (h.acciones === 1 ? ' acción' : ' acciones') + ' · ' + cuando + '</span></div>';
+  }).join('') +
+  '<div class="pa-pie">Es actividad dentro de Nova, no horas trabajadas: ' +
+    'una llamada de media hora no deja rastro aquí.</div>';
+}
+
+/**
+ * Recaudo por día.
+ *
+ * Los siete días que terminan hoy, con lo que entró cada uno. Entró es
+ * entregado: un pedido despachado todavía no es plata.
+ *
+ * Se cuenta el día que la transportadora lo entregó, no el día que la
+ * clienta lo pidió. Si no hay fecha de entrega, ese pedido no se reparte
+ * en ningún día — se dice al pie cuánto quedó fuera y por qué.
+ */
+function pintarRecaudo(r) {
+  const cont = document.getElementById('barchart');
+  const foot = document.getElementById('barfoot');
+  const lbl = document.getElementById('dlbl');
+  const val = document.getElementById('dval');
+  if (!cont || !r || !r.serie) return;
+
+  const S = SYM() + ' ';
+  const serie = r.serie;
+  const mx = Math.max.apply(null, serie.map(function (d) { return d.total; }));
+  const DIA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  const letra = function (iso) {
+    return DIA[new Date(iso + 'T12:00:00Z').getUTCDay()];
+  };
+
+  const hoy = serie[serie.length - 1];
+  if (lbl) lbl.textContent = 'HOY';
+  if (val) val.textContent = S + NUM(hoy.total);
+
+  RECAUDO_SERIE = serie;
+  cont.innerHTML = serie.map(function (d, i) {
+    const pct = mx ? Math.round(d.total / mx * 100) : 0;
+    const esHoy = i === serie.length - 1;
+    return '<div class="bcol" onclick="verDiaRecaudo(' + i + ')">' +
+      '<div class="bfill" style="height:' + Math.max(pct, d.total ? 4 : 0) + '%;' +
+        'background:' + (esHoy ? 'var(--acc-d)' : 'var(--s-dark3)') + ';" ' +
+        'title="' + esc(S + NUM(d.total)) + '"></div>' +
+      '<span class="blbl' + (esHoy ? ' hoy' : '') + '">' +
+      esc(letra(d.fecha).charAt(0).toUpperCase()) + '</span></div>';
+  }).join('');
+
+  if (foot) {
+    if (!mx) {
+      foot.textContent = 'Ninguna entrega con fecha en los últimos 7 días.' +
+        (r.pedidosSinFecha
+          ? ' Hay ' + r.pedidosSinFecha + ' entregados sin fecha de entrega: ' +
+            'esa plata existe, pero no se sabe de qué día es.'
+          : '');
+    } else {
+      const mejor = serie.reduce(function (a, b) { return b.total > a.total ? b : a; });
+      const total = serie.reduce(function (a, b) { return a + b.total; }, 0);
+      foot.textContent = 'Mejor día: ' + letra(mejor.fecha) + ' con ' + S + NUM(mejor.total) +
+        '. La semana suma ' + S + NUM(total) + '.' +
+        (r.pedidosSinFecha
+          ? ' Quedan fuera ' + S + NUM(r.sinFecha) + ' de ' + r.pedidosSinFecha +
+            ' entregados sin fecha de entrega.'
+          : '');
+    }
+  }
+  desellar(['barchart']);
+}
+
+let RECAUDO_SERIE = [];
+
+function verDiaRecaudo(i) {
+  const d = RECAUDO_SERIE[i];
+  if (!d) return;
+  const lbl = document.getElementById('dlbl');
+  const val = document.getElementById('dval');
+  const DIA = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+  if (lbl) {
+    lbl.textContent = i === RECAUDO_SERIE.length - 1
+      ? 'HOY' : DIA[new Date(d.fecha + 'T12:00:00Z').getUTCDay()] + ' ' + d.fecha.slice(8);
+  }
+  if (val) val.textContent = SYM() + ' ' + NUM(d.total);
+}
+
 // ─── VER COMO ─────────────────────────────────────────────────
 /**
  * Mirar Nova con menos permisos de los que tienes.
@@ -6352,7 +6547,8 @@ async function cargarEquipo() {
   PUEDE_EDITAR_EQUIPO = !!r.puedeEditar;
   pintarEquipo();
   pintarGestoras();
-  desellar(['eqlista', 'tlist']);
+  pintarEquipoHoy();
+  desellar(['eqlista', 'tlist', 'eqhoy']);
   return true;
 }
 
