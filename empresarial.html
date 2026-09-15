@@ -813,6 +813,15 @@ input.li:focus{border-color:var(--acc-d);}
 .hist-faltas{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;}
 .hist-falta{font:600 10.5px/1.3 'DM Sans';color:#8a6a13;background:#f6ecd0;border-radius:8px;padding:4px 8px;}
 .hist-pie{font:500 10.5px/1.55 'DM Sans';color:var(--t-mut2);margin-top:10px;}
+/* Cómo se leen las fechas */
+.ffgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+@media(max-width:620px){.ffgrid{grid-template-columns:1fr;}}
+.ffop{background:var(--s-bg);border:1.5px solid var(--s-line2);border-radius:12px;padding:13px 15px;cursor:pointer;transition:border-color .12s;}
+.ffop:hover{border-color:var(--s-line4);}
+.ffop.on{border-color:var(--acc-d);background:var(--s-dark);}
+.ffk{font:600 13px/1.2 'DM Sans';color:var(--t-ink);}
+.ffe{font:600 12px/1.5 'DM Sans';color:var(--acc-d);margin-top:4px;font-variant-numeric:tabular-nums;}
+.ffs{font:500 11px/1.45 'DM Sans';color:var(--t-mut2);margin-top:2px;}
 @media(max-width:700px){.conc-f{grid-template-columns:1fr;gap:5px;}}
 .inf-gris{color:var(--t-mut3);font-weight:500;}
 .inf-falta{font:500 12.5px/1.6 'DM Sans';color:#8a6a13;background:#f6ecd0;
@@ -1497,6 +1506,19 @@ input.li:focus{border-color:var(--acc-d);}
             usan —WhatsApp, Telegram, el que sea— y queda a un clic desde
             cualquier pantalla.</p>
           <div style="display:flex;flex-direction:column;gap:11px;" id="cfg-canal"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><span class="ct">Cómo se leen las fechas</span>
+            <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">
+              Al importar archivos</span></div>
+          <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);margin:0;max-width:74ch;">
+            <b>05-07-2026</b> son dos fechas distintas: 5 de julio si el día va
+            primero, 7 de mayo si va primero el mes. Ningún archivo dice cuál es,
+            y adivinar mal no da error — mueve medio mes de pedidos a otro mes.
+            En pantalla Nova siempre escribe el mes con nombre, así que lo que
+            veas nunca es ambiguo.</p>
+          <div id="cfg-fecha"></div>
         </div>
 
         <div class="g2">
@@ -3241,9 +3263,48 @@ function fichaEstado(p) {
   return ['#5b5b55', '#e6e4de', crudo || 'Sin estado'];
 }
 
+/**
+ * Leer una fecha guardada sin que el navegador adivine.
+ *
+ * `new Date("12-07-2026")` devuelve el 7 de diciembre, porque JavaScript
+ * asume el formato de Estados Unidos. Ese pedido era del 12 de julio, y
+ * en pantalla salía "07-dic": día y mes cambiados, sin error, sin aviso.
+ *
+ * Desde que el importador guarda todo en AAAA-MM-DD esto ya no debería
+ * pasar, pero las filas cargadas antes siguen como vinieron. Así que se
+ * lee explícito: ISO primero, y si no, día primero, que es la convención
+ * de la región y la que usa el importador.
+ */
+function fechaDe(v) {
+  if (v instanceof Date) return isNaN(v) ? null : v;
+  const s = String(v || '').trim();
+  if (!s) return null;
+
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+  if (m) {
+    return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0));
+  }
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (m) {
+    let dia = +m[1], mes = +m[2];
+    // Un "mes" mayor que 12 solo puede ser un día: venía al revés
+    if (mes > 12 && dia <= 12) { const x = dia; dia = mes; mes = x; }
+    return new Date(+m[3], mes - 1, dia, +(m[4] || 0), +(m[5] || 0));
+  }
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
+/**
+ * La fecha en pantalla lleva el mes con nombre, siempre.
+ *
+ * "07/12" se lee distinto según quién lo mire, y en una pantalla que
+ * mezcla pedidos de Ecuador, Guatemala y Colombia eso es una discusión
+ * garantizada. "07 dic" no admite dos lecturas.
+ */
 function fechaCorta(v) {
-  const d = new Date(v);
-  if (isNaN(d)) return String(v || '');
+  const d = fechaDe(v);
+  if (!d) return String(v || '');
   return d.toLocaleDateString(LOC(), { day: '2-digit', month: 'short' });
 }
 
@@ -3504,8 +3565,8 @@ async function cargarNovedadesReales() {
 function pintarNovedadesReales(filas) {
   const hoy = Date.now();
   const dias = function (v) {
-    const d = new Date(v);
-    return isNaN(d) ? null : Math.floor((hoy - d.getTime()) / 86400000);
+    const d = fechaDe(v);
+    return d ? Math.floor((hoy - d.getTime()) / 86400000) : null;
   };
 
   /**
@@ -4844,6 +4905,7 @@ function pintarConfig() {
   const cuenta = document.getElementById('cfg-cuenta');
   const tiendas = document.getElementById('cfg-tiendas');
   pintarConfigCanal();
+  pintarFormatoFecha();
 
   if (cuenta) {
     cuenta.innerHTML = SESION
@@ -4922,8 +4984,8 @@ function pintarPantallasGestora() {
   // Lo que lleva más tiempo quieto es lo que hay que tocar primero
   const quietos = pendientes.map(function (p) {
     const ref = p.ultimo_movimiento || p.fecha;
-    const d = new Date(ref);
-    return { p: p, dias: isNaN(d) ? 0 : Math.floor((Date.now() - d.getTime()) / 86400000) };
+    const d = fechaDe(ref);
+    return { p: p, dias: d ? Math.floor((Date.now() - d.getTime()) / 86400000) : 0 };
   }).sort(function (a, b) { return b.dias - a.dias; });
 
   const kpis = [
@@ -4974,8 +5036,8 @@ function pintarPantallasGestora() {
       ? G_VISTA.map(function (p, i) {
           const e = fichaEstado(p);
           const ref = p.ultimo_movimiento || p.fecha;
-          const dd = new Date(ref);
-          const dias = isNaN(dd) ? null : Math.floor((Date.now() - dd.getTime()) / 86400000);
+          const dd = fechaDe(ref);
+          const dias = dd ? Math.floor((Date.now() - dd.getTime()) / 86400000) : null;
           const vivo = abierto(p);
           return '<div class="orow" id="gprow' + i + '" onclick="togGPed(' + i + ')" ' +
             'style="cursor:pointer;">' +
@@ -5635,9 +5697,54 @@ async function guardarCanal(nombre, url) {
     pintarCanal();
     pintarConfigCanal();
     pintarNavCanal();
+    pintarFormatoFecha();
     showToast(url ? 'Canal guardado' : 'Canal quitado');
     return true;
   } catch (e) { showToast('Sin conexión: no se guardó'); return false; }
+}
+
+/**
+ * Cómo se leen las fechas de los archivos.
+ *
+ * Es el único ajuste del que depende que un pedido caiga en su mes. Va
+ * en Configuración y no escondido en el importador porque se decide una
+ * vez, no en cada carga.
+ */
+function pintarFormatoFecha() {
+  const cont = document.getElementById('cfg-fecha');
+  if (!cont) return;
+  if (ROL !== 'dueno') {
+    cont.innerHTML = '<div class="eq-vacio">Solo la dueña cambia esto.</div>';
+    return;
+  }
+  const actual = CANAL.formato_fecha === 'mes_primero' ? 'mes_primero' : 'dia_primero';
+  const ops = [
+    ['dia_primero', 'Día primero', '05-07-2026 es el 5 de julio',
+     'Lo normal en América Latina'],
+    ['mes_primero', 'Mes primero', '05-07-2026 es el 7 de mayo',
+     'Si exportas desde una cuenta en inglés'],
+  ];
+  cont.innerHTML = '<div class="ffgrid">' + ops.map(function (o) {
+    return '<div class="ffop' + (actual === o[0] ? ' on' : '') + '" ' +
+      'onclick="guardarFormatoFecha(\'' + o[0] + '\')">' +
+      '<div class="ffk">' + o[1] + '</div>' +
+      '<div class="ffe">' + o[2] + '</div>' +
+      '<div class="ffs">' + o[3] + '</div></div>';
+  }).join('') + '</div>' +
+  '<div class="cart-nota">Cambiarlo no corrige lo ya importado: vuelve a subir ' +
+    'ese archivo y las fechas se reescriben con el formato nuevo.</div>';
+}
+
+async function guardarFormatoFecha(valor) {
+  try {
+    const r = await api('parametros', { tienda: ST, cambios: { formato_fecha: valor } });
+    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
+    CANAL = r.ajustes || CANAL;
+    pintarFormatoFecha();
+    showToast(valor === 'dia_primero'
+      ? 'Las fechas se leerán con el día primero'
+      : 'Las fechas se leerán con el mes primero');
+  } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
 
 /** La tarjeta de Configuración: el mismo dato, editable con calma. */
@@ -5818,9 +5925,10 @@ function botResponde(q) {
         : 'No hay novedades cargadas para este mes.';
     }
     const vieja = abiertas.slice().sort(function (a, b2) {
-      return new Date(a.fecha) - new Date(b2.fecha);
+      return (fechaDe(a.fecha) || 0) - (fechaDe(b2.fecha) || 0);
     })[0];
-    const dias = Math.floor((Date.now() - new Date(vieja.fecha).getTime()) / 86400000);
+    const fv = fechaDe(vieja.fecha);
+    const dias = fv ? Math.floor((Date.now() - fv.getTime()) / 86400000) : NaN;
     return 'Hay ' + b(abiertas.length + (abiertas.length === 1 ? ' novedad abierta' : ' novedades abiertas')) +
       '. La más antigua es ' + esc(vieja.pedido_id || vieja.id) +
       (isNaN(dias) ? '' : ', de hace ' + dias + (dias === 1 ? ' día' : ' días')) +
@@ -5893,8 +6001,8 @@ function botResponde(q) {
     });
     if (!mios.length) return 'No tienes nada pendiente ahora mismo.';
     const quieto = mios.map(function (p) {
-      const d = new Date(p.ultimo_movimiento || p.fecha);
-      return { p: p, dias: isNaN(d) ? 0 : Math.floor((Date.now() - d.getTime()) / 86400000) };
+      const d = fechaDe(p.ultimo_movimiento || p.fecha);
+      return { p: p, dias: d ? Math.floor((Date.now() - d.getTime()) / 86400000) : 0 };
     }).sort(function (a, b2) { return b2.dias - a.dias; })[0];
     const p = quieto.p;
     return 'Empieza por ' + b(esc(p.cliente || 'ese pedido')) + ' · ' +
@@ -6439,9 +6547,8 @@ function cargarOficina() {
 }
 
 function diasDesde(v) {
-  const d = new Date(v);
-  if (isNaN(d)) return null;
-  return Math.floor((Date.now() - d.getTime()) / 86400000);
+  const d = fechaDe(v);
+  return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : null;
 }
 
 function pintarOficina() {
@@ -6849,6 +6956,7 @@ async function cargarAlarmas() {
   pintarCanal();
   pintarConfigCanal();
   pintarNavCanal();
+  pintarFormatoFecha();
   return true;
 }
 

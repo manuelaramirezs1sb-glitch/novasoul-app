@@ -44,6 +44,13 @@ function importar(fuenteId, tienda, cliente) {
     throw new Error('La tienda "' + tienda + '" no está en la hoja Tiendas.');
   }
 
+  // Todo el import corre con el formato de fecha que eligió la dueña
+  return conFormatoFecha(ss, tienda, function () {
+    return importarConFormato(ss, fuenteId, tienda);
+  });
+}
+
+function importarConFormato(ss, fuenteId, tienda) {
   const r = leerCrudo(ss, fuenteId, tienda);
   if (!r.filas.length) {
     const msg = r.tab + ' está vacía. Pega el export ahí primero.';
@@ -189,10 +196,43 @@ function novedadesDeLaCarga(antes, ahora) {
 }
 
 /** Convierte una fila normalizada en una fila lista para la entidad. */
+/**
+ * Las columnas que son fechas, en cualquier hoja.
+ *
+ * Todas se guardan en AAAA-MM-DD. Lo que llega del archivo puede venir
+ * como 12-07-2026 o 07/12/2026 según la plataforma y el país, y esas dos
+ * cosas se ven iguales: una es 12 de julio y la otra 7 de diciembre.
+ * Mientras se guarde así, cada pantalla tiene que volver a adivinar, y
+ * el navegador adivina a la americana —mes primero— sin avisar.
+ */
+const CAMPOS_FECHA = ['fecha', 'fecha_entrega', 'fecha_promesa', 'fecha_ingreso',
+                      'fecha_solucion', 'fecha_fin', 'ultimo_movimiento',
+                      'actualizado', 'creado_en', 'ultimo_conteo'];
+
 function prepararFila(f, tipo, fuenteId, tienda, pais, ss) {
   const o = Object.assign({}, f);
   o.fuente = fuenteId;
   o.tienda = tienda;
+
+  /**
+   * La fecha se normaliza aquí, una vez, y ya nadie más tiene que dudar.
+   *
+   * Antes se guardaba tal como venía y cada lector la interpretaba por su
+   * cuenta: el servidor con aISO —que sabe que en la región el día va
+   * primero— y la pantalla con new Date(), que asume el formato de
+   * Estados Unidos. Por eso un pedido del 12 de julio salía en pantalla
+   * como 7 de diciembre.
+   *
+   * La hora se conserva cuando viene: el gráfico de la jornada y el
+   * seguimiento de novedades la necesitan.
+   */
+  CAMPOS_FECHA.forEach(function (k) {
+    if (o[k] === undefined || o[k] === '' || o[k] === null) return;
+    const iso = aISO(o[k], 'UTC');
+    if (!iso) return;
+    const hora = String(o[k]).match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
+    o[k] = hora ? iso + ' ' + hora[1] : iso;
+  });
 
   // El id es fuente + id externo: estable entre importaciones, y deja
   // ver de dónde salió cada fila sin abrir el export.

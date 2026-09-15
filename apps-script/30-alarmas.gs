@@ -73,6 +73,22 @@ const ALARMAS = [
 const AJUSTES_DEFAULT = {
   canal_nombre: '',   // cómo lo llama el equipo: "Grupo de pedidos"
   canal_url:    '',   // a dónde lleva
+  /**
+   * Cómo se leen las fechas de los archivos que subes.
+   *
+   * 05-07-2026 son dos fechas distintas: 5 de julio si el día va primero,
+   * 7 de mayo si va primero el mes. Ningún archivo dice cuál es, y
+   * adivinar mal no da error — mueve medio mes de pedidos a otro mes y
+   * nadie se entera hasta que un cierre no cuadra.
+   *
+   * Por defecto el día primero, que es como escribe toda América Latina.
+   * Quien exporte desde una cuenta configurada en inglés lo cambia aquí
+   * una vez y deja de pelear con esto.
+   *
+   * Solo afecta a lo ambiguo: un 25-12-2026 no tiene vuelta de hoja, y
+   * lo que ya viene en AAAA-MM-DD tampoco.
+   */
+  formato_fecha: 'dia_primero',   // 'dia_primero' | 'mes_primero'
 };
 
 /** Esquemas que sí se pueden abrir desde un enlace de la app. */

@@ -432,6 +432,28 @@ function aNumero(v) {
 }
 
 /** Fecha a ISO AAAA-MM-DD. Causa número uno de errores al leer hojas. */
+/**
+ * Cómo leer una fecha ambigua, mientras dura la importación.
+ *
+ * aISO se llama desde una docena de sitios y pasarle el ajuste por
+ * parámetro obligaría a tocarlos todos —incluidos los que ni siquiera
+ * tienen la hoja a mano—. Así que el valor se pone una vez, antes de
+ * importar, y se quita al terminar.
+ *
+ * Solo cambia lo que de verdad es ambiguo: 25-12-2026 es 25 de diciembre
+ * en cualquier convención, y AAAA-MM-DD no admite discusión.
+ */
+let FORMATO_FECHA = 'dia_primero';
+
+function conFormatoFecha(ss, tienda, fn) {
+  const previo = FORMATO_FECHA;
+  try {
+    const a = ajustes(ss, tienda);
+    FORMATO_FECHA = a.formato_fecha === 'mes_primero' ? 'mes_primero' : 'dia_primero';
+    return fn();
+  } finally { FORMATO_FECHA = previo; }
+}
+
 function aISO(v, zonaHoraria) {
   if (!v) return '';
   if (v instanceof Date) {
@@ -452,9 +474,12 @@ function aISO(v, zonaHoraria) {
    */
   m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
   if (m) {
-    let dia = parseInt(m[1], 10), mesN = parseInt(m[2], 10);
-    // Un "mes" mayor que 12 solo puede ser un día: el archivo venía al revés
-    if (mesN > 12 && dia <= 12) { const t = dia; dia = mesN; mesN = t; }
+    const a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+    let dia, mesN;
+    if (a > 12 && b <= 12)      { dia = a; mesN = b; }   // solo puede ser día-mes
+    else if (b > 12 && a <= 12) { dia = b; mesN = a; }   // solo puede ser mes-día
+    else if (FORMATO_FECHA === 'mes_primero') { mesN = a; dia = b; }
+    else                        { dia = a; mesN = b; }   // la convención de la región
     return m[3] + '-' + ('0' + mesN).slice(-2) + '-' + ('0' + dia).slice(-2);
   }
 

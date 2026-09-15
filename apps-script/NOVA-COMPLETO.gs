@@ -1607,6 +1607,28 @@ function aNumero(v) {
 }
 
 /** Fecha a ISO AAAA-MM-DD. Causa número uno de errores al leer hojas. */
+/**
+ * Cómo leer una fecha ambigua, mientras dura la importación.
+ *
+ * aISO se llama desde una docena de sitios y pasarle el ajuste por
+ * parámetro obligaría a tocarlos todos —incluidos los que ni siquiera
+ * tienen la hoja a mano—. Así que el valor se pone una vez, antes de
+ * importar, y se quita al terminar.
+ *
+ * Solo cambia lo que de verdad es ambiguo: 25-12-2026 es 25 de diciembre
+ * en cualquier convención, y AAAA-MM-DD no admite discusión.
+ */
+let FORMATO_FECHA = 'dia_primero';
+
+function conFormatoFecha(ss, tienda, fn) {
+  const previo = FORMATO_FECHA;
+  try {
+    const a = ajustes(ss, tienda);
+    FORMATO_FECHA = a.formato_fecha === 'mes_primero' ? 'mes_primero' : 'dia_primero';
+    return fn();
+  } finally { FORMATO_FECHA = previo; }
+}
+
 function aISO(v, zonaHoraria) {
   if (!v) return '';
   if (v instanceof Date) {
@@ -1627,9 +1649,12 @@ function aISO(v, zonaHoraria) {
    */
   m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
   if (m) {
-    let dia = parseInt(m[1], 10), mesN = parseInt(m[2], 10);
-    // Un "mes" mayor que 12 solo puede ser un día: el archivo venía al revés
-    if (mesN > 12 && dia <= 12) { const t = dia; dia = mesN; mesN = t; }
+    const a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+    let dia, mesN;
+    if (a > 12 && b <= 12)      { dia = a; mesN = b; }   // solo puede ser día-mes
+    else if (b > 12 && a <= 12) { dia = b; mesN = a; }   // solo puede ser mes-día
+    else if (FORMATO_FECHA === 'mes_primero') { mesN = a; dia = b; }
+    else                        { dia = a; mesN = b; }   // la convención de la región
     return m[3] + '-' + ('0' + mesN).slice(-2) + '-' + ('0' + dia).slice(-2);
   }
 
@@ -2360,6 +2385,22 @@ const ALARMAS = [
 const AJUSTES_DEFAULT = {
   canal_nombre: '',   // cómo lo llama el equipo: "Grupo de pedidos"
   canal_url:    '',   // a dónde lleva
+  /**
+   * Cómo se leen las fechas de los archivos que subes.
+   *
+   * 05-07-2026 son dos fechas distintas: 5 de julio si el día va primero,
+   * 7 de mayo si va primero el mes. Ningún archivo dice cuál es, y
+   * adivinar mal no da error — mueve medio mes de pedidos a otro mes y
+   * nadie se entera hasta que un cierre no cuadra.
+   *
+   * Por defecto el día primero, que es como escribe toda América Latina.
+   * Quien exporte desde una cuenta configurada en inglés lo cambia aquí
+   * una vez y deja de pelear con esto.
+   *
+   * Solo afecta a lo ambiguo: un 25-12-2026 no tiene vuelta de hoja, y
+   * lo que ya viene en AAAA-MM-DD tampoco.
+   */
+  formato_fecha: 'dia_primero',   // 'dia_primero' | 'mes_primero'
 };
 
 /** Esquemas que sí se pueden abrir desde un enlace de la app. */
@@ -6519,6 +6560,13 @@ function importar(fuenteId, tienda, cliente) {
     throw new Error('La tienda "' + tienda + '" no está en la hoja Tiendas.');
   }
 
+  // Todo el import corre con el formato de fecha que eligió la dueña
+  return conFormatoFecha(ss, tienda, function () {
+    return importarConFormato(ss, fuenteId, tienda);
+  });
+}
+
+function importarConFormato(ss, fuenteId, tienda) {
   const r = leerCrudo(ss, fuenteId, tienda);
   if (!r.filas.length) {
     const msg = r.tab + ' está vacía. Pega el export ahí primero.';
@@ -6664,10 +6712,43 @@ function novedadesDeLaCarga(antes, ahora) {
 }
 
 /** Convierte una fila normalizada en una fila lista para la entidad. */
+/**
+ * Las columnas que son fechas, en cualquier hoja.
+ *
+ * Todas se guardan en AAAA-MM-DD. Lo que llega del archivo puede venir
+ * como 12-07-2026 o 07/12/2026 según la plataforma y el país, y esas dos
+ * cosas se ven iguales: una es 12 de julio y la otra 7 de diciembre.
+ * Mientras se guarde así, cada pantalla tiene que volver a adivinar, y
+ * el navegador adivina a la americana —mes primero— sin avisar.
+ */
+const CAMPOS_FECHA = ['fecha', 'fecha_entrega', 'fecha_promesa', 'fecha_ingreso',
+                      'fecha_solucion', 'fecha_fin', 'ultimo_movimiento',
+                      'actualizado', 'creado_en', 'ultimo_conteo'];
+
 function prepararFila(f, tipo, fuenteId, tienda, pais, ss) {
   const o = Object.assign({}, f);
   o.fuente = fuenteId;
   o.tienda = tienda;
+
+  /**
+   * La fecha se normaliza aquí, una vez, y ya nadie más tiene que dudar.
+   *
+   * Antes se guardaba tal como venía y cada lector la interpretaba por su
+   * cuenta: el servidor con aISO —que sabe que en la región el día va
+   * primero— y la pantalla con new Date(), que asume el formato de
+   * Estados Unidos. Por eso un pedido del 12 de julio salía en pantalla
+   * como 7 de diciembre.
+   *
+   * La hora se conserva cuando viene: el gráfico de la jornada y el
+   * seguimiento de novedades la necesitan.
+   */
+  CAMPOS_FECHA.forEach(function (k) {
+    if (o[k] === undefined || o[k] === '' || o[k] === null) return;
+    const iso = aISO(o[k], 'UTC');
+    if (!iso) return;
+    const hora = String(o[k]).match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
+    o[k] = hora ? iso + ' ' + hora[1] : iso;
+  });
 
   // El id es fuente + id externo: estable entre importaciones, y deja
   // ver de dónde salió cada fila sin abrir el export.
