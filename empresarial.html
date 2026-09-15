@@ -837,6 +837,11 @@ input.li:focus{border-color:var(--acc-d);}
 .cas-chip:hover{border-color:var(--acc-d);color:var(--acc-d);}
 .cas-pie{font:500 10.5px/1.5 'DM Sans';color:var(--t-mut2);margin-top:8px;}
 .cas-viejos{font:500 11.5px/1.6 'DM Sans';color:#7a5c10;background:#f6ecd0;border-radius:10px;padding:10px 13px;margin-top:10px;}
+/* Escalera de precios */
+.precios{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;}
+@media(max-width:560px){.precios{grid-template-columns:1fr;}}
+.iprec{font:500 11px/1.5 'DM Sans';color:var(--acc-d);margin-top:3px;font-variant-numeric:tabular-nums;}
+.iprec a{color:var(--acc-d);text-decoration:underline;}
 .cas-ver{font-weight:600;cursor:pointer;text-decoration:underline;}
 /* Cómo se leen las fechas */
 .ffgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
@@ -5315,6 +5320,13 @@ function filaInventario(p, i) {
       ? '<span class="bd" style="color:#3f5330;background:#d3e0c2;">OK</span>'
       : '<span class="bd" style="color:#8a6a13;background:#f6ecd0;">Falta ficha</span>';
 
+  const S = SYM() + ' ';
+  const precios = f
+    ? [[1, f.precio], [2, f.precio2], [3, f.precio3]]
+        .filter(function (x) { return x[1] > 0; })
+        .map(function (x) { return x[0] + 'x ' + S + NUM(x[1]); }).join(' · ')
+    : '';
+
   const sub = [
     p.sku ? esc(p.sku) : null,
     textoCobertura(p),
@@ -5325,13 +5337,52 @@ function filaInventario(p, i) {
   return '<div class="irow' + (abierta ? ' open' : '') + '" id="irow' + i + '">' +
     '<div class="irow-top" onclick="abrirFicha(' + i + ')" style="cursor:pointer;">' +
       '<div><div class="inm">' + esc(p.nombre) + '</div>' +
-        '<div class="isub">' + sub + '</div></div>' +
+        '<div class="isub">' + sub + '</div>' +
+        (precios || (f && f.landing)
+          ? '<div class="iprec">' + esc(precios) +
+            (f && f.landing
+              ? (precios ? ' · ' : '') +
+                '<a href="' + esc(f.landing) + '" target="_blank" rel="noopener" ' +
+                'onclick="event.stopPropagation()">landing →</a>'
+              : '') + '</div>'
+          : '') + '</div>' +
       '<div style="display:flex;align-items:center;gap:8px;">' + marca +
         '<span class="itog">' + (abierta ? 'Cerrar ▴' : (f ? 'Editar ▾' : 'Crear ficha ▾')) +
         '</span></div>' +
     '</div>' +
     (abierta ? editorFicha(p) : '') +
     '</div>';
+}
+
+/**
+ * A qué peldaño de la escalera se parece lo que de verdad pagan.
+ *
+ * El ticket promedio ya sale de los pedidos reales, así que comparado
+ * con los precios de lista dice qué combo está comprando la gente. Es la
+ * única forma de saberlo sin abrir Dropi pedido por pedido: si el ticket
+ * se parece al de dos unidades, el 2x es el que mueve la tienda.
+ *
+ * Solo se dice cuando hay con qué comparar. Sin precios cargados no hay
+ * escalera, y adivinar cuál peldaño es sería inventarlo.
+ */
+function escalon(p, f) {
+  const escalera = [[1, f.precio], [2, f.precio2], [3, f.precio3]]
+    .filter(function (x) { return x[1] > 0; });
+  if (!escalera.length || !p.ticket) return '.';
+
+  let cerca = escalera[0], dist = Math.abs(p.ticket - escalera[0][1]);
+  escalera.forEach(function (x) {
+    const d = Math.abs(p.ticket - x[1]);
+    if (d < dist) { dist = d; cerca = x; }
+  });
+
+  // A más de un 15% del peldaño más cercano, no se parece a ninguno
+  if (cerca[1] && dist / cerca[1] > 0.15) {
+    return ', que no se parece a ninguno de tus precios. Puede que estés ' +
+      'vendiendo con descuentos que no están aquí.';
+  }
+  return ' — se parece al de ' + cerca[0] +
+    (cerca[0] === 1 ? ' unidad.' : ' unidades, así que ese es el que mueve la tienda.');
 }
 
 /**
@@ -5371,9 +5422,38 @@ function editorFicha(p) {
       campo('stock', 'STOCK ACTUAL', f.stock, 'number', '0') +
       campo('minimo', 'AVISARME CUANDO BAJE DE', f.minimo, 'number', 'Unidades') +
       campo('costo_unitario', 'COSTO UNITARIO (' + SYM() + ')', f.costo, 'number', 'Lo que te cuesta') +
-      campo('precio', 'PRECIO DE VENTA (' + SYM() + ')', f.precio, 'number', 'Precio de lista') +
       campo('proveedor', 'PROVEEDOR', f.proveedor, 'text', 'Quién te lo trae') +
     '</div>' +
+    /**
+     * La escalera de precios.
+     *
+     * Casi nadie vende una unidad suelta: la promoción de dos o de tres es
+     * la que de verdad se paga. Con un solo precio, quien confirma tiene
+     * que acordarse de memoria de cuánto vale el combo.
+     *
+     * Las de 2 y 3 se pueden dejar vacías: una tienda que solo vende
+     * unidades sueltas no tiene por qué inventarse un combo.
+     */
+    '<div><div class="inv-lbl" style="margin-bottom:6px;">' +
+      'PRECIO DE VENTA (' + SYM() + ') · por cantidad</div>' +
+      '<div class="precios">' +
+        campo('precio', '1 UNIDAD', f.precio, 'number', 'Precio de lista') +
+        campo('precio_2', '2 UNIDADES', f.precio2, 'number', 'Si hay promo') +
+        campo('precio_3', '3 UNIDADES', f.precio3, 'number', 'Si hay promo') +
+      '</div>' +
+      (p.ticket
+        ? '<div class="inv-pie" style="margin-top:6px;">Tus clientas están ' +
+          'pagando ' + SYM() + ' ' + NUM(p.ticket) + ' en promedio por pedido' +
+          escalon(p, f) + '</div>'
+        : '') +
+    '</div>' +
+    '<div class="inv-field"><div class="inv-lbl">LANDING · la página desde donde se vende</div>' +
+      '<input class="inv-inp" id="fi-landing" type="url" inputmode="url" ' +
+      'placeholder="https://tutienda.com/producto" value="' + esc(f.landing || '') + '">' +
+      (f.landing
+        ? '<a class="cfg-probar" href="' + esc(f.landing) + '" target="_blank" ' +
+          'rel="noopener noreferrer">Abrirla →</a>'
+        : '') + '</div>' +
     '<div><div class="inv-lbl" style="margin-bottom:6px;">QUÉ ES ESTE PRODUCTO</div>' +
       '<div class="nstates" id="fi-cats">' + chips + '</div></div>' +
     '<div class="inv-field"><div class="inv-lbl">NOTA</div>' +
@@ -5435,8 +5515,9 @@ function leerFicha() {
   const cat = document.querySelector('#fi-cats .nst.on');
   return {
     producto: v('producto'), sku: v('sku'), stock: v('stock'), minimo: v('minimo'),
-    costo_unitario: v('costo_unitario'), precio: v('precio'),
-    proveedor: v('proveedor'), nota: v('nota'),
+    costo_unitario: v('costo_unitario'),
+    precio: v('precio'), precio_2: v('precio_2'), precio_3: v('precio_3'),
+    proveedor: v('proveedor'), landing: v('landing'), nota: v('nota'),
     categoria: cat ? cat.dataset.cat : '',
   };
 }

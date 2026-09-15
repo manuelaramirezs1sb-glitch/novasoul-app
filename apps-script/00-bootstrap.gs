@@ -299,6 +299,20 @@ const ESQUEMA_EMPRESARIAL = {
    * si ese número lo contó una persona o lo trajo un archivo. Mezclarlos
    * sin distinguir hace imposible saber en cuál confiar.
    *
+   * El precio NO es uno solo. Casi nadie vende una unidad suelta: hay
+   * promoción de dos y de tres, y esa es la que de verdad se paga. Con un
+   * solo precio, quien gestiona tiene que acordarse de memoria de cuánto
+   * vale el combo, y el margen por unidad que calcula Nova se parece poco
+   * a lo que entra por pedido.
+   *
+   * Por eso van tres columnas y no una lista: se leen de un vistazo en la
+   * hoja y se editan sin sintaxis. Vacías quedan apagadas — una tienda
+   * que solo vende unidades sueltas no tiene por qué llenarlas.
+   *
+   * `landing` es la página desde donde se vende. Quien confirma un pedido
+   * la necesita abierta para responder precio y beneficios sin colgar, y
+   * hoy vive en la cabeza de cada quien o en un chat viejo.
+   *
    * `categoria` es lo que la dueña decide que es ese producto —estrella,
    * complemento, testeo, frenado— y no tiene nada que ver con `origen`.
    * Estuvieron en la misma columna un tiempo, y eso obligaba a elegir
@@ -306,7 +320,8 @@ const ESQUEMA_EMPRESARIAL = {
    * producto. Son dos preguntas distintas y ahora tienen dos columnas.
    */
   Inventario: ['id','sku','producto','tienda','fuente','origen','categoria',
-               'proveedor','stock','costo_unitario','precio','minimo',
+               'proveedor','landing','stock','costo_unitario',
+               'precio','precio_2','precio_3','minimo',
                'dias_cobertura','ultimo_conteo','nota','activo',
                'actualizado_en','actualizado_por'],
   // "permisos" es lo que la dueña decide que esta persona puede hacer,

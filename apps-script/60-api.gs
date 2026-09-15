@@ -973,10 +973,32 @@ function validarFicha(d) {
   if (cat && CATEGORIAS_PRODUCTO.indexOf(cat) === -1) {
     return 'La categoría debe ser una de: ' + CATEGORIAS_PRODUCTO.join(', ') + '.';
   }
-  const negativo =['stock', 'minimo', 'costo_unitario', 'precio'].filter(function (k) {
+  const negativo = ['stock', 'minimo', 'costo_unitario', 'precio',
+                    'precio_2', 'precio_3'].filter(function (k) {
     return d[k] !== undefined && d[k] !== '' && num(d[k]) < 0;
   });
   if (negativo.length) return 'No puede haber números negativos en ' + negativo.join(', ') + '.';
+
+  /**
+   * Un combo tiene que costar más que una unidad suelta, o el precio está
+   * mal escrito. Se avisa en vez de aceptarlo: un 2x más barato que un 1x
+   * no es una promoción, es un error de tecleo que después aparece como
+   * un margen raro sin que nadie sepa de dónde salió.
+   */
+  const p1 = num(d.precio), p2 = num(d.precio_2), p3 = num(d.precio_3);
+  if (p1 && p2 && p2 < p1) {
+    return 'El precio de 2 unidades (' + p2 + ') es menor que el de 1 (' + p1 +
+           '). Si es a propósito, dilo en la nota; si no, revísalo.';
+  }
+  if (p2 && p3 && p3 < p2) {
+    return 'El precio de 3 unidades (' + p3 + ') es menor que el de 2 (' + p2 + ').';
+  }
+
+  // La landing se abre desde la app: mismo filtro que el canal del equipo
+  if (d.landing !== undefined && String(d.landing).trim()) {
+    const err = validarCanal(d.landing);
+    if (err) return 'La landing: ' + err;
+  }
   return '';
 }
 

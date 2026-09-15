@@ -303,6 +303,20 @@ const ESQUEMA_EMPRESARIAL = {
    * si ese número lo contó una persona o lo trajo un archivo. Mezclarlos
    * sin distinguir hace imposible saber en cuál confiar.
    *
+   * El precio NO es uno solo. Casi nadie vende una unidad suelta: hay
+   * promoción de dos y de tres, y esa es la que de verdad se paga. Con un
+   * solo precio, quien gestiona tiene que acordarse de memoria de cuánto
+   * vale el combo, y el margen por unidad que calcula Nova se parece poco
+   * a lo que entra por pedido.
+   *
+   * Por eso van tres columnas y no una lista: se leen de un vistazo en la
+   * hoja y se editan sin sintaxis. Vacías quedan apagadas — una tienda
+   * que solo vende unidades sueltas no tiene por qué llenarlas.
+   *
+   * `landing` es la página desde donde se vende. Quien confirma un pedido
+   * la necesita abierta para responder precio y beneficios sin colgar, y
+   * hoy vive en la cabeza de cada quien o en un chat viejo.
+   *
    * `categoria` es lo que la dueña decide que es ese producto —estrella,
    * complemento, testeo, frenado— y no tiene nada que ver con `origen`.
    * Estuvieron en la misma columna un tiempo, y eso obligaba a elegir
@@ -310,7 +324,8 @@ const ESQUEMA_EMPRESARIAL = {
    * producto. Son dos preguntas distintas y ahora tienen dos columnas.
    */
   Inventario: ['id','sku','producto','tienda','fuente','origen','categoria',
-               'proveedor','stock','costo_unitario','precio','minimo',
+               'proveedor','landing','stock','costo_unitario',
+               'precio','precio_2','precio_3','minimo',
                'dias_cobertura','ultimo_conteo','nota','activo',
                'actualizado_en','actualizado_por'],
   // "permisos" es lo que la dueña decide que esta persona puede hacer,
@@ -4629,10 +4644,32 @@ function validarFicha(d) {
   if (cat && CATEGORIAS_PRODUCTO.indexOf(cat) === -1) {
     return 'La categoría debe ser una de: ' + CATEGORIAS_PRODUCTO.join(', ') + '.';
   }
-  const negativo =['stock', 'minimo', 'costo_unitario', 'precio'].filter(function (k) {
+  const negativo = ['stock', 'minimo', 'costo_unitario', 'precio',
+                    'precio_2', 'precio_3'].filter(function (k) {
     return d[k] !== undefined && d[k] !== '' && num(d[k]) < 0;
   });
   if (negativo.length) return 'No puede haber números negativos en ' + negativo.join(', ') + '.';
+
+  /**
+   * Un combo tiene que costar más que una unidad suelta, o el precio está
+   * mal escrito. Se avisa en vez de aceptarlo: un 2x más barato que un 1x
+   * no es una promoción, es un error de tecleo que después aparece como
+   * un margen raro sin que nadie sepa de dónde salió.
+   */
+  const p1 = num(d.precio), p2 = num(d.precio_2), p3 = num(d.precio_3);
+  if (p1 && p2 && p2 < p1) {
+    return 'El precio de 2 unidades (' + p2 + ') es menor que el de 1 (' + p1 +
+           '). Si es a propósito, dilo en la nota; si no, revísalo.';
+  }
+  if (p2 && p3 && p3 < p2) {
+    return 'El precio de 3 unidades (' + p3 + ') es menor que el de 2 (' + p2 + ').';
+  }
+
+  // La landing se abre desde la app: mismo filtro que el canal del equipo
+  if (d.landing !== undefined && String(d.landing).trim()) {
+    const err = validarCanal(d.landing);
+    if (err) return 'La landing: ' + err;
+  }
   return '';
 }
 
