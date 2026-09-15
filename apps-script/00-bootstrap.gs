@@ -322,6 +322,10 @@ const ESQUEMA_EMPRESARIAL = {
   Inventario: ['id','sku','producto','tienda','fuente','origen','categoria',
                'proveedor','landing','stock','costo_unitario',
                'precio','precio_2','precio_3','minimo',
+               // Las respuestas a las cuatro preguntas de siempre, cada
+               // una en su columna. Qué pregunta es cada una lo decide la
+               // tienda en Parametros → preguntas_producto.
+               'resp_1','resp_2','resp_3','resp_4',
                'dias_cobertura','ultimo_conteo','nota','activo',
                'actualizado_en','actualizado_por'],
   // "permisos" es lo que la dueña decide que esta persona puede hacer,

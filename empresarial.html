@@ -842,6 +842,20 @@ input.li:focus{border-color:var(--acc-d);}
 @media(max-width:560px){.precios{grid-template-columns:1fr;}}
 .iprec{font:500 11px/1.5 'DM Sans';color:var(--acc-d);margin-top:3px;font-variant-numeric:tabular-nums;}
 .iprec a{color:var(--acc-d);text-decoration:underline;}
+/* Las preguntas de siempre, cada una en su caja */
+.preg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:620px){.preg-grid{grid-template-columns:1fr;}}
+.preg-f{display:flex;flex-direction:column;gap:5px;}
+.preg-q{font:600 11.5px/1.35 'DM Sans';color:var(--acc-d);}
+.preg-f .narea{min-height:62px;}
+/* En la ficha que ve la gestora */
+.gq{display:flex;flex-direction:column;gap:9px;border-top:1px solid var(--s-line2);padding-top:10px;}
+.gq-b{display:flex;flex-direction:column;gap:3px;}
+.gq-q{font:600 11px/1.35 'DM Sans';color:var(--acc-d);}
+.gq-r{font:500 12.5px/1.6 'DM Sans';color:var(--t-ink2);}
+.gq-falta{font:500 11px/1.5 'DM Sans';color:var(--t-mut2);font-style:italic;}
+.gq-land{font:600 11.5px/1 'DM Sans';color:var(--acc-d);align-self:flex-start;text-decoration:none;}
+.gq-land:hover{text-decoration:underline;}
 .cas-ver{font-weight:600;cursor:pointer;text-decoration:underline;}
 /* Cómo se leen las fechas */
 .ffgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
@@ -1540,6 +1554,19 @@ input.li:focus{border-color:var(--acc-d);}
             usan —WhatsApp, Telegram, el que sea— y queda a un clic desde
             cualquier pantalla.</p>
           <div style="display:flex;flex-direction:column;gap:11px;" id="cfg-canal"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><span class="ct">Lo que siempre preguntan</span>
+            <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">
+              Las ve tu equipo en cada pedido</span></div>
+          <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);margin:0;max-width:74ch;">
+            En toda llamada la clienta pregunta lo mismo. Escribe aquí esas
+            cuatro preguntas y después respóndelas producto por producto en
+            Inventario: quien confirma las ve separadas, con el pedido al lado,
+            en vez de buscar la frase dentro de un párrafo mientras la clienta
+            espera al teléfono.</p>
+          <div id="cfg-preguntas"></div>
         </div>
 
         <div class="card">
@@ -4939,6 +4966,7 @@ function pintarConfig() {
   const tiendas = document.getElementById('cfg-tiendas');
   pintarConfigCanal();
   pintarFormatoFecha();
+  pintarPreguntas();
 
   if (cuenta) {
     cuenta.innerHTML = SESION
@@ -5093,6 +5121,8 @@ function pintarPantallasGestora() {
                 '<div><div class="dlbl">DIRECCIÓN</div><div class="dtxt">' +
                   esc(p.direccion || '—') + '</div></div>' +
               '</div>' +
+              // Lo que la clienta va a preguntar, ya respondido
+              fichaProducto(p.producto) +
               '<textarea class="narea" id="gnota' + i + '" placeholder="Qué pasó, qué ' +
                 'acordaste con la clienta y qué sigue.">' + esc(p.nota || '') + '</textarea>' +
               '<div class="nsavebtn" onclick="event.stopPropagation();guardarNotaGestora(' +
@@ -5173,6 +5203,15 @@ async function guardarNotaGestora(i) {
  */
 let PRODS = [];
 let PROD_MODALIDAD = '';
+/**
+ * Las cuatro preguntas que la clienta hace siempre.
+ *
+ * Las decide cada tienda —no es lo mismo vender una crema que un
+ * electrodoméstico— y llegan del servidor. Estas son el respaldo por si
+ * la respuesta no trae ninguna.
+ */
+let PREGUNTAS = ['¿Para qué sirve?', '¿Cómo se usa?',
+                 '¿En cuánto tiempo se ven resultados?', '¿Tiene contraindicaciones?'];
 let INV_VISTA = [];      // el orden en que se pintó: los onclick van por índice
 let FICHA_ABIERTA = -1;  // índice dentro de INV_VISTA, o -1, o 'nuevo'
 
@@ -5204,6 +5243,8 @@ async function cargarProductos() {
 
   PRODS = r.productos || [];
   PROD_MODALIDAD = r.modalidad || '';
+  PREGUNTAS = (r.preguntas && r.preguntas.length) ? r.preguntas : PREGUNTAS;
+  pintarPreguntas();
   pintarInventario();
   pintarProductos();
   pintarInvRiesgo();
@@ -5456,6 +5497,21 @@ function editorFicha(p) {
         : '') + '</div>' +
     '<div><div class="inv-lbl" style="margin-bottom:6px;">QUÉ ES ESTE PRODUCTO</div>' +
       '<div class="nstates" id="fi-cats">' + chips + '</div></div>' +
+    /**
+     * Cada respuesta en su caja, con la pregunta encima.
+     *
+     * Un solo campo de "beneficios" obliga a quien confirma a leer el
+     * párrafo entero por teléfono buscando la frase que necesita, y por
+     * eso termina improvisando. Separadas, se responde de un vistazo.
+     */
+    '<div><div class="inv-lbl" style="margin-bottom:6px;">' +
+      'LO QUE SIEMPRE PREGUNTAN</div>' +
+      '<div class="preg-grid">' + PREGUNTAS.map(function (q, i) {
+        return '<div class="preg-f"><div class="preg-q">' + esc(q) + '</div>' +
+          '<textarea class="narea" id="fi-resp' + (i + 1) + '" ' +
+          'placeholder="La respuesta, como se la dirías a la clienta.">' +
+          esc((f.respuestas || [])[i] || '') + '</textarea></div>';
+      }).join('') + '</div></div>' +
     '<div class="inv-field"><div class="inv-lbl">NOTA</div>' +
       '<textarea class="narea" style="min-height:54px;" id="fi-nota" ' +
       'placeholder="Para qué sirve, a quién le sirve, qué hay que saber al venderlo.">' +
@@ -5518,6 +5574,7 @@ function leerFicha() {
     costo_unitario: v('costo_unitario'),
     precio: v('precio'), precio_2: v('precio_2'), precio_3: v('precio_3'),
     proveedor: v('proveedor'), landing: v('landing'), nota: v('nota'),
+    resp_1: v('resp1'), resp_2: v('resp2'), resp_3: v('resp3'), resp_4: v('resp4'),
     categoria: cat ? cat.dataset.cat : '',
   };
 }
@@ -5853,6 +5910,51 @@ async function guardarFormatoFecha(valor) {
     showToast(valor === 'dia_primero'
       ? 'Las fechas se leerán con el día primero'
       : 'Las fechas se leerán con el mes primero');
+  } catch (e) { showToast('Sin conexión: no se guardó'); }
+}
+
+/**
+ * Las cuatro preguntas, editables.
+ *
+ * No las puede decidir Nova: no es lo mismo vender una crema que un
+ * electrodoméstico, y unas preguntas inventadas producen fichas que
+ * nadie llena porque no son las que le hacen a esa tienda.
+ */
+function pintarPreguntas() {
+  const cont = document.getElementById('cfg-preguntas');
+  if (!cont) return;
+  if (ROL !== 'dueno') {
+    cont.innerHTML = '<div class="eq-vacio">Solo la dueña cambia las preguntas.</div>';
+    return;
+  }
+  cont.innerHTML = '<div class="preg-grid" style="margin-top:10px;">' +
+    [0, 1, 2, 3].map(function (i) {
+      return '<div class="inv-field"><div class="inv-lbl">PREGUNTA ' + (i + 1) + '</div>' +
+        '<input class="inv-inp" id="cfg-preg' + i + '" ' +
+        'placeholder="' + (i ? 'Opcional' : '¿Para qué sirve?') + '" ' +
+        'value="' + esc(PREGUNTAS[i] || '') + '"></div>';
+    }).join('') + '</div>' +
+    '<div style="display:flex;gap:8px;margin-top:12px;">' +
+      '<div class="nsavebtn" onclick="guardarPreguntas()">Guardar preguntas</div></div>' +
+    '<div class="cart-nota">Cambiarlas no borra lo ya escrito: las respuestas ' +
+      'siguen en su sitio, solo cambia el título de cada una. Si dejas una ' +
+      'vacía, esa deja de pedirse.</div>';
+}
+
+async function guardarPreguntas() {
+  const qs = [0, 1, 2, 3].map(function (i) {
+    const el = document.getElementById('cfg-preg' + i);
+    return el ? el.value.trim() : '';
+  }).filter(String);
+  if (!qs.length) { showToast('Deja al menos una pregunta'); return; }
+  try {
+    const r = await api('parametros', { tienda: ST,
+      cambios: { preguntas_producto: qs.join('|') } });
+    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
+    PREGUNTAS = qs;
+    pintarPreguntas();
+    if (PRODS.length) pintarInventario();
+    showToast('Preguntas guardadas');
   } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
 
@@ -6730,6 +6832,53 @@ async function marcarCas(id, estado) {
   } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
 
+/**
+ * La ficha del producto, en forma de respuestas.
+ *
+ * Quien confirma un pedido tiene a la clienta al teléfono preguntando
+ * para qué sirve y en cuánto tiempo se ven resultados. Un párrafo de
+ * "beneficios" no sirve ahí: hay que leerlo entero buscando la frase, y
+ * mientras tanto el silencio cuesta la venta.
+ *
+ * Así que van separadas, cada pregunta con su respuesta, y la landing al
+ * pie por si hace falta enseñar una foto. Lo que no esté escrito se dice
+ * que falta —con quién lo escribe—, en vez de dejar un hueco mudo.
+ */
+function fichaProducto(nombre) {
+  const clave = norm2(nombre || '').replace(/_/g, ' ');
+  const p = (PRODS || []).filter(function (x) {
+    return norm2(x.nombre || '').replace(/_/g, ' ') === clave;
+  })[0];
+  const f = p && p.ficha;
+
+  if (!f) {
+    return '<div class="gq"><div class="gq-falta">De ' + esc(nombre || 'este producto') +
+      ' todavía no hay ficha. La dueña la escribe en Inventario y aparece aquí.' +
+      '</div></div>';
+  }
+
+  const resp = f.respuestas || [];
+  const hay = resp.filter(String).length;
+  if (!hay && !f.landing) {
+    return '<div class="gq"><div class="gq-falta">La ficha de ' + esc(p.nombre) +
+      ' está vacía. Pídele a la dueña que la llene en Inventario.</div></div>';
+  }
+
+  return '<div class="gq">' +
+    PREGUNTAS.map(function (q, i) {
+      const r = resp[i];
+      return '<div class="gq-b"><div class="gq-q">' + esc(q) + '</div>' +
+        (r ? '<div class="gq-r">' + esc(r) + '</div>'
+           : '<div class="gq-falta">Sin responder todavía.</div>') + '</div>';
+    }).join('') +
+    (f.landing
+      ? '<a class="gq-land" href="' + esc(f.landing) + '" target="_blank" ' +
+        'rel="noopener noreferrer" onclick="event.stopPropagation()">' +
+        'Abrir la página del producto →</a>'
+      : '') +
+    '</div>';
+}
+
 // ─── VER COMO ─────────────────────────────────────────────────
 /**
  * Mirar Nova con menos permisos de los que tienes.
@@ -7245,6 +7394,7 @@ async function cargarAlarmas() {
   pintarConfigCanal();
   pintarNavCanal();
   pintarFormatoFecha();
+  pintarPreguntas();
   return true;
 }
 

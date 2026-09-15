@@ -737,8 +737,10 @@ const CREABLES = {
   // número —una persona contando o un archivo importado— y dejar que lo
   // mande el cliente sería dejar que un conteo a mano se firme como si
   // hubiera venido de la plataforma.
-  Inventario: ['tienda', 'sku', 'producto', 'stock', 'costo_unitario', 'precio',
-               'minimo', 'categoria', 'proveedor', 'nota'],
+  Inventario: ['tienda', 'sku', 'producto', 'stock', 'costo_unitario',
+               'precio', 'precio_2', 'precio_3',
+               'minimo', 'categoria', 'proveedor', 'landing',
+               'resp_1', 'resp_2', 'resp_3', 'resp_4', 'nota'],
   Equipo:     ['nombre', 'correo', 'rol', 'tienda', 'estado', 'permisos'],
 };
 
@@ -1114,6 +1116,14 @@ function apiProductos(s, p) {
         nombre: nombreFicha,
         stock: num(f[c('stock')]), minimo: num(f[c('minimo')]),
         costo: num(f[c('costo_unitario')]), precio: num(f[c('precio')]),
+        // La escalera de precios: lo que de verdad se cobra por combo
+        precio2: c('precio_2') !== -1 ? num(f[c('precio_2')]) : 0,
+        precio3: c('precio_3') !== -1 ? num(f[c('precio_3')]) : 0,
+        landing: String((c('landing') !== -1 ? f[c('landing')] : '') || '').trim(),
+        // Las respuestas a las cuatro preguntas de siempre
+        respuestas: [1, 2, 3, 4].map(function (n) {
+          return String((c('resp_' + n) !== -1 ? f[c('resp_' + n)] : '') || '').trim();
+        }),
         // `categoria` es nueva. Las hojas escritas antes guardaban esto en
         // `origen`, así que se lee de ahí mientras nadie la haya llenado —
         // pero solo si lo que dice no es una palabra de procedencia, que
@@ -1200,7 +1210,11 @@ function apiProductos(s, p) {
                   sinVentas: true });
   });
 
-  return { ok: true, tienda: tienda, productos: salida,
+  // Las preguntas que esta tienda decidió que son las suyas
+  const preg = String(ajustes(ss, tienda).preguntas_producto || '')
+    .split('|').map(function (x) { return x.trim(); }).filter(String).slice(0, 4);
+
+  return { ok: true, tienda: tienda, productos: salida, preguntas: preg,
            modalidad: modalidadDeTienda(ss, tienda),
            moneda: monedaDeTienda(ss, tienda) };
 }

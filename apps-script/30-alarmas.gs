@@ -91,6 +91,24 @@ const AJUSTES_DEFAULT = {
   formato_fecha: 'dia_primero',   // 'dia_primero' | 'mes_primero'
 
   /**
+   * Las preguntas que la clienta hace siempre.
+   *
+   * La ficha de un producto no es un párrafo: es la respuesta a cuatro o
+   * cinco cosas que se preguntan en toda llamada. Guardarlas juntas en un
+   * bloque de texto obliga a quien confirma a leerlo entero por teléfono
+   * buscando la frase que necesita, y por eso termina improvisando.
+   *
+   * Cuáles son depende del catálogo —no es lo mismo vender una crema que
+   * un electrodoméstico—, así que las escribe cada tienda. Estas son el
+   * punto de partida, y se cambian en Configuración.
+   *
+   * Separadas por |. Hasta cuatro.
+   */
+  preguntas_producto: '¿Para qué sirve?|¿Cómo se usa?|' +
+                      '¿En cuánto tiempo se ven resultados?|' +
+                      '¿Tiene contraindicaciones?',
+
+  /**
    * Lo que cuesta mover la plata, que nadie factura pero se cobra igual.
    *
    * Dropi descuenta un porcentaje de cada retiro de la billetera a la
