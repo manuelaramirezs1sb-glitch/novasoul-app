@@ -255,6 +255,27 @@ const ESQUEMA_EMPRESARIAL = {
                 'gasto','moneda_gasto','gasto_normalizado','moneda_reporte'],
 
   /**
+   * La cartera es el extracto, y el extracto manda.
+   *
+   * El export de órdenes dice lo que un pedido DEBERÍA costar: un flete
+   * estimado, un costo de proveedor de lista. La cartera dice lo que la
+   * plataforma de verdad te cobró y te abonó, orden por orden y con
+   * fecha. Cuando los dos no coinciden, el que tiene razón es este.
+   *
+   * En agosto de Nutrea EC eso son 63 cobros de devolución por 315,55 —
+   * un promedio de 5,01— contra los 3,50 que traía el export: 95 dólares
+   * que ningún cierre estaba contando.
+   *
+   * `clase` es lo que el movimiento significa, sacado de su descripción:
+   * ganancia, devolucion, flete, retiro o recarga. Un retiro NO es gasto
+   * —es plata tuya saliendo de la billetera, muchas veces para pagar la
+   * pauta— y meterlo como gasto hundiría la utilidad del mes.
+   */
+  Cartera: ['id','fuente','tienda','fecha','tipo','clase','monto','saldo_previo',
+            'orden_id','guia','descripcion','cuenta','concepto_retiro',
+            'importado_en'],
+
+  /**
    * `id` para poder editar una fila desde la app, y `origen` para saber
    * si ese número lo contó una persona o lo trajo un archivo. Mezclarlos
    * sin distinguir hace imposible saber en cuál confiar.

@@ -53,7 +53,7 @@ function importar(fuenteId, tienda, cliente) {
 
   const destino = { pedidos: 'Pedidos', novedades: 'Novedades',
                     llamadas: 'Llamadas', pauta: 'Pauta',
-                    facturacion: 'Facturacion',
+                    facturacion: 'Facturacion', cartera: 'Cartera',
                     pedidos_secundario: 'Pedidos' }[r.tipo];
   if (!destino) throw new Error('No sé dónde guardar una fuente de tipo ' + r.tipo);
 
@@ -242,6 +242,23 @@ function prepararFila(f, tipo, fuenteId, tienda, pais, ss) {
       // Sin tasa no se inventa un número: queda vacío y visible
       o.gasto_normalizado = c.valor === null ? '' : c.valor;
     }
+  }
+
+  if (tipo === 'cartera') {
+    o.id = fuenteId + '-' + (o.id_externo || Utilities.getUuid().slice(0, 8));
+    o.tipo = String(o.tipo_movimiento || '').trim().toUpperCase();
+    delete o.tipo_movimiento;
+    o.clase = claseMovimiento(o.descripcion, o.concepto_retiro);
+    o.importado_en = ahoraISO();
+    /**
+     * El signo se guarda en el monto, no en la cabeza de quien lee.
+     *
+     * Dropi manda todo positivo y dice aparte si fue ENTRADA o SALIDA.
+     * Guardarlo así obliga a acordarse del signo cada vez que se suma, y
+     * tarde o temprano alguien suma una devolución como ingreso.
+     */
+    if (o.tipo === 'SALIDA') o.monto = -Math.abs(num(o.monto));
+    else o.monto = Math.abs(num(o.monto));
   }
 
   if (tipo === 'pauta') {

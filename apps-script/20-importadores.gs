@@ -327,6 +327,35 @@ const FUENTES = {
   //   · fechas D/M/AAAA (las de campañas vienen en ISO)
   // Son los cargos a la tarjeta, no el gasto por campaña. Sirve para
   // cuadrar que lo facturado coincida con lo reportado.
+  /**
+   * El historial de cartera de Dropi.
+   *
+   * VERIFICADO contra historial_de_cartera-12-09-2026 (Nutrea EC, 275
+   * movimientos entre agosto y septiembre).
+   *
+   * Es el único archivo que dice lo que de verdad se movió: cuánto te
+   * abonaron por cada orden entregada, cuánto te cobraron por cada
+   * devolución y cada flete, y cuánto retiraste. El export de órdenes
+   * trae estimados; esto es el extracto.
+   */
+  dropi_cartera: {
+    tipo: 'cartera',
+    verificado: true,
+    tab: '_Import_Cartera',
+    alias: {
+      id_externo:      ['id'],
+      fecha:           ['fecha'],
+      tipo_movimiento: ['tipo'],
+      monto:           ['monto'],
+      saldo_previo:    ['monto previo'],
+      orden_id:        ['orden id', 'id orden'],
+      guia:            ['numero de guia', 'numero guia', 'guia'],
+      descripcion:     ['descripcion'],
+      cuenta:          ['cuenta'],
+      concepto_retiro: ['concepto de retiro'],
+    },
+  },
+
   meta_facturacion: {
     tipo: 'facturacion',
     verificado: true,
@@ -568,4 +597,31 @@ function diagnosticar(fuenteId, tienda, cliente) {
   ].join('\n');
   Logger.log(msg);
   return msg;
+}
+
+/**
+ * Qué significa un movimiento de cartera.
+ *
+ * Dropi no trae una columna con la clase: la describe en texto libre, con
+ * mayúsculas y el número de orden pegado al final. Las cinco frases de
+ * abajo son las que aparecen en el historial de Nutrea EC, y cubren los
+ * 275 movimientos del archivo de muestra sin dejar ninguno en "otro".
+ *
+ * Se clasifica por la frase, no por ENTRADA/SALIDA: una recarga y una
+ * ganancia son las dos entradas, pero una es plata que metiste tú y la
+ * otra es plata que ganaste. Sumarlas juntas diría que el mes vendió el
+ * doble.
+ */
+function claseMovimiento(descripcion, conceptoRetiro) {
+  const d = norm(descripcion || '');
+  if (d.indexOf('ganancia en la orden') !== -1)   return 'ganancia';
+  if (d.indexOf('cobro de devolucion') !== -1)    return 'devolucion';
+  if (d.indexOf('flete inicial') !== -1)          return 'flete';
+  if (d.indexOf('cobro de flete') !== -1)         return 'flete';
+  if (d.indexOf('retiro') !== -1)                 return 'retiro';
+  if (d.indexOf('recarga') !== -1)                return 'recarga';
+  if (d.indexOf('reversion') !== -1)              return 'reversion';
+  // Un retiro puede venir descrito de otra forma pero traer concepto
+  if (String(conceptoRetiro || '').trim())        return 'retiro';
+  return 'otro';
 }

@@ -791,6 +791,17 @@ input.li:focus{border-color:var(--acc-d);}
 .conc-f{display:grid;grid-template-columns:minmax(180px,1fr) 2fr;gap:14px;padding:12px 0;border-bottom:1px solid var(--s-line2);}
 .conc-k{font:600 12.5px/1.4 'DM Sans';color:var(--t-ink);}
 .conc-v{font:500 12px/1.65 'DM Sans';color:var(--t-mut);}
+/* Cartera: el extracto de la plataforma */
+.cart{display:flex;flex-direction:column;border-top:1px solid var(--s-line2);margin-top:10px;}
+.cart-f{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid var(--s-line2);}
+.cart-f.total{border-bottom:none;border-top:2px solid var(--s-line4);padding-top:12px;}
+.cart-k{font:600 12.5px/1.35 'DM Sans';color:var(--t-ink);}
+.cart-s{font:500 11px/1.5 'DM Sans';color:var(--t-mut2);margin-top:2px;}
+.cart-v{font:600 14px/1 'DM Sans';color:var(--t-ink);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.cart-v.pos{color:#3f5330;}
+.cart-v.neg{color:#b8322f;}
+.cart-retiros{background:var(--s-dark);border-radius:11px;padding:11px 13px;margin-top:12px;}
+.cart-nota{font:500 10.5px/1.55 'DM Sans';color:var(--t-mut2);margin-top:10px;}
 @media(max-width:700px){.conc-f{grid-template-columns:1fr;gap:5px;}}
 .inf-gris{color:var(--t-mut3);font-weight:500;}
 .inf-falta{font:500 12.5px/1.6 'DM Sans';color:#8a6a13;background:#f6ecd0;
@@ -1315,6 +1326,18 @@ input.li:focus{border-color:var(--acc-d);}
           </div>
         </div>
         <div class="imp-slot" data-tipo="pauta"></div>
+        <div class="imp-slot" data-tipo="cartera"></div>
+
+        <!-- Cartera: el extracto de la plataforma -->
+        <div class="card">
+          <div class="card-h"><span class="ct">Cartera</span>
+            <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);" id="cart-saldo"></span></div>
+          <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);margin:0;max-width:74ch;">
+            Lo que de verdad se movió en tu billetera, según el extracto de la
+            plataforma. El export de pedidos dice lo que un pedido debería
+            costar; esto dice lo que te cobraron.</p>
+          <div id="cartera"></div>
+        </div>
 
         <!-- Gastos del mes -->
         <div class="card">
@@ -3088,6 +3111,7 @@ function aplicarReales(d) {
   aplicarDinero(d);
   aplicarPauta(d);
   if (d.recaudo7) pintarRecaudo(d.recaudo7);
+  pintarCartera(d.cartera);
   cont.innerHTML = tarjetas.map(k=>
     '<div class="kc '+k.cl+'"><div class="klbl">'+k.lb+'</div>'+
     '<div class="kval">'+k.v+'</div><div class="ksub">'+k.sub+'</div></div>').join('');
@@ -3597,6 +3621,15 @@ const TIPOS_IMPORT = {
           'cobro: trae el gasto real y en qué moneda te cobraron.',
     fuentes: [['meta','Meta · campañas'], ['meta_facturacion','Meta · facturación'],
               ['tiktok','TikTok']],
+  },
+  cartera: {
+    titulo: 'Subir el historial de cartera',
+    nota: 'El extracto de tu billetera en la plataforma: lo que te abonaron ' +
+          'por cada entrega, lo que te cobraron por cada devolución y cada ' +
+          'flete, y lo que retiraste. El export de pedidos trae estimados; ' +
+          'esto es lo que de verdad se movió, y es lo que Nova usa para ' +
+          'corregir el costo real de las devoluciones.',
+    fuentes: [['dropi_cartera','Dropi · historial de cartera']],
   },
 };
 
@@ -4228,6 +4261,9 @@ function mapearCierre(a, mes, tienda, r) {
     novedades: a.novedades || 0,
     sinMover: a.sinMover || 0,
     costosPorEstado: a.costosPorEstado || null,
+    costoDevolucionFuente: a.costoDevolucionFuente || '',
+    costoDevolucionEstimado: a.costoDevolucionEstimado || 0,
+    cartera: a.cartera || null,
     incompleto: !!a.incompleto,
     gastoSinConvertir: a.gastoSinConvertir || 0,
     monedasSinTasa: a.monedasSinTasa || {},
@@ -4319,7 +4355,11 @@ function pintarInforme(d, p, real) {
   const devol    = d.costoDevolucion || 0;
   const pauta    = d.gasto || 0;
   const fijos    = d.fijos || 0;
-  const utilidad = ventas - prod - envio - pauta - fijos;
+  // El cobro de retorno solo se resta si salió de la cartera. Sin ella,
+  // `devol` es una copia del flete de ida que ya está en `envio`, y
+  // restarlo sería cobrar ese flete dos veces.
+  const retorno = d.costoDevolucionFuente === 'cartera' ? devol : 0;
+  const utilidad = ventas - prod - envio - retorno - pauta - fijos;
   const abiertos = d.pendientes || 0;
 
   const gananciaProducto = ventas - prod - envio;
@@ -4539,6 +4579,19 @@ function comoSeConto(d) {
         'Vuelve a tu proveedor o a tu bodega, así que no es costo de lo que sí ' +
         'vendiste. Si tu hoja lo da por perdido, réstalo.']);
     }
+  }
+
+  if (d.costoDevolucionFuente === 'cartera') {
+    filas.push(['El cobro de devolución sale de tu cartera',
+      S + n0(d.costoDevolucion) + ' sobre ' + (d.devueltos || 0) + ' devoluciones. ' +
+      'Es el cobro real del extracto, no el flete de lista del export — que ' +
+      'para este mes habría dado ' + S + n0(d.costoDevolucionEstimado) + '.']);
+  } else {
+    filas.push(['Falta el cobro real de las devoluciones',
+      'Sin el historial de cartera, Nova solo conoce el flete de ida. El cobro ' +
+      'de retorno que te pasa la plataforma —que suele ser más alto que el ' +
+      'estimado— no está restado aquí, así que esta utilidad sale por encima ' +
+      'de la real. Se arregla subiendo el historial de cartera en Dinero.']);
   }
 
   filas.push(['La tasa de entrega se mide sobre lo resuelto',
@@ -5984,6 +6037,93 @@ function verDiaRecaudo(i) {
       ? 'HOY' : DIA[new Date(d.fecha + 'T12:00:00Z').getUTCDay()] + ' ' + d.fecha.slice(8);
   }
   if (val) val.textContent = SYM() + ' ' + NUM(d.total);
+}
+
+// ─── CARTERA ──────────────────────────────────────────────────
+/**
+ * El extracto de la plataforma, que es lo único que dice la verdad.
+ *
+ * El export de pedidos trae lo que un pedido DEBERÍA costar: un flete de
+ * lista, un costo de proveedor de catálogo. La cartera trae lo que la
+ * plataforma cobró y abonó, movimiento por movimiento. Cuando los dos no
+ * coinciden, gana el extracto.
+ *
+ * Dos avisos que esta tarjeta tiene que dar sí o sí:
+ *
+ *   · La cartera se mueve el día que la plata cambia de manos, no el día
+ *     que se creó el pedido. Los movimientos de agosto incluyen entregas
+ *     de pedidos de julio. No es comparable línea a línea con el cierre
+ *     por cohorte, y decirlo evita que alguien reste dos números que no
+ *     hablan del mismo conjunto.
+ *
+ *   · Un retiro NO es un gasto. Es plata tuya saliendo de la billetera, y
+ *     en el historial de Nutrea los conceptos dicen a dónde iba: "PAUTA",
+ *     "tarjeta". Contarlo como gasto hundiría un mes que estuvo bien.
+ */
+function pintarCartera(c) {
+  const cont = document.getElementById('cartera');
+  const saldoEl = document.getElementById('cart-saldo');
+  if (!cont) return;
+
+  if (!c || !c.hay) {
+    if (saldoEl) saldoEl.textContent = '';
+    cont.innerHTML = '<div class="eq-vacio">Todavía no has subido el historial ' +
+      'de cartera. Sin él, el costo de cada devolución sale del flete estimado ' +
+      'del export, que suele estar por debajo del cobro real. Se sube aquí ' +
+      'arriba, en "Subir el historial de cartera".</div>';
+    return;
+  }
+
+  const S = SYM() + ' ';
+  if (saldoEl) {
+    saldoEl.textContent = c.saldo !== null
+      ? 'Saldo ' + S + NUM(c.saldo) + (c.ultimaFecha ? ' · al ' + fechaCorta(c.ultimaFecha) : '')
+      : '';
+  }
+
+  const linea = function (lb, valor, sub, signo) {
+    return '<div class="cart-f"><div><div class="cart-k">' + lb + '</div>' +
+      (sub ? '<div class="cart-s">' + sub + '</div>' : '') + '</div>' +
+      '<div class="cart-v ' + (signo < 0 ? 'neg' : signo > 0 ? 'pos' : '') + '">' +
+      (signo < 0 ? '−' : '') + S + NUM(Math.abs(valor)) + '</div></div>';
+  };
+
+  const conceptos = Object.keys(c.conceptosRetiro || {});
+  cont.innerHTML =
+    '<div class="cart">' +
+      linea('Abonado por entregas', c.ganancia,
+            c.nGanancia + (c.nGanancia === 1 ? ' orden' : ' órdenes') +
+            ' · ya neto de producto y flete', 1) +
+      linea('Cobros de devolución', c.devoluciones,
+            c.nDevoluciones + (c.nDevoluciones === 1 ? ' cobro' : ' cobros') +
+            (c.devolucionPromedio
+              ? ' · promedio ' + S + (Math.round(c.devolucionPromedio * 100) / 100)
+              : ''), -1) +
+      linea('Fletes cobrados aparte', c.fletes,
+            c.nFletes + (c.nFletes === 1 ? ' cobro' : ' cobros'), -1) +
+      (c.recargas ? linea('Recargas', c.recargas, 'Plata que metiste tú', 1) : '') +
+      (c.otros ? linea('Otros movimientos', c.otros, 'Sin clasificar', c.otros < 0 ? -1 : 1) : '') +
+      '<div class="cart-f total"><div class="cart-k">Neto operativo del mes</div>' +
+        '<div class="cart-v ' + (c.netoOperativo >= 0 ? 'pos' : 'neg') + '">' +
+        (c.netoOperativo < 0 ? '−' : '') + S + NUM(Math.abs(c.netoOperativo)) +
+        '</div></div>' +
+    '</div>' +
+    (c.nRetiros
+      ? '<div class="cart-retiros"><div class="cart-k">' +
+          c.nRetiros + (c.nRetiros === 1 ? ' retiro' : ' retiros') + ' · ' +
+          S + NUM(c.retiros) + '</div>' +
+        '<div class="cart-s">Esto no es un gasto: es plata tuya saliendo de la ' +
+          'billetera. No se resta de la utilidad' +
+          (conceptos.length
+            ? '. Concepto: ' + conceptos.map(function (k) {
+                return esc(k) + ' (' + S + NUM(c.conceptosRetiro[k]) + ')';
+              }).join(', ')
+            : '') + '.</div></div>'
+      : '') +
+    '<div class="cart-nota">La cartera se mueve el día que la plata cambia de ' +
+      'manos, no el día que se creó el pedido: estos movimientos incluyen ' +
+      'entregas de pedidos del mes anterior. Por eso no cuadra línea a línea ' +
+      'con el cierre, que va por cohorte.</div>';
 }
 
 // ─── VER COMO ─────────────────────────────────────────────────

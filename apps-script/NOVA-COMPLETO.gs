@@ -259,6 +259,27 @@ const ESQUEMA_EMPRESARIAL = {
                 'gasto','moneda_gasto','gasto_normalizado','moneda_reporte'],
 
   /**
+   * La cartera es el extracto, y el extracto manda.
+   *
+   * El export de órdenes dice lo que un pedido DEBERÍA costar: un flete
+   * estimado, un costo de proveedor de lista. La cartera dice lo que la
+   * plataforma de verdad te cobró y te abonó, orden por orden y con
+   * fecha. Cuando los dos no coinciden, el que tiene razón es este.
+   *
+   * En agosto de Nutrea EC eso son 63 cobros de devolución por 315,55 —
+   * un promedio de 5,01— contra los 3,50 que traía el export: 95 dólares
+   * que ningún cierre estaba contando.
+   *
+   * `clase` es lo que el movimiento significa, sacado de su descripción:
+   * ganancia, devolucion, flete, retiro o recarga. Un retiro NO es gasto
+   * —es plata tuya saliendo de la billetera, muchas veces para pagar la
+   * pauta— y meterlo como gasto hundiría la utilidad del mes.
+   */
+  Cartera: ['id','fuente','tienda','fecha','tipo','clase','monto','saldo_previo',
+            'orden_id','guia','descripcion','cuenta','concepto_retiro',
+            'importado_en'],
+
+  /**
    * `id` para poder editar una fila desde la app, y `origen` para saber
    * si ese número lo contó una persona o lo trajo un archivo. Mezclarlos
    * sin distinguir hace imposible saber en cuál confiar.
@@ -1481,6 +1502,35 @@ const FUENTES = {
   //   · fechas D/M/AAAA (las de campañas vienen en ISO)
   // Son los cargos a la tarjeta, no el gasto por campaña. Sirve para
   // cuadrar que lo facturado coincida con lo reportado.
+  /**
+   * El historial de cartera de Dropi.
+   *
+   * VERIFICADO contra historial_de_cartera-12-09-2026 (Nutrea EC, 275
+   * movimientos entre agosto y septiembre).
+   *
+   * Es el único archivo que dice lo que de verdad se movió: cuánto te
+   * abonaron por cada orden entregada, cuánto te cobraron por cada
+   * devolución y cada flete, y cuánto retiraste. El export de órdenes
+   * trae estimados; esto es el extracto.
+   */
+  dropi_cartera: {
+    tipo: 'cartera',
+    verificado: true,
+    tab: '_Import_Cartera',
+    alias: {
+      id_externo:      ['id'],
+      fecha:           ['fecha'],
+      tipo_movimiento: ['tipo'],
+      monto:           ['monto'],
+      saldo_previo:    ['monto previo'],
+      orden_id:        ['orden id', 'id orden'],
+      guia:            ['numero de guia', 'numero guia', 'guia'],
+      descripcion:     ['descripcion'],
+      cuenta:          ['cuenta'],
+      concepto_retiro: ['concepto de retiro'],
+    },
+  },
+
   meta_facturacion: {
     tipo: 'facturacion',
     verificado: true,
@@ -1722,6 +1772,33 @@ function diagnosticar(fuenteId, tienda, cliente) {
   ].join('\n');
   Logger.log(msg);
   return msg;
+}
+
+/**
+ * Qué significa un movimiento de cartera.
+ *
+ * Dropi no trae una columna con la clase: la describe en texto libre, con
+ * mayúsculas y el número de orden pegado al final. Las cinco frases de
+ * abajo son las que aparecen en el historial de Nutrea EC, y cubren los
+ * 275 movimientos del archivo de muestra sin dejar ninguno en "otro".
+ *
+ * Se clasifica por la frase, no por ENTRADA/SALIDA: una recarga y una
+ * ganancia son las dos entradas, pero una es plata que metiste tú y la
+ * otra es plata que ganaste. Sumarlas juntas diría que el mes vendió el
+ * doble.
+ */
+function claseMovimiento(descripcion, conceptoRetiro) {
+  const d = norm(descripcion || '');
+  if (d.indexOf('ganancia en la orden') !== -1)   return 'ganancia';
+  if (d.indexOf('cobro de devolucion') !== -1)    return 'devolucion';
+  if (d.indexOf('flete inicial') !== -1)          return 'flete';
+  if (d.indexOf('cobro de flete') !== -1)         return 'flete';
+  if (d.indexOf('retiro') !== -1)                 return 'retiro';
+  if (d.indexOf('recarga') !== -1)                return 'recarga';
+  if (d.indexOf('reversion') !== -1)              return 'reversion';
+  // Un retiro puede venir descrito de otra forma pero traer concepto
+  if (String(conceptoRetiro || '').trim())        return 'retiro';
+  return 'otro';
 }
 
 
@@ -5509,10 +5586,50 @@ function agregarMes(ss, tienda, mes, s) {
       }
     }
 
+    /**
+     * La cartera corrige el costo de devolución.
+     *
+     * El export de órdenes trae un flete de lista; la cartera trae lo que
+     * la plataforma cobró de verdad. En agosto de Nutrea EC eso son 63
+     * cobros por 315,55 —promedio 5,01— contra los 3,50 del export: 95
+     * dólares que ningún cierre estaba contando.
+     *
+     * Se usa el promedio real por devolución sobre las devoluciones de la
+     * cohorte, no el total del mes de cartera: los cobros de agosto
+     * incluyen devoluciones de pedidos de julio. El promedio sí es
+     * representativo; el total sería de otro conjunto de pedidos.
+     */
+    out.cartera = carteraDelMes(ss, tienda, mes);
+    out.costoDevolucionEstimado = out.costoDevolucion;
+    if (out.cartera.hay && out.cartera.devolucionPromedio && out.devueltos) {
+      out.costoDevolucion = out.cartera.devolucionPromedio * out.devueltos;
+      out.costoDevolucionFuente = 'cartera';
+    } else {
+      out.costoDevolucionFuente = 'export';
+    }
+
     out.cpa  = out.entregados ? out.gasto / out.entregados : 0;
     out.roas = out.gasto ? out.ventas / out.gasto : 0;
-    // Margen: antes de los gastos fijos. Utilidad: lo que queda de verdad.
-    out.margen = out.ventas - out.gasto - out.costoProducto - out.costoEnvio;
+    /**
+     * El cobro de devolución entra en el margen SOLO si viene de la cartera.
+     *
+     * Una devolución cuesta dos veces: el flete de ida, que ya está en
+     * costoEnvio porque el pedido sí salió de bodega, y el cobro de
+     * retorno que la plataforma pasa aparte. En el historial de Nutrea son
+     * dos líneas distintas: "SALIDA POR COBRO DE FLETE INICIAL" (~7,10) y
+     * "SALIDA DE COBRO DE DEVOLUCIÓN" (~5,01).
+     *
+     * Sin cartera, lo único que Nova tiene es el flete del export, y
+     * costoDevolucion es una copia de ese mismo número: restarlo sería
+     * cobrar el flete de ida dos veces. Así que sin cartera se muestra
+     * aparte y no se resta, y la pantalla dice que falta ese costo.
+     *
+     * Margen: antes de los gastos fijos. Utilidad: lo que queda de verdad.
+     */
+    const cobroRetorno = out.costoDevolucionFuente === 'cartera'
+      ? out.costoDevolucion : 0;
+    out.margen = out.ventas - out.gasto - out.costoProducto - out.costoEnvio
+                 - cobroRetorno;
     out.utilidad = out.margen - out.fijos;
   }
   return out;
@@ -6071,6 +6188,82 @@ function autorizar() {
   return 'Permiso concedido. Ya puedes subir archivos de Excel.';
 }
 
+/**
+ * Lo que de verdad se movió en la billetera este mes.
+ *
+ * Nova calcula la utilidad desde el export de órdenes, que son estimados:
+ * un flete de lista, un costo de proveedor de catálogo. La cartera es el
+ * extracto — lo que la plataforma cobró y abonó de verdad. Cuando los dos
+ * no coinciden, el que tiene razón es el extracto.
+ *
+ * Ojo con la fecha: la cartera se mueve el día que la plata cambia de
+ * manos, no el día que se creó el pedido. Los movimientos de agosto
+ * incluyen pedidos de julio que se entregaron en agosto, y los pedidos de
+ * agosto entregados en septiembre están en el mes siguiente. Por eso esto
+ * NO reemplaza el cierre por cohorte: lo acompaña, y sirve para cuadrar.
+ *
+ * Los retiros van aparte de todo lo demás. No son gasto: son plata tuya
+ * saliendo de la billetera —casi siempre para pagar la pauta, que es lo
+ * que dicen los conceptos del historial de Nutrea— y meterlos como gasto
+ * hundiría la utilidad de un mes que estuvo bien.
+ */
+function carteraDelMes(ss, tienda, mes) {
+  const out = {
+    hay: false, mes: mes,
+    ganancia: 0, devoluciones: 0, fletes: 0, otros: 0,
+    nGanancia: 0, nDevoluciones: 0, nFletes: 0,
+    retiros: 0, nRetiros: 0, conceptosRetiro: {},
+    recargas: 0,
+    netoOperativo: 0, saldo: null, ultimaFecha: '',
+    devolucionPromedio: 0,
+  };
+  const sh = ss.getSheetByName('Cartera');
+  if (!sh || sh.getLastRow() < 2) return out;
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+  if (c('fecha') === -1) return out;
+
+  let ultimo = null;
+  for (let i = 1; i < d.length; i++) {
+    const f = d[i];
+    if (c('tienda') !== -1 && String(f[c('tienda')]).trim() !== tienda) continue;
+    const fecha = aISO(f[c('fecha')], 'UTC');
+    if (!fecha) continue;
+
+    // El saldo más reciente es de la tienda entera, no del mes: sirve para
+    // saber cuánta plata hay ahora, que es una pregunta sin mes.
+    if (!ultimo || fecha > ultimo.fecha) {
+      ultimo = { fecha: fecha, saldo: num(f[c('saldo_previo')]) + num(f[c('monto')]) };
+    }
+    if (fecha.slice(0, 7) !== mes) continue;
+
+    out.hay = true;
+    const monto = num(f[c('monto')]);
+    const abs = Math.abs(monto);
+    switch (String(f[c('clase')] || '').trim()) {
+      case 'ganancia':   out.ganancia += abs;     out.nGanancia++;     break;
+      case 'devolucion': out.devoluciones += abs; out.nDevoluciones++; break;
+      case 'flete':      out.fletes += abs;       out.nFletes++;       break;
+      case 'recarga':    out.recargas += abs;                          break;
+      case 'retiro': {
+        out.retiros += abs; out.nRetiros++;
+        const cp = String(c('concepto_retiro') === -1 ? '' : f[c('concepto_retiro')] || '').trim();
+        const k = cp || 'sin concepto';
+        out.conceptosRetiro[k] = (out.conceptosRetiro[k] || 0) + abs;
+        break;
+      }
+      default: out.otros += monto;
+    }
+  }
+
+  out.netoOperativo = out.ganancia - out.devoluciones - out.fletes + out.otros;
+  out.devolucionPromedio = out.nDevoluciones ? out.devoluciones / out.nDevoluciones : 0;
+  if (ultimo) { out.saldo = ultimo.saldo; out.ultimaFecha = ultimo.fecha; }
+  return out;
+}
+
 
 /* ═══════════════════════════════════════════════════════════════
    10 · ESCRITURA
@@ -6131,7 +6324,7 @@ function importar(fuenteId, tienda, cliente) {
 
   const destino = { pedidos: 'Pedidos', novedades: 'Novedades',
                     llamadas: 'Llamadas', pauta: 'Pauta',
-                    facturacion: 'Facturacion',
+                    facturacion: 'Facturacion', cartera: 'Cartera',
                     pedidos_secundario: 'Pedidos' }[r.tipo];
   if (!destino) throw new Error('No sé dónde guardar una fuente de tipo ' + r.tipo);
 
@@ -6320,6 +6513,23 @@ function prepararFila(f, tipo, fuenteId, tienda, pais, ss) {
       // Sin tasa no se inventa un número: queda vacío y visible
       o.gasto_normalizado = c.valor === null ? '' : c.valor;
     }
+  }
+
+  if (tipo === 'cartera') {
+    o.id = fuenteId + '-' + (o.id_externo || Utilities.getUuid().slice(0, 8));
+    o.tipo = String(o.tipo_movimiento || '').trim().toUpperCase();
+    delete o.tipo_movimiento;
+    o.clase = claseMovimiento(o.descripcion, o.concepto_retiro);
+    o.importado_en = ahoraISO();
+    /**
+     * El signo se guarda en el monto, no en la cabeza de quien lee.
+     *
+     * Dropi manda todo positivo y dice aparte si fue ENTRADA o SALIDA.
+     * Guardarlo así obliga a acordarse del signo cada vez que se suma, y
+     * tarde o temprano alguien suma una devolución como ingreso.
+     */
+    if (o.tipo === 'SALIDA') o.monto = -Math.abs(num(o.monto));
+    else o.monto = Math.abs(num(o.monto));
   }
 
   if (tipo === 'pauta') {

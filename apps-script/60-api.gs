@@ -2027,10 +2027,50 @@ function agregarMes(ss, tienda, mes, s) {
       }
     }
 
+    /**
+     * La cartera corrige el costo de devolución.
+     *
+     * El export de órdenes trae un flete de lista; la cartera trae lo que
+     * la plataforma cobró de verdad. En agosto de Nutrea EC eso son 63
+     * cobros por 315,55 —promedio 5,01— contra los 3,50 del export: 95
+     * dólares que ningún cierre estaba contando.
+     *
+     * Se usa el promedio real por devolución sobre las devoluciones de la
+     * cohorte, no el total del mes de cartera: los cobros de agosto
+     * incluyen devoluciones de pedidos de julio. El promedio sí es
+     * representativo; el total sería de otro conjunto de pedidos.
+     */
+    out.cartera = carteraDelMes(ss, tienda, mes);
+    out.costoDevolucionEstimado = out.costoDevolucion;
+    if (out.cartera.hay && out.cartera.devolucionPromedio && out.devueltos) {
+      out.costoDevolucion = out.cartera.devolucionPromedio * out.devueltos;
+      out.costoDevolucionFuente = 'cartera';
+    } else {
+      out.costoDevolucionFuente = 'export';
+    }
+
     out.cpa  = out.entregados ? out.gasto / out.entregados : 0;
     out.roas = out.gasto ? out.ventas / out.gasto : 0;
-    // Margen: antes de los gastos fijos. Utilidad: lo que queda de verdad.
-    out.margen = out.ventas - out.gasto - out.costoProducto - out.costoEnvio;
+    /**
+     * El cobro de devolución entra en el margen SOLO si viene de la cartera.
+     *
+     * Una devolución cuesta dos veces: el flete de ida, que ya está en
+     * costoEnvio porque el pedido sí salió de bodega, y el cobro de
+     * retorno que la plataforma pasa aparte. En el historial de Nutrea son
+     * dos líneas distintas: "SALIDA POR COBRO DE FLETE INICIAL" (~7,10) y
+     * "SALIDA DE COBRO DE DEVOLUCIÓN" (~5,01).
+     *
+     * Sin cartera, lo único que Nova tiene es el flete del export, y
+     * costoDevolucion es una copia de ese mismo número: restarlo sería
+     * cobrar el flete de ida dos veces. Así que sin cartera se muestra
+     * aparte y no se resta, y la pantalla dice que falta ese costo.
+     *
+     * Margen: antes de los gastos fijos. Utilidad: lo que queda de verdad.
+     */
+    const cobroRetorno = out.costoDevolucionFuente === 'cartera'
+      ? out.costoDevolucion : 0;
+    out.margen = out.ventas - out.gasto - out.costoProducto - out.costoEnvio
+                 - cobroRetorno;
     out.utilidad = out.margen - out.fijos;
   }
   return out;
@@ -2587,4 +2627,80 @@ function autorizar() {
     muteHttpExceptions: true,
   });
   return 'Permiso concedido. Ya puedes subir archivos de Excel.';
+}
+
+/**
+ * Lo que de verdad se movió en la billetera este mes.
+ *
+ * Nova calcula la utilidad desde el export de órdenes, que son estimados:
+ * un flete de lista, un costo de proveedor de catálogo. La cartera es el
+ * extracto — lo que la plataforma cobró y abonó de verdad. Cuando los dos
+ * no coinciden, el que tiene razón es el extracto.
+ *
+ * Ojo con la fecha: la cartera se mueve el día que la plata cambia de
+ * manos, no el día que se creó el pedido. Los movimientos de agosto
+ * incluyen pedidos de julio que se entregaron en agosto, y los pedidos de
+ * agosto entregados en septiembre están en el mes siguiente. Por eso esto
+ * NO reemplaza el cierre por cohorte: lo acompaña, y sirve para cuadrar.
+ *
+ * Los retiros van aparte de todo lo demás. No son gasto: son plata tuya
+ * saliendo de la billetera —casi siempre para pagar la pauta, que es lo
+ * que dicen los conceptos del historial de Nutrea— y meterlos como gasto
+ * hundiría la utilidad de un mes que estuvo bien.
+ */
+function carteraDelMes(ss, tienda, mes) {
+  const out = {
+    hay: false, mes: mes,
+    ganancia: 0, devoluciones: 0, fletes: 0, otros: 0,
+    nGanancia: 0, nDevoluciones: 0, nFletes: 0,
+    retiros: 0, nRetiros: 0, conceptosRetiro: {},
+    recargas: 0,
+    netoOperativo: 0, saldo: null, ultimaFecha: '',
+    devolucionPromedio: 0,
+  };
+  const sh = ss.getSheetByName('Cartera');
+  if (!sh || sh.getLastRow() < 2) return out;
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+  if (c('fecha') === -1) return out;
+
+  let ultimo = null;
+  for (let i = 1; i < d.length; i++) {
+    const f = d[i];
+    if (c('tienda') !== -1 && String(f[c('tienda')]).trim() !== tienda) continue;
+    const fecha = aISO(f[c('fecha')], 'UTC');
+    if (!fecha) continue;
+
+    // El saldo más reciente es de la tienda entera, no del mes: sirve para
+    // saber cuánta plata hay ahora, que es una pregunta sin mes.
+    if (!ultimo || fecha > ultimo.fecha) {
+      ultimo = { fecha: fecha, saldo: num(f[c('saldo_previo')]) + num(f[c('monto')]) };
+    }
+    if (fecha.slice(0, 7) !== mes) continue;
+
+    out.hay = true;
+    const monto = num(f[c('monto')]);
+    const abs = Math.abs(monto);
+    switch (String(f[c('clase')] || '').trim()) {
+      case 'ganancia':   out.ganancia += abs;     out.nGanancia++;     break;
+      case 'devolucion': out.devoluciones += abs; out.nDevoluciones++; break;
+      case 'flete':      out.fletes += abs;       out.nFletes++;       break;
+      case 'recarga':    out.recargas += abs;                          break;
+      case 'retiro': {
+        out.retiros += abs; out.nRetiros++;
+        const cp = String(c('concepto_retiro') === -1 ? '' : f[c('concepto_retiro')] || '').trim();
+        const k = cp || 'sin concepto';
+        out.conceptosRetiro[k] = (out.conceptosRetiro[k] || 0) + abs;
+        break;
+      }
+      default: out.otros += monto;
+    }
+  }
+
+  out.netoOperativo = out.ganancia - out.devoluciones - out.fletes + out.otros;
+  out.devolucionPromedio = out.nDevoluciones ? out.devoluciones / out.nDevoluciones : 0;
+  if (ultimo) { out.saldo = ultimo.saldo; out.ultimaFecha = ultimo.fecha; }
+  return out;
 }
