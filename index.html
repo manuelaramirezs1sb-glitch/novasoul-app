@@ -235,6 +235,7 @@ body { margin: 0; background: var(--bg); font-family: 'DM Sans', sans-serif; min
 
   <hr class="divider">
   <p class="hub-note">Cargando tu plan…</p>
+  <p style="font:400 10px/1.4 'DM Sans';opacity:.55;margin-top:10px;" id="sello-version"></p>
 </div>
 
 <button class="modo-btn" onclick="toggleModo()">☀ / ☾</button>
@@ -251,6 +252,13 @@ body { margin: 0; background: var(--bg); font-family: 'DM Sans', sans-serif; min
  * Sin sesión se muestra solo Nova Empresarial, que es lo que se vende.
  * Los demás aparecen cuando la hoja confirma que el plan los incluye.
  */
+/** La huella de esta pantalla, para saber si es la última. */
+const VERSION_PANTALLA = '2026-09-15 · e4f9';
+(function () {
+  const el = document.getElementById('sello-version');
+  if (el) el.textContent = 'Hub del ' + VERSION_PANTALLA;
+})();
+
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /**

@@ -316,6 +316,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
            onclick="pasoLogin(1)">Usar otro correo</div>
     </div>
     <div id="lgn-err" style="display:none;font:500 12px/1.5 'DM Sans';color:#A83636"></div>
+    <div style="text-align:center;font:400 10px/1.4 'DM Sans';color:var(--ink3)"
+         id="sello-version"></div>
   </div>
 </div>
 
@@ -579,6 +581,24 @@ let demoOn  = false;
 let demoAccess = ['manuela@nova.co', 'laura@novacademy.co', 'camila@novacademy.co'];
 let activeSt = 'gt';
 
+/**
+ * Qué versión de la pantalla estás viendo.
+ *
+ * El navegador guarda el HTML y lo sigue sirviendo aunque el servidor ya
+ * tenga otro. Sin una marca visible no hay forma de saber si lo que está
+ * abierto es lo último o lo de ayer, y se pierde media hora buscando un
+ * error que ya estaba arreglado.
+ *
+ * La huella sale del contenido del archivo: cambia sola con cada cambio,
+ * aunque sean dos versiones el mismo día.
+ */
+const VERSION_PANTALLA = '2026-09-15 · 4950';
+
+function pintarVersion() {
+  const el = document.getElementById('sello-version');
+  if (el) el.textContent = 'Pantalla del ' + VERSION_PANTALLA;
+}
+
 /* ─── CONEXIÓN CON LA HOJA ─── */
 /**
  * Nova Central habla con el mismo Web App que Empresarial, pero por su
@@ -687,6 +707,7 @@ async function reanudarCentral() {
   const guardado = localStorage.getItem('nc_email') || '';
   const el = document.getElementById('lgn-email');
   if (el && guardado) el.value = guardado;
+  pintarVersion();
   pasoLogin(1);
   if (!NC_TOKEN) return;
   try {
