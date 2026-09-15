@@ -956,7 +956,7 @@ input.li:focus{border-color:var(--acc-d);}
       <div class="lstep on" id="s1">
         <div><div class="ltag">PASO 1 DE 3</div><div class="ltitle">Entra con tu correo</div>
         <p class="lsub">Te mando un código de 6 dígitos. Sin contraseña que se te olvide.</p></div>
-        <div class="lfield"><span>CORREO</span><input class="li" id="em" type="email" value="manuela@nutrea.co"></div>
+        <div class="lfield"><span>CORREO</span><input class="li" id="em" type="email" autocomplete="email" inputmode="email" placeholder="tucorreo@tudominio.com"></div>
         <!-- Los chips de cuentas de prueba se quitaron: rellenaban correos
              inventados que no existen en la hoja Equipo, así que solo
              podían llevar a un error. Quien entra usa su correo real. -->
@@ -965,11 +965,12 @@ input.li:focus{border-color:var(--acc-d);}
         <div class="ldiv"><hr><span>o</span><hr></div>
         <div class="lghost">Entrar con Google</div>
         <div style="text-align:center;"><span style="font:500 12px/1 'DM Sans';color:var(--t-mut2);">¿Primera vez? </span><span class="llink" onclick="enterApp()">Entrar en modo demo →</span></div>
+        <div style="text-align:center;font:500 10px/1.4 'DM Sans';color:var(--t-mut3);" id="sello-version"></div>
       </div>
       <!-- paso 2 -->
       <div class="lstep" id="s2">
         <div><div class="ltag">PASO 2 DE 3</div><div class="ltitle">Revisa tu correo</div>
-        <p class="lsub">Mandé un código a <strong id="em-show" style="color:var(--acc-d);">manuela@nutrea.co</strong>. Vence en 10 minutos.</p></div>
+        <p class="lsub">Mandé un código a <strong id="em-show" style="color:var(--acc-d);">tu correo</strong>. Vence en 10 minutos.</p></div>
         <input class="li" id="cod" inputmode="numeric" maxlength="6" placeholder="000000"
           style="text-align:center;font:700 26px/1 'Fraunces',serif;letter-spacing:10px;padding:16px;"
           onkeydown="if(event.key==='Enter')verificarCodigo()">
@@ -6126,6 +6127,38 @@ function pintarCartera(c) {
       'con el cierre, que va por cohorte.</div>';
 }
 
+/**
+ * Qué versión de la pantalla estás viendo.
+ *
+ * "No me carga el cambio" es imposible de diagnosticar a ciegas: el
+ * navegador guarda el HTML y lo sigue sirviendo aunque el servidor ya
+ * tenga otro. Sin una marca visible, ni ella ni yo podemos saber si el
+ * archivo que está abierto es el nuevo o el de ayer.
+ *
+ * La fecha se escribe al construir. Si la de la pantalla no coincide con
+ * la del archivo que acabas de publicar, lo que estás viendo es caché.
+ */
+const VERSION_PANTALLA = '2026-09-15';
+
+function pintarVersion() {
+  const el = document.getElementById('sello-version');
+  if (el) el.textContent = 'Pantalla del ' + VERSION_PANTALLA;
+}
+
+/**
+ * El correo con el que entraste la última vez.
+ *
+ * Aquí había un "manuela@nutrea.co" escrito a mano que no existe en
+ * ninguna hoja Equipo: quien llegaba tenía que borrarlo antes de escribir
+ * el suyo, y si no se fijaba, pedía un código para una cuenta inventada y
+ * recibía un error que no explicaba nada.
+ */
+function recordarCorreo() {
+  const el = document.getElementById('em');
+  const guardado = localStorage.getItem('ne_email') || '';
+  if (el && guardado && !el.value) el.value = guardado;
+}
+
 // ─── VER COMO ─────────────────────────────────────────────────
 /**
  * Mirar Nova con menos permisos de los que tienes.
@@ -7143,6 +7176,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('login').setAttribute('data-tema',TM);
   if(MD==='oscuro') document.getElementById('login').setAttribute('data-modo','oscuro');
   document.querySelectorAll('.cdot').forEach(d=>d.classList.toggle('on',d.dataset.t===TM));
+  pintarVersion();
+  recordarCorreo();
   reanudarSesion();
 });
 </script>
