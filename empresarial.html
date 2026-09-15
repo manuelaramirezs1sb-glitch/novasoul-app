@@ -2787,6 +2787,35 @@ async function api(accion, datos, intento) {
       '\n\nSi acabas de publicar una versión nueva, espera un minuto: ' +
       'Google tarda en activarla.');
   }
+  /**
+   * El POST llegó como GET y sin cuerpo.
+   *
+   * Apps Script no responde el POST directamente: contesta un redirect a
+   * googleusercontent, y el navegador lo sigue convirtiéndolo en GET —así
+   * funciona 301/302 desde siempre. Normalmente da igual, porque Google
+   * deja la respuesta ya calculada al otro lado. Pero en los minutos
+   * siguientes a publicar una versión nueva esa respuesta todavía no
+   * existe, el navegador acaba haciendo un GET pelado contra /exec, y
+   * doGet contesta "Falta la acción" sobre una petición que sí era POST.
+   *
+   * No es un error del código ni de la pantalla: es la publicación a
+   * medio propagar. Se espera y se reintenta, igual que con el 404.
+   */
+  if (j && j.diagnostico && j.diagnostico.metodo === 'GET' && !j.diagnostico.hubo_cuerpo) {
+    if (intento < 3) {
+      await new Promise(function (ok) { setTimeout(ok, 2000 * Math.pow(2, intento)); });
+      return api(accion, datos, intento + 1);
+    }
+    j.error = 'Google está recibiendo la petición sin su contenido.\n\n' +
+      'Casi siempre es que acabas de publicar y todavía se está ' +
+      'propagando: espera un minuto y vuelve a intentar.\n\n' +
+      'Si sigue igual, revisa la implementación en Apps Script: ' +
+      'Ejecutar como “Yo” y Quién tiene acceso “Cualquier usuario”. ' +
+      'Con cualquier otra combinación Google pide iniciar sesión y el ' +
+      'contenido se pierde por el camino.';
+    delete j.diagnostico;
+  }
+
   if (j && j.reautenticar) { sesionVencida(); }
   return j;
 }
@@ -2863,8 +2892,8 @@ async function pedirCodigo() {
   try {
     const r = await api('login', { email: email });
     if (!r.ok) {
-      errLogin('lg-err', (r.error||'No se pudo enviar el código.') +
-        (r.diagnostico ? '\n' + JSON.stringify(r.diagnostico) : ''));
+      errLogin('lg-err', r.error || 'No se pudo enviar el código.');
+      if (r.diagnostico) console.warn('[Nova] diagnóstico:', r.diagnostico);
       return;
     }
     document.getElementById('em-show').textContent = email;
@@ -2888,10 +2917,11 @@ async function verificarCodigo() {
   try {
     const r = await api('verificar', { email: email, codigo: codigo });
     if (!r.ok) {
-      // Si el servidor mandó diagnóstico, se muestra: es lo que evita
-      // tener que abrir la consola para saber qué pasó.
-      errLogin('lg-err2', (r.error||'Código incorrecto.') +
-        (r.diagnostico ? '\n' + JSON.stringify(r.diagnostico) : ''));
+      // El diagnóstico va a la consola, no a la cara de quien entra: un
+      // objeto JSON en pantalla no le dice nada a nadie y tapa el mensaje
+      // que sí se entiende.
+      errLogin('lg-err2', r.error || 'Código incorrecto.');
+      if (r.diagnostico) console.warn('[Nova] diagnóstico:', r.diagnostico);
       return;
     }
     TOKEN = r.token;
