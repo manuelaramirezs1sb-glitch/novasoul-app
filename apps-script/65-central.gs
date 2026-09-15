@@ -352,32 +352,60 @@ function registrarCentral(s, entidad, id, campo, antes, ahora) {
 }
 
 /**
- * Darse de alta a una misma la primera vez.
+ * ★ Darse de alta en la consola, la primera vez ★
  *
- * La consola se entra con un correo que esté en la hoja Plataforma, y esa
- * hoja nace vacía: sin esto, nadie podría entrar nunca a Nova Central.
+ * Se entra a Nova Central con un correo que esté en la hoja Plataforma,
+ * y esa hoja nace vacía: sin esto nadie podría entrar nunca.
  *
- * Se corre desde el editor, una sola vez, y solo funciona mientras la
- * hoja esté vacía. Después, quien agrega gente es quien ya está dentro.
+ * SE CORRE SIN ESCRIBIR NADA. Eliges primeraSocia en el editor, le das a
+ * Ejecutar, y se da de alta la cuenta desde la que estás corriendo el
+ * script — que es la dueña de las hojas, así que ya es tuya.
+ *
+ * El botón Ejecutar del editor no sabe pasar argumentos, y pedirle a
+ * alguien que edite el código para darse de alta es pedirle que toque lo
+ * único que no debería tener que tocar. Si quieres otro correo, se puede
+ * pasar: primeraSocia("Nombre", "otro@correo.com")
+ *
+ * Solo funciona mientras la hoja esté vacía. Después, quien agrega gente
+ * es quien ya está dentro.
  */
 function primeraSocia(nombre, correo) {
   const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Plataforma');
   if (!sh) throw new Error('Falta la hoja Plataforma. Corre bootstrapTodo().');
   if (sh.getLastRow() > 1) {
+    const ya = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues()
+      .map(function (f) { return f[2]; }).filter(String).join(', ');
     throw new Error(
-      'La hoja Plataforma ya tiene gente. Para agregar a alguien más, ' +
-      'escribe su fila directamente ahí: nombre, correo, rol (socia u ' +
-      'operadora) y estado "activo".');
+      'La hoja Plataforma ya tiene gente: ' + ya + '\n\n' +
+      'Para agregar a alguien más, escribe su fila directamente ahí: ' +
+      'nombre, correo, rol (socia u operadora) y estado "activo".');
   }
-  if (!correo || String(correo).indexOf('@') === -1) {
-    throw new Error('Se usa así:  primeraSocia("Manuela", "tucorreo@dominio.com")');
+
+  // Sin correo, el de la cuenta que está corriendo esto
+  const mail = String(correo || Session.getEffectiveUser().getEmail() || '')
+    .toLowerCase().trim();
+  if (!mail || mail.indexOf('@') === -1) {
+    throw new Error(
+      'No pude averiguar tu correo solo. Córrela así:\n\n' +
+      '  primeraSocia("Manuela", "tucorreo@dominio.com")');
   }
+
   sembrar(sh.getParent(), 'Plataforma', [{
     id: 'pl-' + Utilities.getUuid().slice(0, 8),
-    nombre: nombre || 'Socia', correo: String(correo).toLowerCase().trim(),
+    nombre: nombre || mail.split('@')[0],
+    correo: mail,
     rol: 'socia', estado: 'activo', ultima_conexion: '', nota: 'primera socia',
   }], 2);
-  const msg = 'Listo. ' + correo + ' ya puede entrar a Nova Central.';
+
+  const msg = [
+    'Listo.',
+    '',
+    'Entra a Nova Central con este correo:  ' + mail,
+    'Ahí te llega el código de 6 dígitos.',
+    '',
+    'Si prefieres otro correo, bórralo de la hoja Plataforma y vuelve a',
+    'correr esto pasándole el que quieras.',
+  ].join('\n');
   Logger.log(msg);
   return msg;
 }
