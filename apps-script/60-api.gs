@@ -2988,6 +2988,13 @@ function apiCas(s, p) {
   const u = umbrales(ss, tienda);
   const minDias = Number(u.dias_sin_mover) || 3;
   const hoy = new Date();
+  /**
+   * La ventana del SOP son 10 días, porque el CAS sirve para atajar a
+   * tiempo. Pero quien nunca lo ha hecho tiene pedidos estancados de
+   * antes, y esconderlos porque "ya no aplica el protocolo" sería
+   * esconder plata parada. Se cuentan aparte y se pueden pedir.
+   */
+  const ventana = Math.max(1, parseInt(p.ventana, 10) || VENTANA_CAS_DIAS);
 
   // Los CAS ya radicados, por pedido
   const abiertos = {};
@@ -3026,6 +3033,7 @@ function apiCas(s, p) {
 
   // Candidatos: pedidos vivos, quietos, y de la ventana reciente
   const candidatos = [];
+  let viejos = 0, valorViejos = 0;
   const shP = ss.getSheetByName('Pedidos');
   if (shP && shP.getLastRow() > 1) {
     const d = shP.getDataRange().getValues();
@@ -3040,11 +3048,12 @@ function apiCas(s, p) {
       const fecha = aISO(f[c('fecha')], tz);
       if (!fecha) continue;
       const edad = Math.floor((hoy - new Date(fecha + 'T00:00:00Z')) / 86400000);
-      if (edad > VENTANA_CAS_DIAS) continue;   // fuera de la ventana del SOP
-
       const ult = aISO(f[c('ultimo_movimiento')] || f[c('actualizado_en')], tz) || fecha;
       const quieto = Math.floor((hoy - new Date(ult + 'T00:00:00Z')) / 86400000);
       if (quieto < minDias) continue;
+
+      // Estancado pero más viejo que la ventana: existe, y se dice
+      if (edad > ventana) { viejos++; valorViejos += num(f[c('valor')]); continue; }
 
       const id = String(f[c('id')] || '');
       candidatos.push({
@@ -3069,8 +3078,9 @@ function apiCas(s, p) {
     return (b.diasSinTocar || 0) - (a.diasSinTocar || 0);
   });
 
-  return { ok: true, tienda: tienda, minDias: minDias, ventana: VENTANA_CAS_DIAS,
+  return { ok: true, tienda: tienda, minDias: minDias, ventana: ventana,
            candidatos: candidatos, cas: lista,
+           viejos: viejos, valorViejos: valorViejos,
            sinRadicar: candidatos.filter(function (x) { return !x.yaTiene; }).length };
 }
 

@@ -829,6 +829,8 @@ input.li:focus{border-color:var(--acc-d);}
 .cas-chip{font:600 11px/1 'DM Sans';color:var(--t-mut);background:var(--s-dark);border:1px solid var(--s-line2);border-radius:20px;padding:8px 12px;cursor:pointer;white-space:nowrap;}
 .cas-chip:hover{border-color:var(--acc-d);color:var(--acc-d);}
 .cas-pie{font:500 10.5px/1.5 'DM Sans';color:var(--t-mut2);margin-top:8px;}
+.cas-viejos{font:500 11.5px/1.6 'DM Sans';color:#7a5c10;background:#f6ecd0;border-radius:10px;padding:10px 13px;margin-top:10px;}
+.cas-ver{font-weight:600;cursor:pointer;text-decoration:underline;}
 /* Cómo se leen las fechas */
 .ffgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
 @media(max-width:620px){.ffgrid{grid-template-columns:1fr;}}
@@ -6474,6 +6476,7 @@ function verMesCierre(mes) {
  * contestaron. Eso hoy vive en un Drive suelto que nadie más ve.
  */
 let CAS_DATOS = null;
+let CAS_VENTANA = 0;   // 0 = la del SOP; si no, la que se pidió
 
 const CAS_ESTADOS = [
   ['abierto',       'Radicado',      '#8a6a13', '#f6ecd0'],
@@ -6490,7 +6493,8 @@ function fichaCas(estado) {
 async function cargarCas() {
   if (!CONECTADO) return false;
   let r;
-  try { r = await api('cas', { tienda: ST }); }
+  try { r = await api('cas', CAS_VENTANA
+        ? { tienda: ST, ventana: CAS_VENTANA } : { tienda: ST }); }
   catch (e) { return false; }
   if (!r || !r.ok) return false;
   CAS_DATOS = r;
@@ -6568,6 +6572,22 @@ function pintarCas() {
       }).join('');
   }
 
+  /**
+   * Lo estancado que quedó fuera de la ventana.
+   *
+   * El SOP mira los últimos 10 días porque el CAS sirve para atajar a
+   * tiempo. Pero quien nunca lo ha hecho tiene pedidos parados de antes,
+   * y no mostrarlos porque "ya no aplica el protocolo" sería esconder
+   * plata quieta. Se dicen, y se pueden traer.
+   */
+  if (d.viejos) {
+    h += '<div class="cas-viejos">Hay <b>' + d.viejos +
+      (d.viejos === 1 ? '</b> pedido más' : '</b> pedidos más') + ' parados hace ' +
+      d.minDias + ' días o más, pero de antes de la ventana de ' + d.ventana +
+      ' días' + (d.valorViejos ? ' — ' + S + NUM(d.valorViejos) + ' quietos' : '') +
+      '. <span class="cas-ver" onclick="ampliarCas()">Ver también esos →</span></div>';
+  }
+
   const resueltos = d.cas.length - vivos.length;
   if (!h) {
     h = '<div class="eq-vacio">Ningún pedido lleva ' + d.minDias +
@@ -6580,6 +6600,13 @@ function pintarCas() {
   }
 
   cont.innerHTML = h;
+}
+
+/** Traer también lo estancado de antes de la ventana del SOP. */
+async function ampliarCas() {
+  CAS_VENTANA = 365;
+  showToast('Buscando también los de antes…');
+  await cargarCas();
 }
 
 async function radicarCas(pedidoId) {
