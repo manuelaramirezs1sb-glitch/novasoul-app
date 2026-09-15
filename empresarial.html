@@ -96,11 +96,18 @@ input.li:focus{border-color:var(--acc-d);}
 .sidebar::-webkit-scrollbar{width:0;}
 .brand{display:flex;align-items:center;gap:10px;padding:6px 6px 2px;}
 .brand-logo{max-width:140px;height:auto;}
+/* El logo se elige por el fondo que va a tener detrás.
+   Estas reglas miraban `data-tema`, que guarda el COLOR del panel
+   (verde, amarillo, terracota, azul) y nunca vale "claro" ni "oscuro".
+   El que guarda claro/oscuro es `data-modo`. Así que el interruptor no
+   se disparaba nunca: en modo oscuro seguía el logo de tinta negra
+   sobre fondo oscuro, invisible.
+   · logo-nova-empresarial.png        → tinta oscura → fondo CLARO
+   · logo-nova-empresarial-claro.png  → tinta blanca → fondo OSCURO */
 .brand-logo-light{display:none!important;}
 .brand-logo-dark{display:block!important;}
-[data-tema="claro"] .brand-logo-dark,.lbox .brand-logo-light{display:none!important;}
-[data-tema="claro"] .brand-logo-light{display:block!important;}
-@media(prefers-color-scheme:light){:root:not([data-tema="oscuro"]) .brand-logo-dark{display:none!important;}:root:not([data-tema="oscuro"]) .brand-logo-light{display:block!important;}}
+[data-modo="oscuro"] .brand-logo-dark{display:none!important;}
+[data-modo="oscuro"] .brand-logo-light{display:block!important;}
 .brand-ico{width:32px;height:32px;border-radius:9px;background:#3c4433;flex:none;display:flex;align-items:center;justify-content:center;font:700 13px/1 'DM Sans';color:#b9cf8e;}
 .brand-text strong{display:block;font:600 14px/1 'Fraunces',serif;color:var(--t-ondark);}
 .brand-text small{font:500 10px/1.3 'DM Sans';color:var(--t-ondark-mut);}
@@ -980,7 +987,8 @@ input.li:focus{border-color:var(--acc-d);}
 <div id="login">
   <div class="lbox">
     <div class="lleft">
-      <img src="logo-nova-empresarial.png" alt="Nova Empresarial" style="max-width:180px;height:auto;margin-bottom:4px;">
+      <img src="logo-nova-empresarial.png" alt="Nova Empresarial" class="brand-logo-dark" style="max-width:180px;height:auto;margin-bottom:4px;">
+      <img src="logo-nova-empresarial-claro.png" alt="Nova Empresarial" class="brand-logo-light" style="max-width:180px;height:auto;margin-bottom:4px;">
       <h2>Lo que construiste merece orden</h2>
       <p>Cada mañana que no pasas cuadrando cifras se la devuelves a tu negocio. Nova pone el orden; tú decides hacia dónde crece.</p>
       <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px;">

@@ -16,18 +16,18 @@
 <style>
 /* ─── TOKENS ─── */
 :root {
-  --bg:    #09121f;
-  --bg2:   #0d1b2e;
-  --bg3:   #12233d;
-  --card:  #152340;
-  --line:  #1d2f4a;
-  --line2: #223454;
-  --ink:   #e6edf7;
-  --ink2:  #a0b2ca;
-  --ink3:  #607090;
-  --gold:  #c9a84c;
+  --bg:    #171a1c;
+  --bg2:   #1d2124;
+  --bg3:   #24292c;
+  --card:  #22272a;
+  --line:  #32383c;
+  --line2: #2b3134;
+  --ink:   #f0eee9;
+  --ink2:  #b8b4ab;
+  --ink3:  #837e74;
+  --gold:  #d4b45f;
   --gold2: #a8872b;
-  --glow:  rgba(201,168,76,.13);
+  --glow:  rgba(212,180,95,.14);
   --green: #3ecf8e;
   --red:   #ef5a6f;
   --amber: #f5a623;
@@ -36,18 +36,18 @@
   --sb:    210px;
 }
 [data-modo="claro"] {
-  --bg:   #edf1f8;
-  --bg2:  #e2e8f2;
-  --bg3:  #d6dde9;
-  --card: #ffffff;
-  --line: #c5cfde;
-  --line2:#d8e0eb;
-  --ink:  #0f1928;
-  --ink2: #374d68;
-  --ink3: #7a8fa8;
-  --gold: #9a6f20;
+  --bg:   #f6f4ef;
+  --bg2:  #efece5;
+  --bg3:  #e6e2d9;
+  --card: #fffefb;
+  --line: #d9d4c8;
+  --line2:#e6e2d9;
+  --ink:  #22201c;
+  --ink2: #57534b;
+  --ink3: #8b857a;
+  --gold: #8a6a13;
   --gold2:#7a5510;
-  --glow: rgba(154,111,32,.1);
+  --glow: rgba(138,106,19,.09);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
@@ -61,11 +61,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 }
 .lgn-logo{text-align:center;}
 .lgn-logo-img{max-width:220px;height:auto;}
-.lgn-logo-light,.sb-logo-light{display:none!important;}
-.lgn-logo-dark,.sb-logo-dark{display:block!important;}
-[data-modo="claro"] .lgn-logo-dark,[data-modo="claro"] .sb-logo-dark{display:none!important;}
-[data-modo="claro"] .lgn-logo-light,[data-modo="claro"] .sb-logo-light{display:block!important;}
-@media(prefers-color-scheme:light){:root:not([data-modo="oscuro"]) .lgn-logo-dark,:root:not([data-modo="oscuro"]) .sb-logo-dark{display:none!important;}:root:not([data-modo="oscuro"]) .lgn-logo-light,:root:not([data-modo="oscuro"]) .sb-logo-light{display:block!important;}}
+/* El logo se elige por el FONDO que va a tener detrás, no por un nombre
+   de modo. Estaban al revés: en oscuro se mostraba el de tinta negra y en
+   claro el de tinta blanca, así que "NOVA Central" era invisible en los
+   dos. La brújula dorada se veía; las letras no.
+   · logo-nova-central.png        → tinta oscura → fondo CLARO
+   · logo-nova-central-claro.png  → tinta blanca → fondo OSCURO */
+.logo-tinta{display:none!important;}
+.logo-blanco{display:block!important;}
+[data-modo="claro"] .logo-blanco{display:none!important;}
+[data-modo="claro"] .logo-tinta{display:block!important;}
 .lgn-card{
   background:rgba(18,35,61,.85);border:1px solid var(--line);border-radius:20px;
   backdrop-filter:blur(12px);padding:36px 40px;width:340px;
@@ -80,7 +85,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 }
 .f-inp:focus{border-color:var(--gold);}
 .lgn-btn{
-  background:var(--gold);color:#09121f;border:none;border-radius:var(--rsm);
+  background:var(--gold);color:#1c1a16;border:none;border-radius:var(--rsm);
   padding:12px;font:600 14px 'DM Sans';cursor:pointer;transition:opacity .15s;
 }
 .lgn-btn:hover{opacity:.85;}
@@ -117,7 +122,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 [data-modo="claro"] .tog-wrap::after{left:19px;}
 .sb-foot{padding:14px 16px 18px;border-top:1px solid var(--line);}
 .sb-user{display:flex;align-items:center;gap:10px;}
-.sb-ava{width:34px;height:34px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font:700 14px 'DM Sans';color:#09121f;flex-shrink:0;}
+.sb-ava{width:34px;height:34px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font:700 14px 'DM Sans';color:#1c1a16;flex-shrink:0;}
 .sb-nm{font:600 12.5px/1.2 'DM Sans';color:var(--ink);}
 .sb-rol{font:400 10px/1 'DM Sans';color:var(--gold);letter-spacing:.5px;margin-top:3px;}
 .sb-out{font:500 11.5px 'DM Sans';color:var(--ink3);cursor:pointer;margin-top:10px;}
@@ -163,7 +168,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 
 /* Action buttons */
 .btn{
-  display:inline-flex;align-items:center;gap:7px;background:var(--gold);color:#09121f;
+  display:inline-flex;align-items:center;gap:7px;background:var(--gold);color:#1c1a16;
   border:none;border-radius:var(--rsm);padding:9px 18px;font:600 12.5px 'DM Sans';
   cursor:pointer;transition:opacity .15s;white-space:nowrap;
 }
@@ -223,7 +228,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   margin-left:auto;background:var(--card);border:1px solid var(--line2);border-radius:var(--rsm);
   padding:8px 16px;font:600 12px 'DM Sans';color:var(--ink2);cursor:pointer;flex-shrink:0;
 }
-.demo-tog.on{background:var(--green);color:#09121f;border-color:transparent;}
+.demo-tog.on{background:var(--green);color:#1c1a16;border-color:transparent;}
 .demo-access-row{display:flex;align-items:center;gap:8px;}
 .demo-email-item{
   display:flex;align-items:center;gap:8px;padding:8px 12px;
@@ -289,8 +294,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 <!-- ─── LOGIN ─── -->
 <div id="login-screen">
   <div class="lgn-logo">
-    <img src="logo-nova-central.png" alt="Nova Central" class="lgn-logo-img lgn-logo-dark">
-    <img src="logo-nova-central-claro.png" alt="Nova Central" class="lgn-logo-img lgn-logo-light">
+    <img src="logo-nova-central-claro.png" alt="Nova Central" class="lgn-logo-img logo-blanco">
+    <img src="logo-nova-central.png" alt="Nova Central" class="lgn-logo-img logo-tinta">
   </div>
   <div class="lgn-card">
     <div>
@@ -320,8 +325,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   <!-- Sidebar -->
   <div class="sidebar">
     <div class="sb-logo">
-      <img src="logo-nova-central.png" alt="Nova Central" class="sb-logo-img sb-logo-dark">
-      <img src="logo-nova-central-claro.png" alt="Nova Central" class="sb-logo-img sb-logo-light">
+      <img src="logo-nova-central-claro.png" alt="Nova Central" class="sb-logo-img logo-blanco">
+      <img src="logo-nova-central.png" alt="Nova Central" class="sb-logo-img logo-tinta">
     </div>
     <nav class="sb-nav">
       <div class="ni on" data-v="dashboard" onclick="go('dashboard',this)">
