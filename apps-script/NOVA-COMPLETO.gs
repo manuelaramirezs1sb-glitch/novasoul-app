@@ -280,6 +280,25 @@ const ESQUEMA_EMPRESARIAL = {
             'importado_en'],
 
   /**
+   * CAS: el ticket que se le radica a la transportadora.
+   *
+   * Cuando un pedido lleva días sin cambiar de estado, llamar al cliente
+   * no sirve —el paquete no está con él—. Lo que mueve la aguja es
+   * presión administrativa sobre la transportadora: un ticket oficial
+   * pidiendo prioridad de despacho.
+   *
+   * Nova detecta los candidatos sola, leyendo los pedidos quietos. Lo que
+   * no puede saber es si alguien radicó el ticket, con qué número, y qué
+   * contestaron. Eso lo escribe el equipo, y es justo lo que hoy vive en
+   * un Drive suelto donde nadie más lo ve.
+   *
+   * `estado`: abierto · respondido · resuelto · sin_respuesta
+   */
+  CAS: ['id','tienda','pedido_id','id_externo','guia','transportadora',
+        'abierto_en','abierto_por','ticket','estado','dias_quieto',
+        'ultima_gestion','respuesta','cerrado_en','nota'],
+
+  /**
    * `id` para poder editar una fila desde la app, y `origen` para saber
    * si ese número lo contó una persona o lo trajo un archivo. Mezclarlos
    * sin distinguir hace imposible saber en cuál confiar.
@@ -2416,6 +2435,28 @@ const AJUSTES_DEFAULT = {
    * lo que ya viene en AAAA-MM-DD tampoco.
    */
   formato_fecha: 'dia_primero',   // 'dia_primero' | 'mes_primero'
+
+  /**
+   * Lo que cuesta mover la plata, que nadie factura pero se cobra igual.
+   *
+   * Dropi descuenta un porcentaje de cada retiro de la billetera a la
+   * cuenta del banco. No aparece como gasto en ningún reporte: sale
+   * restado del monto que llega, así que es invisible para cualquier
+   * cierre que mire solo ventas y pauta. En agosto de Nutrea son 1.100
+   * dólares retirados — a 3%, treinta y tres dólares que no estaban en
+   * ninguna cuenta.
+   *
+   * La comisión internacional es otra cosa y por eso va aparte: el banco
+   * la cobra por pagar en moneda extranjera, y no a todos los
+   * proveedores. A Meta sí; a Shopify y a Claude, no. Aplicarla a todo
+   * inflaría el costo de los que no la pagan.
+   *
+   * Los dos en cero apagan el cálculo. Nadie tiene que aceptar unas
+   * comisiones que no son las suyas.
+   */
+  retiro_pct: 3,            // % que la plataforma descuenta de cada retiro
+  comision_intl_pct: 2,     // % del banco por pagar en moneda extranjera
+  comision_intl_a: 'meta',  // a qué plataformas se les aplica, separadas por coma
 };
 
 /** Esquemas que sí se pueden abrir desde un enlace de la app. */
@@ -3742,6 +3783,8 @@ function manejar(e, metodo) {
       case 'productos': return json(apiProductos(s, p));
       case 'recuento':  return json(apiRecuento(s, p));
       case 'historial': return json(apiHistorial(s, p));
+      case 'cas':       return json(apiCas(s, p));
+      case 'cas_escribir': return json(apiCasEscribir(s, p));
       case 'alarmas':   return json(apiAlarmas(s, p));
       case 'parametros':return json(apiParametros(s, p));
       case 'auditoria': return json(apiAuditoria(s, p));
@@ -5699,9 +5742,33 @@ function agregarMes(ss, tienda, mes, s) {
      */
     const cobroRetorno = out.costoDevolucionFuente === 'cartera'
       ? out.costoDevolucion : 0;
+
+    /**
+     * Las dos comisiones que nadie factura.
+     *
+     * La de retiro sale de la cartera: es un porcentaje de lo que sacaste
+     * de la billetera ese mes. La internacional la cobra el banco por
+     * pagar en moneda extranjera, y solo a algunos proveedores — a Meta
+     * sí, a Shopify y Claude no—, así que se aplica al gasto de las
+     * plataformas que la dueña haya listado, no a todo.
+     *
+     * Las dos van con los gastos fijos y no dentro del margen: el margen
+     * responde si el producto deja plata, y estas comisiones no dependen
+     * del producto sino de cómo se mueve el dinero.
+     */
+    const ajM = ajustes(ss, tienda);
+    out.comisionRetiro = (out.cartera && out.cartera.costoRetiros) || 0;
+    const pctIntl = Number(ajM.comision_intl_pct) || 0;
+    const plataformas = String(ajM.comision_intl_a || '').split(/[,;]/)
+      .map(function (x) { return norm(x); }).filter(String);
+    let baseIntl = 0;
+    // El gasto ya convertido de las plataformas a las que sí se las cobran
+    if (pctIntl && plataformas.indexOf('meta') !== -1) baseIntl = out.gasto;
+    out.comisionIntl = baseIntl * (pctIntl / 100);
+    out.comisiones = out.comisionRetiro + out.comisionIntl;
     out.margen = out.ventas - out.gasto - out.costoProducto - out.costoEnvio
                  - cobroRetorno;
-    out.utilidad = out.margen - out.fijos;
+    out.utilidad = out.margen - out.fijos - out.comisiones;
   }
   return out;
 }
@@ -6362,6 +6429,19 @@ function carteraDelMes(ss, tienda, mes) {
   }
 
   out.netoOperativo = out.ganancia - out.devoluciones - out.fletes + out.otros;
+
+  /**
+   * Lo que cuesta sacar la plata.
+   *
+   * La plataforma descuenta un porcentaje de cada retiro. No lo factura
+   * ni aparece en ningún reporte: sale restado del monto que llega al
+   * banco, así que un cierre que mire solo ventas y pauta nunca lo ve.
+   * Es pequeño por retiro y nada pequeño al final del mes.
+   */
+  const aj = ajustes(ss, tienda);
+  const pct = Number(aj.retiro_pct);
+  out.retiroPct = isNaN(pct) ? 0 : pct;
+  out.costoRetiros = out.retiros * (out.retiroPct / 100);
   out.devolucionPromedio = out.nDevoluciones ? out.devoluciones / out.nDevoluciones : 0;
   if (ultimo) { out.saldo = ultimo.saldo; out.ultimaFecha = ultimo.fecha; }
   return out;
@@ -6531,6 +6611,195 @@ function apiHistorial(s, p) {
   });
 
   return { ok: true, tienda: tienda, moneda: monTienda, meses: out };
+}
+
+/**
+ * CAS: los pedidos estancados y los tickets que se les radicaron.
+ *
+ * Del SOP de Nutrea: cuando un pedido lleva días sin cambiar de estado,
+ * llamar al cliente no sirve — el paquete no está con él. Lo que mueve
+ * la aguja es presión administrativa sobre la transportadora: un ticket
+ * oficial pidiendo prioridad de despacho, tres veces por semana, y
+ * seguir insistiendo mientras no contesten.
+ *
+ * El criterio del SOP es "órdenes con días sin cambio de estado, de los
+ * últimos 10 días". Los dos números son ajustables porque una tienda con
+ * transportadora lenta no puede usar el mismo umbral que una rápida: se
+ * toma `dias_sin_mover` de las alarmas, que ya es el umbral que la dueña
+ * eligió para "esto lleva demasiado quieto".
+ *
+ * Nova detecta los candidatos sola. Lo que no puede saber —si alguien
+ * radicó el ticket, con qué número, y qué contestaron— lo escribe el
+ * equipo. Eso hoy vive en un Drive suelto que nadie más ve.
+ */
+const VENTANA_CAS_DIAS = 10;
+
+function apiCas(s, p) {
+  const tienda = String(p.tienda || s.tiendas[0] || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const tz = zonaHorariaDe(ss, tienda) || 'UTC';
+  const u = umbrales(ss, tienda);
+  const minDias = Number(u.dias_sin_mover) || 3;
+  const hoy = new Date();
+
+  // Los CAS ya radicados, por pedido
+  const abiertos = {};
+  const lista = [];
+  const shC = ss.getSheetByName('CAS');
+  if (shC && shC.getLastRow() > 1) {
+    const d = shC.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    for (let i = 1; i < d.length; i++) {
+      const f = d[i];
+      if (String(f[c('tienda')]).trim() !== tienda) continue;
+      const est = norm(f[c('estado')]) || 'abierto';
+      const reg = {
+        id: f[c('id')], pedidoId: String(f[c('pedido_id')] || ''),
+        idExterno: String(f[c('id_externo')] || ''),
+        guia: String(f[c('guia')] || ''),
+        transportadora: String(f[c('transportadora')] || ''),
+        ticket: String(f[c('ticket')] || ''),
+        estado: est,
+        abiertoEn: aISO(f[c('abierto_en')], tz) || '',
+        abiertoPor: String(f[c('abierto_por')] || ''),
+        ultimaGestion: aISO(f[c('ultima_gestion')], tz) || '',
+        respuesta: String(f[c('respuesta')] || ''),
+        nota: String(f[c('nota')] || ''),
+        diasQuieto: num(f[c('dias_quieto')]),
+      };
+      // Cuántos días lleva el ticket sin que nadie lo toque
+      const ref = reg.ultimaGestion || reg.abiertoEn;
+      reg.diasSinTocar = ref
+        ? Math.floor((hoy - new Date(ref + 'T00:00:00Z')) / 86400000) : null;
+      lista.push(reg);
+      if (est !== 'resuelto') abiertos[reg.pedidoId] = reg;
+    }
+  }
+
+  // Candidatos: pedidos vivos, quietos, y de la ventana reciente
+  const candidatos = [];
+  const shP = ss.getSheetByName('Pedidos');
+  if (shP && shP.getLastRow() > 1) {
+    const d = shP.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    for (let i = 1; i < d.length; i++) {
+      const f = d[i];
+      if (String(f[c('tienda')]).trim() !== tienda) continue;
+      const est = norm(f[c('estado_nova')] || f[c('estado_canonico')]);
+      if (['entregado', 'devolucion', 'cancelado'].indexOf(est) !== -1) continue;
+
+      const fecha = aISO(f[c('fecha')], tz);
+      if (!fecha) continue;
+      const edad = Math.floor((hoy - new Date(fecha + 'T00:00:00Z')) / 86400000);
+      if (edad > VENTANA_CAS_DIAS) continue;   // fuera de la ventana del SOP
+
+      const ult = aISO(f[c('ultimo_movimiento')] || f[c('actualizado_en')], tz) || fecha;
+      const quieto = Math.floor((hoy - new Date(ult + 'T00:00:00Z')) / 86400000);
+      if (quieto < minDias) continue;
+
+      const id = String(f[c('id')] || '');
+      candidatos.push({
+        pedidoId: id, idExterno: String(f[c('id_externo')] || ''),
+        cliente: String(f[c('cliente')] || ''),
+        ciudad: String(f[c('ciudad')] || ''),
+        guia: String(f[c('guia')] || ''),
+        transportadora: String(f[c('transportadora')] || ''),
+        estado: est, valor: num(f[c('valor')]),
+        fecha: fecha, diasQuieto: quieto, edad: edad,
+        yaTiene: !!abiertos[id],
+        cas: abiertos[id] || null,
+      });
+    }
+  }
+
+  // Lo más quieto primero: ahí la antigüedad es deuda
+  candidatos.sort(function (a, b) { return b.diasQuieto - a.diasQuieto; });
+  lista.sort(function (a, b) {
+    const pa = a.estado === 'resuelto' ? 1 : 0, pb = b.estado === 'resuelto' ? 1 : 0;
+    if (pa !== pb) return pa - pb;
+    return (b.diasSinTocar || 0) - (a.diasSinTocar || 0);
+  });
+
+  return { ok: true, tienda: tienda, minDias: minDias, ventana: VENTANA_CAS_DIAS,
+           candidatos: candidatos, cas: lista,
+           sinRadicar: candidatos.filter(function (x) { return !x.yaTiene; }).length };
+}
+
+/**
+ * Radicar un CAS, o anotar qué pasó con uno ya radicado.
+ *
+ * El número de ticket no es obligatorio al abrirlo: en la práctica
+ * primero se decide radicarlo y el número llega después. Obligarlo
+ * empujaría a inventarse uno con tal de poder guardar.
+ */
+function apiCasEscribir(s, p) {
+  const tienda = String(p.tienda || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const sh = ss.getSheetByName('CAS');
+  if (!sh) return { ok: false, error: 'Falta la hoja CAS. Corre bootstrapTodo().' };
+
+  const ESTADOS = ['abierto', 'respondido', 'sin_respuesta', 'resuelto'];
+  const estado = norm(p.estado || 'abierto');
+  if (ESTADOS.indexOf(estado) === -1) {
+    return { ok: false, error: 'Estado no válido. Sirven: ' + ESTADOS.join(', ') + '.' };
+  }
+
+  const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
+  const hoy = new Date().toISOString().slice(0, 10);
+  const id = String(p.id || '').trim();
+
+  if (id) {
+    const d = sh.getDataRange().getValues();
+    const cId = enc.indexOf('id');
+    for (let i = 1; i < d.length; i++) {
+      if (String(d[i][cId]).trim() !== id) continue;
+      const cambios = {
+        estado: estado, ultima_gestion: hoy,
+        ticket: p.ticket !== undefined ? String(p.ticket).trim() : undefined,
+        respuesta: p.respuesta !== undefined ? String(p.respuesta).trim() : undefined,
+        nota: p.nota !== undefined ? String(p.nota).trim() : undefined,
+        cerrado_en: estado === 'resuelto' ? hoy : undefined,
+      };
+      Object.keys(cambios).forEach(function (k) {
+        if (cambios[k] === undefined) return;
+        const col = enc.indexOf(k);
+        if (col === -1) return;
+        const antes = d[i][col];
+        if (String(antes) === String(cambios[k])) return;
+        sh.getRange(i + 1, col + 1).setValue(cambios[k]);
+        registrarMovimiento(s, 'CAS', id, k, antes, cambios[k]);
+      });
+      return { ok: true, id: id };
+    }
+    return { ok: false, error: 'No encuentro ese CAS.' };
+  }
+
+  const pedidoId = String(p.pedido_id || '').trim();
+  if (!pedidoId) return { ok: false, error: 'Falta decir de qué pedido es el CAS.' };
+
+  const nuevo = 'cas-' + Utilities.getUuid().slice(0, 8);
+  const valores = {
+    id: nuevo, tienda: tienda, pedido_id: pedidoId,
+    id_externo: String(p.id_externo || ''), guia: String(p.guia || ''),
+    transportadora: String(p.transportadora || ''),
+    abierto_en: hoy, abierto_por: s.email,
+    ticket: String(p.ticket || '').trim(), estado: estado,
+    dias_quieto: num(p.dias_quieto), ultima_gestion: hoy,
+    respuesta: '', cerrado_en: '', nota: String(p.nota || '').trim(),
+  };
+  sh.appendRow(enc.map(function (col) {
+    return valores[col] !== undefined ? valores[col] : '';
+  }));
+  registrarMovimiento(s, 'CAS', nuevo, 'radicado', '', pedidoId);
+  return { ok: true, id: nuevo };
 }
 
 

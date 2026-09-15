@@ -89,6 +89,28 @@ const AJUSTES_DEFAULT = {
    * lo que ya viene en AAAA-MM-DD tampoco.
    */
   formato_fecha: 'dia_primero',   // 'dia_primero' | 'mes_primero'
+
+  /**
+   * Lo que cuesta mover la plata, que nadie factura pero se cobra igual.
+   *
+   * Dropi descuenta un porcentaje de cada retiro de la billetera a la
+   * cuenta del banco. No aparece como gasto en ningún reporte: sale
+   * restado del monto que llega, así que es invisible para cualquier
+   * cierre que mire solo ventas y pauta. En agosto de Nutrea son 1.100
+   * dólares retirados — a 3%, treinta y tres dólares que no estaban en
+   * ninguna cuenta.
+   *
+   * La comisión internacional es otra cosa y por eso va aparte: el banco
+   * la cobra por pagar en moneda extranjera, y no a todos los
+   * proveedores. A Meta sí; a Shopify y a Claude, no. Aplicarla a todo
+   * inflaría el costo de los que no la pagan.
+   *
+   * Los dos en cero apagan el cálculo. Nadie tiene que aceptar unas
+   * comisiones que no son las suyas.
+   */
+  retiro_pct: 3,            // % que la plataforma descuenta de cada retiro
+  comision_intl_pct: 2,     // % del banco por pagar en moneda extranjera
+  comision_intl_a: 'meta',  // a qué plataformas se les aplica, separadas por coma
 };
 
 /** Esquemas que sí se pueden abrir desde un enlace de la app. */

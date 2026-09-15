@@ -813,6 +813,22 @@ input.li:focus{border-color:var(--acc-d);}
 .hist-faltas{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;}
 .hist-falta{font:600 10.5px/1.3 'DM Sans';color:#8a6a13;background:#f6ecd0;border-radius:8px;padding:4px 8px;}
 .hist-pie{font:500 10.5px/1.55 'DM Sans';color:var(--t-mut2);margin-top:10px;}
+/* CAS: presión a la transportadora */
+.cas-sec{font:600 10px/1 'DM Sans';letter-spacing:1.1px;color:var(--t-mut2);margin:14px 0 2px;}
+.cas-f{background:var(--s-bg);border:1px solid var(--s-line2);border-left:3px solid var(--s-line4);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:7px;margin-bottom:8px;}
+.cas-f.nuevo{border-left-color:#b8322f;}
+.cas-f.urge{border-left-color:#d9a23f;}
+.cas-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.cas-nm{font:600 12.5px/1.3 'DM Sans';color:var(--t-ink);}
+.cas-meta{font:500 11px/1.5 'DM Sans';color:var(--t-mut2);}
+.cas-resp{font:500 11.5px/1.55 'DM Sans';color:var(--t-ink2);background:var(--s-dark);border-radius:9px;padding:8px 10px;}
+.cas-acc{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+.cas-inp{flex:1;min-width:160px;background:var(--s-bg);border:1px solid var(--s-line);border-radius:9px;padding:8px 11px;font:500 12px/1 'DM Sans';color:var(--t-ink);outline:none;}
+.cas-inp:focus{border-color:var(--acc-d);}
+.cas-btn{background:var(--acc-d);color:#f1f4e8;font:600 11.5px/1 'DM Sans';padding:10px 14px;border-radius:9px;cursor:pointer;white-space:nowrap;}
+.cas-chip{font:600 11px/1 'DM Sans';color:var(--t-mut);background:var(--s-dark);border:1px solid var(--s-line2);border-radius:20px;padding:8px 12px;cursor:pointer;white-space:nowrap;}
+.cas-chip:hover{border-color:var(--acc-d);color:var(--acc-d);}
+.cas-pie{font:500 10.5px/1.5 'DM Sans';color:var(--t-mut2);margin-top:8px;}
 /* Cómo se leen las fechas */
 .ffgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
 @media(max-width:620px){.ffgrid{grid-template-columns:1fr;}}
@@ -982,8 +998,6 @@ input.li:focus{border-color:var(--acc-d);}
              podían llevar a un error. Quien entra usa su correo real. -->
         <button class="lbtn" id="btn-cod" onclick="pedirCodigo()">Enviarme el código</button>
         <div id="lg-err" style="display:none;font:500 12px/1.5 'DM Sans';color:#b8322f;"></div>
-        <div class="ldiv"><hr><span>o</span><hr></div>
-        <div class="lghost">Entrar con Google</div>
         <div style="text-align:center;"><span style="font:500 12px/1 'DM Sans';color:var(--t-mut2);">¿Primera vez? </span><span class="llink" onclick="enterApp()">Entrar en modo demo →</span></div>
         <div style="text-align:center;font:500 10px/1.4 'DM Sans';color:var(--t-mut3);" id="sello-version"></div>
       </div>
@@ -1228,7 +1242,12 @@ input.li:focus{border-color:var(--acc-d);}
           <div class="ofi-det" id="ofidet"></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">
-          <div style="font:600 16px/1.1 'Fraunces',serif;color:var(--t-ink);">CAS en operación</div>
+          <div style="font:600 16px/1.1 'Fraunces',serif;color:var(--t-ink);">CAS · presión a la transportadora</div>
+          <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);margin:0;max-width:76ch;">
+            Cuando un pedido lleva días sin moverse, llamar a la clienta no
+            sirve: el paquete no está con ella. Lo que mueve la aguja es un
+            ticket oficial pidiéndole prioridad a la transportadora, y seguir
+            insistiendo mientras no contesten.</p>
           <div id="caslist"></div>
         </div>
       </div>
@@ -3058,7 +3077,7 @@ async function cargarReales() {
     await Promise.all([cargarPedidosReales(), cargarNovedadesReales(),
                        cargarEquipo(), cargarAuditoria(), cargarAlarmas(),
                        cargarRecuento(), cargarProductos(),
-                       cargarHistorial()]);
+                       cargarHistorial(), cargarCas()]);
     // Una gestora sin pedidos asignados también merece respuesta. Si las
     // listas vinieron vacías nadie la habría pintado, y se quedaría
     // mirando un "buscando…" que ya terminó.
@@ -4149,8 +4168,7 @@ async function cargarHistorialFuentes() {
  */
 const SIN_FUENTE = [
   // Operación
-  'caslist',       // CAS en operación
-  'commlist',      // comisiones
+  'commlist',      // comisiones · falta definir la regla de cada equipo
 ];
 
 function sellarEjemplo(conectado) {
@@ -6440,6 +6458,160 @@ function verMesCierre(mes) {
   buildCierre();
   const doc = document.getElementById('cm-doc');
   if (doc) doc.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
+// ─── CAS ──────────────────────────────────────────────────────
+/**
+ * Los tickets que se le radican a la transportadora.
+ *
+ * Del SOP: un pedido que lleva días sin cambiar de estado no se arregla
+ * llamando a la clienta —el paquete no está con ella—. Se arregla con
+ * presión administrativa: un ticket oficial pidiendo prioridad, tres
+ * veces por semana, insistiendo mientras no contesten.
+ *
+ * Nova encuentra los candidatos sola. Lo que escribe el equipo es lo que
+ * Nova no puede saber: si el ticket se radicó, con qué número y qué
+ * contestaron. Eso hoy vive en un Drive suelto que nadie más ve.
+ */
+let CAS_DATOS = null;
+
+const CAS_ESTADOS = [
+  ['abierto',       'Radicado',      '#8a6a13', '#f6ecd0'],
+  ['respondido',    'Contestaron',   '#3C6684', '#dde7ef'],
+  ['sin_respuesta', 'Sin respuesta', '#b8322f', '#f6e3db'],
+  ['resuelto',      'Resuelto',      '#3f5330', '#d3e0c2'],
+];
+
+function fichaCas(estado) {
+  const f = CAS_ESTADOS.filter(function (x) { return x[0] === estado; })[0];
+  return f || ['abierto', estado || '—', '#5b5b55', '#e6e4de'];
+}
+
+async function cargarCas() {
+  if (!CONECTADO) return false;
+  let r;
+  try { r = await api('cas', { tienda: ST }); }
+  catch (e) { return false; }
+  if (!r || !r.ok) return false;
+  CAS_DATOS = r;
+  pintarCas();
+  desellar(['caslist']);
+  return true;
+}
+
+function pintarCas() {
+  const cont = document.getElementById('caslist');
+  if (!cont) return;
+  if (!CAS_DATOS) {
+    cont.innerHTML = '<div class="eq-vacio">Entra con tu correo para ver los CAS.</div>';
+    return;
+  }
+
+  const S = SYM() + ' ';
+  const d = CAS_DATOS;
+  const pendientes = d.candidatos.filter(function (c) { return !c.yaTiene; });
+  const vivos = d.cas.filter(function (c) { return c.estado !== 'resuelto'; });
+
+  let h = '';
+
+  // ── Lo que hay que radicar hoy ──
+  if (pendientes.length) {
+    h += '<div class="cas-sec">Sin radicar · ' + pendientes.length + '</div>' +
+      pendientes.map(function (c) {
+        return '<div class="cas-f nuevo">' +
+          '<div class="cas-top"><span class="cas-nm">' + esc(c.cliente || '—') +
+            ' · #' + esc(c.idExterno || c.pedidoId) + '</span>' +
+            '<span class="bd" style="color:#b8322f;background:#f6e3db;">' +
+            c.diasQuieto + ' días quieto</span></div>' +
+          '<div class="cas-meta">' +
+            [c.transportadora, c.guia ? 'guía ' + c.guia : null, c.ciudad,
+             S + NUM(c.valor), fichaEstado({ estado_canonico: c.estado })[2]]
+              .filter(Boolean).map(esc).join(' · ') + '</div>' +
+          '<div class="cas-acc">' +
+            '<input class="cas-inp" id="cast-' + esc(c.pedidoId) +
+              '" placeholder="N° de ticket (si ya lo tienes)">' +
+            '<div class="cas-btn" onclick="radicarCas(\'' + esc(c.pedidoId) +
+              '\')">Radicar CAS</div>' +
+          '</div></div>';
+      }).join('');
+  }
+
+  // ── Los que ya están radicados y esperan ──
+  if (vivos.length) {
+    h += '<div class="cas-sec">Radicados · ' + vivos.length + '</div>' +
+      vivos.map(function (c) {
+        const f = fichaCas(c.estado);
+        // Un ticket sin tocar tres días es un ticket que nadie empujó
+        const urge = c.diasSinTocar !== null && c.diasSinTocar >= 3;
+        return '<div class="cas-f' + (urge ? ' urge' : '') + '">' +
+          '<div class="cas-top"><span class="cas-nm">#' +
+            esc(c.idExterno || c.pedidoId) +
+            (c.ticket ? ' · ticket ' + esc(c.ticket) : '') + '</span>' +
+            '<span class="bd" style="color:' + f[2] + ';background:' + f[3] + ';">' +
+            esc(f[1]) + '</span></div>' +
+          '<div class="cas-meta">' +
+            [c.transportadora, 'radicado ' + fechaCorta(c.abiertoEn),
+             c.diasSinTocar !== null
+               ? (c.diasSinTocar === 0 ? 'tocado hoy'
+                  : c.diasSinTocar + (c.diasSinTocar === 1 ? ' día' : ' días') + ' sin empujar')
+               : null].filter(Boolean).map(esc).join(' · ') + '</div>' +
+          (c.respuesta ? '<div class="cas-resp">' + esc(c.respuesta) + '</div>' : '') +
+          '<div class="cas-acc">' +
+            '<input class="cas-inp" id="casr-' + esc(c.id) +
+              '" placeholder="Qué contestaron" value="' + esc(c.respuesta || '') + '">' +
+            CAS_ESTADOS.filter(function (e) { return e[0] !== c.estado; })
+              .map(function (e) {
+                return '<div class="cas-chip" onclick="marcarCas(\'' + esc(c.id) +
+                  '\',\'' + e[0] + '\')">' + e[1] + '</div>';
+              }).join('') +
+          '</div></div>';
+      }).join('');
+  }
+
+  const resueltos = d.cas.length - vivos.length;
+  if (!h) {
+    h = '<div class="eq-vacio">Ningún pedido lleva ' + d.minDias +
+      ' días o más sin moverse dentro de los últimos ' + d.ventana + '. ' +
+      'Nada que radicar hoy.' +
+      (resueltos ? ' (' + resueltos + ' CAS resueltos antes.)' : '') + '</div>';
+  } else if (resueltos) {
+    h += '<div class="cas-pie">' + resueltos +
+      (resueltos === 1 ? ' CAS resuelto' : ' CAS resueltos') + ' antes.</div>';
+  }
+
+  cont.innerHTML = h;
+}
+
+async function radicarCas(pedidoId) {
+  const c = (CAS_DATOS.candidatos || []).filter(function (x) {
+    return x.pedidoId === pedidoId;
+  })[0];
+  if (!c) return;
+  const inp = document.getElementById('cast-' + pedidoId);
+  try {
+    const r = await api('cas_escribir', {
+      tienda: ST, pedido_id: c.pedidoId, id_externo: c.idExterno,
+      guia: c.guia, transportadora: c.transportadora,
+      dias_quieto: c.diasQuieto, estado: 'abierto',
+      ticket: inp ? inp.value.trim() : '',
+    });
+    if (!r.ok) { showToast(r.error || 'No se pudo radicar'); return; }
+    showToast('CAS radicado');
+    await cargarCas();
+  } catch (e) { showToast('Sin conexión: no se guardó'); }
+}
+
+async function marcarCas(id, estado) {
+  const inp = document.getElementById('casr-' + id);
+  try {
+    const r = await api('cas_escribir', {
+      tienda: ST, id: id, estado: estado,
+      respuesta: inp ? inp.value.trim() : undefined,
+    });
+    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
+    showToast(estado === 'resuelto' ? 'CAS cerrado' : 'CAS actualizado');
+    await cargarCas();
+  } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
 
 // ─── VER COMO ─────────────────────────────────────────────────

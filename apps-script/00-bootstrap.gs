@@ -276,6 +276,25 @@ const ESQUEMA_EMPRESARIAL = {
             'importado_en'],
 
   /**
+   * CAS: el ticket que se le radica a la transportadora.
+   *
+   * Cuando un pedido lleva días sin cambiar de estado, llamar al cliente
+   * no sirve —el paquete no está con él—. Lo que mueve la aguja es
+   * presión administrativa sobre la transportadora: un ticket oficial
+   * pidiendo prioridad de despacho.
+   *
+   * Nova detecta los candidatos sola, leyendo los pedidos quietos. Lo que
+   * no puede saber es si alguien radicó el ticket, con qué número, y qué
+   * contestaron. Eso lo escribe el equipo, y es justo lo que hoy vive en
+   * un Drive suelto donde nadie más lo ve.
+   *
+   * `estado`: abierto · respondido · resuelto · sin_respuesta
+   */
+  CAS: ['id','tienda','pedido_id','id_externo','guia','transportadora',
+        'abierto_en','abierto_por','ticket','estado','dias_quieto',
+        'ultima_gestion','respuesta','cerrado_en','nota'],
+
+  /**
    * `id` para poder editar una fila desde la app, y `origen` para saber
    * si ese número lo contó una persona o lo trajo un archivo. Mezclarlos
    * sin distinguir hace imposible saber en cuál confiar.
