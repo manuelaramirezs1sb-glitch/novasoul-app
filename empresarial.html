@@ -5519,6 +5519,14 @@ function editorFicha(p) {
     (f.ultimoConteo
       ? '<div class="inv-pie">Último conteo: ' + fechaCorta(f.ultimoConteo) + '</div>'
       : '') +
+    /**
+     * El error se queda en la ficha, no en un aviso que se va.
+     *
+     * Un toast dura dos segundos y se lleva la única pista de por qué no
+     * se guardó. Quien estaba escribiendo se queda con la sensación de
+     * que la pantalla "no deja modificar", sin saber qué corregir.
+     */
+    '<div id="fi-error" style="display:none;"></div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
       '<div class="nsavebtn" onclick="guardarFicha()">' +
         (esNueva ? 'Crear ficha' : 'Guardar cambios') + '</div>' +
@@ -5579,9 +5587,21 @@ function leerFicha() {
   };
 }
 
+/** El motivo por el que no se guardó, donde se pueda leer con calma. */
+function errorFicha(msg) {
+  const el = document.getElementById('fi-error');
+  if (!el) { if (msg) showToast(msg); return; }
+  el.style.display = msg ? 'block' : 'none';
+  el.className = msg ? 'inv-aviso' : '';
+  el.style.color = msg ? '#b8322f' : '';
+  el.style.background = msg ? '#f6e3db' : '';
+  el.textContent = msg || '';
+}
+
 async function guardarFicha() {
   const d = leerFicha();
-  if (!d.producto) { showToast('Ponle nombre al producto'); return; }
+  errorFicha('');
+  if (!d.producto) { errorFicha('Ponle nombre al producto.'); return; }
 
   const p = FICHA_ABIERTA === 'nuevo' ? null : INV_VISTA[FICHA_ABIERTA];
   const ficha = p && p.ficha;
@@ -5594,15 +5614,18 @@ async function guardarFicha() {
       d.tienda = ST;
       r = await api('crear', { entidad: 'Inventario', datos: d, tienda: ST });
     }
-    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
+    if (!r.ok) { errorFicha(r.error || 'No se pudo guardar.'); return; }
     if (r.rechazados && r.rechazados.length) {
-      showToast('Guardado, menos: ' + r.rechazados.join(', '));
-    } else {
-      showToast(ficha ? 'Ficha actualizada' : 'Ficha creada');
+      // Se guardó lo demás, pero hay que decir qué no entró y por qué
+      errorFicha('Se guardó lo demás, pero esto no: ' + r.rechazados.join(' · '));
+      showToast('Guardado a medias');
+      await cargarProductos();
+      return;
     }
+    showToast(ficha ? 'Ficha actualizada' : 'Ficha creada');
     FICHA_ABIERTA = -1;
     await cargarProductos();
-  } catch (e) { showToast('Sin conexión: no se guardó'); }
+  } catch (e) { errorFicha('Sin conexión: no se guardó.'); }
 }
 
 async function quitarFicha() {

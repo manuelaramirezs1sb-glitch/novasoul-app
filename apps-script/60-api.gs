@@ -1404,6 +1404,7 @@ function apiCrear(s, p) {
     }
     const err = validarFicha(p.datos || {});
     if (err) return { ok: false, error: err };
+    if (p.datos.landing !== undefined) p.datos.landing = normalizarEnlace(p.datos.landing);
   }
 
   const datos = p.datos || {};
@@ -1611,12 +1612,21 @@ function apiEscribir(s, p) {
   if (entidad === 'Inventario') {
     const err = validarFicha(campos);
     if (err) return { ok: false, error: err };
+    // Un dominio suelto se guarda completo, para que el enlace funcione
+    if (campos.landing !== undefined) campos.landing = normalizarEnlace(campos.landing);
   }
 
   const escritos = [], rechazados = [];
   Object.keys(campos).forEach(function (k) {
     const col = enc.indexOf(norm(k));
-    if (col === -1) { rechazados.push(k + ' (no existe)'); return; }
+    if (col === -1) {
+      // Una columna que falta casi siempre es una migración pendiente, no
+      // un campo inventado. Decirlo ahorra media hora de buscar dónde está
+      // el error.
+      rechazados.push(k + ' (esa columna todavía no existe en la hoja ' +
+                      entidad + ' — corre bootstrapTodo())');
+      return;
+    }
     if (COLUMNAS_IMPORTADAS.indexOf(norm(k)) !== -1) {
       rechazados.push(k + ' (viene de la plataforma, es de solo lectura)');
       return;

@@ -146,15 +146,41 @@ function validarCanal(url) {
   const u = String(url || '').trim();
   if (!u) return '';                       // vacío apaga el canal, es válido
   const m = u.match(/^([a-z][a-z0-9+.-]*):/i);
+  /**
+   * Un enlace sin esquema se completa, no se rechaza.
+   *
+   * "nutrea.co/tag-recede" es un enlace perfectamente claro y es como se
+   * copia de media parte. Devolver un error por eso hacía fallar el
+   * guardado ENTERO de la ficha —nombre, stock, precios, todo— por una
+   * cosa que se arregla poniendo cuatro letras delante.
+   *
+   * Rechazar sigue siendo lo correcto para lo que de verdad es peligroso
+   * o no lleva a ninguna parte; para lo que solo está incompleto, se
+   * completa.
+   */
   if (!m) {
-    return 'El enlace tiene que empezar por https:// — así, completo, como ' +
-           'lo copias de la barra del navegador.';
+    if (/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(\/|$|\?)/i.test(u)) return '';
+    return 'Eso no parece un enlace. Cópialo de la barra del navegador, ' +
+           'completo — algo como https://tutienda.com/producto.';
   }
   if (ESQUEMAS_CANAL.indexOf(m[1].toLowerCase() + ':') === -1) {
     return 'Ese tipo de enlace no se puede abrir desde Nova. Sirven los de ' +
            'WhatsApp, Telegram, Slack, Teams o cualquier página https.';
   }
   return '';
+}
+
+/**
+ * El enlace tal como se va a guardar.
+ *
+ * Si venía sin esquema y pasó la validación, es un dominio: se le pone
+ * https:// delante para que el href de la pantalla funcione. Guardarlo a
+ * medias dejaría un botón que no lleva a ninguna parte.
+ */
+function normalizarEnlace(url) {
+  const u = String(url || '').trim();
+  if (!u) return '';
+  return /^[a-z][a-z0-9+.-]*:/i.test(u) ? u : 'https://' + u;
 }
 
 function ajustes(ss, tienda) {
