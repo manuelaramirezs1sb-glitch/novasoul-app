@@ -857,6 +857,31 @@ input.li:focus{border-color:var(--acc-d);}
 .gq-land{font:600 11.5px/1 'DM Sans';color:var(--acc-d);align-self:flex-start;text-decoration:none;}
 .gq-land:hover{text-decoration:underline;}
 .cas-ver{font-weight:600;cursor:pointer;text-decoration:underline;}
+/* Calculadoras */
+.cbase{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:4px;}
+.cb-f{background:var(--s-bg);border:1px solid var(--s-line2);border-left:3px solid #6d7d4a;border-radius:11px;padding:11px 13px;}
+.cb-f.falta{border-left-color:#d9a23f;}
+.cb-k{font:600 9.5px/1.2 'DM Sans';letter-spacing:.9px;color:var(--t-mut2);}
+.cb-v{font:700 19px/1.15 'Fraunces',serif;color:var(--t-ink);margin-top:5px;font-variant-numeric:tabular-nums;}
+.cb-s{font:500 10.5px/1.45 'DM Sans';color:var(--t-mut2);margin-top:3px;}
+.cc-f{display:flex;flex-direction:column;gap:5px;margin-top:10px;}
+.cc-dos{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.cc-k{font:600 10px/1.3 'DM Sans';letter-spacing:.8px;color:var(--t-mut2);display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.cc-sup{font:600 9px/1 'DM Sans';letter-spacing:.5px;color:#8a6a13;background:#f6ecd0;border-radius:8px;padding:3px 6px;text-transform:none;}
+.cc-in{display:flex;align-items:center;gap:7px;}
+.cc-in .calc-input{flex:1;}
+.cc-suf{font:600 12px/1 'DM Sans';color:var(--t-mut2);}
+.cc-tabla{display:flex;flex-direction:column;margin-top:12px;border-top:1px solid var(--s-line2);}
+.cc-l{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--s-line2);}
+.cc-l.total{border-bottom:none;border-top:2px solid var(--s-line4);padding-top:10px;}
+.cc-lk{font:600 12px/1.3 'DM Sans';color:var(--t-ink);}
+.cc-ls{font:500 10.5px/1.45 'DM Sans';color:var(--t-mut2);margin-top:2px;}
+.cc-lv{font:600 13.5px/1 'DM Sans';color:var(--t-ink);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.cc-veredicto{font:500 12.5px/1.65 'DM Sans';border-radius:11px;padding:11px 13px;margin-top:12px;}
+.cc-veredicto.ok{background:#e2ead6;color:#3f5330;}
+.cc-veredicto.ojo{background:#f6ecd0;color:#7a5c10;}
+.cc-veredicto.mal{background:#f6e3db;color:#a8563a;}
+.cc-nota{font:500 10.5px/1.55 'DM Sans';color:var(--t-mut2);margin-top:8px;}
 /* Cómo se leen las fechas */
 .ffgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
 @media(max-width:620px){.ffgrid{grid-template-columns:1fr;}}
@@ -1435,37 +1460,29 @@ input.li:focus{border-color:var(--acc-d);}
 
       <!-- ════ CALCULADORAS ════ -->
       <div class="view ro-dueno" id="v-calc">
-        <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Dos calculadoras para decidir antes de mover presupuesto o lanzar un producto nuevo.</p>
+        <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);max-width:78ch;">
+          Las dos arrancan con tus números de verdad: lo que te cuesta hoy
+          conseguir una entrega, cuánto entregas y cuánto te cobran por cada
+          devolución. Cambia lo que quieras probar; lo que no toques sigue
+          siendo tu operación.</p>
+        <div id="calc-base"></div>
         <div class="g2">
           <div class="card">
-            <div class="card-h"><span class="ct">ROI de campaña</span></div>
-            <div style="display:flex;flex-direction:column;gap:10px;">
-              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">PAUTA INVERTIDA</span><input class="calc-input" id="calc-pauta" type="number" value="366041" oninput="calcROI()"></div>
-              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">PEDIDOS</span><input class="calc-input" id="calc-ped" type="number" value="11" oninput="calcROI()"></div>
-              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">% ENTREGA</span><input class="calc-input" id="calc-ent" type="number" value="74.6" oninput="calcROI()"></div>
-              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">MARGEN NETO POR ENTREGA</span><input class="calc-input" id="calc-mg" type="number" value="104020" oninput="calcROI()"></div>
-              <div class="dline"></div>
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">ROAS</span>
-                <span class="calc-result-big" id="calc-roas">2.1×</span>
-              </div>
-              <div style="font:500 11px/1.5 'DM Sans';color:var(--t-mut);" id="calc-roi-txt">Recuperas 2.1 veces lo que invertiste. CPA: $ 366.041 / 8.2 entregas.</div>
-            </div>
+            <div class="card-h"><span class="ct">¿Este producto aguanta?</span>
+              <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">Antes de lanzarlo</span></div>
+            <p style="font:500 12px/1.6 'DM Sans';color:var(--t-mut);margin:0;">
+              Pones lo que te cuesta el producto y a cuánto piensas venderlo.
+              Nova le suma el flete, lo que cuestan las devoluciones que vienen
+              con él, y la pauta que hace falta para vender uno.</p>
+            <div id="calc-lanz"></div>
           </div>
           <div class="card">
-            <div class="card-h"><span class="ct">Precio de lanzamiento</span></div>
-            <div style="display:flex;flex-direction:column;gap:10px;">
-              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">COSTO DEL PRODUCTO (unidad)</span><input class="calc-input" id="pre-costo" type="number" value="52000" oninput="calcPre()"></div>
-              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">FLETE PROMEDIO</span><input class="calc-input" id="pre-flete" type="number" value="35000" oninput="calcPre()"></div>
-              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">% ENTREGA ESPERADA</span><input class="calc-input" id="pre-ent" type="number" value="69.1" oninput="calcPre()"></div>
-              <div class="lfield"><span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">MARGEN DESEADO %</span><input class="calc-input" id="pre-margen" type="number" value="25" oninput="calcPre()"></div>
-              <div class="dline"></div>
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);">PRECIO MÍNIMO</span>
-                <span class="calc-result-big" id="pre-result">$ 224.000</span>
-              </div>
-              <div style="font:500 11px/1.5 'DM Sans';color:var(--t-mut);" id="pre-txt">Por debajo de este precio pierdes plata con el 30.9% de devoluciones.</div>
-            </div>
+            <div class="card-h"><span class="ct">¿Cuánto puedo pagar por pedido?</span>
+              <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">El techo del CPA</span></div>
+            <p style="font:500 12px/1.6 'DM Sans';color:var(--t-mut);margin:0;">
+              Al revés: si ya sabes a cuánto vendes, cuánto puedes pagarle a
+              Meta por cada entrega sin perder plata.</p>
+            <div id="calc-techo"></div>
           </div>
         </div>
       </div>
@@ -2069,7 +2086,7 @@ function buildAll() {
   buildHoy(); buildPedidos(); buildNovedades();
   buildOficina(); buildGestoras(); buildAuditoria();
   buildProductos();
-  if (ROL === 'dueno') { buildPauta(); buildInventario(); buildDinero(); buildPermisos(); calcROI(); calcPre(); }
+  if (ROL === 'dueno') { buildPauta(); buildInventario(); buildDinero(); buildPermisos(); pintarCalculadoras(); }
 }
 
 /**
@@ -2728,29 +2745,6 @@ function addBotMsg(txt,who){
 }
 
 // ─── CALCULADORAS ─────────────────────────────────────
-function calcROI(){
-  const pauta=+document.getElementById('calc-pauta')?.value||366041;
-  const ped  =+document.getElementById('calc-ped')?.value||11;
-  const ent  =+document.getElementById('calc-ent')?.value||74.6;
-  const mg   =+document.getElementById('calc-mg')?.value||104020;
-  const entregadas=ped*(ent/100);
-  const ingresos=entregadas*mg;
-  const roas=ingresos/pauta;
-  const cpa=pauta/(entregadas||1);
-  document.getElementById('calc-roas').textContent=roas.toFixed(1)+'×';
-  document.getElementById('calc-roi-txt').textContent=`Recuperas ${roas.toFixed(1)} veces lo que invertiste. CPA: ${C(cpa)} por entrega · ${entregadas.toFixed(1)} entregas efectivas.`;
-}
-function calcPre(){
-  const costo= +document.getElementById('pre-costo')?.value||52000;
-  const flete= +document.getElementById('pre-flete')?.value||35000;
-  const ent=   +document.getElementById('pre-ent')?.value||69.1;
-  const margen=+document.getElementById('pre-margen')?.value||25;
-  const dev=100-ent;
-  const costoDev=flete*(dev/100);
-  const costoTotal=(costo+flete+(costoDev/((ent/100)||1)))/(1-(margen/100));
-  document.getElementById('pre-result').textContent=C(costoTotal);
-  document.getElementById('pre-txt').textContent=`Por debajo de este precio pierdes plata con el ${dev.toFixed(1)}% de devoluciones estimadas.`;
-}
 
 // ─── NAVIGATION ───────────────────────────────────────
 const TITLES = {
@@ -3259,6 +3253,8 @@ function aplicarReales(d) {
   aplicarDinero(d);
   aplicarPauta(d);
   if (d.recaudo7) pintarRecaudo(d.recaudo7);
+  CALC = null;   // los supuestos se rehacen con los números nuevos
+  pintarCalculadoras();
   pintarCartera(d.cartera);
   cont.innerHTML = tarjetas.map(k=>
     '<div class="kc '+k.cl+'"><div class="klbl">'+k.lb+'</div>'+
@@ -5204,6 +5200,15 @@ async function guardarNotaGestora(i) {
 let PRODS = [];
 let PROD_MODALIDAD = '';
 /**
+ * Las columnas que la hoja Inventario tiene de verdad.
+ *
+ * Una hoja que todavía no migró no tiene los campos nuevos. Mandarlos
+ * igual hacía que el servidor los rechazara y la ficha pareciera no
+ * guardarse. Sabiendo cuáles hay, se manda solo lo que cabe y se avisa
+ * de lo que falta, con las palabras exactas para arreglarlo.
+ */
+let COLS_INV = [];
+/**
  * Las cuatro preguntas que la clienta hace siempre.
  *
  * Las decide cada tienda —no es lo mismo vender una crema que un
@@ -5244,6 +5249,7 @@ async function cargarProductos() {
   PRODS = r.productos || [];
   PROD_MODALIDAD = r.modalidad || '';
   PREGUNTAS = (r.preguntas && r.preguntas.length) ? r.preguntas : PREGUNTAS;
+  COLS_INV = r.columnas || [];
   pintarPreguntas();
   pintarInventario();
   pintarProductos();
@@ -5450,7 +5456,13 @@ function editorFicha(p) {
       'onclick="elegirCategoria(this)" data-cat="' + c[0] + '">' + c[1] + '</div>';
   }).join('');
 
+  const faltan = camposQueFaltan();
   return '<div class="inv-dtl" style="display:flex;">' +
+    (faltan.length
+      ? '<div class="inv-aviso">Tu hoja <b>Inventario</b> todavía no tiene ' +
+        'columnas para: ' + esc(faltan.join(', ')) + '. Lo demás sí se guarda. ' +
+        'Para que entren, corre <b>bootstrapTodo()</b> en Apps Script.</div>'
+      : '') +
     (esNueva && p.entregados
       ? '<div class="inv-aviso">Este producto ya lleva ' + p.entregados +
         (p.entregados === 1 ? ' entrega' : ' entregas') + ' y no tiene ficha, así que ' +
@@ -5577,7 +5589,7 @@ function leerFicha() {
     return el ? String(el.value).trim() : '';
   };
   const cat = document.querySelector('#fi-cats .nst.on');
-  return {
+  const todo = {
     producto: v('producto'), sku: v('sku'), stock: v('stock'), minimo: v('minimo'),
     costo_unitario: v('costo_unitario'),
     precio: v('precio'), precio_2: v('precio_2'), precio_3: v('precio_3'),
@@ -5585,6 +5597,23 @@ function leerFicha() {
     resp_1: v('resp1'), resp_2: v('resp2'), resp_3: v('resp3'), resp_4: v('resp4'),
     categoria: cat ? cat.dataset.cat : '',
   };
+  // Solo lo que la hoja sabe recibir. Si no sabemos qué columnas tiene
+  // —hoja vieja, respuesta sin la lista— se manda todo y que el servidor
+  // decida, que es como funcionaba antes.
+  if (!COLS_INV.length) return todo;
+  const cabe = {};
+  Object.keys(todo).forEach(function (k) {
+    if (COLS_INV.indexOf(k) !== -1) cabe[k] = todo[k];
+  });
+  return cabe;
+}
+
+/** Los campos de la ficha que esta hoja todavía no puede guardar. */
+function camposQueFaltan() {
+  if (!COLS_INV.length) return [];
+  return ['precio_2', 'precio_3', 'landing', 'categoria', 'proveedor',
+          'resp_1', 'resp_2', 'resp_3', 'resp_4']
+    .filter(function (k) { return COLS_INV.indexOf(k) === -1; });
 }
 
 /** El motivo por el que no se guardó, donde se pueda leer con calma. */
@@ -6544,7 +6573,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-15 · 7be6';
+const VERSION_PANTALLA = '2026-09-18 · 9364';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -6900,6 +6929,289 @@ function fichaProducto(nombre) {
         'Abrir la página del producto →</a>'
       : '') +
     '</div>';
+}
+
+// ─── CALCULADORAS ─────────────────────────────────────────────
+/**
+ * Costear un producto nuevo con los números de la operación de verdad.
+ *
+ * La calculadora anterior pedía cuatro cifras a mano —costo, flete, %
+ * de entrega, margen deseado— y con eso devolvía un precio mínimo. El
+ * problema es que se le olvidaba lo más caro: LA PAUTA. Un precio que
+ * cubre producto, flete y devoluciones pero no lo que cuesta conseguir
+ * al comprador no es un precio mínimo, es una ilusión.
+ *
+ * Y pedía a mano cosas que Nova ya sabe. El % de entrega de esta tienda,
+ * lo que cobra la transportadora por devolver, lo que cuesta hoy una
+ * entrega en pauta: todo eso sale del mes. Pedirlo es pedirle a alguien
+ * que adivine un dato que tiene al lado.
+ *
+ * Así que arranca con lo real y se puede cambiar. Lo que no se toca
+ * sigue siendo la operación; lo que se toca dice que es un supuesto.
+ */
+let CALC = null;
+
+/**
+ * Dinero con decimales cuando los decimales importan.
+ *
+ * NUM redondea a entero, que está bien para "ventas del mes: 3.200" y
+ * muy mal aquí: un flete de 2,88 se mostraba como 3 y un techo de CPA de
+ * 8,71 como 9. En un costeo donde el margen es de centavos, redondear
+ * es la diferencia entre lanzar y no lanzar.
+ *
+ * Por encima de mil el centavo ya no cambia ninguna decisión, así que
+ * ahí se vuelve a redondear: un precio de 45.000 con decimales es ruido.
+ */
+function CNT(n) {
+  const v = Number(n) || 0;
+  if (Math.abs(v) >= 1000) return NUM(Math.round(v));
+  return v.toLocaleString(LOC(), { minimumFractionDigits: 2,
+                                   maximumFractionDigits: 2 });
+}
+
+/**
+ * La base: lo que cuesta operar hoy, por entrega.
+ *
+ * Todo por ENTREGA y no por pedido, porque un pedido que se devuelve no
+ * paga nada — pero su flete y su cobro de devolución los paga igual la
+ * entrega que sí salió. Esa es la cuenta que casi nadie hace y la que
+ * hunde productos que parecían rentables.
+ */
+function baseCalculo() {
+  const d = REAL || {};
+  const entregados = d.entregados || 0;
+  const devueltos = d.devueltos || 0;
+  const despachados = d.despachados || 0;
+  const resueltos = entregados + devueltos;
+
+  // El cobro real de devolución sale de la cartera cuando está cargada
+  const cobroDev = (d.costoDevolucionFuente === 'cartera' && devueltos)
+    ? d.costoDevolucion / devueltos
+    : (devueltos ? (d.costoDevolucion || 0) / devueltos : 0);
+
+  return {
+    cpa: d.cpa || 0,
+    entrega: resueltos ? entregados / resueltos * 100 : 0,
+    flete: despachados ? (d.costoEnvio || 0) / despachados : 0,
+    cobroDev: cobroDev,
+    ticket: d.ticket || 0,
+    entregados: entregados,
+    hayPauta: !!(d.gasto),
+    hayCartera: d.costoDevolucionFuente === 'cartera',
+  };
+}
+
+function pintarCalculadoras() {
+  const base = baseCalculo();
+  if (!CALC) {
+    CALC = {
+      cpa: base.cpa, entrega: base.entrega, flete: base.flete,
+      cobroDev: base.cobroDev,
+      costo: '', precio: '', margen: 25,
+      tocado: {},
+    };
+  }
+  pintarBaseCalc(base);
+  pintarLanzamiento();
+  pintarTecho();
+}
+
+/** De dónde sale cada número de partida, y qué falta para que sea real. */
+function pintarBaseCalc(base) {
+  const cont = document.getElementById('calc-base');
+  if (!cont) return;
+
+  if (!CONECTADO || !base.entregados) {
+    cont.innerHTML = '<div class="inv-aviso">Todavía no hay entregas de este mes, ' +
+      'así que las calculadoras arrancan vacías. En cuanto importes pedidos y ' +
+      'pauta, se llenan solas con tus números.</div>';
+    return;
+  }
+
+  const S = SYM() + ' ';
+  const dato = function (lb, v, sub, falta) {
+    return '<div class="cb-f' + (falta ? ' falta' : '') + '">' +
+      '<div class="cb-k">' + lb + '</div>' +
+      '<div class="cb-v">' + v + '</div>' +
+      '<div class="cb-s">' + sub + '</div></div>';
+  };
+
+  cont.innerHTML = '<div class="cbase">' +
+    dato('TE CUESTA UNA ENTREGA', base.hayPauta ? S + CNT(base.cpa) : '—',
+      base.hayPauta
+        ? 'En pauta · ' + base.entregados + ' entregas este mes'
+        : 'Falta subir la pauta del mes', !base.hayPauta) +
+    dato('DE CADA 10 PEDIDOS', (base.entrega / 10).toFixed(1) + ' llegan',
+      base.entrega.toFixed(1) + '% de entrega sobre lo resuelto') +
+    dato('FLETE PROMEDIO', S + CNT(base.flete), 'Por pedido despachado') +
+    dato('TE COBRAN POR DEVOLVER', base.cobroDev ? S + CNT(base.cobroDev) : '—',
+      base.hayCartera ? 'Cobro real de tu cartera'
+        : base.cobroDev ? 'Estimado del export — sube la cartera para el real'
+        : 'Falta el historial de cartera', !base.hayCartera) +
+  '</div>';
+}
+
+/** Un campo de la calculadora, que recuerda si lo tocaste. */
+function campoCalc(clave, lbl, sufijo, ph) {
+  const tocado = CALC.tocado[clave];
+  return '<div class="cc-f"><div class="cc-k">' + lbl +
+    (tocado ? '<span class="cc-sup">supuesto tuyo</span>' : '') + '</div>' +
+    '<div class="cc-in"><input class="calc-input" id="cc-' + clave + '" ' +
+    'type="number" inputmode="decimal" value="' + esc(CALC[clave] === '' ? '' : CALC[clave]) +
+    '" placeholder="' + esc(ph || '') + '" oninput="tocarCalc(\'' + clave + '\')">' +
+    (sufijo ? '<span class="cc-suf">' + sufijo + '</span>' : '') + '</div></div>';
+}
+
+function tocarCalc(clave) {
+  const el = document.getElementById('cc-' + clave);
+  if (!el) return;
+  CALC[clave] = el.value === '' ? '' : Number(el.value);
+  CALC.tocado[clave] = true;
+  // Solo se repintan los resultados: repintar los campos perdería el foco
+  calcularLanzamiento();
+  calcularTecho();
+}
+
+function pintarLanzamiento() {
+  const cont = document.getElementById('calc-lanz');
+  if (!cont) return;
+  const S = SYM();
+  cont.innerHTML =
+    campoCalc('costo', 'Lo que te cuesta el producto', S, 'Por unidad') +
+    campoCalc('precio', 'A cuánto piensas venderlo', S, 'Tu precio') +
+    '<div class="cc-dos">' +
+      campoCalc('entrega', 'Entrega esperada', '%') +
+      campoCalc('cpa', 'Pauta por entrega', S) +
+    '</div>' +
+    '<div id="calc-lanz-res"></div>';
+  calcularLanzamiento();
+}
+
+/**
+ * Qué deja de verdad una entrega de este producto.
+ *
+ * Por cada entrega que sale bien hay (1−e)/e que se devuelven, y esas
+ * también se pagan: su flete de ida y el cobro de retorno. Repartir ese
+ * costo entre las entregas que sí llegaron es lo que convierte un
+ * "margen del 40%" en la realidad.
+ */
+function calcularLanzamiento() {
+  const cont = document.getElementById('calc-lanz-res');
+  if (!cont) return;
+  const S = SYM() + ' ';
+  const costo = Number(CALC.costo) || 0;
+  const precio = Number(CALC.precio) || 0;
+  const e = (Number(CALC.entrega) || 0) / 100;
+  const cpa = Number(CALC.cpa) || 0;
+  const flete = Number(CALC.flete) || 0;
+  const cobroDev = Number(CALC.cobroDev) || 0;
+
+  if (!costo || !e) {
+    cont.innerHTML = '<div class="cc-nota">Pon lo que te cuesta el producto ' +
+      'para ver la cuenta.</div>';
+    return;
+  }
+
+  const porDevuelta = (1 - e) / e;              // devoluciones por cada entrega
+  const costoDev = porDevuelta * (flete + cobroDev + costo * 0);
+  const costoTotal = costo + flete + costoDev + cpa;
+  const minimo = costoTotal / 0.75;             // dejando 25% de margen
+
+  const linea = function (k, v, sub) {
+    return '<div class="cc-l"><div><div class="cc-lk">' + k + '</div>' +
+      (sub ? '<div class="cc-ls">' + sub + '</div>' : '') + '</div>' +
+      '<div class="cc-lv">' + S + CNT(v) + '</div></div>';
+  };
+
+  let h = '<div class="cc-tabla">' +
+    linea('El producto', costo, 'Lo que pagas por la unidad') +
+    linea('El flete', flete, 'De la entrega que sí llega') +
+    linea('Las devoluciones', costoDev,
+      porDevuelta.toFixed(2) + ' por cada entrega · flete de ida + cobro de retorno') +
+    linea('La pauta', cpa, 'Lo que cuesta conseguir ese comprador') +
+    '<div class="cc-l total"><div class="cc-lk">Te cuesta cada entrega</div>' +
+      '<div class="cc-lv">' + S + CNT(costoTotal) + '</div></div>' +
+  '</div>';
+
+  if (!precio) {
+    h += '<div class="cc-veredicto ojo">Para no perder plata tienes que ' +
+      'venderlo por encima de <b>' + S + CNT(costoTotal) + '</b>. Con 25% de ' +
+      'margen, <b>' + S + CNT(minimo) + '</b>.<br>Pon tu precio arriba para ver ' +
+      'cuánto te dejaría.</div>';
+  } else {
+    const deja = precio - costoTotal;
+    const margen = precio ? deja / precio * 100 : 0;
+    h += '<div class="cc-veredicto ' + (deja > 0 ? 'ok' : 'mal') + '">' +
+      (deja > 0
+        ? 'A ' + S + CNT(precio) + ' te deja <b>' + S + CNT(deja) +
+          '</b> por entrega · margen ' + margen.toFixed(1) + '%.' +
+          (margen < 15
+            ? '<br>Es poco colchón: si la entrega baja unos puntos o el CPA sube, se pone rojo.'
+            : '')
+        : 'A ' + S + CNT(precio) + ' <b>pierdes ' + S + CNT(Math.abs(deja)) +
+          '</b> en cada entrega. Necesitas al menos ' + S + CNT(costoTotal) +
+          ' para empatar.') +
+      '</div>';
+  }
+  cont.innerHTML = h;
+}
+
+function pintarTecho() {
+  const cont = document.getElementById('calc-techo');
+  if (!cont) return;
+  const S = SYM();
+  cont.innerHTML =
+    campoCalc('precio2', 'A cuánto vendes', S, 'Precio de venta') +
+    campoCalc('costo2', 'Lo que te cuesta el producto', S, 'Por unidad') +
+    '<div id="calc-techo-res"></div>';
+  calcularTecho();
+}
+
+/**
+ * El techo del CPA: lo máximo que puedes pagar por una entrega.
+ *
+ * Es el mismo cálculo al revés. Sirve para mirar una campaña y saber en
+ * el acto si se puede escalar o hay que apagarla — sin esperar al cierre
+ * del mes, que es cuando ya se gastó.
+ */
+function calcularTecho() {
+  const cont = document.getElementById('calc-techo-res');
+  if (!cont) return;
+  const S = SYM() + ' ';
+  const precio = Number(CALC.precio2) || 0;
+  const costo = Number(CALC.costo2) || 0;
+  const e = (Number(CALC.entrega) || 0) / 100;
+  const flete = Number(CALC.flete) || 0;
+  const cobroDev = Number(CALC.cobroDev) || 0;
+
+  if (!precio || !e) {
+    cont.innerHTML = '<div class="cc-nota">Pon a cuánto vendes para ver el techo.</div>';
+    return;
+  }
+
+  const porDevuelta = (1 - e) / e;
+  const costoDev = porDevuelta * (flete + cobroDev);
+  const techo = precio - costo - flete - costoDev;
+  const cpaHoy = Number(CALC.cpa) || 0;
+
+  cont.innerHTML = '<div class="cc-veredicto ' +
+    (techo <= 0 ? 'mal' : (cpaHoy && cpaHoy > techo) ? 'mal'
+      : (cpaHoy && cpaHoy > techo * 0.85) ? 'ojo' : 'ok') + '">' +
+    (techo <= 0
+      ? 'Este producto no aguanta <b>nada</b> de pauta: entre el costo, el flete ' +
+        'y las devoluciones ya se lleva todo lo que cobras.'
+      : 'Puedes pagar hasta <b>' + S + CNT(techo) + '</b> por entrega.' +
+        (cpaHoy
+          ? cpaHoy > techo
+            ? '<br>Hoy estás pagando ' + S + CNT(cpaHoy) + ' — <b>' +
+              S + CNT(cpaHoy - techo) + ' de más en cada una</b>.'
+            : '<br>Hoy pagas ' + S + CNT(cpaHoy) + ', el ' +
+              Math.round(cpaHoy / techo * 100) + '% del techo.' +
+              (cpaHoy > techo * 0.85 ? ' Queda poco colchón.' : '')
+          : '')) +
+    '</div>' +
+    '<div class="cc-nota">Después de producto, flete y las ' + porDevuelta.toFixed(2) +
+      ' devoluciones que trae cada entrega. Antes de gastos fijos.</div>';
 }
 
 // ─── VER COMO ─────────────────────────────────────────────────

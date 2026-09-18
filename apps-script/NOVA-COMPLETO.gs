@@ -4933,7 +4933,27 @@ function apiProductos(s, p) {
   const preg = String(ajustes(ss, tienda).preguntas_producto || '')
     .split('|').map(function (x) { return x.trim(); }).filter(String).slice(0, 4);
 
+  /**
+   * Qué columnas tiene DE VERDAD la hoja Inventario.
+   *
+   * Cuando Nova gana un campo nuevo, la hoja del cliente no lo tiene
+   * hasta que alguien corre bootstrapTodo(). Mientras tanto, guardar una
+   * ficha mandaba campos que no existían y el servidor los rechazaba —
+   * sin que quedara claro que el problema era una migración pendiente y
+   * no lo que se había escrito.
+   *
+   * Diciéndolo, la pantalla puede mandar solo lo que cabe y avisar de lo
+   * que falta. Guardar a medias con explicación es mucho mejor que no
+   * guardar sin ella.
+   */
+  let columnas = [];
+  if (shI && shI.getLastColumn() > 0) {
+    columnas = shI.getRange(1, 1, 1, shI.getLastColumn()).getValues()[0]
+      .map(norm).filter(String);
+  }
+
   return { ok: true, tienda: tienda, productos: salida, preguntas: preg,
+           columnas: columnas,
            modalidad: modalidadDeTienda(ss, tienda),
            moneda: monedaDeTienda(ss, tienda) };
 }
