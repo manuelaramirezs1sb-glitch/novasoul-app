@@ -86,7 +86,14 @@ a{color:inherit;text-decoration:none;}
 /* ─── APP SHELL ───────────────────────────────────────── */
 #app{display:none;min-height:100vh;}
 #app.on{display:grid;grid-template-columns:220px 1fr;}
-@media(max-width:720px){#app.on{grid-template-columns:1fr;}}
+/* En el teléfono la barra se apila arriba del contenido. Sin esto medía
+   una pantalla completa de alto y había que pasarla entera para llegar
+   a lo que se venía a ver. */
+@media(max-width:720px){
+  #app.on{grid-template-columns:1fr;}
+  #sidebar{height:auto;position:static;border-right:none;border-bottom:1px solid var(--s-line2);}
+  #sidebar .sb-nav{display:flex;flex-wrap:wrap;gap:4px;}
+}
 
 /* ─── SIDEBAR ─────────────────────────────────────────── */
 #sidebar{background:var(--s-card);border-right:1px solid var(--s-line2);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto;z-index:10;}
