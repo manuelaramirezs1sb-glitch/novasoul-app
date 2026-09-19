@@ -41,7 +41,15 @@
 (function () {
   'use strict';
 
-  if (!/[?&]demo\b/.test(location.search)) return;
+  /**
+   * Dos formas de encenderlo.
+   *
+   * `?demo=1` en la dirección, cuando Nova está publicada en algún lado.
+   * Y la bandera, que la pone el archivo de un solo pedazo: ese no tiene
+   * dirección que mirar —se abre desde el disco, o llega por correo— y
+   * si dependiera del `?demo` no arrancaría nunca.
+   */
+  if (!/[?&]demo\b/.test(location.search) && !window.NOVA_DEMO_FORZADO) return;
 
   // ─── 1 · AZAR REPETIBLE ───────────────────────────────────────
   /**
