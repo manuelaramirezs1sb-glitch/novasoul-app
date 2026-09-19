@@ -1878,6 +1878,25 @@ function nombreDe(correo){
   const found = ROLE_MAP.find(x=>c.includes(x.m));
   return found ? found.nm : 'Manuela';
 }
+/**
+ * Quién está usando Nova ahora mismo.
+ *
+ * La tabla ROLES de arriba es de antes de que existiera el servidor:
+ * traducía un correo conocido a un nombre, y para cualquier correo
+ * desconocido devolvía "Manuela". Eso significaba que la segunda clienta
+ * de Nova veía el nombre de la primera encima de sus propios números.
+ *
+ * Con sesión abierta el nombre lo dice el servidor, que es quien lo sabe.
+ * La tabla queda solo para la pantalla de entrada, antes de que haya
+ * sesión de la que leer.
+ */
+function quienSoy(){
+  if (typeof SESION !== 'undefined' && SESION && (SESION.nombre || SESION.email)) {
+    return SESION.nombre || SESION.email;
+  }
+  return nombreDe(localStorage.getItem('ne_email') || '');
+}
+
 function labelDe(correo){
   if(!correo) return 'dueña';
   const c = correo.toLowerCase();
@@ -2773,11 +2792,38 @@ function go(view, el) {
 
 // ─── STORE SWITCH ─────────────────────────────────────
 function setStore(s){ST=s;localStorage.setItem('ne_store',s);}
+
+/**
+ * Los nombres de la barra salen de la sesión, no del HTML.
+ *
+ * Estaban escritos a mano: "Manuela · Nutrea EC". Funcionaba porque la
+ * primera cuenta era la de Manuela, pero cualquier otra dueña abría Nova
+ * y veía el nombre de otra persona y el de otra tienda encima de sus
+ * propios números. Una herramienta que se equivoca de dueño en la
+ * primera línea no da confianza para creerle la segunda.
+ */
+function pintarIdentidad() {
+  // La sesión manda. La tabla de nombres por correo es solo el respaldo
+  // de antes de entrar, cuando todavía no hay sesión de la que leer.
+  const quien = quienSoy();
+  const tienda = (STORES[ST] || {});
+  const sub = document.getElementById('bsub');
+  if (sub) sub.textContent = quien + ' · ' + (tienda.name || ST.toUpperCase());
+
+  ['ec', 'gt'].forEach(function (id) {
+    const el = document.getElementById('c' + id);
+    if (!el || !STORES[id]) return;
+    const s = el.querySelector('strong'), p = el.querySelector('small');
+    if (s) s.textContent = STORES[id].name;
+    if (p) p.textContent = STORES[id].sub || STORES[id].moneda || '';
+  });
+}
+
 function switchSt(s){
   ST=s; localStorage.setItem('ne_store',s);
   document.getElementById('cec').classList.toggle('on',s==='ec');
   document.getElementById('cgt').classList.toggle('on',s==='gt');
-  document.getElementById('bsub').textContent='Manuela · Nutrea '+(s==='ec'?'EC':'GT');
+  pintarIdentidad();
   updateSub(); buildAll();
   montarImportadores();
   // La tienda cambió: los datos de la anterior no pueden quedarse en pantalla
@@ -4559,7 +4605,7 @@ function pintarInforme(d, p, real) {
           esc(d.monedaReporte) + '/' + esc(d.moneda) +
           (d.tasaExacta ? '' : ' <span class="inf-aviso">del ' + esc(d.tasaFecha) + '</span>') + '</span>'
         : '') +
-      '<span>' + (nombreDe(localStorage.getItem('ne_email')||'') || '') + '</span>' +
+      '<span>' + esc(quienSoy()) + '</span>' +
     '</div></header>';
 
   h += origenCierre(d, real);
@@ -6573,7 +6619,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-18 · 9364';
+const VERSION_PANTALLA = '2026-09-19 · 8611';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -8134,9 +8180,11 @@ function updateSub(){
   const d=new Date();
   const days=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
   const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  const email = localStorage.getItem('ne_email') || '';
-  const nombre = nombreDe(email);
-  const tienda = ROL === 'gestora' ? 'Nutrea EC' : STORES[ST].name;
+  const nombre = quienSoy();
+  // La gestora ve su tienda, no una escrita a mano: aquí decía
+  // "Nutrea EC" fijo, así que una gestora de Guatemala leía el nombre
+  // de la tienda de otro país sobre sus propios pedidos.
+  const tienda = (STORES[ST] || {}).name || ST;
   document.getElementById('psub').textContent=`${days[d.getDay()]} ${d.getDate()} de ${months[d.getMonth()]} · ${tienda} · ${nombre}`;
 }
 function applyPrefs(){
@@ -8162,11 +8210,7 @@ function applyPrefs(){
     if(el) el.classList.toggle('on', ST===k);
   });
   document.getElementById('cgt').classList.toggle('on',ST==='gt');
-  const email=localStorage.getItem('ne_email')||'';
-  const nombre=nombreDe(email);
-  // El nombre de la tienda sale del catálogo, no se arma pegando texto
-  document.getElementById('bsub').textContent =
-    nombre + ' · ' + ((STORES[ST]||{}).name || ST);
+  pintarIdentidad();
 }
 
 /**
@@ -8213,6 +8257,19 @@ function entrarConSesion(ses) {
 
   document.getElementById('login').style.display = 'none';
   document.getElementById('app').classList.add('on');
+  pintarIdentidad();
+
+  /**
+   * Abrir en la sección que le corresponde a quien entró.
+   *
+   * El HTML arranca con #v-hoy marcada, que es el panel de la dueña. Para
+   * una gestora esa sección está oculta por rol, y como nadie llamaba a
+   * go() al entrar, se quedaba marcada una vista invisible: la gestora
+   * abría Nova y veía la pantalla en blanco, con el título "Hoy" encima
+   * de nada. go() ya sabe mandarla a la suya; solo faltaba llamarlo.
+   */
+  go(ROL === 'gestora' ? 'g-hoy' : 'hoy', null);
+
   applyPrefs(); buildAll(); updateSub();
   montarImportadores();
   cargarReales();
@@ -8236,6 +8293,23 @@ document.addEventListener('DOMContentLoaded',()=>{
   recordarCorreo();
   reanudarSesion();
 });
+</script>
+
+<!--
+  MODO DEMOSTRACIÓN
+  Se carga solo cuando la dirección lo pide (…/empresarial.html?demo=1).
+  En uso normal esta línea no descarga nada y la pantalla ni se entera.
+  demo.js reemplaza api() por una versión que contesta desde la memoria
+  del navegador, así que en demostración no hay ninguna conexión al
+  servidor que pueda escribir en la hoja de nadie.
+-->
+<script>
+(function () {
+  if (!/[?&]demo\b/.test(location.search)) return;
+  var s = document.createElement('script');
+  s.src = 'demo.js';
+  document.head.appendChild(s);
+})();
 </script>
 </body>
 </html>
