@@ -9950,15 +9950,78 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     },
   };
 
+  /**
+   * Los mismos estados que reconoce Nova de verdad.
+   *
+   * VERIFICADO contra un archivo real de Dropi Colombia: 871 órdenes,
+   * abril a septiembre, 18 estados distintos. Un estado que no se
+   * reconoce cae en "pendiente" y eso no da error — solo deja pedidos
+   * resueltos contados como si siguieran en camino, el mes sin cerrar y
+   * la tasa de entrega más baja de lo que fue.
+   */
   const ESTADO_DEMO = {
     'entregado': 'entregado', 'entregada': 'entregado',
+
     'devolucion': 'devolucion', 'devuelto': 'devolucion', 'devuelta': 'devolucion',
     'en proceso de devolucion': 'devolucion',
+    // Rechazado en la puerta: el paquete vuelve y el flete se paga igual
+    'rechazado': 'devolucion', 'rechazada': 'devolucion',
+
     'cancelado': 'cancelado', 'cancelada': 'cancelado',
-    'novedad': 'novedad', 'pendiente': 'pendiente',
-    'guia generada': 'confirmado', 'en bodega origen': 'en_bodega',
+    'guia_anulada': 'cancelado', 'guia anulada': 'cancelado',
+
+    'novedad': 'novedad', 'novedad solucionada': 'novedad_resuelta',
+    'solucion aprobada': 'novedad_resuelta',
+
+    'pendiente': 'pendiente', 'pendiente confirmacion': 'pendiente',
+
+    'guia generada': 'confirmado', 'guia_generada': 'confirmado',
+    'en procesamiento': 'confirmado',
+
+    'en bodega origen': 'en_bodega', 'preparado para transportadora': 'en_bodega',
+    'en bodega transportadora': 'en_bodega',
+    'ingresando operativo a bodega': 'en_bodega',
+
     'en reparto': 'en_transito', 'en transito': 'en_transito',
+    'despachada': 'en_transito', 'despachado': 'en_transito',
+    'en bodega destino': 'en_transito', 'en terminal destino': 'en_transito',
+    'en reexpedicion': 'en_transito', 'en espera de ruta domestica': 'en_transito',
+    'zona de entrega': 'en_transito', 'en distribucion a cliente': 'en_transito',
+
+    'reclame en oficina': 'en_oficina', 'reclamo en oficina': 'en_oficina',
+    'para retiro en agencia': 'en_oficina',
+    'para retiro en agencia servientrega': 'en_oficina',
   };
+
+  /**
+   * Un número escrito como se escribe en América Latina.
+   *
+   * "27044,5" son veintisiete mil con cincuenta centavos, y "1.234,56"
+   * son mil doscientos treinta y cuatro. Cambiar la coma por punto a
+   * secas funciona con el primero y con el segundo produce "1.234.56",
+   * que no es ningún número — y el costo de ese pedido se vuelve cero
+   * sin que nadie lo note.
+   *
+   * La regla: el último separador que aparezca es el decimal, siempre
+   * que le sigan una o dos cifras. Lo demás son separadores de miles.
+   */
+  function numLatam(v) {
+    if (typeof v === 'number') return isFinite(v) ? v : 0;
+    let s = String(v == null ? '' : v).trim().replace(/[^\d.,-]/g, '');
+    if (!s) return 0;
+
+    const coma = s.lastIndexOf(','), punto = s.lastIndexOf('.');
+    const corte = Math.max(coma, punto);
+
+    if (corte !== -1 && s.length - corte - 1 <= 2 && s.length - corte - 1 > 0) {
+      s = s.slice(0, corte).replace(/[.,]/g, '') + '.' + s.slice(corte + 1);
+    } else {
+      s = s.replace(/[.,]/g, '');          // todos eran de miles
+    }
+
+    const n = parseFloat(s);
+    return isFinite(n) ? n : 0;
+  }
 
   /** Día primero, que es como escribe toda América Latina. */
   function fechaDemo(v) {
@@ -9974,9 +10037,56 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     return '';
   }
 
+  /**
+   * Cuál de las pestañas trae los pedidos.
+   *
+   * Antes se leía siempre la primera. Con un export de Dropi da igual —
+   * solo tiene una— pero el control que lleva un equipo de verdad no es
+   * un export: es un cuaderno con diecisiete pestañas. En el primer
+   * archivo real que probamos, la primera pestaña se llamaba ACCESOS y
+   * era la lista de usuarios; los pedidos estaban en la trece.
+   *
+   * Así que se miran todas y gana la que más columnas reconocidas tenga,
+   * con el número de filas como desempate. Y se dice cuál se eligió: si
+   * acierta, tranquiliza; si se equivoca, se ve dónde.
+   */
+  function elegirHoja(wb, fuente) {
+    const alias = ALIAS[fuente] || ALIAS[fuente === 'meta_facturacion' ? 'meta' : 'dropi'];
+    const claves = Object.keys(alias);
+    let mejor = null;
+
+    wb.SheetNames.forEach(function (nombre) {
+      const m = XLSX.utils.sheet_to_json(wb.Sheets[nombre],
+        { header: 1, raw: false, defval: '' });
+      if (!m || m.length < 2) return;
+
+      const enc = (m[0] || []).map(norm);
+      let puntos = 0;
+      claves.forEach(function (campo) {
+        if (alias[campo].some(function (a) { return enc.indexOf(a) !== -1; })) puntos++;
+      });
+
+      // Sin fecha no hay nada que importar, por muchas columnas que tenga
+      const hayFecha = alias.fecha.some(function (a) { return enc.indexOf(a) !== -1; });
+      if (!hayFecha || puntos < 3) return;
+
+      const filas = m.filter(function (f) {
+        return f.some(function (c) { return String(c).trim() !== ''; });
+      }).length;
+
+      if (!mejor || puntos > mejor.puntos ||
+          (puntos === mejor.puntos && filas > mejor.filas)) {
+        mejor = { nombre: nombre, matriz: m, puntos: puntos, filas: filas };
+      }
+    });
+
+    return mejor;
+  }
+
   async function importarDemo(p) {
     const t = tiendaDe(p);
     const fuente = String(p.fuente || 'dropi');
+    let hojaUsada = '';
 
     let bytes = p.bytes;
     if (!bytes) {
@@ -9994,8 +10104,14 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       try { XLSX = await cargarLectorExcel(); }
       catch (e) { return { ok: false, error: e.message }; }
       const wb = XLSX.read(bytes, { type: 'array', cellDates: false });
-      const hoja = wb.Sheets[wb.SheetNames[0]];
-      matriz = XLSX.utils.sheet_to_json(hoja, { header: 1, raw: false, defval: '' });
+      const elegida = elegirHoja(wb, fuente);
+      if (!elegida) {
+        return { ok: false, error: 'Ese Excel tiene ' + wb.SheetNames.length +
+          ' pestañas y en ninguna encontré columnas de pedidos.\n\n' +
+          'Pestañas: ' + wb.SheetNames.join(', ') };
+      }
+      hojaUsada = elegida.nombre;
+      matriz = elegida.matriz;
     } else {
       matriz = leerCSV(new TextDecoder('utf-8').decode(bytes));
     }
@@ -10056,12 +10172,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           campana: col.campana !== undefined ? f[col.campana] : 'Importada',
           conjunto: col.conjunto !== undefined ? f[col.conjunto] : '',
           entrega: '', presupuesto: '',
-          gasto: num(String(f[col.gasto]).replace(/[^\d.,-]/g, '').replace(',', '.')),
+          gasto: numLatam(f[col.gasto]),
           moneda_gasto: TIENDAS[t].moneda,
           gasto_normalizado: '', impresiones: col.impresiones !== undefined ? f[col.impresiones] : '',
           alcance: '', frecuencia: '', clics: col.clics !== undefined ? f[col.clics] : '',
           ctr: '', cpc: '', cpm: '',
-          resultados: col.resultados !== undefined ? num(f[col.resultados]) : 0,
+          resultados: col.resultados !== undefined ? numLatam(f[col.resultados]) : 0,
           compras: '', cpa: '', roas: '', valor_conv: '', visitas_lp: '',
         });
         nuevas++;
@@ -10086,10 +10202,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         direccion: '',
         producto: col.producto !== undefined ? f[col.producto] : 'Sin producto',
         sku: col.sku !== undefined ? f[col.sku] : '',
-        cantidad: col.cantidad !== undefined ? num(f[col.cantidad]) || 1 : 1,
-        valor: col.valor !== undefined ? num(String(f[col.valor]).replace(/[^\d.,-]/g, '').replace(',', '.')) : 0,
-        costo_producto: col.costo_producto !== undefined ? num(f[col.costo_producto]) : 0,
-        costo_envio: col.costo_envio !== undefined ? num(f[col.costo_envio]) : 0,
+        cantidad: col.cantidad !== undefined ? numLatam(f[col.cantidad]) || 1 : 1,
+        valor: col.valor !== undefined ? numLatam(f[col.valor]) : 0,
+        costo_producto: col.costo_producto !== undefined ? numLatam(f[col.costo_producto]) : 0,
+        costo_envio: col.costo_envio !== undefined ? numLatam(f[col.costo_envio]) : 0,
         metodo_pago: 'contraentrega', bodega: '',
         estado: crudo, estado_transportadora: '', estado_canonico: est,
         transportadora: col.transportadora !== undefined ? f[col.transportadora] : '',
@@ -10119,8 +10235,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       ok: true, fuente: fuente, tienda: t,
       nuevas: nuevas, actualizadas: 0, repetidas: repetidas,
       ignoradas: sinFecha, total: matriz.length - 1,
-      resumen: nuevas + ' filas entraron al demo. Se ven reflejadas al instante ' +
-               'y desaparecen cuando recargues.',
+      hoja: hojaUsada,
+      resumen: nuevas + ' filas entraron al demo' +
+               (hojaUsada ? ' (pestaña "' + hojaUsada + '")' : '') + '.',
       demo: true,
     };
   }
@@ -10235,17 +10352,50 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       'cálculo que Nova usa de verdad, sobre una tienda inventada';
   }
 
+  /**
+   * Dejar la tienda vacía para subir los archivos propios.
+   *
+   * La tienda inventada sirve para entender la herramienta. Pero quien
+   * quiere saber si Nova le sirve a SU negocio necesita ver SUS números,
+   * y mezclados con los de Luma no se puede: un agosto de 666 pedidos
+   * donde 281 son de mentira no dice nada de nadie.
+   *
+   * Se borran los pedidos, las novedades, la pauta y la cartera. Se
+   * quedan el equipo, el inventario y los gastos fijos: son la estructura
+   * de la pantalla, y sin ellos la app se ve rota en vez de vacía. Los
+   * gastos fijos además se pueden editar, que es justo lo que alguien
+   * probando querría cambiar por los suyos.
+   */
+  function vaciar() {
+    if (!confirm('Se borran los pedidos, las novedades y la pauta de la tienda ' +
+                 'de ejemplo, para que subas los tuyos y veas solo tus números.\n\n' +
+                 'El equipo y los gastos fijos se quedan para que la pantalla ' +
+                 'siga teniendo forma. Todo vuelve al recargar la página.')) return;
+
+    ['Pedidos', 'Novedades', 'Pauta', 'Cartera', 'CAS', 'Cierres', 'Fuentes']
+      .forEach(function (h) { HOJA[h].length = 0; });
+    HOJA.Auditoria.length = 0;
+    invalidarCache();
+
+    const c = document.getElementById('demo-cinta');
+    if (c) c.firstChild.textContent =
+      'DEMOSTRACIÓN · vacía y lista para tus archivos · nada se guarda';
+
+    if (window.cargarReales) window.cargarReales();
+    if (window.showToast) window.showToast('Listo: sube tu archivo en Pedidos');
+  }
+
   function cinta() {
     if (document.getElementById('demo-cinta')) return;
     const c = document.createElement('div');
     c.id = 'demo-cinta';
     c.innerHTML = 'MODO DEMOSTRACIÓN · datos inventados, nada se guarda' +
-      '<button id="demo-cambiar">Cambiar de rol</button>' +
+      '<button id="demo-vaciar">Vaciar y usar mis archivos</button>' +
       '<button id="demo-reiniciar">Empezar de nuevo</button>';
     document.body.appendChild(c);
     document.body.classList.add('demo-on');
-    document.getElementById('demo-cambiar').onclick = function () { location.reload(); };
     document.getElementById('demo-reiniciar').onclick = function () { location.reload(); };
+    document.getElementById('demo-vaciar').onclick = vaciar;
   }
 
   /**

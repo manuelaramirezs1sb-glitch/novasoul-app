@@ -58,6 +58,47 @@ const MAPA_ESTADOS = {
     'en ruta a concesion':                ESTADOS.EN_TRANSITO,
     'para retiro en agencia servientrega':ESTADOS.EN_OFICINA,
     'para retiro en agencia':             ESTADOS.EN_OFICINA,
+
+    /**
+     * VERIFICADO contra un archivo real de Dropi Colombia (871 órdenes,
+     * abril a septiembre de 2026, 18 estados distintos).
+     *
+     * Los once de abajo no estaban. Y un estado que no se reconoce no da
+     * error: cae en "pendiente", que es el estado de lo que todavía no
+     * tiene desenlace. El efecto es silencioso y caro — en ese archivo,
+     * 13 pedidos RECHAZADO y 19 RECLAME EN OFICINA se habrían contado
+     * como "en camino" para siempre, el mes nunca habría cerrado, y la
+     * tasa de entrega habría salido más baja de lo que fue.
+     */
+
+    // El cliente lo rechazó en la puerta. Es una devolución: el paquete
+    // se devuelve y el flete de retorno se paga igual. Contarlo como
+    // cancelado escondería el costo, y como pendiente, el desenlace.
+    'rechazado':                          ESTADOS.DEVOLUCION,
+    'rechazada':                          ESTADOS.DEVOLUCION,
+
+    // La guía se anuló antes de despachar: nadie movió nada, nadie cobró.
+    'guia_anulada':                       ESTADOS.CANCELADO,
+    'guia anulada':                       ESTADOS.CANCELADO,
+
+    // Va a recogerlo el cliente a la oficina. No está perdido, pero
+    // tampoco entregado: es el caso que Nova sigue en "Seguimiento a
+    // oficina", donde se decide si se espera o se devuelve.
+    'reclame en oficina':                 ESTADOS.EN_OFICINA,
+    'reclamo en oficina':                 ESTADOS.EN_OFICINA,
+
+    // Todavía en manos de la bodega
+    'en procesamiento':                   ESTADOS.CONFIRMADO,
+    'preparado para transportadora':      ESTADOS.EN_BODEGA,
+    'en bodega transportadora':           ESTADOS.EN_BODEGA,
+
+    // Ya salió: desde aquí el flete está causado
+    'despachada':                         ESTADOS.EN_TRANSITO,
+    'despachado':                         ESTADOS.EN_TRANSITO,
+    'en bodega destino':                  ESTADOS.EN_TRANSITO,
+    'en terminal destino':                ESTADOS.EN_TRANSITO,
+    'en reexpedicion':                    ESTADOS.EN_TRANSITO,
+    'en espera de ruta domestica':        ESTADOS.EN_TRANSITO,
   },
 
   // Mastershop / Effi — Colombia. VERIFICADO.
