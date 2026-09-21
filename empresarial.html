@@ -183,6 +183,17 @@ input.li:focus{border-color:var(--acc-d);}
 .card-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
 .ct{font:600 14.5px/1.1 'Fraunces',serif;color:var(--t-ink);}
 .cl{font:600 11px/1 'DM Sans';color:var(--acc-d);cursor:pointer;}
+
+/* Tarjeta de la guía de Meta. En fila cuando cabe, apilada cuando no. */
+.guia-meta{flex-direction:row;align-items:center;gap:18px;flex-wrap:wrap;}
+.guia-meta .gm-txt{flex:1;min-width:230px;display:flex;flex-direction:column;gap:6px;}
+.guia-meta .gm-p{font:400 12.5px/1.6 'DM Sans';color:var(--t-mut);margin:0;max-width:62ch;}
+.guia-meta .gm-btn{
+  flex-shrink:0;background:var(--acc-d);color:#f1f4e8;text-decoration:none;
+  border-radius:10px;padding:10px 16px;font:600 12.5px/1 'DM Sans';
+  transition:opacity .15s;white-space:nowrap;
+}
+.guia-meta .gm-btn:hover{opacity:.85;}
 /* Dark card */
 .dcard{background:var(--s-dark);border-radius:16px;padding:17px 19px;display:flex;flex-direction:column;gap:12px;}
 /* KPI card */
@@ -1352,6 +1363,23 @@ input.li:focus{border-color:var(--acc-d);}
 
       <!-- ════ PAUTA Y ROAS ════ -->
       <div class="view" id="v-pauta">
+        <!--
+          La guía de Meta vive aquí, no escondida en un correo de hace
+          seis meses. Quien necesita conectar la cuenta publicitaria —o
+          volver a generar la llave cuando Meta la revoque— está mirando
+          justo esta pantalla, porque es donde notó que falta el gasto.
+        -->
+        <div class="card guia-meta">
+          <div class="gm-txt">
+            <div class="ct">Que el gasto entre solo</div>
+            <p class="gm-p">Conecta tu cuenta publicitaria y Nova trae el gasto de
+            Meta cada mañana, sin que bajes ningún archivo. Permiso de lectura:
+            nadie puede tocar tus campañas.</p>
+          </div>
+          <a class="gm-btn" href="guia-meta.html" target="_blank" rel="noopener">
+            Ver la guía →
+          </a>
+        </div>
         <!-- Solo la admin: la dueña ya tiene el suyo en Dinero -->
         <div class="imp-slot" data-tipo="pauta" data-solo="admin"></div>
         <div class="kgrid" id="dinkpi"></div>
@@ -6619,7 +6647,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-19 · 8611';
+const VERSION_PANTALLA = '2026-09-21 · 9bda';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
