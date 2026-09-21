@@ -14,10 +14,23 @@
 //
 // `directory: "./"` sirve el repositorio tal cual, igual que hacía
 // Netlify. Lo que NO debe publicarse se lista en .assetsignore.
+//
+// Las dos últimas líneas salen de avisos del primer despliegue. Cuando
+// no se dicen, Cloudflare elige por su cuenta y avisa que lo hizo:
+//
+//   workers_dev   la dirección nova.novasoul959.workers.dev, que es por
+//                 donde se entra hoy. Se deja encendida a propósito.
+//   preview_urls  una dirección pública por cada rama y cada versión.
+//                 Se apaga: Nova se publica desde main y nada más, y una
+//                 dirección pública que nadie sabe que existe es una
+//                 puerta abierta de la que nadie se acuerda.
+//
 {
   "name": "nova",
   "compatibility_date": "2026-09-21",
   "assets": {
     "directory": "./"
-  }
+  },
+  "workers_dev": true,
+  "preview_urls": false
 }

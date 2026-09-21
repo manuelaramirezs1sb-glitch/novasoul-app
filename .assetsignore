@@ -16,6 +16,13 @@
 .git/
 .github/
 
+# Lo que genera la propia herramienta al desplegar.
+# En el primer despliegue se colaron dos archivos suyos (un worker vacío
+# y su mapa) y quedaron publicados. No hacen daño —están vacíos— pero
+# nada que no sea el sitio tiene por qué estar servido.
+.wrangler/
+node_modules/
+
 # El servidor de Nova. Esto es el producto.
 apps-script/
 
