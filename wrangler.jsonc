@@ -1,0 +1,23 @@
+// ─────────────────────────────────────────────────────────────
+//  Cómo se publica Nova en Cloudflare
+// ─────────────────────────────────────────────────────────────
+//
+// Cloudflare unificó Pages dentro de Workers, y el despliegue ahora
+// corre `npx wrangler deploy`. Ese comando lee este archivo. Sin él
+// falla diciendo que no encuentra un punto de entrada, que es un error
+// confuso para algo tan simple como servir unas páginas.
+//
+// No hay "main" a propósito: Nova no tiene código de servidor en
+// Cloudflare —su servidor es Apps Script, del lado de Google—. Un Worker
+// sin script es justo lo que hace falta: los archivos salen directo
+// desde el borde, sin arranque en frío y sin nada que se pueda romper.
+//
+// `directory: "./"` sirve el repositorio tal cual, igual que hacía
+// Netlify. Lo que NO debe publicarse se lista en .assetsignore.
+{
+  "name": "nova",
+  "compatibility_date": "2026-09-21",
+  "assets": {
+    "directory": "./"
+  }
+}

@@ -1,0 +1,35 @@
+# Lo que NO se publica.
+#
+# Cloudflare Workers no excluye nada por su cuenta: lo que esté en la
+# carpeta, se sirve. Y aquí adentro vive mucho más que el sitio — el
+# código del servidor, las notas del proyecto, las maquetas de diseño.
+#
+# Con Netlify todo eso también quedaba publicado, solo que nadie lo
+# había mirado. No hay claves adentro (los identificadores de las hojas
+# viven en las Propiedades del Script, no en el código), así que no era
+# una filtración de credenciales. Pero es el producto entero, y no tiene
+# por qué estar a un clic de cualquiera que adivine una dirección.
+#
+# `_headers` NO va en esta lista: Cloudflare lo lee como configuración y
+# no lo sirve como archivo. Excluirlo sería perder las protecciones.
+
+.git/
+.github/
+
+# El servidor de Nova. Esto es el producto.
+apps-script/
+
+# Notas, transcripciones y maquetas del diseño original
+chats/
+project/
+sheets/
+
+# Herramientas de construcción: se corren aquí, no se publican
+*.py
+netlify/
+netlify.toml
+wrangler.jsonc
+.assetsignore
+
+# Documentación interna
+*.md
