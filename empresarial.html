@@ -596,34 +596,6 @@ input.li:focus{border-color:var(--acc-d);}
 .calc-input{border:1px solid var(--s-line3);background:var(--s-card2);border-radius:11px;padding:12px 14px;font:500 14px/1 'DM Sans';color:var(--t-ink);outline:none;width:100%;}
 .calc-input:focus{border-color:var(--acc-d);}
 .calc-result-big{font:700 36px/1 'Fraunces',serif;color:var(--t-ink);font-variant-numeric:tabular-nums;}
-/* ─── ONBOARDING ─────────────────────────────────────── */
-#onboarding{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;}
-#onboarding.on{display:flex;}
-.ob-box{background:var(--s-card);border-radius:20px;width:640px;max-width:100%;border:1px solid var(--s-line);box-shadow:0 20px 50px rgba(0,0,0,.25);overflow:hidden;}
-.ob-top{background:var(--s-dark2);padding:24px 28px;}
-.ob-top h2{font:600 22px/1.2 'Fraunces',serif;color:var(--t-ondark);margin-bottom:6px;}
-.ob-top p{font:500 12.5px/1.6 'DM Sans';color:var(--t-ondark-mut);}
-.ob-tabs{display:flex;gap:0;border-bottom:1px solid var(--s-line2);}
-.ob-tab{flex:1;padding:13px 14px;font:600 11px/1 'DM Sans';letter-spacing:.8px;color:var(--t-mut3);text-align:center;cursor:pointer;border-bottom:2px solid transparent;}
-.ob-tab.on{color:var(--acc-d);border-bottom-color:var(--acc-d);}
-.ob-body{padding:24px 28px;display:flex;flex-direction:column;gap:16px;}
-.ob-step{display:none;flex-direction:column;gap:14px;}
-.ob-step.on{display:flex;}
-.ob-field{display:flex;flex-direction:column;gap:6px;}
-.ob-field label{font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--t-mut2);}
-.ob-field input,.ob-field select{border:1px solid var(--s-line3);background:var(--s-card2);border-radius:11px;padding:12px 14px;font:500 13px/1 'DM Sans';color:var(--t-ink);outline:none;}
-.ob-field input:focus,.ob-field select:focus{border-color:var(--acc-d);}
-.ob-hint{font:500 11.5px/1.6 'DM Sans';color:var(--t-mut2);background:var(--s-bg);border-radius:10px;padding:11px 14px;}
-.ob-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--s-line2);}
-.ob-row:first-child{border-top:none;}
-.ob-perm{display:flex;gap:6px;}
-.ob-chip{font:600 10px/1 'DM Sans';padding:5px 9px;border-radius:20px;border:1px solid var(--s-line3);cursor:pointer;color:var(--t-mut2);}
-.ob-chip.on{background:var(--acc-d);color:#fff;border-color:var(--acc-d);}
-.ob-actions{display:flex;justify-content:flex-end;gap:10px;padding-top:4px;}
-.ob-btn{background:var(--acc-d);color:#f1f4e8;font:600 13px/1 'DM Sans';padding:13px 22px;border-radius:12px;cursor:pointer;border:none;}
-.ob-btn:hover{opacity:.88;}
-.ob-ghost{border:1px solid var(--s-line3);color:var(--t-ink3);font:600 12px/1 'DM Sans';padding:12px 18px;border-radius:12px;cursor:pointer;}
-
 /* ─── VISTA SOMBRA ───────────────────────────────────── */
 #sombra{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150;display:none;align-items:stretch;}
 #sombra.on{display:flex;}
@@ -1746,11 +1718,6 @@ input.li:focus{border-color:var(--acc-d);}
             </div>
           </div>
         </div>
-        <div class="card">
-          <div class="card-h"><span class="ct">Conexión con onboarding</span></div>
-          <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);margin:0;">Conecta hojas de cálculo nuevas, agrega tiendas o reconfigura tu equipo.</p>
-          <span onclick="showOnboarding()" class="lbtn" style="align-self:flex-start;width:auto;padding:13px 20px;border-radius:12px;">Abrir configuración inicial</span>
-        </div>
       </div>
 
       <!-- ════ GESTORA · HOY ════ -->
@@ -1860,95 +1827,17 @@ input.li:focus{border-color:var(--acc-d);}
   </div>
 </div>
 
-<!-- ══════════════════ ONBOARDING ══════════════════ -->
-<div id="onboarding">
-  <div class="ob-box">
-    <div class="ob-top">
-      <h2>Configuración inicial</h2>
-      <p>Solo la primera vez. Conectas las hojas, defines tu equipo y los permisos quedan guardados.</p>
-    </div>
-    <div class="ob-tabs">
-      <div class="ob-tab on" id="ot1" onclick="obTab(1)">1 · Conectar hojas</div>
-      <div class="ob-tab" id="ot2" onclick="obTab(2)">2 · Tiendas y equipo</div>
-      <div class="ob-tab" id="ot3" onclick="obTab(3)">3 · Permisos</div>
-    </div>
-    <div class="ob-body">
-      <!-- paso 1 -->
-      <div class="ob-step on" id="ob1">
-        <div class="ob-field">
-          <label>ID DEL SPREADSHEET (CENTRO DE COMANDO)</label>
-          <input type="text" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms">
-        </div>
-        <div class="ob-hint">Abre tu Google Sheet · en la URL copia el tramo entre /d/ y /edit · es el ID largo de letras y números.</div>
-        <div class="ob-field">
-          <label>ID DEL SPREADSHEET (GESTOR, si aplica)</label>
-          <input type="text" placeholder="Opcional">
-        </div>
-        <div class="ob-actions">
-          <button class="ob-btn" onclick="obTab(2)">Siguiente →</button>
-        </div>
-      </div>
-      <!-- paso 2 -->
-      <div class="ob-step" id="ob2">
-        <div class="ob-field">
-          <label>TIENDAS ACTIVAS</label>
-          <select><option>Nutrea Ecuador (Shopify + Dropi · USD)</option><option>Nutrea GT (Dropi · GTQ)</option></select>
-        </div>
-        <div>
-          <div class="slbl" style="margin-bottom:9px;">EQUIPO</div>
-          <div class="ob-row">
-            <span style="font:500 13px/1 'DM Sans';color:var(--t-ink);">Camila Restrepo</span>
-            <select style="font:500 12px/1 'DM Sans';border:1px solid var(--s-line3);background:var(--s-card2);border-radius:8px;padding:7px 10px;color:var(--t-ink);">
-              <option>Gestora</option><option>Admin</option><option>Dueña</option>
-            </select>
-          </div>
-          <div class="ob-row">
-            <span style="font:500 13px/1 'DM Sans';color:var(--t-ink);">Daniela Ríos</span>
-            <select style="font:500 12px/1 'DM Sans';border:1px solid var(--s-line3);background:var(--s-card2);border-radius:8px;padding:7px 10px;color:var(--t-ink);">
-              <option>Admin</option><option>Gestora</option><option>Dueña</option>
-            </select>
-          </div>
-          <div class="ob-row">
-            <span style="font:500 13px/1 'DM Sans';color:var(--t-ink);">Valentina Ospina</span>
-            <select style="font:500 12px/1 'DM Sans';border:1px solid var(--s-line3);background:var(--s-card2);border-radius:8px;padding:7px 10px;color:var(--t-ink);">
-              <option>Gestora</option><option>Admin</option><option>Dueña</option>
-            </select>
-          </div>
-        </div>
-        <div class="ob-actions">
-          <button class="ob-ghost" onclick="obTab(1)">← Atrás</button>
-          <button class="ob-btn" onclick="obTab(3)">Siguiente →</button>
-        </div>
-      </div>
-      <!-- paso 3 -->
-      <div class="ob-step" id="ob3">
-        <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut2);">Revisa qué puede hacer cada rol. Puedes cambiar estos permisos en cualquier momento desde la vista de Gestoras.</p>
-        <div>
-          <div class="ob-row" style="border-top:none;">
-            <span style="font:600 12px/1 'DM Sans';color:var(--t-ink);">Gestora</span>
-            <div class="ob-perm">
-              <span class="ob-chip on">Sus pedidos</span>
-              <span class="ob-chip on">Sus novedades</span>
-              <span class="ob-chip">Ver pauta</span>
-            </div>
-          </div>
-          <div class="ob-row">
-            <span style="font:600 12px/1 'DM Sans';color:var(--t-ink);">Admin</span>
-            <div class="ob-perm">
-              <span class="ob-chip on">Todos los pedidos</span>
-              <span class="ob-chip on">Auditoría</span>
-              <span class="ob-chip">Ver finanzas</span>
-            </div>
-          </div>
-        </div>
-        <div class="ob-actions">
-          <button class="ob-ghost" onclick="obTab(2)">← Atrás</button>
-          <button class="ob-btn" onclick="closeOnboarding()">Guardar y entrar →</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+<!--
+  Aquí vivía un asistente de "Configuración inicial" que pedía pegar a
+  mano los identificadores de las hojas de Google.
+
+  Se quitó porque ya no configura nada: desde que existe el servidor, la
+  conexión con las hojas se resuelve del lado de Apps Script y esos
+  campos no iban a ninguna parte — solo guardaban una marca en el
+  navegador. Peor todavía, aparecía cuando una sesión vencía, justo
+  cuando alguien ya tenía su cuenta funcionando, y le ofrecía "conectar
+  las hojas" como si estuviera empezando de cero.
+-->
 
 <script>
 // ─── STATE ────────────────────────────────────────────
@@ -4489,13 +4378,6 @@ function enterApp(forceRol){
   document.getElementById('chat-fab').style.display='flex';
   initChat();
 
-  // Primera vez: mostrar onboarding solo al dueño
-  // El asistente de configuración pedía pegar IDs de spreadsheet a mano.
-  // Con la API conectada esa conexión ya está hecha del lado del servidor,
-  // así que mostrarlo solo invita a romper algo que funciona.
-  if (!CONECTADO && ROL === 'dueno' && !localStorage.getItem('ne_onboarded')) {
-    showOnboarding();
-  }
 }
 function logout(){
   if (TOKEN) { try { api('salir'); } catch(e){} }
@@ -6747,7 +6629,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-21 · 2031';
+const VERSION_PANTALLA = '2026-09-21 · ab3a';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -8536,17 +8418,6 @@ function showSombra(nombre) {
   document.getElementById('sombra').classList.add('on');
 }
 function closeSombra(){document.getElementById('sombra').classList.remove('on');}
-
-// ─── ONBOARDING ───────────────────────────────────────
-function showOnboarding(){document.getElementById('onboarding').classList.add('on');}
-function closeOnboarding(){
-  document.getElementById('onboarding').classList.remove('on');
-  localStorage.setItem('ne_onboarded','1');
-}
-function obTab(n){
-  document.querySelectorAll('.ob-tab').forEach((t,i)=>t.classList.toggle('on',i===n-1));
-  document.querySelectorAll('.ob-step').forEach((s,i)=>s.classList.toggle('on',i===n-1));
-}
 
 // ─── UTILS ────────────────────────────────────────────
 function updateSub(){
