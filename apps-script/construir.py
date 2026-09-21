@@ -28,6 +28,7 @@ ORDEN = [
     ('60-api.gs',          '9 · API WEB'),
     ('65-central.gs',      '10 · NOVA CENTRAL'),
     ('70-importar.gs',     '11 · ESCRITURA'),
+    ('75-meta.gs',         '12 · META'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

@@ -184,6 +184,28 @@ input.li:focus{border-color:var(--acc-d);}
 .ct{font:600 14.5px/1.1 'Fraunces',serif;color:var(--t-ink);}
 .cl{font:600 11px/1 'DM Sans';color:var(--acc-d);cursor:pointer;}
 
+/* Botones de formulario. No existían: hasta ahora cada pantalla los
+   dibujaba a su manera, y los dos primeros que se pusieron juntos
+   salieron pegados y con el estilo gris del navegador. */
+.btn,.btn-ghost{
+  border-radius:10px;padding:10px 16px;font:600 12.5px/1 'DM Sans';
+  cursor:pointer;transition:opacity .15s,border-color .15s;
+}
+.btn{background:var(--acc-d);color:#f1f4e8;border:1px solid var(--acc-d);}
+.btn:hover{opacity:.85;}
+.btn-ghost{background:transparent;color:var(--t-ink2);border:1px solid var(--s-line3);}
+.btn-ghost:hover{border-color:var(--acc-d);color:var(--acc-d);}
+.btn:disabled,.btn-ghost:disabled{opacity:.5;cursor:default;}
+
+/* ─── CONEXIÓN CON META ────────────────────────────────── */
+.mt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;}
+.mt-campo{display:flex;flex-direction:column;gap:5px;}
+.mt-campo label{font:600 10.5px/1 'DM Sans';letter-spacing:.9px;text-transform:uppercase;color:var(--t-mut3);}
+.mt-campo small{font:500 11px/1.5 'DM Sans';color:var(--t-mut3);}
+.mt-inp{min-height:0;font-family:ui-monospace,Menlo,monospace;font-size:12px;}
+.mt-msg{margin-top:11px;border-radius:10px;padding:11px 13px;
+  font:500 12px/1.6 'DM Sans';white-space:pre-wrap;}
+
 /* ─── ESTADOS DE LA TRANSPORTADORA ─────────────────────── */
 .est-vacio{font:500 12.5px/1.6 'DM Sans';color:var(--t-mut2);margin:6px 0 0;}
 .est-aviso{
@@ -1611,6 +1633,25 @@ input.li:focus{border-color:var(--acc-d);}
           pedidos sin clasificar, todo lo que se muestre debajo está
           calculado sobre menos pedidos de los que hay.
         -->
+        <!--
+          La llave de Meta. El campo se escribe pero NUNCA se lee de
+          vuelta: el servidor jamás la devuelve, ni recortada. Una llave
+          que viaja al navegador queda en la memoria del navegador, y de
+          ahí a una captura de pantalla hay un paso.
+        -->
+        <div class="card" id="card-meta">
+          <div class="card-h"><span class="ct">Conexión con Meta</span>
+            <span style="font:500 11px/1 'DM Sans';" id="meta-estado-lbl"></span></div>
+          <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);margin:0;max-width:74ch;">
+            Con esto Nova trae sola el gasto de tus anuncios cada día y dejas de
+            bajar el Excel de Meta. Es una llave <strong>de lectura</strong>:
+            no puede crear anuncios, pausarlos ni mover un presupuesto.
+            <a href="guia-meta.html" target="_blank" rel="noopener"
+               style="color:var(--acc-d);font-weight:600;">Cómo conseguirla →</a>
+          </p>
+          <div id="meta-caja"></div>
+        </div>
+
         <div class="card" id="card-estados">
           <div class="card-h"><span class="ct">Estados de la transportadora</span>
             <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);" id="est-resumen"></span></div>
@@ -3234,7 +3275,8 @@ async function cargarReales() {
     await Promise.all([cargarPedidosReales(), cargarNovedadesReales(),
                        cargarEquipo(), cargarAuditoria(), cargarAlarmas(),
                        cargarRecuento(), cargarProductos(),
-                       cargarHistorial(), cargarCas(), cargarEstados()]);
+                       cargarHistorial(), cargarCas(), cargarEstados(),
+                       cargarMeta()]);
     // Una gestora sin pedidos asignados también merece respuesta. Si las
     // listas vinieron vacías nadie la habría pintado, y se quedaría
     // mirando un "buscando…" que ya terminó.
@@ -6705,7 +6747,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-21 · 9bda';
+const VERSION_PANTALLA = '2026-09-21 · 1e96';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -7843,6 +7885,108 @@ async function cargarRecuento() {
 let ALARMAS_HOY = [];
 let UMBRALES = null;
 let CATALOGO_ALARMAS = [];
+
+// ─── CONEXIÓN CON META ────────────────────────────────────────
+/**
+ * La llave se escribe, nunca se lee.
+ *
+ * El servidor no la devuelve jamás — ni los últimos cuatro caracteres.
+ * Esta pantalla solo sabe SI hay una guardada y desde cuándo. Para
+ * cambiarla se escribe otra encima; no hay forma de recuperar la que
+ * está puesta, y eso es a propósito: lo que no se puede leer no se
+ * puede filtrar.
+ */
+let META_DATA = null;
+
+async function cargarMeta() {
+  if (!CONECTADO || ROL !== 'dueno') return false;
+  let r;
+  try { r = await api('meta_estado', { tienda: ST }); }
+  catch (e) { return false; }
+  if (!r || !r.ok) return false;
+  META_DATA = r;
+  pintarMeta();
+  return true;
+}
+
+function pintarMeta() {
+  const caja = document.getElementById('meta-caja');
+  const lbl = document.getElementById('meta-estado-lbl');
+  if (!caja || !META_DATA) return;
+
+  const hay = META_DATA.hayLlave;
+  lbl.textContent = hay ? 'llave guardada' : 'sin conectar';
+  lbl.style.color = hay ? 'var(--acc-d)' : 'var(--t-mut2)';
+
+  const cta = (META_DATA.cuentas || []).filter(function (c) { return c.tienda === ST; })[0]
+              || { cuenta: '' };
+
+  caja.innerHTML =
+    '<div class="mt-grid">' +
+      '<div class="mt-campo">' +
+        '<label>La llave' + (hay ? ' · ya hay una guardada' : '') + '</label>' +
+        '<input class="narea mt-inp" id="meta-token" type="password" autocomplete="off" ' +
+          'spellcheck="false" placeholder="' +
+          (hay ? 'Escribe una nueva solo si quieres reemplazarla' : 'Pega aquí la llave de Meta') +
+          '">' +
+        '<small>' + (hay
+          ? 'Guardada el ' + esc(String(META_DATA.guardadaEn).slice(0, 10)) +
+            '. No se puede volver a ver, solo reemplazar.'
+          : 'Empieza por EAA y es larga. No se guarda en la hoja: va a un ' +
+            'lugar que no ve quien abra el archivo.') + '</small>' +
+      '</div>' +
+      '<div class="mt-campo">' +
+        '<label>Cuenta publicitaria de ' + esc((STORES[ST] || {}).name || ST) + '</label>' +
+        '<input class="narea mt-inp" id="meta-cuenta" inputmode="numeric" ' +
+          'placeholder="solo el número" value="' + esc(cta.cuenta || '') + '">' +
+        '<small>Sin el «act_» de adelante. Cada tienda tiene la suya.</small>' +
+      '</div>' +
+    '</div>' +
+    '<div class="row-btns" style="margin-top:12px">' +
+      '<button class="btn" onclick="guardarMeta()">Guardar</button>' +
+      '<button class="btn-ghost" onclick="probarMeta()">Probar conexión</button>' +
+    '</div>' +
+    '<div id="meta-msg" class="mt-msg" style="display:none"></div>';
+}
+
+function metaMsg(texto, tipo) {
+  const el = document.getElementById('meta-msg');
+  if (!el) return;
+  const c = { ok:['#e6efe8','#2f5738'], ojo:['#f6ecd0','#7a5c10'], mal:['#f6e3db','#a8563a'] }[tipo||'ojo'];
+  el.style.display = 'block';
+  el.style.background = c[0]; el.style.color = c[1];
+  el.textContent = texto;
+}
+
+async function guardarMeta() {
+  const tk = document.getElementById('meta-token');
+  const ct = document.getElementById('meta-cuenta');
+  const datos = { tienda: ST, cuenta: ct.value };
+  // Vacío significa "no la toques", no "bórrala": si mandara vacío al
+  // guardar solo el número de cuenta, se borraría la llave sin querer.
+  if (tk.value.trim()) datos.token = tk.value.trim();
+
+  metaMsg('Guardando…', 'ojo');
+  try {
+    const r = await api('meta_guardar', datos);
+    if (!r.ok) { metaMsg(r.error, 'mal'); return; }
+    tk.value = '';                       // no se queda escrita en pantalla
+    META_DATA = r;
+    pintarMeta();
+    metaMsg('Guardado. Prueba la conexión para confirmar que Meta la acepta.', 'ok');
+  } catch (e) { metaMsg('No se pudo guardar: ' + e.message, 'mal'); }
+}
+
+async function probarMeta() {
+  metaMsg('Preguntándole a Meta…', 'ojo');
+  try {
+    const r = await api('meta_probar', { tienda: ST });
+    if (!r.ok) { metaMsg(r.error, 'mal'); return; }
+    metaMsg('Conectado con «' + (r.nombre || r.cuenta) + '»' +
+            (r.moneda ? ' · Meta cobra en ' + r.moneda : '') +
+            (r.avisoMoneda ? '\n\n' + r.avisoMoneda : ''), 'ok');
+  } catch (e) { metaMsg('No se pudo probar: ' + e.message, 'mal'); }
+}
 
 // ─── ESTADOS DE LA TRANSPORTADORA ─────────────────────────────
 /**
@@ -9981,6 +10125,29 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
     importar: function (p) { return importarDemo(p); },
 
+    /**
+     * En el demo no hay llave ni hay Meta: se dice, no se simula.
+     *
+     * Fingir una conexión que no existe sería enseñar un botón que en la
+     * app de verdad hace algo muy distinto. Mejor que la tarjeta explique
+     * para qué sirve y diga que aquí no se conecta nada.
+     */
+    meta_estado: function () {
+      return { ok: true, hayLlave: false, guardadaEn: '', demo: true,
+               cuentas: SES.tiendas.map(function (t) {
+                 return { tienda: t, cuenta: '', moneda: TIENDAS[t].moneda };
+               }) };
+    },
+    meta_guardar: function () {
+      return { ok: false, error: 'Estás en la demostración: no hay ninguna cuenta ' +
+               'de Meta de verdad a la que conectarse.\n\nEn Nova, aquí se pega la ' +
+               'llave y el gasto de tus anuncios entra solo cada día.' };
+    },
+    meta_probar: function () {
+      return { ok: false, error: 'Estás en la demostración: no hay conexión con Meta ' +
+               'que probar.' };
+    },
+
     estados: function () {
       const sin = [], con = [];
       Object.keys(ESTADOS_VISTOS).forEach(function (k) {
@@ -10847,7 +11014,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
      */
     const SOLO_LEEN = ['yo', 'resumen', 'listar', 'productos', 'equipo', 'fuentes',
                        'cierre', 'historial', 'cas', 'alarmas', 'recuento',
-                       'auditoria', 'trozo', 'estados'];
+                       'auditoria', 'trozo', 'estados', 'meta_estado', 'meta_probar'];
 
     try {
       const r = await fn(p);

@@ -131,6 +131,17 @@ const AJUSTES_DEFAULT = {
   retiro_pct: 3,            // % que la plataforma descuenta de cada retiro
   comision_intl_pct: 2,     // % del banco por pagar en moneda extranjera
   comision_intl_a: 'meta',  // a qué plataformas se les aplica, separadas por coma
+
+  /**
+   * La cuenta publicitaria de Meta de esta tienda.
+   *
+   * Solo el número, sin el "act_" de adelante. Va aquí y no junto a la
+   * llave porque no es un secreto: es como el número de una cuenta
+   * bancaria, sirve para nombrarla y no para entrar en ella. La llave sí
+   * es secreta, y vive en las Propiedades del Script — donde no la ve
+   * quien abra la hoja ni quien se la descargue.
+   */
+  meta_cuenta: '',
 };
 
 /** Esquemas que sí se pueden abrir desde un enlace de la app. */

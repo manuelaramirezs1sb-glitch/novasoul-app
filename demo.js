@@ -1422,6 +1422,29 @@
 
     importar: function (p) { return importarDemo(p); },
 
+    /**
+     * En el demo no hay llave ni hay Meta: se dice, no se simula.
+     *
+     * Fingir una conexión que no existe sería enseñar un botón que en la
+     * app de verdad hace algo muy distinto. Mejor que la tarjeta explique
+     * para qué sirve y diga que aquí no se conecta nada.
+     */
+    meta_estado: function () {
+      return { ok: true, hayLlave: false, guardadaEn: '', demo: true,
+               cuentas: SES.tiendas.map(function (t) {
+                 return { tienda: t, cuenta: '', moneda: TIENDAS[t].moneda };
+               }) };
+    },
+    meta_guardar: function () {
+      return { ok: false, error: 'Estás en la demostración: no hay ninguna cuenta ' +
+               'de Meta de verdad a la que conectarse.\n\nEn Nova, aquí se pega la ' +
+               'llave y el gasto de tus anuncios entra solo cada día.' };
+    },
+    meta_probar: function () {
+      return { ok: false, error: 'Estás en la demostración: no hay conexión con Meta ' +
+               'que probar.' };
+    },
+
     estados: function () {
       const sin = [], con = [];
       Object.keys(ESTADOS_VISTOS).forEach(function (k) {
@@ -2288,7 +2311,7 @@
      */
     const SOLO_LEEN = ['yo', 'resumen', 'listar', 'productos', 'equipo', 'fuentes',
                        'cierre', 'historial', 'cas', 'alarmas', 'recuento',
-                       'auditoria', 'trozo', 'estados'];
+                       'auditoria', 'trozo', 'estados', 'meta_estado', 'meta_probar'];
 
     try {
       const r = await fn(p);
