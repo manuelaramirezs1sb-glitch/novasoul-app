@@ -482,7 +482,7 @@
 
     // El cierre congelado se calcula una vez sembrado todo
     HOJA.Cierres.forEach(function (c) {
-      c._datos = agregarMes(c.tienda, c.mes, 'dueno');
+      c._datos = mesDe_(c.tienda, c.mes, 'dueno');
     });
   }
 
@@ -494,6 +494,36 @@
   }
 
   const TERMINALES = ['entregado', 'devolucion', 'cancelado'];
+
+  /**
+   * El mes, calculado una sola vez.
+   *
+   * agregarMes recorre TODOS los pedidos. Con los ocho meses sembrados eso
+   * no se nota, pero el demo está para que alguien suba su histórico de
+   * verdad —hay tiendas con cuatro años— y ahí sí: una sola apertura de
+   * pantalla llama a agregarMes unas treinta veces entre el resumen, el
+   * cierre, el histórico, el recuento y las alarmas. Con cincuenta mil
+   * pedidos son millón y medio de vueltas para responder lo mismo.
+   *
+   * Se devuelve una copia y no el original porque quien llama le agrega
+   * cosas encima —el resumen le cuelga recaudo7, el cierre lo congela— y
+   * eso ensuciaría lo guardado para el siguiente.
+   */
+  const CACHE_MES = {};
+  let SELLO_CACHE = 0;
+
+  function invalidarCache() { SELLO_CACHE++; Object.keys(CACHE_MES).forEach(function (k) { delete CACHE_MES[k]; }); }
+
+  function copia(o) {
+    try { return structuredClone(o); }
+    catch (e) { return JSON.parse(JSON.stringify(o)); }
+  }
+
+  function mesDe_(tienda, mes, rol) {
+    const k = tienda + '|' + mes + '|' + rol;
+    if (!CACHE_MES[k]) CACHE_MES[k] = agregarMesCrudo(tienda, mes, rol);
+    return copia(CACHE_MES[k]);
+  }
 
   /**
    * La cartera del mes, resumida.
@@ -541,7 +571,7 @@
    *  · el flete cuenta si salió de bodega, entregado o devuelto
    *  · lo cancelado y lo pendiente no cuestan nada todavía
    */
-  function agregarMes(tienda, mes, rol) {
+  function agregarMesCrudo(tienda, mes, rol) {
     const out = {
       pedidos: 0, despachados: 0, entregados: 0, devueltos: 0, cancelados: 0,
       pendientes: 0, ventas: 0, costoProducto: 0, costoEnvio: 0,
@@ -780,7 +810,7 @@
       const t = tiendaDe(p);
       if (!accesible(t)) return { ok: false, error: 'No tienes acceso a esa tienda.' };
       const mes = p.mes || MES_ACTUAL;
-      const d = agregarMes(t, mes, rolEfectivo(p));
+      const d = mesDe_(t, mes, rolEfectivo(p));
       d.recaudo7 = recaudoUltimosDias(t, 7);
       return { ok: true, tienda: t, mes: mes, datos: d };
     },
@@ -1030,8 +1060,8 @@
       })[0];
       const r = {
         ok: true, tienda: t, mes: mes, moneda: TIENDAS[t].moneda,
-        actual: cong ? cong._datos : agregarMes(t, mes, rol),
-        anterior: agregarMes(t, mesMenos(mes, 1), rol),
+        actual: cong ? cong._datos : mesDe_(t, mes, rol),
+        anterior: mesDe_(t, mesMenos(mes, 1), rol),
         cerrado: !!cong, cerrado_en: cong ? cong.cerrado_en : '',
       };
       if (!cong) { r.provisional = r.actual.pendientes > 0; r.pendientes = r.actual.pendientes; }
@@ -1048,7 +1078,7 @@
         return { ok: false, error: 'Ese mes ya está cerrado. Para rehacerlo, ' +
                  'borra la fila en la hoja Cierres.' };
       }
-      const d = agregarMes(t, mes, 'dueno');
+      const d = mesDe_(t, mes, 'dueno');
       if (d.pendientes > 0 && !p.forzar) {
         return { ok: false, avisar: true, pendientes: d.pendientes,
                  valorAbierto: d.valorAbierto, mes: mes, tienda: t,
@@ -1070,7 +1100,7 @@
       for (let i = 0; i < cuantos; i++) meses.push(mesMenos(MES_ACTUAL, i));
 
       const out = meses.map(function (mm) {
-        const d = agregarMes(t, mm, 'dueno');
+        const d = mesDe_(t, mm, 'dueno');
         const car = carteraDelMes(t, mm);
         const b = {
           mes: mm, pedidos: d.pedidos, entregados: d.entregados, ventas: d.ventas,
@@ -1160,7 +1190,7 @@
       const t = tiendaDe(p);
       const rol = rolEfectivo(p);
       const u = umbrales(t);
-      const m = agregarMes(t, MES_ACTUAL, 'dueno');
+      const m = mesDe_(t, MES_ACTUAL, 'dueno');
       const out = [];
 
       const mkAlarma = function (id, nombre, nivel, titulo, detalle, casos, ir) {
@@ -1217,7 +1247,7 @@
       }
 
       if (rol === 'dueno') {
-        const ant = agregarMes(t, mesMenos(MES_ACTUAL, 1), 'dueno');
+        const ant = mesDe_(t, mesMenos(MES_ACTUAL, 1), 'dueno');
         const subida = num(u.cpa_subida_pct);
         if (subida > 0 && ant.cpa && m.cpa && m.entregados >= 10) {
           const pct = (m.cpa - ant.cpa) / ant.cpa * 100;
@@ -1273,7 +1303,7 @@
       const conDatos = [];
       let m = mesMenos(MES_ACTUAL, 1);
       for (let i = 0; i < 6 && conDatos.length < 3; i++) {
-        const d = agregarMes(t, m, rol);
+        const d = mesDe_(t, m, rol);
         if (d.pedidos > 0) conDatos.push({ mes: m, d: d });
         m = mesMenos(m, 1);
       }
@@ -1293,7 +1323,7 @@
       const ant = { ventas: 0, entregados: 0, resueltos: 0, gasto: 0, fijos: 0 };
       let pm = mesMenos(usados[0].mes, 1);
       for (let i = 0; i < usados.length; i++) {
-        const d = agregarMes(t, pm, rol);
+        const d = mesDe_(t, pm, rol);
         ant.ventas += d.ventas || 0; ant.entregados += d.entregados || 0;
         ant.resueltos += d.resueltos || 0; ant.gasto += d.gasto || 0; ant.fijos += d.fijos || 0;
         pm = mesMenos(pm, 1);
@@ -1353,6 +1383,89 @@
     importar: function (p) { return importarDemo(p); },
   };
 
+  /**
+   * Subir un archivo, sin el techo de 8 MB.
+   *
+   * Ese techo existe por Apps Script: el archivo viaja en base64, partido
+   * en pedazos de 30 KB, y del otro lado hay un script con seis minutos
+   * para terminar. Ocho megas ya son casi cuatrocientas peticiones.
+   *
+   * En el demo no hay otro lado. El archivo se lee aquí mismo, en la
+   * pestaña. Aplicarle el límite del servidor a un camino que no pasa por
+   * el servidor era heredar una restricción sin heredar su motivo — y
+   * dejaba fuera justo lo que un demo tiene que poder mostrar: el
+   * histórico de un cliente con tres o cuatro años encima.
+   *
+   * Tampoco pasa por base64: el archivo va como bytes, directo. Convertir
+   * cincuenta megas a texto y devolverlos a bytes es duplicar la memoria
+   * y el tiempo para llegar al mismo sitio.
+   */
+  /**
+   * Qué tienda está mirando la pantalla.
+   *
+   * `ST` está declarada con `let` dentro del script de la página: vive en
+   * el ámbito léxico global y no cuelga de `window`. Leerla como
+   * `window.ST` devuelve undefined en silencio, y el archivo terminaría
+   * importado en la tienda equivocada sin que nadie lo note.
+   */
+  function tiendaActiva() {
+    try {
+      const t = (0, eval)('ST');
+      if (t && TIENDAS[t]) return t;
+    } catch (e) { /* la pantalla todavía no arrancó */ }
+    return SES ? SES.tiendas[0] : 'ec';
+  }
+
+  window.subirArchivo = async function (input, z) {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+
+    const fuente = document.getElementById('imp-fuente-' + z).value;
+    const btn = document.getElementById('imp-btn-' + z);
+    const mb = (file.size / 1048576).toFixed(1);
+
+    window.impEstado(z, 'Leyendo ' + file.name + ' (' + mb + ' MB)…', 'ojo');
+    btn.style.opacity = '.6'; btn.textContent = 'Leyendo…';
+
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+
+      window.impEstado(z, 'Procesando ' + mb + ' MB…\n' +
+        (bytes[0] === 0x50 && bytes[1] === 0x4B
+          ? 'Un Excel grande puede tardar y dejar la pantalla quieta un momento.'
+          : 'Leyendo las filas.'), 'ojo');
+
+      // Un respiro para que el navegador alcance a pintar el aviso antes
+      // de bloquearse con el archivo. Sin esto el mensaje nunca se ve.
+      await new Promise(function (ok) { setTimeout(ok, 60); });
+
+      const t0 = performance.now();
+      const r = await ACCIONES.importar({ fuente: fuente, tienda: tiendaActiva(),
+                                          nombre: file.name, bytes: bytes });
+      const seg = ((performance.now() - t0) / 1000).toFixed(1);
+      invalidarCache();
+
+      if (!r.ok) { window.impEstado(z, r.error, 'mal'); return; }
+
+      window.impEstado(z, r.resumen + '\nTardó ' + seg + ' s.\n\nActualizando…', 'ok');
+      await window.cargarReales();
+      await window.cargarHistorialFuentes();
+      window.impEstado(z,
+        r.nuevas + ' filas entraron al demo · ' +
+        (r.repetidas ? r.repetidas + ' repetidas se omitieron · ' : '') +
+        (r.ignoradas ? r.ignoradas + ' sin fecha se saltaron · ' : '') +
+        'en ' + seg + ' s.\n\n' +
+        'Se ven reflejadas al instante y desaparecen cuando recargues.', 'ok');
+      window.showToast('Pantalla actualizada');
+    } catch (e) {
+      console.error('[demo] importar', e);
+      window.impEstado(z, 'No se pudo leer el archivo: ' + e.message, 'mal');
+    } finally {
+      btn.style.opacity = '1'; btn.textContent = 'Elegir archivo';
+    }
+  };
+
   const TROZOS = {};
 
   // ─── 9 · SUBIR UN ARCHIVO DE VERDAD ───────────────────────────
@@ -1375,18 +1488,57 @@
     return out;
   }
 
-  function cargarLectorExcel() {
-    if (window.XLSX) return Promise.resolve(window.XLSX);
+  /**
+   * El lector de Excel viaja con Nova, no se descarga.
+   *
+   * Antes venía de un CDN. Funcionaba en la oficina y fallaba justo donde
+   * importa: la conexión lenta de quien abre el demo por primera vez, la
+   * red de empresa que bloquea dominios ajenos, el avión. Un demo que
+   * depende de que un tercero esté disponible no es un demo confiable —y
+   * el archivo suelto, que se abre sin internet, no podía leer Excel
+   * en absoluto.
+   *
+   * Pesa 860 KB. Se carga solo cuando alguien sube un .xlsx, así que
+   * quien no suba ninguno no lo descarga nunca.
+   *
+   * Si el archivo local faltara, queda el CDN como último recurso. No al
+   * revés: lo propio primero.
+   */
+  const LECTOR_LOCAL = 'vendor/xlsx.min.js';
+  const LECTOR_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+
+  function cargarGuion(src) {
     return new Promise(function (ok, mal) {
       const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.src = src;
       s.onload = function () { ok(window.XLSX); };
-      s.onerror = function () {
-        mal(new Error('El demo no pudo cargar el lector de Excel (hace falta internet).\n\n' +
-          'Guarda el archivo como CSV y súbelo así: el demo lo lee sin depender de nada.'));
-      };
+      s.onerror = function () { mal(new Error('no se pudo cargar ' + src)); };
       document.head.appendChild(s);
     });
+  }
+
+  async function cargarLectorExcel() {
+    if (window.XLSX) return window.XLSX;
+
+    /**
+     * En el archivo de un solo pedazo el lector viene adentro, guardado
+     * en una etiqueta que el navegador no ejecuta. Se despierta aquí, la
+     * primera vez que alguien sube un Excel: así el archivo abre rápido
+     * para quien solo viene a mirar.
+     */
+    const dentro = document.getElementById('nova-xlsx');
+    if (dentro && dentro.textContent.length > 1000) {
+      (0, eval)(dentro.textContent);
+      if (window.XLSX) return window.XLSX;
+    }
+
+    try { return await cargarGuion(LECTOR_LOCAL); }
+    catch (e) { /* se intenta el de afuera */ }
+    try { return await cargarGuion(LECTOR_CDN); }
+    catch (e) {
+      throw new Error('El demo no pudo cargar el lector de Excel.\n\n' +
+        'Guarda el archivo como CSV y súbelo así: ese lo lee sin depender de nada.');
+    }
   }
 
   function leerCSV(texto) {
@@ -1468,11 +1620,13 @@
     const t = tiendaDe(p);
     const fuente = String(p.fuente || 'dropi');
 
-    let b64 = p.contenido;
-    if (!b64 && p.clave) b64 = (TROZOS[p.clave] || []).join('');
-    if (!b64) return { ok: false, error: 'No llegó el archivo.' };
-
-    const bytes = b64aBytes(b64);
+    let bytes = p.bytes;
+    if (!bytes) {
+      let b64 = p.contenido;
+      if (!b64 && p.clave) b64 = (TROZOS[p.clave] || []).join('');
+      if (!b64) return { ok: false, error: 'No llegó el archivo.' };
+      bytes = b64aBytes(b64);
+    }
     let matriz;
 
     // Los .xlsx empiezan por PK: es un zip
@@ -1510,6 +1664,27 @@
     const esPauta = fuente === 'meta' || fuente === 'meta_facturacion' || fuente === 'tiktok';
     let nuevas = 0, repetidas = 0, sinFecha = 0;
 
+    /**
+     * Los números de orden que ya están, en un conjunto.
+     *
+     * Antes esto se resolvía recorriendo TODOS los pedidos por cada fila
+     * del archivo. Con un export de cuatrocientas filas ni se notaba; con
+     * el histórico de cuatro años de una tienda —cincuenta mil pedidos
+     * contra cincuenta mil ya cargados— son dos mil quinientos millones
+     * de comparaciones y la pestaña se cuelga sin decir nada.
+     *
+     * Un conjunto responde en tiempo fijo. El archivo entra en una sola
+     * pasada, y además se va llenando: así un archivo que trae la misma
+     * orden dos veces tampoco la duplica.
+     */
+    const yaEstan = new Set();
+    if (!esPauta) {
+      for (let i = 0; i < HOJA.Pedidos.length; i++) {
+        const x = HOJA.Pedidos[i];
+        if (x.tienda === t && x.id_externo) yaEstan.add(String(x.id_externo));
+      }
+    }
+
     for (let i = 1; i < matriz.length; i++) {
       const f = matriz[i];
       const fecha = fechaDemo(f[col.fecha]);
@@ -1536,9 +1711,8 @@
       }
 
       const ext = col.id_externo !== undefined ? String(f[col.id_externo]).trim() : '';
-      if (ext && HOJA.Pedidos.some(function (x) {
-        return x.tienda === t && String(x.id_externo) === ext;
-      })) { repetidas++; continue; }
+      if (ext && yaEstan.has(ext)) { repetidas++; continue; }
+      if (ext) yaEstan.add(ext);
 
       const crudo = col.estado !== undefined ? norm(f[col.estado]) : '';
       const est = ESTADO_DEMO[crudo] || 'pendiente';
@@ -1775,7 +1949,24 @@
     // que hay una consulta detrás. Con ella se ve el "cargando" real.
     await new Promise(function (ok) { setTimeout(ok, 120 + Math.random() * 130); });
 
-    try { return await fn(p); }
+    /**
+     * Lo que cambia datos tira el mes guardado.
+     *
+     * Se decide aquí y no dentro de cada acción a propósito: si cada una
+     * tuviera que acordarse de invalidar, el día que se agregue una
+     * acción nueva alguien lo va a olvidar y la pantalla va a mostrar
+     * cifras viejas sin ningún síntoma. Es más seguro que la lista diga
+     * qué NO cambia nada.
+     */
+    const SOLO_LEEN = ['yo', 'resumen', 'listar', 'productos', 'equipo', 'fuentes',
+                       'cierre', 'historial', 'cas', 'alarmas', 'recuento',
+                       'auditoria', 'trozo'];
+
+    try {
+      const r = await fn(p);
+      if (SOLO_LEEN.indexOf(accion) === -1) invalidarCache();
+      return r;
+    }
     catch (e) {
       console.error('[demo]', accion, e);
       return { ok: false, error: 'El demo se atoró en "' + accion + '": ' + e.message };
@@ -1805,5 +1996,7 @@
   }
 
   // Para poder mirar por dentro desde la consola si algo no cuadra
-  window.NOVA_DEMO = { HOJA: HOJA, agregarMes: agregarMes, meses: MESES };
+  window.NOVA_DEMO = { HOJA: HOJA, meses: MESES,
+                       agregarMes: mesDe_, sinCache: agregarMesCrudo,
+                       invalidar: invalidarCache };
 })();

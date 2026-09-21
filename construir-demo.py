@@ -79,7 +79,31 @@ def main():
     html = cargador.sub(lambda _: adentro, html, count=1)
     cambios.append('%-34s %d KB adentro' % ('demo.js', len(demo) // 1024))
 
-    # ── 4 · Que se note qué es, desde la pestaña ──
+    # ── 4 · El lector de Excel, dormido adentro ──
+    #
+    # Va en una etiqueta que el navegador NO ejecuta. Si fuera un <script>
+    # normal, el archivo tardaría casi un segundo más en abrir para todo el
+    # mundo, incluida la mayoría que solo viene a mirar y nunca sube nada.
+    # demo.js lo despierta la primera vez que alguien sube un .xlsx.
+    #
+    # Solo se escapa </script, que es lo único que corta la etiqueta.
+    #
+    # El primer intento escapaba TODO "</" y eso rompió la librería: entre
+    # sus 329 apariciones hay expresiones regulares como /\s+</g, que al
+    # volverse /\s+<\/g dejan de terminar donde deben. El archivo se
+    # construía sin quejarse y reventaba al leer el primer Excel.
+    #
+    # De ahí la comprobación de más abajo: escapar código ajeno es fácil
+    # de hacer mal y el error no aparece hasta que alguien lo usa.
+    lector = re.sub(r'</(?=script)', r'<\\/', texto('vendor/xlsx.min.js'),
+                    flags=re.I)
+    etiqueta = ('<script type="text/plain" id="nova-xlsx">'
+                + lector + '</' + 'script>\n')
+    html = html.replace('<script>window.NOVA_DEMO_FORZADO = true;</script>',
+                        etiqueta + '<script>window.NOVA_DEMO_FORZADO = true;</script>', 1)
+    cambios.append('%-34s %d KB, dormido' % ('lector de Excel', len(lector) // 1024))
+
+    # ── 5 · Que se note qué es, desde la pestaña ──
     html = html.replace('<title>Nova Empresarial</title>',
                         '<title>Nova Empresarial · Demostración</title>', 1)
 
@@ -96,6 +120,44 @@ def main():
               ', '.join(sorted(set(sueltos))))
     if 'script.google.com' in html:
         sys.exit('\n  ALTO · todavía hay una dirección de Apps Script adentro.')
+
+    comprobar_lector(html)
+
+
+def comprobar_lector(html):
+    """
+    Que el lector de Excel siga siendo JavaScript válido después de meterlo.
+
+    Existe porque ya falló una vez: un escape de más lo dejó con una
+    expresión regular sin cerrar. El archivo se construyó igual, se veía
+    perfecto, y solo reventaba cuando alguien subía un Excel — es decir,
+    en manos del cliente y no aquí.
+    """
+    import subprocess
+    import tempfile
+
+    m = re.search(r'<script type="text/plain" id="nova-xlsx">(.*?)</script>',
+                  html, re.S)
+    if not m:
+        sys.exit('\n  ALTO · el lector de Excel no quedó adentro.')
+
+    cuerpo = m.group(1).replace('<\\/script', '</script')
+    with tempfile.NamedTemporaryFile('w', suffix='.js', delete=False,
+                                     encoding='utf-8') as f:
+        f.write(cuerpo)
+        tmp = f.name
+
+    try:
+        r = subprocess.run(['node', '--check', tmp],
+                           capture_output=True, text=True, timeout=60)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        print('  (sin node: no se pudo comprobar el lector)')
+        return
+
+    if r.returncode != 0:
+        sys.exit('\n  ALTO · el lector de Excel quedó roto al meterlo:\n  ' +
+                 r.stderr.strip().split('\n')[0])
+    print('  %-34s sigue siendo válido' % 'lector comprobado')
 
 
 if __name__ == '__main__':
