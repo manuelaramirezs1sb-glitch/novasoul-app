@@ -5,7 +5,35 @@ que solo vive en una conversación se pierde con la conversación.
 
 ---
 
-## 1 · Mudanza a Cloudflare Pages
+## 1 · Mudanza a Cloudflare — HECHO (21-09-2026)
+
+**En vivo:** https://nova.novasoul959.workers.dev
+
+| | |
+|---|---|
+| Hub | `/` |
+| Empresarial | `/empresarial.html` |
+| Central | `/novacentral.html` |
+| Demo | `/empresarial.html?demo=1` |
+
+Cloudflare unificó Pages dentro de Workers, así que el proyecto quedó
+como Worker de solo archivos: sin `main`, sin código de servidor. El
+servidor de Nova sigue siendo Apps Script.
+
+Dos cosas que salieron de esto y no estaban previstas:
+
+- `wrangler.jsonc` hacía falta o el despliegue no arrancaba.
+- **`apps-script/` estaba publicado en Netlify desde siempre.** Nadie lo
+  había mirado. No había claves (los identificadores viven en las
+  Propiedades del Script), pero era el producto entero a un clic de quien
+  adivinara la dirección. `.assetsignore` lo cerró — verificado: da 404.
+
+Netlify se puede dar de baja cuando se quiera.
+
+<details>
+<summary>Por qué Cloudflare y no las otras</summary>
+
+
 
 **Por qué.** Netlify se quedó sin cuota. Cloudflare Pages da ancho de
 banda ilimitado, **permite uso comercial** en el plan gratis y funciona
@@ -23,9 +51,7 @@ Se descartaron:
 - **Neon** — no es hosting, es una base de datos PostgreSQL. Serviría si
   algún día Nova se muda fuera de Google Sheets, no para servir páginas.
 
-**Estado.** El repositorio ya está listo: `_headers` reemplaza a
-`netlify.toml`. Falta que Manuela cree la cuenta y conecte el
-repositorio, y pasar los enlaces a la nueva dirección.
+</details>
 
 ---
 
