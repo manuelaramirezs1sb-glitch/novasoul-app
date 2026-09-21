@@ -1,0 +1,18 @@
+# Las mismas protecciones que Nova tenía en Netlify.
+#
+# Netlify las leía de netlify.toml; Cloudflare Pages lee este archivo.
+# Se escriben aquí para que la mudanza no las pierda en silencio: son de
+# esas cosas que nadie nota que faltan hasta que hacen falta.
+#
+#   X-Frame-Options        nadie puede meter Nova dentro de un marco en
+#                          otra página y engañar a alguien para que haga
+#                          clic donde no cree
+#   X-Content-Type-Options el navegador respeta el tipo de archivo que le
+#                          decimos, en vez de adivinarlo
+#   Referrer-Policy        al salir de Nova no se le cuenta al otro sitio
+#                          en qué pantalla estaba quien hizo clic
+
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
