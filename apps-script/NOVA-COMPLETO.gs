@@ -338,6 +338,28 @@ const ESQUEMA_EMPRESARIAL = {
   Equipo: ['id','nombre','correo','rol','tienda','estado','casos_asignados',
            'casos_resueltos','nota_auditoria','ultima_conexion','permisos'],
 
+  /**
+   * Los estados que cada plataforma inventa, y qué significan aquí.
+   *
+   * Existe para que agregar un estado nuevo NO exija publicar una versión
+   * del código. Las transportadoras cambian nombres sin avisar, y esperar
+   * a un desarrollador para volver a cerrar un mes es un cuello de
+   * botella que no tiene por qué existir.
+   *
+   * `origen` dice de dónde salió la traducción, y es lo que permite
+   * auditarla:
+   *   catalogo  · de las tablas que trae Nova
+   *   deducido  · Nova lo dedujo del texto. Solo pasa con tránsito:
+   *               nunca se deduce un entregado ni una devolución
+   *   manual    · lo decidió la dueña. Manda sobre todo lo demás
+   *   nuevo     · Nova no sabe qué es y está esperando respuesta
+   *
+   * `pedidos` es cuántos hay con ese estado. Sirve para priorizar: uno
+   * suelto es ruido, doscientos es un cierre mal hecho esperando a pasar.
+   */
+  Estados: ['fuente','texto','estado_nova','origen','pedidos',
+            'primera_vez','ultima_vez','decidido_por','nota'],
+
   // Un mes no cierra el día 31: cierra cuando los pedidos de ese mes ya
   // se resolvieron. Un pedido del 28 de agosto se entrega el 5 de
   // septiembre, y hasta que eso pase la tasa de entrega y el margen de
@@ -646,6 +668,20 @@ const ESTADOS = {
   ENTREGADO:        'entregado',        // terminal, cuenta como venta
   DEVOLUCION:       'devolucion',       // terminal, no cuenta como venta
   CANCELADO:        'cancelado',        // terminal, no cuenta como venta
+
+  /**
+   * No sabemos qué pasó con este pedido.
+   *
+   * Va aparte de `pendiente` a propósito, porque no son lo mismo:
+   * pendiente es "todavía no se resolvió", una afirmación sobre el
+   * pedido. Sin clasificar es "la transportadora usó una palabra que no
+   * reconozco", una afirmación sobre NOVA.
+   *
+   * Confundirlos escondía el problema: los desconocidos se sumaban a los
+   * pendientes y nadie volvía a mirarlos. Separados, se pueden contar,
+   * mostrar y preguntar.
+   */
+  SIN_CLASIFICAR:   'sin_clasificar',
 };
 
 // Los tres estados que cierran el ciclo. Las tendencias y el % de
@@ -797,11 +833,100 @@ const MAPA_ESTADOS = {
   },
 };
 
-/** Traduce el estado de una plataforma al canónico de Nova. */
-function estadoCanonico(fuente, texto) {
+/**
+ * ═══════════════════════════════════════════════════════════
+ *  ESTADOS QUE NOVA NO CONOCE
+ * ═══════════════════════════════════════════════════════════
+ *
+ * Las tablas de arriba son el punto de partida, no la verdad completa.
+ * Cada transportadora inventa nombres y los cambia sin avisar: en un solo
+ * archivo real de Dropi Colombia aparecieron dieciocho estados distintos
+ * y Nova reconocía siete.
+ *
+ * Antes, un estado desconocido acababa contado como "pendiente". No daba
+ * error, y esa es la parte cara: trece pedidos RECHAZADO —que ya
+ * volvieron y cuyo flete ya se pagó— quedaban como "en camino" para
+ * siempre, el mes nunca cerraba, y la tasa de entrega salía más baja de
+ * lo que fue. Un mes entero podía estar mal sin un solo síntoma.
+ *
+ * LA LÍNEA NO ES "IMPORTANTE O BOBO". ES SI EL ESTADO CIERRA EL PEDIDO.
+ *
+ * Los estados de tránsito —en bodega destino, en reexpedición, preparado
+ * para transportadora— significan todos lo mismo para las cuentas: el
+ * pedido sigue vivo. Equivocarse entre ellos no mueve un solo número, así
+ * que Nova los deduce sola cuando el texto lo delata, y deja constancia.
+ *
+ * Los terminales —entregado, devolución, cancelado— mueven la plata en
+ * direcciones opuestas. Adivinar "entregado" es inventar una venta y
+ * contaminar el ingreso, el margen y el ROAS. Adivinar "devolución" es
+ * cobrar un flete que nadie pagó. Así que NOVA NUNCA LOS ADIVINA: deja
+ * el pedido en `sin_clasificar`, lo cuenta aparte, y pregunta.
+ *
+ * Y lo que la dueña clasifica se guarda en la hoja, no en el código: se
+ * aplica al instante y sin que nadie publique una versión nueva.
+ */
+
+/** Palabras que solo aparecen en estados de tránsito. */
+const PISTAS_TRANSITO = [
+  ['bodega',        ESTADOS.EN_BODEGA],
+  ['almacen',       ESTADOS.EN_BODEGA],
+  ['preparad',      ESTADOS.EN_BODEGA],
+  ['alistamiento',  ESTADOS.EN_BODEGA],
+  ['procesamiento', ESTADOS.CONFIRMADO],
+  ['procesando',    ESTADOS.CONFIRMADO],
+  ['reparto',       ESTADOS.EN_TRANSITO],
+  ['transito',      ESTADOS.EN_TRANSITO],
+  ['transporte',    ESTADOS.EN_TRANSITO],
+  ['despach',       ESTADOS.EN_TRANSITO],
+  ['ruta',          ESTADOS.EN_TRANSITO],
+  ['terminal',      ESTADOS.EN_TRANSITO],
+  ['distribucion',  ESTADOS.EN_TRANSITO],
+  ['reexpedicion',  ESTADOS.EN_TRANSITO],
+  ['camino',        ESTADOS.EN_TRANSITO],
+  ['oficina',       ESTADOS.EN_OFICINA],
+  ['agencia',       ESTADOS.EN_OFICINA],
+  ['sucursal',      ESTADOS.EN_OFICINA],
+];
+
+/**
+ * Palabras que aparecen en estados TERMINALES y prohíben deducir nada.
+ *
+ * Van primero y mandan sobre las pistas de tránsito. "DEVUELTO DESDE
+ * BODEGA DESTINO" tiene la palabra bodega, pero es una devolución: sin
+ * este freno, Nova lo daría por vivo y nunca cobraría su flete de retorno.
+ */
+const PISTAS_TERMINALES = ['entrega', 'devol', 'devuel', 'cancel', 'anulad',
+                           'rechaz', 'reembols', 'perdid', 'siniestr', 'indemniz'];
+
+/**
+ * Lo que Nova puede deducir sin riesgo, o cadena vacía.
+ * Solo tránsito, nunca un desenlace.
+ */
+function deducirTransito(k) {
+  for (let i = 0; i < PISTAS_TERMINALES.length; i++) {
+    if (k.indexOf(PISTAS_TERMINALES[i]) !== -1) return '';
+  }
+  for (let j = 0; j < PISTAS_TRANSITO.length; j++) {
+    if (k.indexOf(PISTAS_TRANSITO[j][0]) !== -1) return PISTAS_TRANSITO[j][1];
+  }
+  return '';
+}
+
+/**
+ * Traduce el estado de una plataforma al canónico de Nova.
+ *
+ * `aprendidos` es lo que ya está clasificado en la hoja Estados, con la
+ * forma { 'dropi|rechazado': 'devolucion' }. Va primero porque una
+ * decisión de la dueña gana sobre cualquier tabla de aquí: si ella dice
+ * que en SU operación ese estado significa otra cosa, tiene razón.
+ */
+function estadoCanonico(fuente, texto, aprendidos) {
   if (!texto) return '';
-  const mapa = MAPA_ESTADOS[fuente] || MAPA_ESTADOS[fuente === 'effi' ? 'mastershop' : ''] || {};
   const k = norm(texto);
+
+  if (aprendidos && aprendidos[fuente + '|' + k]) return aprendidos[fuente + '|' + k];
+
+  const mapa = MAPA_ESTADOS[fuente] || MAPA_ESTADOS[fuente === 'effi' ? 'mastershop' : ''] || {};
   if (mapa[k]) return mapa[k];
 
   // Coincidencia por prefijo: los couriers agregan sufijos
@@ -810,7 +935,126 @@ function estadoCanonico(fuente, texto) {
   for (let i = 0; i < claves.length; i++) {
     if (k.indexOf(claves[i]) === 0) return mapa[claves[i]];
   }
-  return '__sin_mapear__:' + k; // visible, no silencioso
+
+  const deducido = deducirTransito(k);
+  if (deducido) return deducido;
+
+  return ESTADOS.SIN_CLASIFICAR;
+}
+
+/**
+ * Igual que la anterior, pero además dice CÓMO lo resolvió.
+ * La usa el importador para saber qué anotar en la hoja Estados.
+ */
+function estadoConOrigen(fuente, texto, aprendidos) {
+  if (!texto) return { estado: '', origen: '' };
+  const k = norm(texto);
+
+  if (aprendidos && aprendidos[fuente + '|' + k]) {
+    return { estado: aprendidos[fuente + '|' + k], origen: 'guardado', clave: k };
+  }
+  const mapa = MAPA_ESTADOS[fuente] || MAPA_ESTADOS[fuente === 'effi' ? 'mastershop' : ''] || {};
+  if (mapa[k]) return { estado: mapa[k], origen: 'catalogo', clave: k };
+  const claves = Object.keys(mapa);
+  for (let i = 0; i < claves.length; i++) {
+    if (k.indexOf(claves[i]) === 0) return { estado: mapa[claves[i]], origen: 'catalogo', clave: k };
+  }
+  const deducido = deducirTransito(k);
+  if (deducido) return { estado: deducido, origen: 'deducido', clave: k };
+
+  return { estado: ESTADOS.SIN_CLASIFICAR, origen: 'nuevo', clave: k };
+}
+
+// ─── LA HOJA DE ESTADOS ──────────────────────────────────────
+
+/**
+ * Lo que ya está clasificado, como { 'dropi|rechazado': 'devolucion' }.
+ *
+ * Solo cuentan las filas con `estado_nova` puesto: una fila con estado
+ * vacío es justamente una pregunta sin responder, y devolverla como
+ * traducción haría que un estado desconocido se resolviera en nada.
+ */
+function estadosAprendidos(ss) {
+  const sh = ss.getSheetByName('Estados');
+  const out = {};
+  if (!sh || sh.getLastRow() < 2) return out;
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const cF = e.indexOf('fuente'), cT = e.indexOf('texto'), cE = e.indexOf('estado_nova');
+  if (cF === -1 || cT === -1 || cE === -1) return out;
+
+  for (let i = 1; i < d.length; i++) {
+    const est = norm(d[i][cE]);
+    if (!est || est === ESTADOS.SIN_CLASIFICAR) continue;
+    out[norm(d[i][cF]) + '|' + norm(d[i][cT])] = est;
+  }
+  return out;
+}
+
+/**
+ * Anota los estados que se vieron en una importación.
+ *
+ * Se escribe SIEMPRE, no solo cuando Nova no entiende: saber que un
+ * estado conocido dejó de aparecer también dice algo, y tener el listado
+ * completo con sus cuentas es lo que permite decidir cuál mirar primero.
+ *
+ * Lo que la dueña ya decidió no se pisa nunca. Solo se le actualiza la
+ * cuenta y la última fecha.
+ */
+function anotarEstados(ss, vistos) {
+  const claves = Object.keys(vistos);
+  if (!claves.length) return;
+
+  let sh = ss.getSheetByName('Estados');
+  if (!sh) {
+    sh = ss.insertSheet('Estados');
+    sh.getRange(1, 1, 1, HOJAS.Estados.length).setValues([HOJAS.Estados]);
+  }
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+  const hoy = ahoraISO().slice(0, 10);
+
+  const donde = {};
+  for (let i = 1; i < d.length; i++) {
+    donde[norm(d[i][c('fuente')]) + '|' + norm(d[i][c('texto')])] = i;
+  }
+
+  const nuevas = [];
+  claves.forEach(function (k) {
+    const v = vistos[k];
+    const i = donde[k];
+
+    if (i === undefined) {
+      const campos = {
+        fuente: v.fuente, texto: v.texto,
+        // Un estado nuevo entra SIN traducción: la casilla vacía es la
+        // pregunta. Escribirle algo sería responderla por la dueña.
+        estado_nova: v.origen === 'nuevo' ? '' : v.estado,
+        origen: v.origen, pedidos: v.n,
+        primera_vez: hoy, ultima_vez: hoy, decidido_por: '', nota: '',
+      };
+      nuevas.push(e.map(function (col) {
+        return campos[col] === undefined ? '' : campos[col];
+      }));
+      return;
+    }
+
+    d[i][c('pedidos')] = num(d[i][c('pedidos')]) + v.n;
+    d[i][c('ultima_vez')] = hoy;
+    // Una decisión manual no se toca jamás
+    if (norm(d[i][c('origen')]) !== 'manual' && !String(d[i][c('estado_nova')]).trim()) {
+      d[i][c('estado_nova')] = v.origen === 'nuevo' ? '' : v.estado;
+      d[i][c('origen')] = v.origen;
+    }
+  });
+
+  if (d.length > 1) sh.getRange(1, 1, d.length, d[0].length).setValues(d);
+  if (nuevas.length) {
+    sh.getRange(sh.getLastRow() + 1, 1, nuevas.length, nuevas[0].length).setValues(nuevas);
+  }
 }
 
 // ─── CATÁLOGO DE NOVEDADES ───────────────────────────────────
@@ -2459,6 +2703,8 @@ const ALARMAS = [
     param: 'cpa_subida_pct', unidad: '% vs. mes pasado', opcional: true },
   { id: 'stock',        nombre: 'Stock por agotarse',
     param: 'stock_dias_min', unidad: 'días de cobertura', opcional: true },
+  // Sin parámetro: no es cuestión de tolerancia, es que faltan datos.
+  { id: 'estados_nuevos', nombre: 'Estados sin clasificar', param: '', unidad: '' },
 ];
 
 /** Los umbrales de una tienda: lo que diga Parametros, o el de fábrica. */
@@ -2717,6 +2963,36 @@ function evaluarAlarmas(ss, tienda) {
         'devolución en la mayoría de los casos.',
         viejas.slice(0, 10), 'Novedades'));
     }
+  }
+
+  /**
+   * ── Estados que Nova no entiende ──
+   *
+   * Va antes que la efectividad a propósito: mientras haya pedidos sin
+   * clasificar, la efectividad que se muestre debajo está calculada sobre
+   * menos pedidos de los que hay. Avisar del número malo antes de
+   * explicar por qué es malo sería enseñar a desconfiar de todo.
+   *
+   * No tiene umbral configurable: no es una cuestión de tolerancia, es
+   * que faltan datos. Un solo pedido sin clasificar ya es una pregunta
+   * sin responder, aunque no mueva la aguja.
+   */
+  if (m.sinClasificar > 0) {
+    const cuales = Object.keys(m.estadosDesconocidos || {})
+      .sort(function (a, b) {
+        return m.estadosDesconocidos[b] - m.estadosDesconocidos[a];
+      });
+    out.push(alarma('estados_nuevos', 'mal',
+      pl(m.sinClasificar, '1 pedido está', '% pedidos están') + ' en un estado ' +
+        'que no reconozco',
+      'No entran en ninguna cuenta: ni entregados, ni devueltos, ni en el ' +
+      'flete. Son ' + moneda + ' ' + Math.round(m.valorSinClasificar) +
+      ' sin clasificar. Los estados son: ' + cuales.slice(0, 5).join(' · ') +
+      '.\n\nDinos qué significan en Configuración → Estados y las cifras del ' +
+      'mes se rehacen solas.',
+      cuales.slice(0, 10).map(function (k) {
+        return { estado: k, pedidos: m.estadosDesconocidos[k] };
+      }), 'Configuración'));
   }
 
   // ── 3. Efectividad baja ──
@@ -3892,6 +4168,8 @@ function manejar(e, metodo) {
       case 'alarmas':   return json(apiAlarmas(s, p));
       case 'parametros':return json(apiParametros(s, p));
       case 'auditoria': return json(apiAuditoria(s, p));
+      case 'estados':   return json(apiEstados(s, p));
+      case 'estado_clasificar': return json(apiEstadoClasificar(s, p));
       case 'borrar':    return json(apiBorrar(s, p));
       case 'cerrarmes': return json(apiCerrarMes(s, p));
       case 'salir':     return json(apiSalir(p.token));
@@ -5144,6 +5422,152 @@ function apiAuditoria(s, p) {
   return { ok: true, movimientos: out };
 }
 
+/**
+ * Los estados que cada plataforma usa, y qué sabe Nova de cada uno.
+ *
+ * Primero los que no entiende, ordenados por cuántos pedidos afectan: uno
+ * suelto es ruido, doscientos es un cierre mal hecho esperando a pasar.
+ */
+function apiEstados(s, p) {
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const sh = ss.getSheetByName('Estados');
+  const out = { ok: true, sinClasificar: [], conocidos: [],
+                opciones: OPCIONES_ESTADO, puedeEditar: s.rol === 'dueno' };
+  if (!sh || sh.getLastRow() < 2) return out;
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+
+  for (let i = 1; i < d.length; i++) {
+    const texto = String(d[i][c('texto')] || '').trim();
+    if (!texto) continue;
+    const fila = {
+      fuente: String(d[i][c('fuente')] || ''), texto: texto,
+      estado: norm(d[i][c('estado_nova')]), origen: norm(d[i][c('origen')]),
+      pedidos: num(d[i][c('pedidos')]),
+      primera: d[i][c('primera_vez')], ultima: d[i][c('ultima_vez')],
+      nota: String(d[i][c('nota')] || ''),
+    };
+    if (!fila.estado) out.sinClasificar.push(fila);
+    else out.conocidos.push(fila);
+  }
+
+  out.sinClasificar.sort(function (a, b) { return b.pedidos - a.pedidos; });
+  out.conocidos.sort(function (a, b) { return b.pedidos - a.pedidos; });
+  return out;
+}
+
+/** A qué puede equivaler un estado, en palabras de quien va a elegir. */
+const OPCIONES_ESTADO = [
+  { id: 'entregado',  nombre: 'Entregado',
+    ayuda: 'Llegó y se cobró. Cuenta como venta.', terminal: true },
+  { id: 'devolucion', nombre: 'Devuelto',
+    ayuda: 'Volvió. No es venta, y su flete se paga igual.', terminal: true },
+  { id: 'cancelado',  nombre: 'Cancelado',
+    ayuda: 'Nunca salió. No cuesta nada.', terminal: true },
+  { id: 'en_transito', nombre: 'En camino',
+    ayuda: 'Salió de bodega y va para allá.' },
+  { id: 'en_bodega',  nombre: 'En bodega',
+    ayuda: 'Todavía no sale.' },
+  { id: 'en_oficina', nombre: 'En oficina',
+    ayuda: 'Esperando que el cliente lo recoja.' },
+  { id: 'novedad',    nombre: 'Con novedad',
+    ayuda: 'Hubo un problema y hay que gestionarlo.' },
+  { id: 'confirmado', nombre: 'Confirmado',
+    ayuda: 'Confirmado con el cliente, sin despachar.' },
+  { id: 'pendiente',  nombre: 'Pendiente',
+    ayuda: 'Sin confirmar todavía.' },
+];
+
+/**
+ * La dueña dice qué significa un estado.
+ *
+ * Queda con origen "manual" y desde ese momento manda sobre las tablas
+ * del código: si ella dice que en SU operación ese estado significa otra
+ * cosa, tiene razón — quien conoce su operación es ella.
+ *
+ * No se reescriben los pedidos ya guardados. No hace falta: cada pantalla
+ * recalcula desde Pedidos, y el estado se vuelve a traducir al leer. Lo
+ * que sí queda avisado son los meses ya cerrados, porque esos están
+ * congelados a propósito y nadie debería cambiarlos a espaldas de quien
+ * los reportó.
+ */
+function apiEstadoClasificar(s, p) {
+  if (s.rol !== 'dueno') {
+    return { ok: false, error: 'Solo la dueña decide qué significa un estado.' };
+  }
+  const fuente = norm(p.fuente), texto = norm(p.texto), estado = norm(p.estado);
+  if (!fuente || !texto) return { ok: false, error: 'Falta el estado a clasificar.' };
+
+  const validos = OPCIONES_ESTADO.map(function (o) { return o.id; });
+  if (estado && validos.indexOf(estado) === -1) {
+    return { ok: false, error: 'No conozco el estado "' + estado + '".' };
+  }
+
+  const ss = SpreadsheetApp.openById(s.sheetId);
+  const sh = ss.getSheetByName('Estados');
+  if (!sh) return { ok: false, error: 'Falta la hoja Estados. Corre bootstrapTodo().' };
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+
+  for (let i = 1; i < d.length; i++) {
+    if (norm(d[i][c('fuente')]) !== fuente || norm(d[i][c('texto')]) !== texto) continue;
+
+    const antes = norm(d[i][c('estado_nova')]);
+    sh.getRange(i + 1, c('estado_nova') + 1).setValue(estado);
+    sh.getRange(i + 1, c('origen') + 1).setValue(estado ? 'manual' : 'nuevo');
+    sh.getRange(i + 1, c('decidido_por') + 1).setValue(s.email);
+    if (p.nota !== undefined) sh.getRange(i + 1, c('nota') + 1).setValue(String(p.nota));
+
+    registrarMovimiento(s, 'Estados', fuente + ' · ' + texto,
+                        'estado_nova', antes, estado);
+
+    return { ok: true, fuente: fuente, texto: texto, estado: estado,
+             cerradosAfectados: cierresConEseEstado(ss, texto) };
+  }
+  return { ok: false, error: 'No encuentro ese estado en la hoja.' };
+}
+
+/**
+ * Qué meses ya cerrados contienen pedidos con ese estado.
+ *
+ * Un cierre congelado no se rehace solo: las cifras que ya se reportaron
+ * no pueden cambiar a espaldas de nadie. Pero sí hay que decir cuáles
+ * quedaron hechos antes de saber esto, para que la dueña decida.
+ */
+function cierresConEseEstado(ss, texto) {
+  const shC = ss.getSheetByName('Cierres');
+  const shP = ss.getSheetByName('Pedidos');
+  if (!shC || shC.getLastRow() < 2 || !shP || shP.getLastRow() < 2) return [];
+
+  const cerrados = {};
+  const dc = shC.getDataRange().getValues();
+  const ec = dc[0].map(norm);
+  for (let i = 1; i < dc.length; i++) {
+    cerrados[String(dc[i][ec.indexOf('tienda')]).trim() + '|' +
+             String(dc[i][ec.indexOf('mes')]).trim()] = true;
+  }
+  if (!Object.keys(cerrados).length) return [];
+
+  const dp = shP.getDataRange().getValues();
+  const ep = dp[0].map(norm);
+  const cT = ep.indexOf('tienda'), cF = ep.indexOf('fecha'), cE = ep.indexOf('estado');
+  const tocados = {};
+  for (let i = 1; i < dp.length; i++) {
+    if (norm(dp[i][cE]) !== texto) continue;
+    const f = aISO(dp[i][cF], 'UTC');
+    if (!f) continue;
+    const k = String(dp[i][cT]).trim() + '|' + f.slice(0, 7);
+    if (cerrados[k]) tocados[k] = (tocados[k] || 0) + 1;
+  }
+  return Object.keys(tocados).map(function (k) {
+    return { tienda: k.split('|')[0], mes: k.split('|')[1], pedidos: tocados[k] };
+  });
+}
+
 function apiCrear(s, p) {
   const entidad = String(p.entidad || '').trim();
   const campos = CREABLES[entidad];
@@ -5654,6 +6078,9 @@ function agregarMes(ss, tienda, mes, s) {
     pendientes: 0,
     ventas: 0, costoProducto: 0, costoEnvio: 0, costoDevolucion: 0,
     valorAbierto: 0,
+    // Pedidos cuyo estado Nova no reconoce. No entran en ninguna otra
+    // cuenta: ni entregados, ni devueltos, ni despachados, ni costos.
+    sinClasificar: 0, valorSinClasificar: 0, estadosDesconocidos: {},
     // Qué costo trae cada estado, contado o no. Es lo que permite
     // reconciliar el cierre de Nova contra el que el cliente hizo aparte.
     costosPorEstado: {
@@ -5680,6 +6107,26 @@ function agregarMes(ss, tienda, mes, s) {
       out.pedidos++;
       // estado_nova gana sobre el importado: es lo que el equipo corrigió
       const est = norm(f[c('estado_nova')] || f[c('estado_canonico')] || f[c('estado')]);
+
+      /**
+       * Un estado que Nova no entiende no entra en ninguna cuenta.
+       *
+       * La tentación era tratarlo como pendiente, pero eso es afirmar que
+       * el pedido sigue vivo —y bien puede estar entregado desde hace un
+       * mes—. Tampoco se le cobra flete: decir que salió de bodega es
+       * otra afirmación que nadie puede sostener.
+       *
+       * Se cuenta aparte, con su plata, y la pantalla lo pregunta. Un
+       * hueco que se ve vale mucho más que un número que parece completo.
+       */
+      if (est === ESTADOS.SIN_CLASIFICAR) {
+        out.sinClasificar++;
+        out.valorSinClasificar += num(f[c('valor')]);
+        const crudo = String(f[c('estado')] || '').trim() || '(vacío)';
+        out.estadosDesconocidos[crudo] = (out.estadosDesconocidos[crudo] || 0) + 1;
+        continue;
+      }
+
       if (est === 'entregado')   { out.entregados++; out.ventas += num(f[c('valor')]); }
       if (est === 'devolucion')  out.devueltos++;
       if (est === 'cancelado')   out.cancelados++;
@@ -7220,6 +7667,33 @@ function centralClientes(s, p) {
           }
           cl.ultimaImportacion = ult;
         }
+
+        /**
+         * Estados que ese cliente tiene sin clasificar.
+         *
+         * Aparece aquí porque el cliente no siempre se da cuenta: Nova se
+         * lo dice en su pantalla, pero quien vende Nova necesita saberlo
+         * antes de que le llamen diciendo que las cifras no cuadran. Un
+         * estado nuevo de una transportadora suele afectar a varios
+         * clientes del mismo país a la vez.
+         */
+        const shEst = cs.getSheetByName('Estados');
+        if (shEst && shEst.getLastRow() > 1) {
+          const de = shEst.getDataRange().getValues();
+          const ee = de[0].map(norm);
+          const cEst = ee.indexOf('estado_nova'), cTx = ee.indexOf('texto'),
+                cPed = ee.indexOf('pedidos');
+          const pend = [];
+          for (let j = 1; j < de.length; j++) {
+            if (String(de[j][cTx] || '').trim() && !norm(de[j][cEst])) {
+              pend.push({ texto: String(de[j][cTx]), pedidos: num(de[j][cPed]) });
+            }
+          }
+          pend.sort(function (a, b) { return b.pedidos - a.pedidos; });
+          cl.estadosSinClasificar = pend.length;
+          cl.pedidosSinClasificar = pend.reduce(function (t, x) { return t + x.pedidos; }, 0);
+          cl.estadosNuevos = pend.slice(0, 5);
+        }
       } catch (err) {
         // Una hoja borrada o sin permiso no puede tumbar la lista entera
         cl.problema = 'No se pudo abrir su hoja: ' + err.message;
@@ -7472,9 +7946,23 @@ function importarConFormato(ss, fuenteId, tienda) {
 
   let extra = '';
   const pais = paisDeTienda(ss, tienda);
+
+  /**
+   * Lo que la dueña ya clasificó, leído una sola vez.
+   *
+   * Si cada fila abriera la hoja Estados, un archivo de cuarenta mil
+   * pedidos la abriría cuarenta mil veces y el script se quedaría sin sus
+   * seis minutos antes de escribir nada.
+   */
+  const aprendidos = estadosAprendidos(ss);
+  const vistos = {};
+
   const preparadas = r.filas.map(function (f) {
-    return prepararFila(f, r.tipo, fuenteId, tienda, pais, ss);
+    return prepararFila(f, r.tipo, fuenteId, tienda, pais, ss, aprendidos, vistos);
   });
+
+  // Lo que se vio queda anotado, se entendiera o no
+  anotarEstados(ss, vistos);
 
   /**
    * Qué cambió respecto a la carga anterior.
@@ -7530,7 +8018,11 @@ function importarConFormato(ss, fuenteId, tienda) {
     '  sin cambios    : ' + res.iguales,
     r.sinMapear.length ? '  columnas sin mapear: ' + r.sinMapear.join(', ') : '',
     res.sinEstado.length
-      ? '  ⚠ estados sin mapear: ' + res.sinEstado.slice(0, 8).join(' · ')
+      ? '  ⚠ ' + res.sinEstado.length + ' estado(s) que no reconozco: ' +
+        res.sinEstado.slice(0, 8).join(' · ') +
+        '\n    Esos pedidos quedan SIN CLASIFICAR: no cuentan como entregados ' +
+        'ni como devueltos.\n    Dinos qué significan en Configuración → Estados ' +
+        'y las cifras se rehacen solas.'
       : '',
     extra,
   ].filter(String).join('\n');
@@ -7615,7 +8107,7 @@ const CAMPOS_FECHA = ['fecha', 'fecha_entrega', 'fecha_promesa', 'fecha_ingreso'
                       'fecha_solucion', 'fecha_fin', 'ultimo_movimiento',
                       'actualizado', 'creado_en', 'ultimo_conteo'];
 
-function prepararFila(f, tipo, fuenteId, tienda, pais, ss) {
+function prepararFila(f, tipo, fuenteId, tienda, pais, ss, aprendidos, vistos) {
   const o = Object.assign({}, f);
   o.fuente = fuenteId;
   o.tienda = tienda;
@@ -7663,7 +8155,16 @@ function prepararFila(f, tipo, fuenteId, tienda, pais, ss) {
   }
 
   if (tipo === 'pedidos' || tipo === 'pedidos_secundario') {
-    o.estado_canonico = estadoCanonico(fuenteId, o.estado);
+    const r = estadoConOrigen(fuenteId, o.estado, aprendidos);
+    o.estado_canonico = r.estado;
+    if (vistos && r.clave) {
+      const k = fuenteId + '|' + r.clave;
+      if (!vistos[k]) {
+        vistos[k] = { fuente: fuenteId, texto: r.clave,
+                      estado: r.estado, origen: r.origen, n: 0 };
+      }
+      vistos[k].n++;
+    }
   }
   if (tipo === 'novedades') {
     o.grupo = grupoNovedad(o.motivo, o.codigo);
@@ -7792,8 +8293,8 @@ function escribirFilas(ss, hoja, filas, fuenteId) {
     let actualizadas = 0, iguales = 0;
 
     filas.forEach(function (o) {
-      if (o.estado_canonico && o.estado_canonico.indexOf('__sin_mapear__') === 0) {
-        sinEstado[o.estado_canonico.replace('__sin_mapear__:', '')] = 1;
+      if (o.estado_canonico === ESTADOS.SIN_CLASIFICAR) {
+        sinEstado[norm(o.estado) || '(vacio)'] = 1;
       }
 
       const i = existentes[o.id];

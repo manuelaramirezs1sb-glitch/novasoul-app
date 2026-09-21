@@ -231,6 +231,33 @@ function centralClientes(s, p) {
           }
           cl.ultimaImportacion = ult;
         }
+
+        /**
+         * Estados que ese cliente tiene sin clasificar.
+         *
+         * Aparece aquí porque el cliente no siempre se da cuenta: Nova se
+         * lo dice en su pantalla, pero quien vende Nova necesita saberlo
+         * antes de que le llamen diciendo que las cifras no cuadran. Un
+         * estado nuevo de una transportadora suele afectar a varios
+         * clientes del mismo país a la vez.
+         */
+        const shEst = cs.getSheetByName('Estados');
+        if (shEst && shEst.getLastRow() > 1) {
+          const de = shEst.getDataRange().getValues();
+          const ee = de[0].map(norm);
+          const cEst = ee.indexOf('estado_nova'), cTx = ee.indexOf('texto'),
+                cPed = ee.indexOf('pedidos');
+          const pend = [];
+          for (let j = 1; j < de.length; j++) {
+            if (String(de[j][cTx] || '').trim() && !norm(de[j][cEst])) {
+              pend.push({ texto: String(de[j][cTx]), pedidos: num(de[j][cPed]) });
+            }
+          }
+          pend.sort(function (a, b) { return b.pedidos - a.pedidos; });
+          cl.estadosSinClasificar = pend.length;
+          cl.pedidosSinClasificar = pend.reduce(function (t, x) { return t + x.pedidos; }, 0);
+          cl.estadosNuevos = pend.slice(0, 5);
+        }
       } catch (err) {
         // Una hoja borrada o sin permiso no puede tumbar la lista entera
         cl.problema = 'No se pudo abrir su hoja: ' + err.message;

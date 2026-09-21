@@ -334,6 +334,28 @@ const ESQUEMA_EMPRESARIAL = {
   Equipo: ['id','nombre','correo','rol','tienda','estado','casos_asignados',
            'casos_resueltos','nota_auditoria','ultima_conexion','permisos'],
 
+  /**
+   * Los estados que cada plataforma inventa, y qué significan aquí.
+   *
+   * Existe para que agregar un estado nuevo NO exija publicar una versión
+   * del código. Las transportadoras cambian nombres sin avisar, y esperar
+   * a un desarrollador para volver a cerrar un mes es un cuello de
+   * botella que no tiene por qué existir.
+   *
+   * `origen` dice de dónde salió la traducción, y es lo que permite
+   * auditarla:
+   *   catalogo  · de las tablas que trae Nova
+   *   deducido  · Nova lo dedujo del texto. Solo pasa con tránsito:
+   *               nunca se deduce un entregado ni una devolución
+   *   manual    · lo decidió la dueña. Manda sobre todo lo demás
+   *   nuevo     · Nova no sabe qué es y está esperando respuesta
+   *
+   * `pedidos` es cuántos hay con ese estado. Sirve para priorizar: uno
+   * suelto es ruido, doscientos es un cierre mal hecho esperando a pasar.
+   */
+  Estados: ['fuente','texto','estado_nova','origen','pedidos',
+            'primera_vez','ultima_vez','decidido_por','nota'],
+
   // Un mes no cierra el día 31: cierra cuando los pedidos de ese mes ya
   // se resolvieron. Un pedido del 28 de agosto se entrega el 5 de
   // septiembre, y hasta que eso pase la tasa de entrega y el margen de

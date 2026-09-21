@@ -66,9 +66,23 @@ function importarConFormato(ss, fuenteId, tienda) {
 
   let extra = '';
   const pais = paisDeTienda(ss, tienda);
+
+  /**
+   * Lo que la dueña ya clasificó, leído una sola vez.
+   *
+   * Si cada fila abriera la hoja Estados, un archivo de cuarenta mil
+   * pedidos la abriría cuarenta mil veces y el script se quedaría sin sus
+   * seis minutos antes de escribir nada.
+   */
+  const aprendidos = estadosAprendidos(ss);
+  const vistos = {};
+
   const preparadas = r.filas.map(function (f) {
-    return prepararFila(f, r.tipo, fuenteId, tienda, pais, ss);
+    return prepararFila(f, r.tipo, fuenteId, tienda, pais, ss, aprendidos, vistos);
   });
+
+  // Lo que se vio queda anotado, se entendiera o no
+  anotarEstados(ss, vistos);
 
   /**
    * Qué cambió respecto a la carga anterior.
@@ -124,7 +138,11 @@ function importarConFormato(ss, fuenteId, tienda) {
     '  sin cambios    : ' + res.iguales,
     r.sinMapear.length ? '  columnas sin mapear: ' + r.sinMapear.join(', ') : '',
     res.sinEstado.length
-      ? '  ⚠ estados sin mapear: ' + res.sinEstado.slice(0, 8).join(' · ')
+      ? '  ⚠ ' + res.sinEstado.length + ' estado(s) que no reconozco: ' +
+        res.sinEstado.slice(0, 8).join(' · ') +
+        '\n    Esos pedidos quedan SIN CLASIFICAR: no cuentan como entregados ' +
+        'ni como devueltos.\n    Dinos qué significan en Configuración → Estados ' +
+        'y las cifras se rehacen solas.'
       : '',
     extra,
   ].filter(String).join('\n');
@@ -209,7 +227,7 @@ const CAMPOS_FECHA = ['fecha', 'fecha_entrega', 'fecha_promesa', 'fecha_ingreso'
                       'fecha_solucion', 'fecha_fin', 'ultimo_movimiento',
                       'actualizado', 'creado_en', 'ultimo_conteo'];
 
-function prepararFila(f, tipo, fuenteId, tienda, pais, ss) {
+function prepararFila(f, tipo, fuenteId, tienda, pais, ss, aprendidos, vistos) {
   const o = Object.assign({}, f);
   o.fuente = fuenteId;
   o.tienda = tienda;
@@ -257,7 +275,16 @@ function prepararFila(f, tipo, fuenteId, tienda, pais, ss) {
   }
 
   if (tipo === 'pedidos' || tipo === 'pedidos_secundario') {
-    o.estado_canonico = estadoCanonico(fuenteId, o.estado);
+    const r = estadoConOrigen(fuenteId, o.estado, aprendidos);
+    o.estado_canonico = r.estado;
+    if (vistos && r.clave) {
+      const k = fuenteId + '|' + r.clave;
+      if (!vistos[k]) {
+        vistos[k] = { fuente: fuenteId, texto: r.clave,
+                      estado: r.estado, origen: r.origen, n: 0 };
+      }
+      vistos[k].n++;
+    }
   }
   if (tipo === 'novedades') {
     o.grupo = grupoNovedad(o.motivo, o.codigo);
@@ -386,8 +413,8 @@ function escribirFilas(ss, hoja, filas, fuenteId) {
     let actualizadas = 0, iguales = 0;
 
     filas.forEach(function (o) {
-      if (o.estado_canonico && o.estado_canonico.indexOf('__sin_mapear__') === 0) {
-        sinEstado[o.estado_canonico.replace('__sin_mapear__:', '')] = 1;
+      if (o.estado_canonico === ESTADOS.SIN_CLASIFICAR) {
+        sinEstado[norm(o.estado) || '(vacio)'] = 1;
       }
 
       const i = existentes[o.id];

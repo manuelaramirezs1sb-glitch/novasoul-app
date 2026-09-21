@@ -311,7 +311,8 @@
               producto: prod.nombre, sku: prod.sku, cantidad: u,
               valor: valor, costo_producto: cProd, costo_envio: cEnv,
               metodo_pago: 'contraentrega', bodega: '',
-              estado: est, estado_transportadora: '', estado_canonico: est,
+              estado: CRUDO_DROPI[est] || est.toUpperCase(),
+              estado_transportadora: '', estado_canonico: est,
               transportadora: trans, guia: 'G' + (900000 + SEQ),
               intentos: '', gestora_asignada: gest,
               fecha_promesa: '', fecha_entrega: fEntrega,
@@ -480,6 +481,16 @@
         });
     });
 
+    // Los estados de la tienda inventada, para que el panel no abra vacío
+    HOJA.Pedidos.forEach(function (x) {
+      const r = resolverEstado(x.estado);
+      if (!ESTADOS_VISTOS[r.clave]) {
+        ESTADOS_VISTOS[r.clave] = { texto: r.clave, fuente: 'dropi',
+                                    estado: r.estado, origen: r.origen, n: 0 };
+      }
+      ESTADOS_VISTOS[r.clave].n++;
+    });
+
     // El cierre congelado se calcula una vez sembrado todo
     HOJA.Cierres.forEach(function (c) {
       c._datos = mesDe_(c.tienda, c.mes, 'dueno');
@@ -494,6 +505,23 @@
   }
 
   const TERMINALES = ['entregado', 'devolucion', 'cancelado'];
+
+  /**
+   * Cómo llama Dropi a cada estado.
+   *
+   * La semilla guardaba en la columna `estado` el estado YA traducido
+   * —"en_transito", "confirmado"— y esa columna es la del texto crudo,
+   * el que escribe la transportadora. El panel de estados quedaba
+   * mostrando "en_transito → en_transito" y "confirmado" como
+   * desconocido: un demo enseñando algo que en la vida real no pasa.
+   */
+  const CRUDO_DROPI = {
+    entregado: 'ENTREGADO', devolucion: 'DEVOLUCION', cancelado: 'CANCELADO',
+    novedad: 'NOVEDAD', novedad_resuelta: 'NOVEDAD SOLUCIONADA',
+    pendiente: 'PENDIENTE', confirmado: 'GUIA_GENERADA',
+    en_bodega: 'EN BODEGA ORIGEN', en_transito: 'EN REPARTO',
+    en_oficina: 'RECLAME EN OFICINA',
+  };
 
   /**
    * El mes, calculado una sola vez.
@@ -581,6 +609,7 @@
         envio:    { entregado: 0, devolucion: 0, cancelado: 0, pendiente: 0 },
       },
       novedades: 0, sinMover: 0, grupos: {}, transportadoras: {}, productos: {},
+      sinClasificar: 0, valorSinClasificar: 0, estadosDesconocidos: {},
     };
 
     HOJA.Pedidos.forEach(function (f) {
@@ -589,6 +618,17 @@
 
       out.pedidos++;
       const est = norm(f.estado_nova || f.estado_canonico || f.estado);
+
+      // Un estado que Nova no entiende no entra en ninguna cuenta: ni
+      // entregado, ni devuelto, ni despachado, ni en el flete.
+      if (est === 'sin_clasificar') {
+        out.sinClasificar++;
+        out.valorSinClasificar += num(f.valor);
+        const cr = String(f.estado || '').trim() || '(vacío)';
+        out.estadosDesconocidos[cr] = (out.estadosDesconocidos[cr] || 0) + 1;
+        return;
+      }
+
       if (est === 'entregado') { out.entregados++; out.ventas += num(f.valor); }
       if (est === 'devolucion') out.devueltos++;
       if (est === 'cancelado') out.cancelados++;
@@ -1381,7 +1421,88 @@
     },
 
     importar: function (p) { return importarDemo(p); },
+
+    estados: function () {
+      const sin = [], con = [];
+      Object.keys(ESTADOS_VISTOS).forEach(function (k) {
+        const v = ESTADOS_VISTOS[k];
+        const fila = { fuente: v.fuente, texto: v.texto, pedidos: v.n,
+                       estado: ESTADOS_APRENDIDOS[k] || (v.origen === 'nuevo' ? '' : v.estado),
+                       origen: ESTADOS_APRENDIDOS[k] ? 'manual' : v.origen,
+                       primera: '', nota: '' };
+        (fila.estado ? con : sin).push(fila);
+      });
+      sin.sort(function (a, b) { return b.pedidos - a.pedidos; });
+      con.sort(function (a, b) { return b.pedidos - a.pedidos; });
+      return { ok: true, sinClasificar: sin, conocidos: con,
+               opciones: OPCIONES_ESTADO, puedeEditar: rolEfectivo({}) === 'dueno' };
+    },
+
+    estado_clasificar: function (p) {
+      if (rolEfectivo(p) !== 'dueno') {
+        return { ok: false, error: 'Solo la dueña decide qué significa un estado.' };
+      }
+      const k = norm(p.texto), est = norm(p.estado);
+      if (!k) return { ok: false, error: 'Falta el estado a clasificar.' };
+      if (est && OPCIONES_ESTADO.map(function (o) { return o.id; }).indexOf(est) === -1) {
+        return { ok: false, error: 'No conozco el estado "' + est + '".' };
+      }
+
+      if (est) ESTADOS_APRENDIDOS[k] = est;
+      else delete ESTADOS_APRENDIDOS[k];
+      if (ESTADOS_VISTOS[k]) {
+        ESTADOS_VISTOS[k].estado = est;
+        ESTADOS_VISTOS[k].origen = est ? 'manual' : 'nuevo';
+      }
+
+      /**
+       * Los pedidos ya guardados se vuelven a traducir.
+       *
+       * En el servidor no hace falta —cada pantalla recalcula leyendo
+       * Pedidos y el estado se traduce al vuelo— pero aquí los pedidos
+       * ya tienen su estado_canonico escrito. Sin esto, clasificar no
+       * cambiaría nada y parecería que el botón no sirve.
+       */
+      let tocados = 0;
+      HOJA.Pedidos.forEach(function (x) {
+        if (norm(x.estado) !== k) return;
+        x.estado_canonico = est || 'sin_clasificar';
+        tocados++;
+      });
+      invalidarCache();
+
+      const cerrados = {};
+      HOJA.Cierres.forEach(function (c) { cerrados[c.tienda + '|' + c.mes] = true; });
+      const afect = {};
+      HOJA.Pedidos.forEach(function (x) {
+        if (norm(x.estado) !== k) return;
+        const kk = x.tienda + '|' + mesDe(x.fecha);
+        if (cerrados[kk]) afect[kk] = (afect[kk] || 0) + 1;
+      });
+
+      return { ok: true, fuente: p.fuente, texto: k, estado: est, pedidos: tocados,
+               cerradosAfectados: Object.keys(afect).map(function (kk) {
+                 return { tienda: kk.split('|')[0], mes: kk.split('|')[1],
+                          pedidos: afect[kk] };
+               }) };
+    },
   };
+
+  /** Las mismas opciones que ofrece Nova de verdad. */
+  const OPCIONES_ESTADO = [
+    { id: 'entregado',  nombre: 'Entregado',
+      ayuda: 'Llegó y se cobró. Cuenta como venta.', terminal: true },
+    { id: 'devolucion', nombre: 'Devuelto',
+      ayuda: 'Volvió. No es venta, y su flete se paga igual.', terminal: true },
+    { id: 'cancelado',  nombre: 'Cancelado',
+      ayuda: 'Nunca salió. No cuesta nada.', terminal: true },
+    { id: 'en_transito', nombre: 'En camino', ayuda: 'Salió de bodega y va para allá.' },
+    { id: 'en_bodega',  nombre: 'En bodega', ayuda: 'Todavía no sale.' },
+    { id: 'en_oficina', nombre: 'En oficina', ayuda: 'Esperando que el cliente lo recoja.' },
+    { id: 'novedad',    nombre: 'Con novedad', ayuda: 'Hubo un problema y hay que gestionarlo.' },
+    { id: 'confirmado', nombre: 'Confirmado', ayuda: 'Confirmado con el cliente, sin despachar.' },
+    { id: 'pendiente',  nombre: 'Pendiente', ayuda: 'Sin confirmar todavía.' },
+  ];
 
   /**
    * Subir un archivo, sin el techo de 8 MB.
@@ -1636,6 +1757,53 @@
   };
 
   /**
+   * Lo mismo que hace Nova de verdad con un estado que no conoce.
+   *
+   * La línea no es "importante o bobo": es si el estado CIERRA el pedido.
+   * Dónde va el paquete —bodega, ruta, terminal— no mueve ninguna cuenta,
+   * así que se deduce del texto sin riesgo. Entregado, devuelto o
+   * cancelado mueven la plata en direcciones opuestas, y adivinarlos es
+   * inventar una venta o cobrar un flete que nadie pagó. Esos no se
+   * adivinan nunca: el pedido queda sin clasificar y se cuenta aparte.
+   */
+  const PISTAS_TERMINALES = ['entrega', 'devol', 'devuel', 'cancel', 'anulad',
+                             'rechaz', 'reembols', 'perdid', 'siniestr', 'indemniz'];
+  const PISTAS_TRANSITO = [
+    ['bodega','en_bodega'], ['almacen','en_bodega'], ['preparad','en_bodega'],
+    ['alistamiento','en_bodega'], ['procesamiento','confirmado'],
+    ['procesando','confirmado'], ['reparto','en_transito'],
+    ['transito','en_transito'], ['transporte','en_transito'],
+    ['despach','en_transito'], ['ruta','en_transito'], ['terminal','en_transito'],
+    ['distribucion','en_transito'], ['reexpedicion','en_transito'],
+    ['camino','en_transito'], ['oficina','en_oficina'], ['agencia','en_oficina'],
+    ['sucursal','en_oficina'],
+  ];
+
+  function deducirTransito(k) {
+    for (let i = 0; i < PISTAS_TERMINALES.length; i++) {
+      if (k.indexOf(PISTAS_TERMINALES[i]) !== -1) return '';
+    }
+    for (let j = 0; j < PISTAS_TRANSITO.length; j++) {
+      if (k.indexOf(PISTAS_TRANSITO[j][0]) !== -1) return PISTAS_TRANSITO[j][1];
+    }
+    return '';
+  }
+
+  /** Lo que la dueña ya clasificó en esta sesión del demo. */
+  const ESTADOS_APRENDIDOS = {};
+  const ESTADOS_VISTOS = {};
+
+  function resolverEstado(crudo) {
+    const k = norm(crudo);
+    if (!k) return { estado: 'pendiente', origen: 'catalogo', clave: '(vacio)' };
+    if (ESTADOS_APRENDIDOS[k]) return { estado: ESTADOS_APRENDIDOS[k], origen: 'manual', clave: k };
+    if (ESTADO_DEMO[k]) return { estado: ESTADO_DEMO[k], origen: 'catalogo', clave: k };
+    const d = deducirTransito(k);
+    if (d) return { estado: d, origen: 'deducido', clave: k };
+    return { estado: 'sin_clasificar', origen: 'nuevo', clave: k };
+  }
+
+  /**
    * Un número escrito como se escribe en América Latina.
    *
    * "27044,5" son veintisiete mil con cincuenta centavos, y "1.234,56"
@@ -1831,7 +1999,13 @@
       if (ext) yaEstan.add(ext);
 
       const crudo = col.estado !== undefined ? norm(f[col.estado]) : '';
-      const est = ESTADO_DEMO[crudo] || 'pendiente';
+      const res = resolverEstado(crudo);
+      const est = res.estado;
+      if (!ESTADOS_VISTOS[res.clave]) {
+        ESTADOS_VISTOS[res.clave] = { texto: res.clave, fuente: fuente,
+                                      estado: est, origen: res.origen, n: 0 };
+      }
+      ESTADOS_VISTOS[res.clave].n++;
       HOJA.Pedidos.push({
         id: nid('p'), fuente: fuente, id_externo: ext || String(500000 + SEQ),
         fecha: fecha, tienda: t,
@@ -2017,6 +2191,10 @@
     ['Pedidos', 'Novedades', 'Pauta', 'Cartera', 'CAS', 'Cierres', 'Fuentes']
       .forEach(function (h) { HOJA[h].length = 0; });
     HOJA.Auditoria.length = 0;
+    // También los estados: si no, el panel seguiría preguntando por
+    // estados de una tienda que ya no existe.
+    Object.keys(ESTADOS_VISTOS).forEach(function (k) { delete ESTADOS_VISTOS[k]; });
+    Object.keys(ESTADOS_APRENDIDOS).forEach(function (k) { delete ESTADOS_APRENDIDOS[k]; });
     invalidarCache();
 
     const c = document.getElementById('demo-cinta');
@@ -2110,7 +2288,7 @@
      */
     const SOLO_LEEN = ['yo', 'resumen', 'listar', 'productos', 'equipo', 'fuentes',
                        'cierre', 'historial', 'cas', 'alarmas', 'recuento',
-                       'auditoria', 'trozo'];
+                       'auditoria', 'trozo', 'estados'];
 
     try {
       const r = await fn(p);

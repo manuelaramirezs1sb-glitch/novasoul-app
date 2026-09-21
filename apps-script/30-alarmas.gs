@@ -53,6 +53,8 @@ const ALARMAS = [
     param: 'cpa_subida_pct', unidad: '% vs. mes pasado', opcional: true },
   { id: 'stock',        nombre: 'Stock por agotarse',
     param: 'stock_dias_min', unidad: 'días de cobertura', opcional: true },
+  // Sin parámetro: no es cuestión de tolerancia, es que faltan datos.
+  { id: 'estados_nuevos', nombre: 'Estados sin clasificar', param: '', unidad: '' },
 ];
 
 /** Los umbrales de una tienda: lo que diga Parametros, o el de fábrica. */
@@ -311,6 +313,36 @@ function evaluarAlarmas(ss, tienda) {
         'devolución en la mayoría de los casos.',
         viejas.slice(0, 10), 'Novedades'));
     }
+  }
+
+  /**
+   * ── Estados que Nova no entiende ──
+   *
+   * Va antes que la efectividad a propósito: mientras haya pedidos sin
+   * clasificar, la efectividad que se muestre debajo está calculada sobre
+   * menos pedidos de los que hay. Avisar del número malo antes de
+   * explicar por qué es malo sería enseñar a desconfiar de todo.
+   *
+   * No tiene umbral configurable: no es una cuestión de tolerancia, es
+   * que faltan datos. Un solo pedido sin clasificar ya es una pregunta
+   * sin responder, aunque no mueva la aguja.
+   */
+  if (m.sinClasificar > 0) {
+    const cuales = Object.keys(m.estadosDesconocidos || {})
+      .sort(function (a, b) {
+        return m.estadosDesconocidos[b] - m.estadosDesconocidos[a];
+      });
+    out.push(alarma('estados_nuevos', 'mal',
+      pl(m.sinClasificar, '1 pedido está', '% pedidos están') + ' en un estado ' +
+        'que no reconozco',
+      'No entran en ninguna cuenta: ni entregados, ni devueltos, ni en el ' +
+      'flete. Son ' + moneda + ' ' + Math.round(m.valorSinClasificar) +
+      ' sin clasificar. Los estados son: ' + cuales.slice(0, 5).join(' · ') +
+      '.\n\nDinos qué significan en Configuración → Estados y las cifras del ' +
+      'mes se rehacen solas.',
+      cuales.slice(0, 10).map(function (k) {
+        return { estado: k, pedidos: m.estadosDesconocidos[k] };
+      }), 'Configuración'));
   }
 
   // ── 3. Efectividad baja ──

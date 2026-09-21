@@ -24,6 +24,20 @@ const ESTADOS = {
   ENTREGADO:        'entregado',        // terminal, cuenta como venta
   DEVOLUCION:       'devolucion',       // terminal, no cuenta como venta
   CANCELADO:        'cancelado',        // terminal, no cuenta como venta
+
+  /**
+   * No sabemos qué pasó con este pedido.
+   *
+   * Va aparte de `pendiente` a propósito, porque no son lo mismo:
+   * pendiente es "todavía no se resolvió", una afirmación sobre el
+   * pedido. Sin clasificar es "la transportadora usó una palabra que no
+   * reconozco", una afirmación sobre NOVA.
+   *
+   * Confundirlos escondía el problema: los desconocidos se sumaban a los
+   * pendientes y nadie volvía a mirarlos. Separados, se pueden contar,
+   * mostrar y preguntar.
+   */
+  SIN_CLASIFICAR:   'sin_clasificar',
 };
 
 // Los tres estados que cierran el ciclo. Las tendencias y el % de
@@ -175,11 +189,100 @@ const MAPA_ESTADOS = {
   },
 };
 
-/** Traduce el estado de una plataforma al canónico de Nova. */
-function estadoCanonico(fuente, texto) {
+/**
+ * ═══════════════════════════════════════════════════════════
+ *  ESTADOS QUE NOVA NO CONOCE
+ * ═══════════════════════════════════════════════════════════
+ *
+ * Las tablas de arriba son el punto de partida, no la verdad completa.
+ * Cada transportadora inventa nombres y los cambia sin avisar: en un solo
+ * archivo real de Dropi Colombia aparecieron dieciocho estados distintos
+ * y Nova reconocía siete.
+ *
+ * Antes, un estado desconocido acababa contado como "pendiente". No daba
+ * error, y esa es la parte cara: trece pedidos RECHAZADO —que ya
+ * volvieron y cuyo flete ya se pagó— quedaban como "en camino" para
+ * siempre, el mes nunca cerraba, y la tasa de entrega salía más baja de
+ * lo que fue. Un mes entero podía estar mal sin un solo síntoma.
+ *
+ * LA LÍNEA NO ES "IMPORTANTE O BOBO". ES SI EL ESTADO CIERRA EL PEDIDO.
+ *
+ * Los estados de tránsito —en bodega destino, en reexpedición, preparado
+ * para transportadora— significan todos lo mismo para las cuentas: el
+ * pedido sigue vivo. Equivocarse entre ellos no mueve un solo número, así
+ * que Nova los deduce sola cuando el texto lo delata, y deja constancia.
+ *
+ * Los terminales —entregado, devolución, cancelado— mueven la plata en
+ * direcciones opuestas. Adivinar "entregado" es inventar una venta y
+ * contaminar el ingreso, el margen y el ROAS. Adivinar "devolución" es
+ * cobrar un flete que nadie pagó. Así que NOVA NUNCA LOS ADIVINA: deja
+ * el pedido en `sin_clasificar`, lo cuenta aparte, y pregunta.
+ *
+ * Y lo que la dueña clasifica se guarda en la hoja, no en el código: se
+ * aplica al instante y sin que nadie publique una versión nueva.
+ */
+
+/** Palabras que solo aparecen en estados de tránsito. */
+const PISTAS_TRANSITO = [
+  ['bodega',        ESTADOS.EN_BODEGA],
+  ['almacen',       ESTADOS.EN_BODEGA],
+  ['preparad',      ESTADOS.EN_BODEGA],
+  ['alistamiento',  ESTADOS.EN_BODEGA],
+  ['procesamiento', ESTADOS.CONFIRMADO],
+  ['procesando',    ESTADOS.CONFIRMADO],
+  ['reparto',       ESTADOS.EN_TRANSITO],
+  ['transito',      ESTADOS.EN_TRANSITO],
+  ['transporte',    ESTADOS.EN_TRANSITO],
+  ['despach',       ESTADOS.EN_TRANSITO],
+  ['ruta',          ESTADOS.EN_TRANSITO],
+  ['terminal',      ESTADOS.EN_TRANSITO],
+  ['distribucion',  ESTADOS.EN_TRANSITO],
+  ['reexpedicion',  ESTADOS.EN_TRANSITO],
+  ['camino',        ESTADOS.EN_TRANSITO],
+  ['oficina',       ESTADOS.EN_OFICINA],
+  ['agencia',       ESTADOS.EN_OFICINA],
+  ['sucursal',      ESTADOS.EN_OFICINA],
+];
+
+/**
+ * Palabras que aparecen en estados TERMINALES y prohíben deducir nada.
+ *
+ * Van primero y mandan sobre las pistas de tránsito. "DEVUELTO DESDE
+ * BODEGA DESTINO" tiene la palabra bodega, pero es una devolución: sin
+ * este freno, Nova lo daría por vivo y nunca cobraría su flete de retorno.
+ */
+const PISTAS_TERMINALES = ['entrega', 'devol', 'devuel', 'cancel', 'anulad',
+                           'rechaz', 'reembols', 'perdid', 'siniestr', 'indemniz'];
+
+/**
+ * Lo que Nova puede deducir sin riesgo, o cadena vacía.
+ * Solo tránsito, nunca un desenlace.
+ */
+function deducirTransito(k) {
+  for (let i = 0; i < PISTAS_TERMINALES.length; i++) {
+    if (k.indexOf(PISTAS_TERMINALES[i]) !== -1) return '';
+  }
+  for (let j = 0; j < PISTAS_TRANSITO.length; j++) {
+    if (k.indexOf(PISTAS_TRANSITO[j][0]) !== -1) return PISTAS_TRANSITO[j][1];
+  }
+  return '';
+}
+
+/**
+ * Traduce el estado de una plataforma al canónico de Nova.
+ *
+ * `aprendidos` es lo que ya está clasificado en la hoja Estados, con la
+ * forma { 'dropi|rechazado': 'devolucion' }. Va primero porque una
+ * decisión de la dueña gana sobre cualquier tabla de aquí: si ella dice
+ * que en SU operación ese estado significa otra cosa, tiene razón.
+ */
+function estadoCanonico(fuente, texto, aprendidos) {
   if (!texto) return '';
-  const mapa = MAPA_ESTADOS[fuente] || MAPA_ESTADOS[fuente === 'effi' ? 'mastershop' : ''] || {};
   const k = norm(texto);
+
+  if (aprendidos && aprendidos[fuente + '|' + k]) return aprendidos[fuente + '|' + k];
+
+  const mapa = MAPA_ESTADOS[fuente] || MAPA_ESTADOS[fuente === 'effi' ? 'mastershop' : ''] || {};
   if (mapa[k]) return mapa[k];
 
   // Coincidencia por prefijo: los couriers agregan sufijos
@@ -188,7 +291,126 @@ function estadoCanonico(fuente, texto) {
   for (let i = 0; i < claves.length; i++) {
     if (k.indexOf(claves[i]) === 0) return mapa[claves[i]];
   }
-  return '__sin_mapear__:' + k; // visible, no silencioso
+
+  const deducido = deducirTransito(k);
+  if (deducido) return deducido;
+
+  return ESTADOS.SIN_CLASIFICAR;
+}
+
+/**
+ * Igual que la anterior, pero además dice CÓMO lo resolvió.
+ * La usa el importador para saber qué anotar en la hoja Estados.
+ */
+function estadoConOrigen(fuente, texto, aprendidos) {
+  if (!texto) return { estado: '', origen: '' };
+  const k = norm(texto);
+
+  if (aprendidos && aprendidos[fuente + '|' + k]) {
+    return { estado: aprendidos[fuente + '|' + k], origen: 'guardado', clave: k };
+  }
+  const mapa = MAPA_ESTADOS[fuente] || MAPA_ESTADOS[fuente === 'effi' ? 'mastershop' : ''] || {};
+  if (mapa[k]) return { estado: mapa[k], origen: 'catalogo', clave: k };
+  const claves = Object.keys(mapa);
+  for (let i = 0; i < claves.length; i++) {
+    if (k.indexOf(claves[i]) === 0) return { estado: mapa[claves[i]], origen: 'catalogo', clave: k };
+  }
+  const deducido = deducirTransito(k);
+  if (deducido) return { estado: deducido, origen: 'deducido', clave: k };
+
+  return { estado: ESTADOS.SIN_CLASIFICAR, origen: 'nuevo', clave: k };
+}
+
+// ─── LA HOJA DE ESTADOS ──────────────────────────────────────
+
+/**
+ * Lo que ya está clasificado, como { 'dropi|rechazado': 'devolucion' }.
+ *
+ * Solo cuentan las filas con `estado_nova` puesto: una fila con estado
+ * vacío es justamente una pregunta sin responder, y devolverla como
+ * traducción haría que un estado desconocido se resolviera en nada.
+ */
+function estadosAprendidos(ss) {
+  const sh = ss.getSheetByName('Estados');
+  const out = {};
+  if (!sh || sh.getLastRow() < 2) return out;
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const cF = e.indexOf('fuente'), cT = e.indexOf('texto'), cE = e.indexOf('estado_nova');
+  if (cF === -1 || cT === -1 || cE === -1) return out;
+
+  for (let i = 1; i < d.length; i++) {
+    const est = norm(d[i][cE]);
+    if (!est || est === ESTADOS.SIN_CLASIFICAR) continue;
+    out[norm(d[i][cF]) + '|' + norm(d[i][cT])] = est;
+  }
+  return out;
+}
+
+/**
+ * Anota los estados que se vieron en una importación.
+ *
+ * Se escribe SIEMPRE, no solo cuando Nova no entiende: saber que un
+ * estado conocido dejó de aparecer también dice algo, y tener el listado
+ * completo con sus cuentas es lo que permite decidir cuál mirar primero.
+ *
+ * Lo que la dueña ya decidió no se pisa nunca. Solo se le actualiza la
+ * cuenta y la última fecha.
+ */
+function anotarEstados(ss, vistos) {
+  const claves = Object.keys(vistos);
+  if (!claves.length) return;
+
+  let sh = ss.getSheetByName('Estados');
+  if (!sh) {
+    sh = ss.insertSheet('Estados');
+    sh.getRange(1, 1, 1, HOJAS.Estados.length).setValues([HOJAS.Estados]);
+  }
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+  const hoy = ahoraISO().slice(0, 10);
+
+  const donde = {};
+  for (let i = 1; i < d.length; i++) {
+    donde[norm(d[i][c('fuente')]) + '|' + norm(d[i][c('texto')])] = i;
+  }
+
+  const nuevas = [];
+  claves.forEach(function (k) {
+    const v = vistos[k];
+    const i = donde[k];
+
+    if (i === undefined) {
+      const campos = {
+        fuente: v.fuente, texto: v.texto,
+        // Un estado nuevo entra SIN traducción: la casilla vacía es la
+        // pregunta. Escribirle algo sería responderla por la dueña.
+        estado_nova: v.origen === 'nuevo' ? '' : v.estado,
+        origen: v.origen, pedidos: v.n,
+        primera_vez: hoy, ultima_vez: hoy, decidido_por: '', nota: '',
+      };
+      nuevas.push(e.map(function (col) {
+        return campos[col] === undefined ? '' : campos[col];
+      }));
+      return;
+    }
+
+    d[i][c('pedidos')] = num(d[i][c('pedidos')]) + v.n;
+    d[i][c('ultima_vez')] = hoy;
+    // Una decisión manual no se toca jamás
+    if (norm(d[i][c('origen')]) !== 'manual' && !String(d[i][c('estado_nova')]).trim()) {
+      d[i][c('estado_nova')] = v.origen === 'nuevo' ? '' : v.estado;
+      d[i][c('origen')] = v.origen;
+    }
+  });
+
+  if (d.length > 1) sh.getRange(1, 1, d.length, d[0].length).setValues(d);
+  if (nuevas.length) {
+    sh.getRange(sh.getLastRow() + 1, 1, nuevas.length, nuevas[0].length).setValues(nuevas);
+  }
 }
 
 // ─── CATÁLOGO DE NOVEDADES ───────────────────────────────────
