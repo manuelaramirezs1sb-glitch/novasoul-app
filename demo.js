@@ -1430,7 +1430,7 @@
      * para qué sirve y diga que aquí no se conecta nada.
      */
     meta_estado: function () {
-      return { ok: true, hayLlave: false, guardadaEn: '', demo: true,
+      return { ok: true, hayLlave: false, guardadaEn: '', ultimaPrueba: null, demo: true,
                cuentas: SES.tiendas.map(function (t) {
                  return { tienda: t, cuenta: '', moneda: TIENDAS[t].moneda };
                }) };

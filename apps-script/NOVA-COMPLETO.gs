@@ -8652,9 +8652,24 @@ function apiMetaEstado(s, p) {
   if (s.rol !== 'dueno') return { ok: false, error: 'Solo la dueña ve la conexión con Meta.' };
   const ss = SpreadsheetApp.openById(s.sheetId);
   const props = PropertiesService.getScriptProperties();
+  /**
+   * La última prueba que salió bien.
+   *
+   * Sin esto, lo único que decía si la conexión servía era el mensaje
+   * que aparecía justo al probarla — y se perdía al recargar. Quien
+   * volvía al día siguiente veía "hay una llave guardada" y no tenía
+   * forma de saber si esa llave funcionaba.
+   */
+  let prueba = null;
+  try {
+    const crudo = props.getProperty(metaClave(s) + '_PRUEBA');
+    if (crudo) prueba = JSON.parse(crudo);
+  } catch (e) { prueba = null; }
+
   return {
     ok: true,
     hayLlave: !!metaToken(s),
+    ultimaPrueba: prueba,
     guardadaEn: props.getProperty(metaClave(s) + '_FECHA') || '',
     cuentas: s.tiendas.map(function (t) {
       return { tienda: t, cuenta: metaCuenta(ss, t), moneda: monedaDeTienda(ss, t) };
@@ -8676,9 +8691,13 @@ function apiMetaGuardar(s, p) {
     if (t) {
       props.setProperty(metaClave(s), t);
       props.setProperty(metaClave(s) + '_FECHA', ahoraISO());
+      // La prueba anterior era de la llave anterior. Dejarla puesta diría
+      // "conectada" sobre una llave que nadie ha comprobado todavía.
+      props.deleteProperty(metaClave(s) + '_PRUEBA');
     } else {
       props.deleteProperty(metaClave(s));
       props.deleteProperty(metaClave(s) + '_FECHA');
+      props.deleteProperty(metaClave(s) + '_PRUEBA');
     }
     registrarMovimiento(s, 'Meta', 'llave', 'token', '(oculto)', t ? '(guardada)' : '(borrada)');
   }
@@ -8737,6 +8756,12 @@ function apiMetaProbar(s, p) {
   if (j.error) return Object.assign({ ok: false }, explicarErrorMeta(j.error));
 
   const monedaTienda = monedaDeTienda(ss, tienda);
+
+  PropertiesService.getScriptProperties().setProperty(
+    metaClave(s) + '_PRUEBA',
+    JSON.stringify({ cuando: ahoraISO(), cuenta: cuenta,
+                     nombre: j.name || '', moneda: j.currency || '', tienda: tienda }));
+
   return {
     ok: true, tienda: tienda, cuenta: cuenta,
     nombre: j.name || '', moneda: j.currency || '',

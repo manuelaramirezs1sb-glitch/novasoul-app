@@ -3143,7 +3143,22 @@ async function cargarReales() {
   try {
     const mes = new Date().toISOString().slice(0,7);
     const r = await api('resumen', { tienda: ST, mes: mes });
-    if (!r.ok) { marcarOrigen(false, r.error); return; }
+    /**
+     * Que falle el resumen no puede dejar a oscuras a todo lo demás.
+     *
+     * Antes esto hacía `return` y se llevaba por delante a Estados, a la
+     * conexión con Meta, al equipo y a las alarmas — todas consultas
+     * independientes que no tenían por qué caerse con esta. El resultado
+     * era una pantalla con tarjetas en blanco, sin un solo mensaje: lo
+     * peor posible, porque no se puede ni saber qué preguntar.
+     *
+     * Ahora el resumen dice lo suyo y el resto sigue su camino.
+     */
+    if (!r.ok) {
+      marcarOrigen(false, r.error);
+      cargarEstados(); cargarMeta();
+      return;
+    }
     REAL = r.datos;
     /**
      * El sello va PRIMERO y el desello después.
@@ -6629,7 +6644,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-21 · 2031';
+const VERSION_PANTALLA = '2026-09-21 · ab3a';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -7781,14 +7796,44 @@ let CATALOGO_ALARMAS = [];
 let META_DATA = null;
 
 async function cargarMeta() {
-  if (!CONECTADO || ROL !== 'dueno') return false;
+  if (ROL !== 'dueno') return false;
+
+  /**
+   * Si no se puede preguntar, se dice. Nunca se deja en blanco.
+   *
+   * Una tarjeta vacía no comunica "no sé": comunica "aquí no hay nada",
+   * y quien la mira no tiene ni qué preguntar. Cuando algo falla, lo que
+   * hay que ver es qué falló.
+   */
+  if (!CONECTADO) { metaCaja('Entra con tu cuenta para ver la conexión con Meta.'); return false; }
+
   let r;
   try { r = await api('meta_estado', { tienda: ST }); }
-  catch (e) { return false; }
-  if (!r || !r.ok) return false;
+  catch (e) { metaCaja('No pude preguntar por la conexión: ' + e.message); return false; }
+
+  if (!r || !r.ok) {
+    const err = (r && r.error) || 'el servidor no contestó';
+    metaCaja(/desconocida/i.test(err)
+      ? 'Esta parte todavía no está en tu Apps Script.\n\nPega la última versión ' +
+        'de NOVA-COMPLETO.gs, guarda la implementación, y vuelve a entrar.'
+      : 'No pude leer la conexión: ' + err);
+    return false;
+  }
+
   META_DATA = r;
   pintarMeta();
   return true;
+}
+
+/** Un mensaje dentro de la tarjeta, cuando no hay formulario que pintar. */
+function metaCaja(texto) {
+  const caja = document.getElementById('meta-caja');
+  const lbl = document.getElementById('meta-estado-lbl');
+  if (lbl) { lbl.textContent = 'no se pudo leer'; lbl.style.color = 'var(--t-mut2)'; }
+  if (caja) {
+    caja.innerHTML = '<div class="mt-msg" style="background:#f6ecd0;color:#7a5c10;' +
+      'margin-top:0;">' + esc(texto) + '</div>';
+  }
 }
 
 function pintarMeta() {
@@ -7797,13 +7842,34 @@ function pintarMeta() {
   if (!caja || !META_DATA) return;
 
   const hay = META_DATA.hayLlave;
-  lbl.textContent = hay ? 'llave guardada' : 'sin conectar';
-  lbl.style.color = hay ? 'var(--acc-d)' : 'var(--t-mut2)';
+  const prob = META_DATA.ultimaPrueba;      // { cuando, cuenta, nombre } o vacío
+  lbl.textContent = prob ? 'conectada' : (hay ? 'llave guardada, sin probar' : 'sin conectar');
+  lbl.style.color = prob ? 'var(--acc-d)' : (hay ? '#8a6a13' : 'var(--t-mut2)');
 
   const cta = (META_DATA.cuentas || []).filter(function (c) { return c.tienda === ST; })[0]
               || { cuenta: '' };
 
+  /**
+   * El estado, en una frase y antes que los campos.
+   *
+   * La llave no se puede volver a ver, y eso está bien — pero entonces
+   * lo único que dice si esto funciona o no es esta línea. Sin ella,
+   * alguien que ya la guardó abre la pantalla y no tiene forma de saber
+   * si quedó puesta.
+   */
+  const estado = prob
+    ? { t: 'Conectada con «' + esc(prob.nombre || prob.cuenta) + '»' +
+            (prob.cuando ? ' · comprobado el ' + esc(String(prob.cuando).slice(0, 10)) : ''),
+        c: ['#e6efe8', '#2f5738'] }
+    : hay
+      ? { t: 'Hay una llave guardada, pero todavía no se ha comprobado. ' +
+             'Dale a «Probar conexión».', c: ['#f6ecd0', '#7a5c10'] }
+      : { t: 'Sin conectar. Pega la llave y el número de cuenta, y prueba.',
+          c: ['#f1f1ec', '#5f6b52'] };
+
   caja.innerHTML =
+    '<div class="mt-msg" style="margin:0 0 14px;background:' + estado.c[0] +
+      ';color:' + estado.c[1] + '">' + estado.t + '</div>' +
     '<div class="mt-grid">' +
       '<div class="mt-campo">' +
         '<label>La llave' + (hay ? ' · ya hay una guardada' : '') + '</label>' +
@@ -10004,7 +10070,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
      * para qué sirve y diga que aquí no se conecta nada.
      */
     meta_estado: function () {
-      return { ok: true, hayLlave: false, guardadaEn: '', demo: true,
+      return { ok: true, hayLlave: false, guardadaEn: '', ultimaPrueba: null, demo: true,
                cuentas: SES.tiendas.map(function (t) {
                  return { tienda: t, cuenta: '', moneda: TIENDAS[t].moneda };
                }) };
