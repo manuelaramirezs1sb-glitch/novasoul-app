@@ -2908,8 +2908,23 @@ const REINTENTABLES = ['login', 'verificar', 'yo', 'resumen', 'listar',
 
 async function api(accion, datos, intento) {
   intento = intento || 0;
-  const cuerpo = Object.assign({ accion: accion, token: TOKEN },
-    VISTA ? { vista: VISTA } : {}, datos || {});
+  /**
+   * La identidad va DESPUÉS de los datos, no antes.
+   *
+   * Estaba al revés, y eso permitía que un campo del formulario llamado
+   * igual que uno de estos pisara el de verdad. Pasó: el campo de la
+   * llave de Meta se llamaba `token`, igual que el token de la sesión.
+   * Al guardar, la llave de Meta viajaba en el lugar de la sesión, el
+   * servidor no reconocía a nadie, y la respuesta era cerrar la sesión y
+   * mandar un código nuevo al correo. Un error de nombres que se veía
+   * como una expulsión.
+   *
+   * Poniendo la identidad al final, ningún dato la puede tocar — ni éste
+   * ni el que alguien agregue mañana sin acordarse de esto.
+   */
+  const cuerpo = Object.assign({}, datos || {},
+    { accion: accion, token: TOKEN },
+    VISTA ? { vista: VISTA } : {});
   const r = await fetch(NOVA_API, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -6644,7 +6659,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-21 · 7489';
+const VERSION_PANTALLA = '2026-09-22 · a39c';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -7912,7 +7927,7 @@ async function guardarMeta() {
   const datos = { tienda: ST, cuenta: ct.value };
   // Vacío significa "no la toques", no "bórrala": si mandara vacío al
   // guardar solo el número de cuenta, se borraría la llave sin querer.
-  if (tk.value.trim()) datos.token = tk.value.trim();
+  if (tk.value.trim()) datos.llave = tk.value.trim();
 
   metaMsg('Guardando…', 'ojo');
   try {

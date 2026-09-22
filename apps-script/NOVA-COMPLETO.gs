@@ -8682,8 +8682,16 @@ function apiMetaGuardar(s, p) {
   if (s.rol !== 'dueno') return { ok: false, error: 'Solo la dueña conecta Meta.' };
   const props = PropertiesService.getScriptProperties();
 
-  if (p.token !== undefined) {
-    const t = String(p.token).trim();
+  /**
+   * Se llama `llave` y no `token` a propósito.
+   *
+   * `token` es el de la sesión de Nova y viaja en cada petición. Cuando
+   * este campo se llamaba igual, la llave de Meta ocupaba su lugar al
+   * enviar: el servidor no reconocía la sesión y respondía cerrándola.
+   * Guardar la llave expulsaba a quien la estaba guardando.
+   */
+  if (p.llave !== undefined) {
+    const t = String(p.llave).trim();
     if (t && t.length < 50) {
       return { ok: false, error: 'Esa llave se ve incompleta. Las de Meta pasan de ' +
                'doscientos caracteres — puede que se haya cortado al copiarla.' };
