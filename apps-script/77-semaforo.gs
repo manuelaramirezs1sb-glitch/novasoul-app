@@ -317,9 +317,18 @@ function semaforosDe_(hoy, antes, u, moneda) {
   return luces;
 }
 
+/**
+ * Un número para leer, no para operar.
+ *
+ * Con separador de miles: «1.386.315» se lee de un vistazo y «1386315»
+ * hay que contarlo con el dedo. Esto es lo que va en el correo del lunes,
+ * que alguien lee en el teléfono a las siete de la mañana.
+ */
 function redondear_(n) {
   if (n === null || n === undefined || isNaN(n)) return '—';
-  return Math.round(Number(n) * 100) / 100;
+  const x = Math.round(Number(n) * 100) / 100;
+  try { return x.toLocaleString('es-CO', { maximumFractionDigits: 2 }); }
+  catch (e) { return String(x); }
 }
 
 // ─── LAS ALERTAS ─────────────────────────────────────────────

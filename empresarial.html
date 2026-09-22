@@ -825,6 +825,40 @@ input.li:focus{border-color:var(--acc-d);}
   .aud-val{text-align:left;}
 }
 
+
+/* ─── SEMÁFORO SEMANAL ──────────────────────────────── */
+/*
+  Cuatro estados de color y tres de ausencia. Los de ausencia importan
+  tanto como los otros: «no lo sé» tiene que verse distinto de «va mal»,
+  o alguien apaga una campaña por un dato que nunca existió.
+*/
+.sem{--sem-c:var(--t-mut3);}
+.sem.verde{--sem-c:#4f7a3a;} .sem.amarillo{--sem-c:#8a6a13;}
+.sem.rojo{--sem-c:#a8563a;} .sem.incompleto{--sem-c:#8a6a13;}
+.sem-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;}
+.sem-luz{background:var(--s-card);border:1px solid var(--s-line);border-top:3px solid var(--sem-c);
+  border-radius:12px;padding:14px 15px 13px;display:flex;flex-direction:column;gap:5px;min-height:136px;}
+.sem-lbl{font:600 10.5px/1 'DM Sans';letter-spacing:.1em;text-transform:uppercase;color:var(--t-mut2);}
+.sem-val{font:600 27px/1.05 'Fraunces',serif;color:var(--sem-c);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;}
+.sem-delta{font:500 12px/1.3 'DM Sans';color:var(--t-mut);font-variant-numeric:tabular-nums;}
+.sem-por{font:400 11.5px/1.45 'DM Sans';color:var(--t-mut2);}
+.sem-pill{align-self:flex-start;margin-top:auto;font:600 9.5px/1 'DM Sans';letter-spacing:.09em;
+  text-transform:uppercase;padding:3px 8px;border-radius:20px;background:var(--s-soft);color:var(--sem-c);}
+.sem-tab{width:100%;border-collapse:collapse;font:500 13px/1.4 'DM Sans';}
+.sem-tab td{padding:7px 0;border-bottom:1px solid var(--s-line2);color:var(--t-ink2);}
+.sem-tab td:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;}
+.sem-tab tr:last-child td{border-bottom:none;}
+.sem-tab tr.fuerte td{font-weight:700;color:var(--t-ink);}
+.sem-al{border-left:3px solid var(--sem-c);padding:9px 0 9px 12px;display:flex;
+  flex-direction:column;gap:3px;}
+.sem-al .t{font:600 13px/1.35 'DM Sans';color:var(--t-ink);}
+.sem-al .a{font:400 12.5px/1.55 'DM Sans';color:var(--t-mut);}
+.sem-pie{font:400 11.5px/1.6 'DM Sans';color:var(--t-mut3);border-top:1px solid var(--s-line2);
+  padding-top:11px;}
+@media(max-width:720px){ .sem-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .sem-luz{min-height:0;padding:12px;} .sem-val{font-size:22px;} }
+
 /* ─── INFORME DE CIERRE ─────────────────────────────── */
 .inf-head{border-bottom:2px solid var(--t-ink);padding-bottom:20px;margin-bottom:22px;}
 .inf-eyebrow{font:500 10.5px/1 'DM Sans';letter-spacing:.14em;text-transform:uppercase;
@@ -1213,6 +1247,18 @@ input.li:focus{border-color:var(--acc-d);}
       <!-- ════ HOY ════ -->
       <div class="view on" id="v-hoy">
 
+        <!--
+          Las cuatro luces de la semana que cerró. Van arriba de las
+          alarmas a propósito: las alarmas dicen qué pasó ayer, y esto
+          dice si el negocio va bien. Lo urgente no puede tapar lo
+          importante todos los días.
+
+          Solo aparece si el plan trae pauta y dinero y la persona puede
+          verlos; si no, el servidor no lo manda y este bloque se queda
+          vacío sin dejar un hueco.
+        -->
+        <div id="sem-luces"></div>
+
         <!-- Alarmas · mismo cálculo que el correo diario -->
         <div id="alarmas"></div>
 
@@ -1397,6 +1443,10 @@ input.li:focus{border-color:var(--acc-d);}
 
       <!-- ════ PAUTA Y ROAS ════ -->
       <div class="view" id="v-pauta">
+
+        <!-- El semáforo completo: luces, la semana y qué mirar. -->
+        <div id="sem-pauta"></div>
+
         <!--
           La guía de Meta vive aquí, no escondida en un correo de hace
           seis meses. Quien necesita conectar la cuenta publicitaria —o
@@ -3181,7 +3231,7 @@ async function cargarReales() {
      */
     if (!r.ok) {
       marcarOrigen(false, r.error);
-      cargarEstados(); cargarMeta();
+      cargarEstados(); cargarMeta(); cargarSemaforo();
       return;
     }
     REAL = r.datos;
@@ -3205,7 +3255,7 @@ async function cargarReales() {
                        cargarEquipo(), cargarAuditoria(), cargarAlarmas(),
                        cargarRecuento(), cargarProductos(),
                        cargarHistorial(), cargarCas(), cargarEstados(),
-                       cargarMeta()]);
+                       cargarMeta(), cargarSemaforo()]);
     // Una gestora sin pedidos asignados también merece respuesta. Si las
     // listas vinieron vacías nadie la habría pintado, y se quedaría
     // mirando un "buscando…" que ya terminó.
@@ -6669,7 +6719,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-22 · 01bf';
+const VERSION_PANTALLA = '2026-09-22 · 906b';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -8085,6 +8135,140 @@ async function probarMeta() {
  * encontrar arriba lo que más le cuesta.
  */
 let ESTADOS_DATA = null;
+
+// ─── SEMÁFORO SEMANAL ─────────────────────────────────────────
+/**
+ * Lo mismo que llega por correo el lunes, en la pantalla.
+ *
+ * Las cuatro luces van en Hoy y el detalle en Pauta, desde UNA sola
+ * llamada: son el mismo semáforo mirado con dos zooms distintos, y
+ * pedirlo dos veces abriría la puerta a que digan cosas diferentes.
+ *
+ * Si el plan no trae pauta y dinero, o la persona no puede verlos, el
+ * servidor responde que no y aquí no se dibuja nada. No se deja un
+ * cartel de «no tienes permiso»: un hueco explicado es ruido para quien
+ * no lo va a usar nunca.
+ */
+let SEM_DATA = null;
+
+async function cargarSemaforo() {
+  if (!CONECTADO) return false;
+  let r;
+  try { r = await api('semaforo', { tienda: ST }); }
+  catch (e) { return false; }
+  if (!r || !r.ok) { SEM_DATA = null; pintarSemaforo(); return false; }
+  SEM_DATA = r.semaforo;
+  pintarSemaforo();
+  return true;
+}
+
+const SEM_PILL = {
+  verde: 'Bien', amarillo: 'Ojo', rojo: 'Mal',
+  incompleto: 'Incompleto', sin_medir: 'Sin medir',
+  muestra_chica: 'Muestra chica', sin_umbral: 'Sin meta',
+};
+
+function semNum(v) {
+  if (v === null || v === undefined) return 'sin dato';
+  return Number(v).toLocaleString('es-CO', { maximumFractionDigits: 2 });
+}
+
+function semLuz(l) {
+  const clase = ['verde', 'amarillo', 'rojo', 'incompleto'].indexOf(l.estado) !== -1
+    ? l.estado : '';
+  return '<div class="sem sem-luz ' + clase + '">' +
+    '<div class="sem-lbl">' + esc(l.etiqueta) + '</div>' +
+    '<div class="sem-val">' + semNum(l.valor) + '</div>' +
+    (l.delta === null || l.delta === undefined ? ''
+      : '<div class="sem-delta">' + (l.delta >= 0 ? '▲ +' : '▼ ') + semNum(l.delta) +
+        ' vs. la semana anterior</div>') +
+    (l.porque ? '<div class="sem-por">' + esc(l.porque) + '</div>' : '') +
+    '<span class="sem-pill">' + (SEM_PILL[l.estado] || l.estado) + '</span>' +
+  '</div>';
+}
+
+function pintarSemaforo() {
+  const enHoy = document.getElementById('sem-luces');
+  const enPauta = document.getElementById('sem-pauta');
+  if (!SEM_DATA) {
+    if (enHoy) enHoy.innerHTML = '';
+    if (enPauta) enPauta.innerHTML = '';
+    return;
+  }
+  const s = SEM_DATA, m = s.moneda ? ' ' + s.moneda : '';
+  const rango = esc(s.semana.lunes) + ' a ' + esc(s.semana.domingo);
+
+  // Una semana sin datos no se disfraza de semana en ceros.
+  if (!s.hayDatos) {
+    const aviso = '<div class="card"><div class="ct">La semana ' + rango + ' está vacía</div>' +
+      '<p class="sem-por">No hay ni un pedido de esos días en la hoja. Eso no ' +
+      'significa que no se vendió: significa que la hoja no se actualizó. ' +
+      'Sube el reporte con el rango completo y vuelve a mirar.</p></div>';
+    if (enHoy) enHoy.innerHTML = aviso;
+    if (enPauta) enPauta.innerHTML = aviso;
+    return;
+  }
+
+  const luces = '<div class="sem-grid">' + s.luces.map(semLuz).join('') + '</div>';
+
+  if (enHoy) {
+    enHoy.innerHTML = '<div class="card">' +
+      '<div class="ct">Tu semana · ' + rango + '</div>' + luces +
+      '<div class="sem-por">El detalle está en Pauta y gastos.</div>' +
+    '</div>';
+  }
+  if (!enPauta) return;
+
+  const fila = function (k, v, fuerte) {
+    return '<tr' + (fuerte ? ' class="fuerte"' : '') + '><td>' + k + '</td><td>' + v + '</td></tr>';
+  };
+  const h = s.hoy;
+  const tabla = '<table class="sem-tab">' +
+    fila('Pedidos creados', h.pedidos) +
+    fila('Entregados', h.entregados) +
+    fila('Devoluciones', h.devoluciones) +
+    fila('Cancelados', h.cancelados) +
+    fila('En tránsito', h.enTransito) +
+    fila('Ganancia de entregados', semNum(h.ganancia) + m) +
+    fila('Costo de devoluciones', '− ' + semNum(h.costoDevoluciones) + m) +
+    fila('Utilidad antes de pauta', semNum(h.utilidadAntesPauta) + m, true) +
+    fila('Pauta', h.hayPauta ? semNum(h.gasto) + m : 'sin dato') +
+    fila('Utilidad real', h.utilidadReal === null ? 'sin dato' : semNum(h.utilidadReal) + m, true) +
+    fila('Techo de CPA', h.techo === null ? 'sin dato' : semNum(h.techo) + m) +
+  '</table>';
+
+  const alertas = s.alertas.map(function (a) {
+    const clase = a.nivel === 'rojo' ? 'rojo' : a.nivel === 'amarillo' ? 'amarillo' : '';
+    return '<div class="sem sem-al ' + clase + '">' +
+      '<div class="t">' + esc(a.titulo) + '</div>' +
+      '<div class="a">' + esc(a.accion) + '</div></div>';
+  }).join('');
+
+  const prods = s.productos.length ? '<div class="card">' +
+    '<div class="ct">Producto</div>' +
+    '<table class="sem-tab">' + s.productos.map(function (p) {
+      return '<tr><td>' + esc(p.producto) +
+        '<div class="sem-por">' + p.pedidos + (p.pedidos === 1 ? ' pedido · ' : ' pedidos · ') +
+        p.entregados + ' ent. / ' +
+        p.devoluciones + ' dev.' +
+        (p.señal === 'medible' ? '' : ' · ' + esc(p.señal)) + '</div></td>' +
+        '<td>' + (p.señal === 'medible' && p.gananciaPorPedido !== null
+                   ? semNum(p.gananciaPorPedido) + m : '—') + '</td></tr>';
+    }).join('') + '</table>' +
+    '<div class="sem-por">Ganancia neta por pedido. Se muestra solo donde hay ' +
+    'muestra suficiente: con pocos resueltos el azar manda sobre la cifra.</div>' +
+  '</div>' : '';
+
+  enPauta.innerHTML =
+    '<div class="card"><div class="ct">Tu semana · ' + rango + '</div>' + luces + '</div>' +
+    '<div class="card"><div class="ct">Los números</div>' + tabla +
+      '<div class="sem-pie">Solo los entregados generan ganancia. Cada devolución ' +
+      'cuesta el flete; los cancelados cuestan cero. La entrega es entregados ÷ ' +
+      '(entregados + devoluciones). El techo de CPA es la utilidad antes de pauta ÷ ' +
+      'pedidos creados. Donde no hay dato, dice sin dato.</div></div>' +
+    '<div class="card"><div class="ct">Qué mirar</div>' + alertas + '</div>' +
+    prods;
+}
 
 async function cargarEstados() {
   if (!CONECTADO) return false;

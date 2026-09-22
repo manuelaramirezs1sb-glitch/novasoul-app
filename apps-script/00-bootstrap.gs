@@ -226,6 +226,23 @@ const ESQUEMA_EMPRESARIAL = {
           'entrega','presupuesto','gasto','moneda_gasto','gasto_normalizado',
           'impresiones','alcance','frecuencia','clics','ctr','cpc','cpm',
           'resultados','compras','cpa','roas','valor_conv','visitas_lp'],
+
+  /**
+   * Los anuncios, uno por uno. Hoja APARTE de Pauta, y es lo importante.
+   *
+   * El mismo gasto existe en los dos niveles: un conjunto de 100 con tres
+   * anuncios adentro son 100 en Pauta y 100 repartidos aquí. Si vivieran
+   * en la misma hoja, cualquier suma contaría el gasto dos veces y el
+   * margen saldría a la mitad sin que nada avisara.
+   *
+   * Separados, cada hoja responde una pregunta distinta y ninguna miente:
+   * Pauta dice cuánto cuesta el conjunto —que es donde se mueve el
+   * presupuesto— y Anuncios dice cuál creativo está tirando del carro.
+   */
+  Anuncios: ['id','fecha','tienda','plataforma','cuenta','campana','conjunto',
+             'anuncio','anuncio_id','gasto','moneda_gasto',
+             'impresiones','alcance','frecuencia','clics','ctr','cpc','cpm',
+             'resultados','compras','cpa','valor_conv','visitas_lp'],
   /**
    * Lo que la operación cuesta aunque no se venda nada.
    *

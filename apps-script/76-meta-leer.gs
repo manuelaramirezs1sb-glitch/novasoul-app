@@ -38,6 +38,30 @@
  */
 const META_NIVEL = 'adset';
 
+/**
+ * Y los anuncios, uno por uno, en su propia hoja.
+ *
+ * Es otra pregunta: el conjunto dice dónde va el presupuesto, el anuncio
+ * dice cuál creativo tira del carro. Se piden aparte y se guardan aparte
+ * porque el gasto está en los dos —el conjunto de 100 son los mismos 100
+ * repartidos entre sus anuncios— y sumarlos juntos contaría todo dos
+ * veces.
+ *
+ * Cuesta llamadas: un conjunto con cuatro creativos son cuatro filas por
+ * día en vez de una. Por eso se puede apagar por tienda, y por eso la
+ * lectura diaria trae menos días de anuncios que de conjuntos.
+ */
+const META_NIVEL_ANUNCIO = 'ad';
+
+const META_CAMPOS_ANUNCIO = [
+  'date_start', 'account_currency', 'campaign_name', 'adset_name',
+  'ad_name', 'ad_id', 'spend', 'impressions', 'reach', 'frequency',
+  'clicks', 'ctr', 'cpc', 'cpm', 'actions', 'action_values',
+];
+
+/** Cuántos días de anuncios se repiden a diario. Menos que los conjuntos. */
+const META_DIAS_ANUNCIOS = 3;
+
 const META_CAMPOS = [
   'date_start', 'date_stop', 'account_currency',
   'campaign_name', 'adset_name', 'adset_id',
@@ -323,6 +347,91 @@ function metaFilasSolapadas_(ss, tienda, desde, hasta) {
   return n;
 }
 
+/**
+ * Los anuncios de una tienda, a su propia hoja.
+ *
+ * No toca Pauta. Nada de lo que escribe aquí entra en ninguna suma de
+ * gasto: esta hoja existe para comparar creativos entre sí, no para
+ * cuadrar plata. El total de la cuenta sigue saliendo de Pauta.
+ */
+function metaLeerAnuncios_(sheetId, tienda, token, dias) {
+  const ss = SpreadsheetApp.openById(sheetId);
+  const cuenta = metaCuenta(ss, tienda);
+  const informe = { tienda: tienda, ok: false, error: '', filas: 0,
+                    nuevas: 0, actualizadas: 0, iguales: 0, desde: '', hasta: '' };
+
+  if (!cuenta) { informe.error = 'Esta tienda no tiene cuenta publicitaria.'; return informe; }
+  if (!ss.getSheetByName('Anuncios')) {
+    informe.error = 'Falta la hoja Anuncios. Corre bootstrapTodo() una vez.';
+    return informe;
+  }
+
+  const hasta = metaFecha_(0);
+  const desde = metaFecha_(Math.max(1, dias || META_DIAS_ANUNCIOS));
+  informe.desde = desde; informe.hasta = hasta;
+
+  const url = META_API + 'act_' + cuenta + '/insights' +
+    '?level=' + META_NIVEL_ANUNCIO +
+    '&time_increment=1' +
+    '&time_range=' + encodeURIComponent(JSON.stringify({ since: desde, until: hasta })) +
+    '&fields=' + META_CAMPOS_ANUNCIO.join(',') +
+    '&limit=200' +
+    '&access_token=' + encodeURIComponent(token);
+
+  const r = metaPedir_(url, token);
+  if (!r.ok) { informe.error = r.error; return informe; }
+
+  informe.filas = r.filas.length;
+  if (!r.filas.length) { informe.ok = true; return informe; }
+
+  const filas = r.filas.map(function (f) {
+    const fecha = String(f.date_start || '').slice(0, 10);
+    const compra = metaAccion_(f.actions, META_ACCIONES_COMPRA);
+    const lead   = metaAccion_(f.actions, META_ACCIONES_LEAD);
+    const lp     = metaAccion_(f.actions, META_ACCION_LP);
+    const valor  = metaAccion_(f.action_values, META_ACCIONES_COMPRA);
+    const resultado = compra || lead;
+    const gasto = Number(f.spend) || 0;
+
+    // El id lleva el ad_id de Meta, que sí es único y estable. En Pauta
+    // no se puede: el informe de conjuntos no siempre trae adset_id.
+    return {
+      id: ['meta', tienda, fecha, String(f.ad_id || norm(f.ad_name || ''))]
+            .join('-').replace(/\s+/g, '_').slice(0, 180),
+      fecha: fecha, tienda: tienda, plataforma: 'meta', cuenta: cuenta,
+      campana: String(f.campaign_name || '').trim(),
+      conjunto: String(f.adset_name || '').trim(),
+      anuncio: String(f.ad_name || '').trim(),
+      anuncio_id: String(f.ad_id || ''),
+      gasto: gasto,
+      moneda_gasto: String(f.account_currency || '').toUpperCase(),
+      impresiones: Number(f.impressions) || 0,
+      alcance: Number(f.reach) || 0,
+      frecuencia: Number(f.frequency) || 0,
+      clics: Number(f.clicks) || 0,
+      ctr: Number(f.ctr) || 0,
+      cpc: Number(f.cpc) || 0,
+      cpm: Number(f.cpm) || 0,
+      resultados: resultado ? resultado.valor : 0,
+      compras: compra ? compra.valor : 0,
+      cpa: (resultado && resultado.valor) ? gasto / resultado.valor : '',
+      valor_conv: valor ? valor.valor : '',
+      visitas_lp: lp ? lp.valor : '',
+    };
+  });
+
+  try {
+    const esc = escribirFilas(ss, 'Anuncios', filas, 'meta');
+    informe.nuevas = esc.nuevas;
+    informe.actualizadas = esc.actualizadas;
+    informe.iguales = esc.iguales;
+    informe.ok = true;
+  } catch (err) {
+    informe.error = err.message;
+  }
+  return informe;
+}
+
 /** Todas las tiendas de un cliente. */
 function metaLeerCliente_(sheetId, dias) {
   const token = PropertiesService.getScriptProperties()
@@ -343,7 +452,21 @@ function metaLeerCliente_(sheetId, dias) {
     if (!id) return;
     if (cEstado !== -1 && norm(f[cEstado]) === 'inactiva') return;
     if (!metaCuenta(ss, id)) return;            // esa tienda no tiene cuenta conectada
-    out.push(metaLeerTienda_(sheetId, id, token, dias));
+    const r = metaLeerTienda_(sheetId, id, token, dias);
+    // Los anuncios solo si esa tienda los quiere. Y si fallan, no
+    // arrastran a la lectura de conjuntos: el gasto ya quedó escrito.
+    if (norm(ajustes(ss, id).meta_anuncios) === 'si') {
+      try {
+        r.anuncios = metaLeerAnuncios_(sheetId, id, token, META_DIAS_ANUNCIOS);
+        if (!r.anuncios.ok && r.anuncios.error) {
+          r.avisos.push('Los conjuntos entraron bien, pero los anuncios no: ' +
+                        r.anuncios.error);
+        }
+      } catch (e) {
+        r.avisos.push('Los conjuntos entraron bien, pero los anuncios no: ' + e.message);
+      }
+    }
+    out.push(r);
   });
   return { sheetId: sheetId, tiendas: out };
 }
@@ -408,6 +531,24 @@ function apiMetaTraer(s, p) {
 
   const informe = metaLeerTienda_(s.sheetId, tienda, token, dias);
   if (!informe.ok) return { ok: false, error: informe.error };
+
+  /**
+   * Los anuncios se traen con menos días que los conjuntos, aunque se
+   * pidan muchos. Un año a nivel de anuncio son miles de filas y varias
+   * páginas por cuenta: se llenaría la cuota de la hora y quedaría a
+   * medias, que es peor que no traerlo.
+   */
+  const ss2 = SpreadsheetApp.openById(s.sheetId);
+  if (norm(ajustes(ss2, tienda).meta_anuncios) === 'si') {
+    try {
+      informe.anuncios = metaLeerAnuncios_(s.sheetId, tienda, token, Math.min(dias, 90));
+      if (!informe.anuncios.ok && informe.anuncios.error) {
+        informe.avisos.push('Los anuncios no se pudieron traer: ' + informe.anuncios.error);
+      }
+    } catch (e) {
+      informe.avisos.push('Los anuncios no se pudieron traer: ' + e.message);
+    }
+  }
 
   registrarMovimiento(s, 'Pauta', 'meta', 'traer', tienda,
     informe.nuevas + ' nuevas / ' + informe.actualizadas + ' corregidas');

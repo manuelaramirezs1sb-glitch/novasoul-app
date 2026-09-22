@@ -1280,7 +1280,17 @@ function modalidadDeTienda(ss, tienda) {
 function apiEquipo(s, p) {
   const ss = SpreadsheetApp.openById(s.sheetId);
   const sh = ss.getSheetByName('Equipo');
-  if (!sh || sh.getLastRow() < 2) return { ok: true, personas: [] };
+  /**
+   * `puedeEditar` también va aquí, y no solo en la salida de abajo.
+   *
+   * Cuando faltaba, una cuenta con el Equipo vacío le respondía a su
+   * propia dueña que no podía editar: la pantalla escondía el formulario
+   * y los botones, y quedaba sin forma de agregar a la primera persona.
+   * Era el peor momento posible para negar el permiso — justo el día uno.
+   */
+  if (!sh || sh.getLastRow() < 2) {
+    return { ok: true, personas: [], puedeEditar: s.rol === 'dueno' };
+  }
 
   const mes = String(p.mes || Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM'));
   const tienda = String(p.tienda || '').trim();

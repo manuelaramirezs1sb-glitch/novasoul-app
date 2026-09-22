@@ -144,6 +144,17 @@ const AJUSTES_DEFAULT = {
   meta_cuenta: '',
 
   /**
+   * Si Nova también baja los anuncios uno por uno.
+   *
+   * Cuesta llamadas: un conjunto con cuatro creativos son cuatro filas
+   * por día en vez de una, y el nivel de acceso de una app nueva permite
+   * 300 llamadas por hora. Por eso arranca encendido pero se puede
+   * apagar: hay cuentas donde saber cuál creativo tira no cambia ninguna
+   * decisión, y pagar por ese dato sin usarlo no tiene sentido.
+   */
+  meta_anuncios: 'si',
+
+  /**
    * Los umbrales del semáforo semanal.
    *
    * Viven aquí, junto al resto de ajustes de la tienda, y no escondidos
