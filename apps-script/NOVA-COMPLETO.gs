@@ -3660,6 +3660,74 @@ function paresEnUso(ss) {
   });
 }
 
+/**
+ * Los pares que hacen falta para convertir el GASTO DE PAUTA.
+ *
+ * Son otros pares, y por eso existe esta función aparte. Meta no cobra
+ * en la moneda de la tienda: le cobra en la del medio de pago. Una
+ * tienda de Guatemala puede facturar en quetzales y que Meta le cobre en
+ * dólares, y ese gasto se convierte a la moneda de la TIENDA —no a la
+ * del reporte— porque es contra las ventas de esa tienda que se compara.
+ *
+ * Mientras esto no existió, paresEnUso decidía sola qué tasas traer.
+ * A Nutrea le funcionaba de rebote: reporta en pesos, Meta le cobra en
+ * pesos, y el par USD->COP servía invertido. A una tienda que facture y
+ * reporte en la misma moneda le habría devuelto «no hacen falta tasas»,
+ * y el gasto se habría quedado sin convertir para siempre sin que nada
+ * lo dijera.
+ */
+function paresDeGasto(ss) {
+  const sh = ss.getSheetByName('Pauta');
+  if (!sh || sh.getLastRow() < 2) return [];
+
+  const datos = sh.getDataRange().getValues();
+  const enc = datos[0].map(norm);
+  const cMon = enc.indexOf('moneda_gasto');
+  const cTienda = enc.indexOf('tienda');
+  if (cMon === -1 || cTienda === -1) return [];
+
+  const monedaDe = {};   // se pregunta una vez por tienda, no una por fila
+  const vistos = {};
+
+  datos.slice(1).forEach(function (f) {
+    const origen = String(f[cMon] || '').toUpperCase();
+    const t = String(f[cTienda] || '').trim();
+    if (!origen || !t) return;
+    if (!(t in monedaDe)) {
+      try { monedaDe[t] = String(monedaDeTienda(ss, t) || '').toUpperCase(); }
+      catch (e) { monedaDe[t] = ''; }
+    }
+    const destino = monedaDe[t];
+    if (!destino || destino === origen) return;
+    vistos[origen + '|' + destino] = 1;
+  });
+
+  return Object.keys(vistos).map(function (k) {
+    const p = k.split('|');
+    return { origen: p[0], destino: p[1] };
+  });
+}
+
+/**
+ * Todo lo que hay que traer: lo del reporte y lo de la pauta, sin repetir.
+ *
+ * Un par y su inverso son el mismo par para buscarTasa —sabe dividir—,
+ * así que traer los dos sería gastar dos consultas para el mismo dato.
+ */
+function paresNecesarios(ss) {
+  const out = [];
+  const vistos = {};
+  paresEnUso(ss).concat(paresDeGasto(ss)).forEach(function (p) {
+    if (!p.origen || !p.destino || p.origen === p.destino) return;
+    const directo = p.origen + '|' + p.destino;
+    const inverso = p.destino + '|' + p.origen;
+    if (vistos[directo] || vistos[inverso]) return;
+    vistos[directo] = 1;
+    out.push(p);
+  });
+  return out;
+}
+
 /** La moneda en que el dueño ve su plata. Sale de Parametros. */
 function monedaReporte(ss) {
   const sh = ss.getSheetByName('Parametros');
@@ -3689,9 +3757,10 @@ function monedaReporte(ss) {
  */
 function actualizarTasas(cliente, dias) {
   const ss = SpreadsheetApp.openById(hojaCliente(cliente));
-  const pares = paresEnUso(ss);
+  const pares = paresNecesarios(ss);
   if (!pares.length) {
-    Logger.log('No hay pares que actualizar: todas las tiendas reportan en la misma moneda.');
+    Logger.log('No hay pares que actualizar: las tiendas reportan en su misma ' +
+               'moneda y la pauta se cobra en esa misma moneda.');
     return 'Sin pares que actualizar.';
   }
 
@@ -8913,35 +8982,94 @@ function verAutomatico() {
            (puestos[fn] ? '' : '  ← APAGADO, corre prenderAutomatico()');
   });
 
-  // Y si las tasas están al día de verdad, no solo "instaladas"
+  /**
+   * Y si las tasas están al día de verdad, no solo "instaladas".
+   *
+   * Se revisa cuenta por cuenta, no una sola hoja: las tasas viven en la
+   * hoja de cada cliente, que es donde actualizarTasas las escribe.
+   * Mirar una sola diría "al día" mientras la de otro cliente lleva
+   * meses vacía — la respuesta correcta a la pregunta equivocada.
+   */
+  lineas.push('');
   try {
-    const ss = SpreadsheetApp.openById(IDS_().empresarial);
-    const sh = ss.getSheetByName('Tasas');
-    if (!sh || sh.getLastRow() < 2) {
-      lineas.push('');
-      lineas.push('OJO · la hoja Tasas está vacía. El gasto de pauta en otra ' +
-                  'moneda no se va a sumar hasta que tenga datos.');
-    } else {
-      const d = sh.getDataRange().getValues().slice(1);
-      let ultima = '';
-      d.forEach(function (f) {
-        const x = aISO(f[0], 'UTC');
-        if (x && x > ultima) ultima = x;
-      });
-      const hoy = ahoraISO().slice(0, 10);
-      const dias = ultima
-        ? Math.floor((new Date(hoy + 'T00:00:00Z') - new Date(ultima + 'T00:00:00Z')) / 86400000)
-        : 999;
-      lineas.push('');
-      lineas.push('Tasas: ' + d.length + ' filas, la más reciente del ' + (ultima || '—') +
-                  (dias > 3 ? '  ← lleva ' + dias + ' días sin actualizarse' : '  ✓ al día'));
+    const clientes = listarClientes();
+    if (!clientes.length) {
+      lineas.push('No hay clientes registrados todavía, así que no hay tasas que revisar.');
     }
+    clientes.forEach(function (c) {
+      if (!c.sheetId) return;
+      lineas.push(revisarTasasDe_(c.sheetId, c.empresa));
+    });
   } catch (e) {
-    lineas.push('');
-    lineas.push('No pude revisar la hoja Tasas: ' + e.message);
+    lineas.push('No pude revisar las tasas: ' + e.message);
   }
 
   const msg = 'LO AUTOMÁTICO DE NOVA\n\n' + lineas.join('\n');
   Logger.log(msg);
   return msg;
+}
+
+/**
+ * Una línea sobre las tasas de una cuenta.
+ *
+ * Distingue tres cosas que se confunden: que la hoja esté vacía, que
+ * esté vieja, y que no haga falta. Una tienda que factura en la misma
+ * moneda en que le cobran no necesita ninguna tasa, y decirle que le
+ * "faltan" sería mandarla a arreglar algo que no está roto.
+ */
+function revisarTasasDe_(sheetId, nombre) {
+  try {
+    const ss = SpreadsheetApp.openById(sheetId);
+    const pares = paresNecesarios(ss);
+    if (!pares.length) {
+      return '· ' + nombre + ': no necesita tasas — factura y le cobran en la misma moneda.';
+    }
+    const comoTexto = pares.map(function (p) {
+      return p.origen + '→' + p.destino;
+    }).join(', ');
+
+    const sh = ss.getSheetByName('Tasas');
+    if (!sh || sh.getLastRow() < 2) {
+      return '· ' + nombre + ': OJO · la hoja Tasas está VACÍA y esta cuenta sí ' +
+             'las necesita (' + comoTexto + '). El gasto de pauta no se va ' +
+             'a sumar hasta que las tenga — corre prenderAutomatico().';
+    }
+
+    /**
+     * Par por par, no la hoja entera.
+     *
+     * Mirar solo la fecha más reciente de toda la hoja diría "al día"
+     * mientras a un par le falta hasta la primera fila: basta con que
+     * otro par se esté actualizando bien para tapar el hueco.
+     */
+    const ultimaDe = {};
+    sh.getDataRange().getValues().slice(1).forEach(function (f) {
+      const fecha = aISO(f[0], 'UTC');
+      if (!fecha) return;
+      const o = String(f[1] || '').toUpperCase();
+      const d = String(f[2] || '').toUpperCase();
+      [o + '|' + d, d + '|' + o].forEach(function (k) {   // el inverso sirve igual
+        if (!ultimaDe[k] || fecha > ultimaDe[k]) ultimaDe[k] = fecha;
+      });
+    });
+
+    const hoy = ahoraISO().slice(0, 10);
+    const detalle = pares.map(function (p) {
+      const ultima = ultimaDe[p.origen + '|' + p.destino];
+      if (!ultima) return p.origen + '→' + p.destino + ' SIN NINGUNA TASA';
+      const dias = Math.floor(
+        (new Date(hoy + 'T00:00:00Z') - new Date(ultima + 'T00:00:00Z')) / 86400000);
+      return p.origen + '→' + p.destino +
+             (dias > 3 ? ' ' + dias + ' días atrasado (última: ' + ultima + ')'
+                       : ' ✓ al ' + ultima);
+    });
+
+    const malo = detalle.some(function (t) {
+      return t.indexOf('✓') === -1;
+    });
+    return '· ' + nombre + ': ' + detalle.join(' · ') +
+           (malo ? '\n    ← corre prenderAutomatico() en esta cuenta' : '');
+  } catch (e) {
+    return '· ' + nombre + ': no pude revisar las tasas — ' + e.message;
+  }
 }

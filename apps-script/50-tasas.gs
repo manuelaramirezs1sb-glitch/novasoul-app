@@ -50,6 +50,74 @@ function paresEnUso(ss) {
   });
 }
 
+/**
+ * Los pares que hacen falta para convertir el GASTO DE PAUTA.
+ *
+ * Son otros pares, y por eso existe esta función aparte. Meta no cobra
+ * en la moneda de la tienda: le cobra en la del medio de pago. Una
+ * tienda de Guatemala puede facturar en quetzales y que Meta le cobre en
+ * dólares, y ese gasto se convierte a la moneda de la TIENDA —no a la
+ * del reporte— porque es contra las ventas de esa tienda que se compara.
+ *
+ * Mientras esto no existió, paresEnUso decidía sola qué tasas traer.
+ * A Nutrea le funcionaba de rebote: reporta en pesos, Meta le cobra en
+ * pesos, y el par USD->COP servía invertido. A una tienda que facture y
+ * reporte en la misma moneda le habría devuelto «no hacen falta tasas»,
+ * y el gasto se habría quedado sin convertir para siempre sin que nada
+ * lo dijera.
+ */
+function paresDeGasto(ss) {
+  const sh = ss.getSheetByName('Pauta');
+  if (!sh || sh.getLastRow() < 2) return [];
+
+  const datos = sh.getDataRange().getValues();
+  const enc = datos[0].map(norm);
+  const cMon = enc.indexOf('moneda_gasto');
+  const cTienda = enc.indexOf('tienda');
+  if (cMon === -1 || cTienda === -1) return [];
+
+  const monedaDe = {};   // se pregunta una vez por tienda, no una por fila
+  const vistos = {};
+
+  datos.slice(1).forEach(function (f) {
+    const origen = String(f[cMon] || '').toUpperCase();
+    const t = String(f[cTienda] || '').trim();
+    if (!origen || !t) return;
+    if (!(t in monedaDe)) {
+      try { monedaDe[t] = String(monedaDeTienda(ss, t) || '').toUpperCase(); }
+      catch (e) { monedaDe[t] = ''; }
+    }
+    const destino = monedaDe[t];
+    if (!destino || destino === origen) return;
+    vistos[origen + '|' + destino] = 1;
+  });
+
+  return Object.keys(vistos).map(function (k) {
+    const p = k.split('|');
+    return { origen: p[0], destino: p[1] };
+  });
+}
+
+/**
+ * Todo lo que hay que traer: lo del reporte y lo de la pauta, sin repetir.
+ *
+ * Un par y su inverso son el mismo par para buscarTasa —sabe dividir—,
+ * así que traer los dos sería gastar dos consultas para el mismo dato.
+ */
+function paresNecesarios(ss) {
+  const out = [];
+  const vistos = {};
+  paresEnUso(ss).concat(paresDeGasto(ss)).forEach(function (p) {
+    if (!p.origen || !p.destino || p.origen === p.destino) return;
+    const directo = p.origen + '|' + p.destino;
+    const inverso = p.destino + '|' + p.origen;
+    if (vistos[directo] || vistos[inverso]) return;
+    vistos[directo] = 1;
+    out.push(p);
+  });
+  return out;
+}
+
 /** La moneda en que el dueño ve su plata. Sale de Parametros. */
 function monedaReporte(ss) {
   const sh = ss.getSheetByName('Parametros');
@@ -79,9 +147,10 @@ function monedaReporte(ss) {
  */
 function actualizarTasas(cliente, dias) {
   const ss = SpreadsheetApp.openById(hojaCliente(cliente));
-  const pares = paresEnUso(ss);
+  const pares = paresNecesarios(ss);
   if (!pares.length) {
-    Logger.log('No hay pares que actualizar: todas las tiendas reportan en la misma moneda.');
+    Logger.log('No hay pares que actualizar: las tiendas reportan en su misma ' +
+               'moneda y la pauta se cobra en esa misma moneda.');
     return 'Sin pares que actualizar.';
   }
 

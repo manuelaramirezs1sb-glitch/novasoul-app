@@ -62,12 +62,35 @@ app y usuario de sistema creados en el portfolio de Manuela, permiso de
 activo "ver rendimiento", token con `ads_read` únicamente.
 
 **Ojo con la moneda.** Meta le cobra en COP y esa tienda factura en USD.
-La conversión funciona sola porque buscarTasa sabe invertir un par —con
-USD→COP cargado, el COP→USD sale de dividir— pero exige que la hoja
-Tasas tenga los días del gasto. Sin ellos ese gasto NO se suma: se cuenta
-aparte como "sin convertir" y la pantalla lo dice. Eso es lo correcto, y
-es la misma protección que evitó el margen de −181.817% de antes; pero
-hay que correr `actualizarTasas()` para que sume.
+Sin la tasa del día de cada gasto ese gasto NO se suma: se cuenta aparte
+como "sin convertir" y la pantalla lo dice. Eso es lo correcto —es la
+misma protección que evitó el margen de −181.817% de antes— pero deja el
+CPA y el margen incompletos hasta que haya tasas.
+
+### Lo automático ya se prende con una sola función
+
+`prenderAutomatico()` en el Apps Script, una vez por cuenta. Instala los
+dos disparadores diarios (tasas 6 a.m., alarmas 7 a.m.) y carga de una
+vez los últimos 90 días de tasas. `verAutomatico()` dice qué quedó
+prendido y, aparte, si las tasas están de verdad al día.
+
+Dos cosas que había que arreglar para que eso sirviera:
+
+- **Los disparadores nunca se habían prendido.** `instalarTriggerTasas()`
+  e `instalarTriggerAlarmas()` existían desde siempre, cada uno con su
+  instalador aparte que había que correr a mano. Nadie los corrió. Eso
+  es peor que estar roto: *parecía* automático. La hoja Tasas vacía no da
+  error, y quien conecta Meta se queda esperando una conversión que no
+  va a llegar.
+- **`paresEnUso` no miraba dónde estaba el problema.** Decidía qué tasas
+  traer comparando la moneda de cada tienda con la del reporte — nunca
+  la moneda en que Meta cobra. A Nutrea le funcionaba de rebote (reporta
+  en pesos, le cobran en pesos, y el par USD→COP sirve invertido); a una
+  tienda que facture y reporte en la misma moneda y le cobren en otra le
+  habría respondido "no hacen falta tasas". Ahora `paresDeGasto()` lee la
+  moneda real del gasto en Pauta contra la moneda de esa tienda, y
+  `paresNecesarios()` junta las dos listas sin repetir inversos.
+  Probado en `apps-script/pruebas/tasas.js`.
 
 **Falta:** la lectura diaria. Que Nova le pida a Meta el gasto de ayer
 cada mañana y lo escriba en Pauta, en vez de que alguien baje el Excel.
