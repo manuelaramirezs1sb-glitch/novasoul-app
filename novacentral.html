@@ -640,7 +640,7 @@ let activeSt = 'gt';
  * La huella sale del contenido del archivo: cambia sola con cada cambio,
  * aunque sean dos versiones el mismo día.
  */
-const VERSION_PANTALLA = '2026-09-22 · 1e55';
+const VERSION_PANTALLA = '2026-09-22 · b2a9';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -837,7 +837,7 @@ function pintarAutomatico() {
       '<div style="flex:1;min-width:0">' +
         '<div class="row-nm">' + escC(t.nombre) + '</div>' +
         '<div class="row-sub">' +
-          (t.prendido ? 'Todos los días a las ' + t.hora + ':00'
+          (t.prendido ? escC(t.cuando || ('todos los días a las ' + t.hora + ':00'))
                       : escC(t.porque)) + '</div>' +
       '</div>' +
       '<span class="bd ' + (t.prendido ? 'bd-g' : 'bd-r') + '">' +

@@ -30,6 +30,7 @@ ORDEN = [
     ('70-importar.gs',     '11 · ESCRITURA'),
     ('75-meta.gs',         '12 · META'),
     ('76-meta-leer.gs',    '13 · META · LECTURA DIARIA'),
+    ('77-semaforo.gs',     '14 · SEMÁFORO SEMANAL'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

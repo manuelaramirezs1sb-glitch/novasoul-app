@@ -6659,7 +6659,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-22 · 1028';
+const VERSION_PANTALLA = '2026-09-22 · 0475';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -8351,6 +8351,9 @@ const PERMISOS_EXTRA = [
   ['subir_pauta', 'Puede subir pauta', 'Meta y TikTok: ahí está el gasto y el margen.'],
   ['subir_cartera', 'Puede subir la cartera',
    'El extracto de la billetera: cuánto hay, cuánto se retiró y con qué concepto.'],
+  // Mirar y escribir no son el mismo riesgo, así que son permisos distintos.
+  ['ver_dinero', 'Puede ver el dinero',
+   'Utilidad, techo de CPA y el semáforo semanal. Solo mirar, no subir nada.'],
 ];
 
 async function cargarEquipo() {

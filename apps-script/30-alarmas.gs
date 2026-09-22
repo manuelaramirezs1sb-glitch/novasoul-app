@@ -142,6 +142,24 @@ const AJUSTES_DEFAULT = {
    * quien abra la hoja ni quien se la descargue.
    */
   meta_cuenta: '',
+
+  /**
+   * Los umbrales del semáforo semanal.
+   *
+   * Viven aquí, junto al resto de ajustes de la tienda, y no escondidos
+   * dentro de un `if` del código que los usa: son decisiones de negocio.
+   * Un umbral que nadie puede ver es un umbral que nadie discute, y el
+   * día que el semáforo se equivoque hará falta poder moverlo sin tocar
+   * el código.
+   *
+   * `ticket_minimo` arranca en cero, que apaga esa luz. Es a propósito:
+   * el mínimo sano depende del catálogo y del país, y poner uno por
+   * defecto sería inventarle a cada cliente una meta que no es suya.
+   */
+  ticket_minimo: 0,       // por debajo, el ticket es rojo. Moneda de la tienda.
+  entrega_minima: 72,     // % de entrega sobre resuelto que se considera sano
+  muestra_minima: 10,     // resueltos que hacen falta para que una cifra signifique algo
+  cpa_verde_pct: 70,      // qué parte del techo se puede gastar antes del amarillo
 };
 
 /** Esquemas que sí se pueden abrir desde un enlace de la app. */

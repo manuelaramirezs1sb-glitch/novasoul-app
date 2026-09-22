@@ -137,6 +137,7 @@ function manejar(e, metodo) {
       case 'meta_guardar': return json(apiMetaGuardar(s, p));
       case 'meta_probar':  return json(apiMetaProbar(s, p));
       case 'meta_traer':   return json(apiMetaTraer(s, p));
+      case 'semaforo':     return json(apiSemaforo(s, p));
       case 'estado_clasificar': return json(apiEstadoClasificar(s, p));
       case 'borrar':    return json(apiBorrar(s, p));
       case 'cerrarmes': return json(apiCerrarMes(s, p));
@@ -344,8 +345,16 @@ const PERMISO_DE_FUENTE = {
   dropi_cartera: 'subir_cartera',
 };
 
+/**
+ * `ver_dinero` es el único que no habilita a subir nada: habilita a MIRAR.
+ *
+ * Hacía falta porque el semáforo semanal muestra utilidad, gasto y techo
+ * de CPA, y hasta ahora la única forma de que una admin los viera era
+ * darle permiso para SUBIR la pauta — que es otra cosa. Poder leer lo que
+ * la empresa gana y poder escribir lo que gastó no son el mismo riesgo.
+ */
 const PERMISOS_CONOCIDOS = ['subir_pedidos', 'subir_novedades', 'subir_pauta',
-                            'subir_cartera'];
+                            'subir_cartera', 'ver_dinero'];
 
 /**
  * Los permisos de una persona: los de su rol, más lo que la dueña le haya

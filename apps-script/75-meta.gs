@@ -277,7 +277,23 @@ const TRABAJOS = [
     // De último: juzga el día con el gasto ya adentro y ya convertido.
     porque: 'Sin esto, las alarmas solo se calculan cuando alguien abre Nova.',
   },
+  {
+    fn: 'semaforoLunes',
+    nombre: 'Semáforo semanal',
+    hora: 8,
+    // El único semanal. Va el lunes y a las 8, después de que las tasas,
+    // Meta y las alarmas de esa misma mañana ya corrieron: si saliera
+    // antes, juzgaría la semana con la pauta del viernes.
+    dia: 'MONDAY',
+    porque: 'Sin esto, el cierre de la semana solo existe si alguien lo pide.',
+  },
 ];
+
+/** Cómo se dice la frecuencia de un trabajo, en castellano. */
+function cuandoCorre_(t) {
+  return t.dia === 'MONDAY' ? 'los lunes a las ' + t.hora + ':00'
+                            : 'todos los días a las ' + t.hora + ':00';
+}
 
 /** Qué disparadores hay puestos ahora mismo, por función. */
 function trabajosPuestos_() {
@@ -330,15 +346,18 @@ function prenderTrabajos_() {
     const correcta = horas[t.fn] === t.hora;
 
     if (mios.length === 1 && correcta) {
-      return { fn: t.fn, nombre: t.nombre, ya: true, hora: t.hora };
+      return { fn: t.fn, nombre: t.nombre, ya: true, hora: t.hora,
+               cuando: cuandoCorre_(t) };
     }
     // Sobrantes o a la hora equivocada: se rehace. Dos disparadores de la
     // misma función leerían Meta dos veces la misma mañana.
     mios.forEach(function (d) { try { ScriptApp.deleteTrigger(d); } catch (e) {} });
-    ScriptApp.newTrigger(t.fn).timeBased().atHour(t.hora).everyDays(1).create();
+    const b = ScriptApp.newTrigger(t.fn).timeBased().atHour(t.hora);
+    if (t.dia) b.onWeekDay(ScriptApp.WeekDay[t.dia]).create();
+    else b.everyDays(1).create();
     horas[t.fn] = t.hora;
     return { fn: t.fn, nombre: t.nombre, ya: false, hora: t.hora,
-             rehecho: mios.length > 0 };
+             cuando: cuandoCorre_(t), rehecho: mios.length > 0 };
   });
 
   props.setProperty(PROP_HORAS, JSON.stringify(horas));
@@ -393,7 +412,7 @@ function prenderAutomatico() {
   const hechos = prenderTrabajos_().map(function (r) {
     if (r.ya) return '· ' + r.nombre + ': ya estaba corriendo.';
     return '· ' + r.nombre + ': ' + (r.rehecho ? 'reprogramado' : 'prendido') +
-           ', todos los días a las ' + r.hora + ':00.';
+           ', ' + r.cuando + '.';
   });
   hechos.push('· ' + cargaInicialTasas());
 
@@ -419,6 +438,7 @@ function estadoAutomatico() {
     // "Puesto a otra hora" cuenta como apagado: el orden entre los tres
     // es lo que hace que el gasto entre convertido y las alarmas lo vean.
     return { nombre: t.nombre, hora: t.hora, porque: t.porque,
+             cuando: cuandoCorre_(t),
              prendido: !!puestos[t.fn] && horas[t.fn] === t.hora };
   });
 
@@ -514,8 +534,7 @@ function verAutomatico() {
 
   const lineas = e.trabajos.map(function (t) {
     return (t.prendido ? '✓ ' : '✗ ') + t.nombre +
-           (t.prendido ? ' (todos los días a las ' + t.hora + ':00)'
-                       : '  ← APAGADO. ' + t.porque);
+           (t.prendido ? ' (' + t.cuando + ')' : '  ← APAGADO. ' + t.porque);
   });
 
   lineas.push('');
