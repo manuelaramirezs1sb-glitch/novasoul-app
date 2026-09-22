@@ -427,3 +427,70 @@ adentro están su ciclo, sus finanzas personales y su ánimo. Lo que
 resuelve el pedido sin dejar la puerta abierta es **compartir la sesión
 de Central**: ella no escribe ningún código, y quien no tenga esa sesión
 no ve nada. Es lo mismo que ya se hizo entre el hub y Empresarial.
+
+---
+
+## 7 · Lo que entró el 22-09-2026 por la tarde
+
+### La paleta de Nova Central — HECHA
+
+Manuela: «no me gustan esos colores, no tiene el modo claro, muy oscuro
+para mi gusto». Tenía razón a medias y la mitad importa: **el modo claro
+existía, pero Central arrancaba en oscuro y había que pedirlo.** Nadie va
+a buscar el interruptor de algo que no sabe que está apagado.
+
+Ahora el claro es la casa y el oscuro la excepción que se marca.
+
+La paleta nueva sale del tema de la pantalla, que es plata: **un libro de
+cuentas**. Papel tibio (`#F3F1E9`), tinta (`#23272B`), el verde profundo
+de las rayas contables como acento (`#2F5E4E`) y latón para lo que hay
+que mirar (`#B8873B`).
+
+Descartados y por qué: el rosa del tablero que mandó de referencia —dijo
+que «tampoco me mata»—; el azul marino, que ya había descartado para
+NovaSoul; y el verde amarillento de Nova Empresarial, que es otra
+pantalla y no deben confundirse.
+
+**El rojo y el verde de dinero van aparte del acento.** Si el acento
+fuera verde y lo positivo también, una cifra buena no se distinguiría de
+un botón. Y lo ATRASADO va en rojo: una cifra que pide llamar hoy no
+puede verse igual que una que está bien.
+
+### PHH es confidencial — queda por escrito
+
+Manuela: «los de PHH normalmente son confidenciales, entonces para que
+dejes eso por escrito, y sepas que lo comparto con Nova solo por
+organización».
+
+Queda dicho y manda sobre lo que se construya:
+
+- Lo de PHH se guarda **solo para organizarse**: qué hay que entregar y
+  cuándo. No es material para analizar, ni para entrenar nada, ni para
+  mostrar en ninguna pantalla compartida.
+- Vive en **NovaSoul**, que es la que no se abre delante de nadie. A
+  Central sube únicamente que existe un compromiso y cuánto ocupa — el
+  nombre del trabajo y sus horas. **El contenido no sube.**
+- Los documentos que suba de PHH no se copian a ninguna otra hoja ni se
+  mandan a ningún servicio externo.
+
+### Mindlab: su meta más alta ahora mismo
+
+Un programa de 3 meses y 12 semanas para monetizar su marca personal.
+NovaSoul tiene que tenerlo presente: es la meta contra la que se mide si
+una semana sirvió.
+
+| Mes | | Semanas |
+|---|---|---|
+| 1 · **Tráfico** | atraer a las personas correctas | 01 Fundamentos de marca · 02 Investigación y estrategia · 03 Producción · 04 Edición |
+| 2 · **Nutrición** | convertir seguidores en audiencia | 05 Historias que conectan · 06 Ecosistema de confianza · 07 Sistemas de conversión · 08 Ventas desde contenido |
+| 3 · **Venta** | monetizar la marca | 09 Diseño de oferta · 10 Creación de producto · 11 Infraestructura · 12 Landing pages |
+
+Cada semana trae UNA tarea concreta —«optimizar perfil y definir
+posicionamiento», «crear 30 ideas y 15 guiones», «grabar entre 8 y 12
+piezas», «lanzar tu sistema de adquisición»— y esas doce tareas son las
+que entran a NovaSoul como entregables con fecha.
+
+**Por qué importa para el diseño.** Sin esto, Mindlab compite en igualdad
+con Salsabor y con PHH por sus horas, y pierde siempre: no tiene cliente
+que reclame. Marcarla como meta es lo que permite que NovaSoul diga «esta
+semana no tocaste lo único que es tuyo».

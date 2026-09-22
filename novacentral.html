@@ -9,45 +9,75 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap">
 <script>
 (function(){
+  /*
+    Claro por defecto.
+    Antes era al revés —arrancaba oscuro y el claro había que pedirlo—
+    y por eso parecía que no existía el modo claro: nadie va a buscar
+    un interruptor de algo que no sabe que está apagado.
+  */
   const m = localStorage.getItem('nc_modo');
-  if(m === 'claro') document.documentElement.setAttribute('data-modo','claro');
+  if (m === 'oscuro') document.documentElement.setAttribute('data-modo','oscuro');
 })();
 </script>
 <style>
 /* ─── TOKENS ─── */
+/*
+  ═══════════════════════════════════════════════════════════
+   LA PALETA · un libro de cuentas, no un panel de control
+  ═══════════════════════════════════════════════════════════
+
+  Esta pantalla habla de plata: contratos, cobros, deudas, lo que entra
+  y lo que sale. Los colores salen de donde eso se ha anotado siempre —
+  el papel tibio de un libro contable, la tinta verde oscura de las
+  rayas, el latón de los cantos, y el rojo que se reservaba para lo que
+  estaba en rojo.
+
+  No es rosa y no es azul marino: los dos estaban descartados. Y no es
+  el verde amarillento de Nova Empresarial, que es otra pantalla y otra
+  cabeza — este verde es profundo y frío, no de campo.
+
+  El rojo y el verde de dinero van APARTE del acento. Si el acento
+  fuera verde y lo positivo también, una cifra buena no se distinguiría
+  de un botón.
+*/
 :root {
-  --bg:    #171a1c;
-  --bg2:   #1d2124;
-  --bg3:   #24292c;
-  --card:  #22272a;
-  --line:  #32383c;
-  --line2: #2b3134;
-  --ink:   #f0eee9;
-  --ink2:  #b8b4ab;
-  --ink3:  #837e74;
-  --gold:  #d4b45f;
-  --gold2: #a8872b;
-  --glow:  rgba(212,180,95,.14);
-  --green: #3ecf8e;
-  --red:   #ef5a6f;
-  --amber: #f5a623;
+  --bg:    #F3F1E9;   /* papel */
+  --bg2:   #EBE8DC;   /* el lomo: barra lateral */
+  --bg3:   #E4E0D1;   /* hundido: cabeceras de tabla */
+  --card:  #FCFBF7;   /* la hoja */
+  --line:  #D7D2C0;
+  --line2: #E3DFD1;
+  --ink:   #23272B;   /* tinta */
+  --ink2:  #545A54;
+  --ink3:  #878C82;
+  --gold:  #2F5E4E;   /* el acento: verde de libro contable */
+  --gold2: #23483C;
+  --glow:  rgba(47,94,78,.10);
+  --green: #2E7A55;   /* dinero que entra */
+  --red:   #A63A2C;   /* dinero que falta, o va tarde */
+  --amber: #B8873B;   /* latón: lo que hay que mirar */
   --r:     14px;
   --rsm:   9px;
   --sb:    210px;
+  --sobre-acc: #FCFBF7;  /* lo que va ENCIMA del acento */
 }
-[data-modo="claro"] {
-  --bg:   #f6f4ef;
-  --bg2:  #efece5;
-  --bg3:  #e6e2d9;
-  --card: #fffefb;
-  --line: #d9d4c8;
-  --line2:#e6e2d9;
-  --ink:  #22201c;
-  --ink2: #57534b;
-  --ink3: #8b857a;
-  --gold: #8a6a13;
-  --gold2:#7a5510;
-  --glow: rgba(138,106,19,.09);
+[data-modo="oscuro"] {
+  --bg:   #14171A;
+  --bg2:  #1A1E21;
+  --bg3:  #232829;
+  --card: #1F2426;
+  --line: #313837;
+  --line2:#272D2E;
+  --ink:  #ECEAE3;
+  --ink2: #A9AFA6;
+  --ink3: #7C8279;
+  --gold: #7FBBA1;
+  --gold2:#A8D0BC;
+  --glow: rgba(127,187,161,.14);
+  --green:#5BC48E;
+  --red:  #E4756A;
+  --amber:#D9A94E;
+  --sobre-acc: #14201B;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
@@ -57,7 +87,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 #login-screen{
   display:flex;align-items:center;justify-content:center;min-height:100vh;
   flex-direction:column;gap:32px;
-  background:radial-gradient(ellipse at 55% 25%,#172d52 0%,#07101e 70%);
+  background:radial-gradient(ellipse at 55% 22%,var(--bg2) 0%,var(--bg) 72%);
 }
 .lgn-logo{text-align:center;}
 .lgn-logo-img{max-width:220px;height:auto;}
@@ -69,8 +99,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
    · logo-nova-central-claro.png  → tinta blanca → fondo OSCURO */
 .logo-tinta{display:none!important;}
 .logo-blanco{display:block!important;}
-[data-modo="claro"] .logo-blanco{display:none!important;}
-[data-modo="claro"] .logo-tinta{display:block!important;}
+.logo-blanco{display:none!important;}
+[data-modo="oscuro"] .logo-blanco{display:block!important;}
+.logo-tinta{display:block!important;}
+[data-modo="oscuro"] .logo-tinta{display:none!important;}
 .lgn-card{
   background:rgba(18,35,61,.85);border:1px solid var(--line);border-radius:20px;
   backdrop-filter:blur(12px);padding:36px 40px;width:340px;
@@ -85,7 +117,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 }
 .f-inp:focus{border-color:var(--gold);}
 .lgn-btn{
-  background:var(--gold);color:#1c1a16;border:none;border-radius:var(--rsm);
+  background:var(--gold);color:var(--sobre-acc);border:none;border-radius:var(--rsm);
   padding:12px;font:600 14px 'DM Sans';cursor:pointer;transition:opacity .15s;
 }
 .lgn-btn:hover{opacity:.85;}
@@ -119,7 +151,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;
   border-radius:50%;background:var(--gold);transition:left .2s;
 }
-[data-modo="claro"] .tog-wrap::after{left:19px;}
+.tog-wrap::after{left:19px;}
+[data-modo="oscuro"] .tog-wrap::after{left:3px;}
 .sb-foot{padding:14px 16px 18px;border-top:1px solid var(--line);}
 .sb-user{display:flex;align-items:center;gap:10px;}
 .sb-ava{width:34px;height:34px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font:700 14px 'DM Sans';color:#1c1a16;flex-shrink:0;}
@@ -157,6 +190,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .kpi-lbl{font:500 9.5px/1 'DM Sans';letter-spacing:1px;color:var(--ink3);text-transform:uppercase;}
 .kpi-val{font:700 22px/1 'Playfair Display',serif;color:var(--ink);margin-top:7px;font-variant-numeric:tabular-nums;}
 .kpi-val.gold{color:var(--gold);}
+/* Lo atrasado va en rojo, no en el acento: una cifra que pide llamar
+   hoy no puede verse igual que una que está bien. */
+.kpi-val.mal{color:var(--red);}
 .kpi-sub{font:400 10.5px/1 'DM Sans';color:var(--ink3);margin-top:5px;}
 
 /* Badges */
@@ -168,7 +204,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 
 /* Action buttons */
 .btn{
-  display:inline-flex;align-items:center;gap:7px;background:var(--gold);color:#1c1a16;
+  display:inline-flex;align-items:center;gap:7px;background:var(--gold);color:var(--sobre-acc);
   border:none;border-radius:var(--rsm);padding:9px 18px;font:600 12.5px 'DM Sans';
   cursor:pointer;transition:opacity .15s;white-space:nowrap;
 }
@@ -228,7 +264,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   margin-left:auto;background:var(--card);border:1px solid var(--line2);border-radius:var(--rsm);
   padding:8px 16px;font:600 12px 'DM Sans';color:var(--ink2);cursor:pointer;flex-shrink:0;
 }
-.demo-tog.on{background:var(--green);color:#1c1a16;border-color:transparent;}
+.demo-tog.on{background:var(--green);color:var(--sobre-acc);border-color:transparent;}
 .demo-access-row{display:flex;align-items:center;gap:8px;}
 .demo-email-item{
   display:flex;align-items:center;gap:8px;padding:8px 12px;
@@ -430,7 +466,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
       </div>
     </nav>
     <div class="sb-modo">
-      <span class="sb-modo-lbl" id="modo-lbl">Modo oscuro</span>
+      <span class="sb-modo-lbl" id="modo-lbl">Modo claro</span>
       <div class="tog-wrap" onclick="toggleModo()"></div>
     </div>
     <div class="sb-foot">
@@ -738,7 +774,7 @@ let activeSt = 'gt';
  * La huella sale del contenido del archivo: cambia sola con cada cambio,
  * aunque sean dos versiones el mismo día.
  */
-const VERSION_PANTALLA = '2026-09-22 · 07d8';
+const VERSION_PANTALLA = '2026-09-22 · b6d9';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -881,9 +917,9 @@ function entrarCentral() {
   else document.querySelectorAll('.socia-solo').forEach(function (e) { e.style.display = 'none'; });
   sellarEjemploCentral();
 
-  const m = localStorage.getItem('nc_modo');
   const lbl = document.getElementById('modo-lbl');
-  if (lbl) lbl.textContent = m === 'claro' ? 'Modo claro' : 'Modo oscuro';
+  if (lbl) lbl.textContent =
+    document.documentElement.getAttribute('data-modo') === 'oscuro' ? 'Modo oscuro' : 'Modo claro';
 }
 
 async function salirCentral(porVencimiento) {
@@ -1005,7 +1041,8 @@ function pintarPlata() {
   if (k) {
     const T = MIO.totales;
     k.innerHTML = [
-      ['Atrasado', variasMonedas(T.atrasado), MIO.atrasados.length + ' cobro(s)', 'gold'],
+      ['Atrasado', variasMonedas(T.atrasado), MIO.atrasados.length + ' cobro(s)',
+       MIO.atrasados.length ? 'mal' : ''],
       ['Por cobrar', variasMonedas(T.porCobrar), MIO.porCobrar.length + ' cobro(s)', ''],
       ['Entró este mes', variasMonedas(T.ingresosMes), MIO.mes, ''],
       ['Salió este mes', variasMonedas(T.gastosMes), MIO.mes, ''],
@@ -1831,12 +1868,13 @@ function copyDemo(){
 
 /* ─── MODO ─── */
 function toggleModo(){
-  const curr = document.documentElement.getAttribute('data-modo');
-  const next  = curr === 'claro' ? null : 'claro';
-  if(next) document.documentElement.setAttribute('data-modo', 'claro');
-  else     document.documentElement.removeAttribute('data-modo');
-  localStorage.setItem('nc_modo', next ? 'claro' : 'oscuro');
-  document.getElementById('modo-lbl').textContent = next === 'claro' ? 'Modo claro' : 'Modo oscuro';
+  // El claro es la casa; el oscuro es la excepción que se marca.
+  const oscuro = document.documentElement.getAttribute('data-modo') === 'oscuro';
+  if (oscuro) document.documentElement.removeAttribute('data-modo');
+  else        document.documentElement.setAttribute('data-modo', 'oscuro');
+  localStorage.setItem('nc_modo', oscuro ? 'claro' : 'oscuro');
+  const lbl = document.getElementById('modo-lbl');
+  if (lbl) lbl.textContent = oscuro ? 'Modo claro' : 'Modo oscuro';
 }
 
 /* ─── TOAST ─── */
