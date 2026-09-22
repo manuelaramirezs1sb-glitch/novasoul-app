@@ -6,6 +6,7 @@ Se corren a mano, desde la raíz del repositorio. No se publican:
 ```
 node apps-script/pruebas/tasas.js     # lógica de tasas, sin abrir una hoja
 node pruebas/central-automatico.js    # la tarjeta de lo automático, en Chromium
+node pruebas/hub-puerta.js            # que el hub no se vea sin sesión
 node pruebas/guia-meta.js             # que la guía renderice en ancho y en móvil
 node pruebas/semaforo.js              # las reglas de cálculo del semáforo
 node pruebas/semaforo-pantalla.js     # el semáforo en Hoy y en Pauta

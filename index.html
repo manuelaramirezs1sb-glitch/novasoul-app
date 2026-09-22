@@ -178,9 +178,75 @@ body { margin: 0; background: var(--bg); font-family: 'DM Sans', sans-serif; min
 :root[data-modo="oscuro"] .hub-brand { color: #c9a84c; }
 :root[data-modo="oscuro"] .card { border-color: #1a2d42; }
 :root[data-modo="oscuro"] .card:hover { box-shadow: 0 12px 40px -8px rgba(0,0,0,.6), 0 0 0 1px rgba(201,168,76,.12); }
+
+/* ─── LA PUERTA ─────────────────────────────────────────
+   El hub deja de ser público. Antes, cualquiera que escribiera la
+   dirección veía los cuatro productos y podía deducir qué vende Nova y
+   a quién. No entraba a ninguno —cada uno pide su sesión— pero el mapa
+   entero estaba a la vista, y un mapa también es información. */
+#puerta{position:fixed;inset:0;z-index:100;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;padding:24px;}
+.pz{width:100%;max-width:380px;display:flex;flex-direction:column;gap:16px;text-align:center;}
+.pz img{width:64px;height:64px;border-radius:16px;object-fit:cover;align-self:center;}
+.pz h1{font:600 24px/1.2 'Fraunces',serif;color:var(--ink);margin:0;letter-spacing:-.01em;}
+.pz p{font:400 13.5px/1.6 'DM Sans';color:var(--mut);margin:0;}
+.pz-campo{display:flex;flex-direction:column;gap:6px;text-align:left;}
+.pz-campo span{font:600 10px/1 'DM Sans';letter-spacing:.11em;text-transform:uppercase;color:var(--mut);}
+.pz-inp{width:100%;background:var(--card);border:1px solid var(--line);border-radius:11px;
+  padding:13px 15px;font:500 14px/1.2 'DM Sans';color:var(--ink);outline:none;box-sizing:border-box;}
+.pz-inp:focus{border-color:var(--emp-acc);}
+.pz-btn{width:100%;background:var(--emp-acc);color:#fff;border:none;border-radius:11px;
+  padding:14px;font:600 14px/1 'DM Sans';cursor:pointer;}
+.pz-btn:disabled{opacity:.55;cursor:default;}
+.pz-err{font:500 12.5px/1.5 'DM Sans';color:#b8322f;display:none;}
+.pz-link{font:500 12.5px/1 'DM Sans';color:var(--mut);cursor:pointer;text-decoration:underline;}
+.pz-paso{display:none;flex-direction:column;gap:14px;}
+.pz-paso.on{display:flex;}
+/* Las tarjetas arrancan ocultas. Con la puerta encima igual no se
+   verían, pero si el CSS de la puerta fallara al cargar, el hub entero
+   quedaría a la vista. Dos cerrojos, no uno. */
+.card[data-mod]{display:none;}
 </style>
 </head>
 <body>
+
+<!--
+  Nada del hub se ve sin sesión. La puerta usa el mismo correo y el
+  mismo código que Nova Empresarial, y guarda el mismo token: entrar
+  aquí es entrar allá, sin pedir el código dos veces.
+
+  Nova Central NO entra en este trato. Tiene su propia lista de acceso y
+  su propio código, más corto, porque desde ahí se crean cuentas de
+  clientes. Su tarjeta solo aparece para quien la tenga en su plan.
+-->
+<div id="puerta">
+  <div class="pz">
+    <img src="nova-icono.png" alt="Nova">
+    <div>
+      <h1>Nova</h1>
+      <p id="pz-sub">Entra con tu correo. Te mando un código de 6 dígitos.</p>
+    </div>
+
+    <div class="pz-paso on" id="pz1">
+      <div class="pz-campo"><span>Correo</span>
+        <input class="pz-inp" id="pz-em" type="email" autocomplete="email" inputmode="email"
+          placeholder="tucorreo@tudominio.com"
+          onkeydown="if(event.key==='Enter')pzPedir()"></div>
+      <button class="pz-btn" id="pz-b1" onclick="pzPedir()">Enviarme el código</button>
+      <div class="pz-err" id="pz-e1"></div>
+    </div>
+
+    <div class="pz-paso" id="pz2">
+      <div class="pz-campo"><span>Código</span>
+        <input class="pz-inp" id="pz-cod" inputmode="numeric" maxlength="6" placeholder="000000"
+          style="text-align:center;font:700 24px/1 'Fraunces',serif;letter-spacing:9px;"
+          onkeydown="if(event.key==='Enter')pzVerificar()"></div>
+      <button class="pz-btn" id="pz-b2" onclick="pzVerificar()">Entrar</button>
+      <div class="pz-err" id="pz-e2"></div>
+      <span class="pz-link" onclick="pzPaso(1)">← Cambiar correo</span>
+    </div>
+  </div>
+</div>
 
 <div class="hub">
   <div class="hub-head">
@@ -253,7 +319,7 @@ body { margin: 0; background: var(--bg); font-family: 'DM Sans', sans-serif; min
  * Los demás aparecen cuando la hoja confirma que el plan los incluye.
  */
 /** La huella de esta pantalla, para saber si es la última. */
-const VERSION_PANTALLA = '2026-09-22 · e4f9';
+const VERSION_PANTALLA = '2026-09-22 · cc17';
 (function () {
   const el = document.getElementById('sello-version');
   if (el) el.textContent = 'Hub del ' + VERSION_PANTALLA;
@@ -271,7 +337,14 @@ const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SA
  */
 function verCards(modulos, razon) {
   document.querySelectorAll('.card[data-mod]').forEach(function (c) {
-    c.style.display = modulos.indexOf(c.dataset.mod) !== -1 ? '' : 'none';
+    /*
+      `flex` explícito, no cadena vacía.
+      Vaciar el estilo devolvería la tarjeta a la regla del CSS, que
+      ahora las oculta a todas por defecto — y entonces mostrar dejaba
+      de mostrar. Lo encontró la prueba: la puerta se abría y el hub
+      quedaba vacío.
+    */
+    c.style.display = modulos.indexOf(c.dataset.mod) !== -1 ? 'flex' : 'none';
   });
   const n = document.querySelector('.hub-note');
   if (!n) return;
@@ -292,24 +365,123 @@ function verCards(modulos, razon) {
   }
 }
 
-(async function () {
-  // Lo mínimo primero y sin esperar a nadie: si las cuatro tarjetas se
-  // pintan mientras la red responde, alcanzan a verse y luego desaparecen,
-  // que es justo lo contrario de lo que este hub promete.
-  const token = localStorage.getItem('ne_token');
-  verCards(['empresarial'], token ? 'cargando' : 'sin-sesion');
-  if (!token) return;
+// ─── LA PUERTA ────────────────────────────────────────────────
+/**
+ * Una sola llamada al servidor, y el mismo token que Nova Empresarial.
+ *
+ * Entrar aquí es entrar allá: la sesión se guarda con la misma llave del
+ * navegador (`ne_token`), así que pasar del hub a Empresarial no vuelve
+ * a pedir el código. Pedirlo dos veces para la misma persona y el mismo
+ * correo sería una molestia sin ninguna seguridad a cambio.
+ *
+ * Nova Central queda fuera a propósito. Tiene su propia lista de acceso
+ * —la hoja Plataforma— y su propio código, con una sesión más corta,
+ * porque desde ahí se crean cuentas de clientes. Si compartiera sesión
+ * con Empresarial, un permiso de más en el equipo de un cliente podría
+ * abrir la consola de todos.
+ */
+async function pedir(cuerpo) {
+  const r = await fetch(NOVA_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(cuerpo),
+  });
+  return r.json();
+}
+
+function pzPaso(n) {
+  document.getElementById('pz1').classList.toggle('on', n === 1);
+  document.getElementById('pz2').classList.toggle('on', n === 2);
+  const el = document.getElementById(n === 1 ? 'pz-em' : 'pz-cod');
+  if (el) el.focus();
+}
+
+function pzErr(id, msg) {
+  const e = document.getElementById(id);
+  if (!e) return;
+  e.textContent = msg || '';
+  e.style.display = msg ? 'block' : 'none';
+}
+
+let PZ_EMAIL = '';
+
+async function pzPedir() {
+  const em = (document.getElementById('pz-em').value || '').trim().toLowerCase();
+  if (!em || em.indexOf('@') === -1) { pzErr('pz-e1', 'Escribe un correo válido.'); return; }
+  pzErr('pz-e1', '');
+  const b = document.getElementById('pz-b1');
+  b.disabled = true; b.textContent = 'Mandando…';
   try {
-    const r = await fetch(NOVA_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ accion: 'yo', token: token }),
-    });
-    const j = await r.json();
-    if (j && j.ok && j.sesion && j.sesion.modulos) verCards(j.sesion.modulos, 'plan');
-    else verCards(['empresarial'], 'sin-sesion');
+    const j = await pedir({ accion: 'login', email: em });
+    if (!j || !j.ok) { pzErr('pz-e1', (j && j.error) || 'No se pudo enviar el código.'); return; }
+    PZ_EMAIL = em;
+    localStorage.setItem('ne_email', em);
+    document.getElementById('pz-sub').textContent =
+      'Mandé un código a ' + em + '. Vence en unos minutos.';
+    pzPaso(2);
   } catch (e) {
-    verCards(['empresarial'], 'sin-conexion');
+    pzErr('pz-e1', 'Sin conexión con el servidor.');
+  } finally { b.disabled = false; b.textContent = 'Enviarme el código'; }
+}
+
+async function pzVerificar() {
+  const cod = (document.getElementById('pz-cod').value || '').trim();
+  if (cod.length < 4) { pzErr('pz-e2', 'El código tiene 6 dígitos.'); return; }
+  pzErr('pz-e2', '');
+  const b = document.getElementById('pz-b2');
+  b.disabled = true; b.textContent = 'Entrando…';
+  try {
+    const j = await pedir({ accion: 'verificar', email: PZ_EMAIL, codigo: cod });
+    if (!j || !j.ok || !j.token) {
+      pzErr('pz-e2', (j && j.error) || 'Código incorrecto o vencido.');
+      return;
+    }
+    localStorage.setItem('ne_token', j.token);
+    abrirHub(j.sesion);
+  } catch (e) {
+    pzErr('pz-e2', 'Sin conexión con el servidor.');
+  } finally { b.disabled = false; b.textContent = 'Entrar'; }
+}
+
+/** Quitar la puerta y mostrar solo lo que esa cuenta tiene. */
+function abrirHub(sesion) {
+  const puerta = document.getElementById('puerta');
+  if (puerta) puerta.remove();
+  const mods = (sesion && sesion.modulos && sesion.modulos.length)
+    ? sesion.modulos : ['empresarial'];
+  verCards(mods, 'plan');
+  const h = document.querySelector('.hub-title');
+  if (h && sesion && sesion.nombre) h.textContent = 'Hola, ' + sesion.nombre;
+}
+
+(async function () {
+  /**
+   * Si ya hay sesión guardada, ni se ve la puerta.
+   *
+   * Pero la puerta NO se quita antes de que el servidor confirme: un
+   * token viejo o revocado dejaría el hub abierto a quien no debe. Se
+   * quita cuando la respuesta llega, no cuando el navegador recuerda.
+   */
+  const token = localStorage.getItem('ne_token');
+  const em = localStorage.getItem('ne_email');
+  if (em) {
+    const campo = document.getElementById('pz-em');
+    if (campo) campo.value = em;
+  }
+  if (!token) return;
+
+  const sub = document.getElementById('pz-sub');
+  if (sub) sub.textContent = 'Reconociéndote…';
+  try {
+    const j = await pedir({ accion: 'yo', token: token });
+    if (j && j.ok && j.sesion) { abrirHub(j.sesion); return; }
+    // Token muerto: se borra para que el próximo intento no lo reintente
+    localStorage.removeItem('ne_token');
+  } catch (e) {
+    if (sub) sub.textContent = 'No pude confirmar tu sesión. Entra con tu correo.';
+  }
+  if (sub && sub.textContent === 'Reconociéndote…') {
+    sub.textContent = 'Tu sesión se venció. Entra otra vez con tu correo.';
   }
 })();
 
