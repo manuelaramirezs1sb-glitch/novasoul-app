@@ -104,6 +104,7 @@ function montar(pautaExtra) {
   PEDIDOS.length = 0;
 }
 
+const metaHoy = () => new Date().toISOString().slice(0, 10);
 const ayer = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 const anteayer = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
 
@@ -198,6 +199,70 @@ RESPUESTAS = [
 i = F.metaLeerTienda_('hoja-1', 'gt', 'TOKEN', 7);
 ok('sigue el enlace y no pierde la segunda página', i.filas === 2, 'filas=' + i.filas);
 ok('escribe las dos', HOJAS.Pauta.length === 3, String(HOJAS.Pauta.length - 1));
+
+
+console.log('\nRANGOS LARGOS · por tramos, sin perder filas');
+// El remedo pagina como Meta: 500 por página, con enlace al resto.
+function metaPaginado(filasPorDia) {
+  return (url) => {
+    const m = url.match(/%22since%22%3A%22(\d{4}-\d{2}-\d{2})%22%2C%22until%22%3A%22(\d{4}-\d{2}-\d{2})%22/);
+    let total, servidas = Number((url.match(/__srv=(\d+)/) || [0, 0])[1]);
+    if (url.indexOf('__tot=') !== -1) total = Number(url.match(/__tot=(\d+)/)[1]);
+    else {
+      const dias = Math.round((new Date(m[2] + 'T00:00:00Z') - new Date(m[1] + 'T00:00:00Z')) / 86400000) + 1;
+      total = dias * filasPorDia;
+    }
+    const n = Math.min(500, Math.max(total - servidas, 0));
+    const data = [];
+    for (let i = 0; i < n; i++) data.push(filaMeta('2026-09-01', 'A' + (servidas + i), 1, []));
+    const out = { data: data };
+    if (servidas + n < total) out.paging = { next: 'https://g.fb/n?__tot=' + total + '&__srv=' + (servidas + n) };
+    return { getContentText: () => JSON.stringify(out) };
+  };
+}
+const fetchOriginal = global.UrlFetchApp.fetch;
+
+montar();
+let llamadas = 0;
+global.UrlFetchApp.fetch = (u) => { llamadas++; return metaPaginado(40)(u); };
+i = F.metaLeerTienda_('hoja-1', 'gt', 'TOKEN', 365);
+ok('un año de conjuntos llega entero', i.filas === 366 * 40, i.filas + ' de ' + 366 * 40);
+ok('y no dice que esté incompleto', !i.avisos.some(a => /INCOMPLETO/.test(a)),
+   JSON.stringify(i.avisos));
+ok('en varias llamadas, no en una', llamadas > 10, llamadas + ' llamadas');
+
+console.log('\nSI SE QUEDA A MEDIAS, LO DICE');
+// Tantas filas en un solo tramo que ni 40 páginas de 500 alcanzan.
+montar();
+global.UrlFetchApp.fetch = metaPaginado(2000);   // 31 días × 2000 = 62.000 en un tramo
+i = F.metaLeerTienda_('hoja-1', 'gt', 'TOKEN', 31);
+// Pedir 31 días hacia atrás son 32 días de calendario, o sea dos tramos:
+// el primero se topa a las 40 páginas de 500 (20.000 filas) y el segundo,
+// de un solo día, cabe entero (2.000). Lo que importa no es el número
+// exacto: es que trajo bastante menos de lo que hay y que lo DICE.
+ok('trae lo que cabe, no todo', i.filas > 0 && i.filas < 32 * 2000, String(i.filas));
+ok('y respeta el tope por tramo', i.filas === 20000 + 2000, String(i.filas));
+ok('y avisa que ese tramo está INCOMPLETO',
+   i.avisos.some(a => /INCOMPLETO/.test(a)), JSON.stringify(i.avisos));
+ok('sin hacerlo pasar por un error', i.ok === true);
+
+console.log('\nSI META FALLA A MITAD, NO BORRA LO TRAÍDO');
+montar();
+let n = 0;
+global.UrlFetchApp.fetch = (u) => {
+  n++;
+  if (n > 3) return { getContentText: () => JSON.stringify({ error: { code: 17, message: 'límite' } }) };
+  return metaPaginado(10)(u);
+};
+i = F.metaLeerTienda_('hoja-1', 'gt', 'TOKEN', 365);
+ok('lo de antes quedó guardado', i.filas > 0 && HOJAS.Pauta.length > 1,
+   i.filas + ' filas, hoja con ' + (HOJAS.Pauta.length - 1));
+ok('dice hasta qué fecha llegó', i.avisos.some(a => /Traje hasta el \d{4}-\d{2}-\d{2}/.test(a)),
+   JSON.stringify(i.avisos));
+ok('y el `hasta` del informe es esa fecha, no la pedida', i.hasta < metaHoy(),
+   i.hasta);
+
+global.UrlFetchApp.fetch = fetchOriginal;
 
 console.log('\nEL ORDEN DE LAS HORAS');
 const horas = F.TRABAJOS.map(t => t.fn + '@' + t.hora);

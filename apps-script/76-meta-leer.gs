@@ -62,6 +62,31 @@ const META_CAMPOS_ANUNCIO = [
 /** Cuántos días de anuncios se repiden a diario. Menos que los conjuntos. */
 const META_DIAS_ANUNCIOS = 3;
 
+/**
+ * Cuántas filas pide Nova por llamada, y cuántas páginas sigue.
+ *
+ * Estos dos números se pusieron a ojo y contarlos demostró que uno
+ * estaba mal. Ahora están medidos: con 500 por página, la lectura de
+ * una mañana son 2 llamadas en una cuenta chica y 5 en una grande. El
+ * presupuesto de Meta para eso se cuenta en miles por hora.
+ *
+ * El tope de páginas sigue existiendo —una cuenta rota no puede colgar
+ * el script— pero ya no se cruza en silencio: cuando se toca, se dice.
+ */
+const META_POR_PAGINA = 500;
+const META_PAGINAS_MAX = 40;
+
+/**
+ * En tramos de un mes cuando el rango es largo.
+ *
+ * El límite que muerde no es el de Meta: es el de Apps Script, seis
+ * minutos por ejecución. Cada tramo se escribe apenas llega.
+ */
+const META_DIAS_POR_TRAMO = 31;
+
+/** Cuánto puede tardar una lectura antes de rendirse y decir hasta dónde llegó. */
+const META_MS_MAX = 4 * 60 * 1000;
+
 const META_CAMPOS = [
   'date_start', 'date_stop', 'account_currency',
   'campaign_name', 'adset_name', 'adset_id',
@@ -138,7 +163,7 @@ function metaPedir_(url, token) {
   let siguiente = url;
   let vueltas = 0;
 
-  while (siguiente && vueltas < 40) {   // tope: una cuenta rota no cuelga el script
+  while (siguiente && vueltas < META_PAGINAS_MAX) {
     vueltas++;
     let r;
     try {
@@ -162,7 +187,42 @@ function metaPedir_(url, token) {
     }
   }
 
-  return { ok: true, filas: filas, paginas: vueltas };
+  /**
+   * Si quedó un enlace pendiente, la respuesta está INCOMPLETA y hay que
+   * decirlo.
+   *
+   * Antes no se decía: al llegar al tope el bucle salía y devolvía ok
+   * con lo que llevaba. Contando las llamadas apareció lo que eso
+   * significaba — un año de anuncios de una cuenta grande traía 8.000 de
+   * 54.900 filas y la pantalla respondía «listo». Quince por ciento de
+   * los datos presentados como el cien por ciento.
+   */
+  return { ok: true, filas: filas, paginas: vueltas, truncado: !!siguiente };
+}
+
+/**
+ * En cuántos tramos se parte un rango largo.
+ *
+ * Pedir un año de una sentada no falla por el límite de Meta —que es de
+ * miles de llamadas por hora— sino por el de Apps Script: seis minutos
+ * de ejecución. Por tramos, cada uno se escribe apenas llega, así que
+ * cuando se acaba el tiempo lo traído ya está guardado y lo que falta se
+ * sabe exactamente cuál es.
+ */
+function metaTramos_(desde, hasta, dias) {
+  const tramos = [];
+  let ini = desde;
+  while (ini <= hasta) {
+    const d = new Date(ini + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + dias - 1);
+    let fin = d.toISOString().slice(0, 10);
+    if (fin > hasta) fin = hasta;
+    tramos.push({ desde: ini, hasta: fin });
+    const s = new Date(fin + 'T00:00:00Z');
+    s.setUTCDate(s.getUTCDate() + 1);
+    ini = s.toISOString().slice(0, 10);
+  }
+  return tramos;
 }
 
 /** yyyy-MM-dd de hace N días, en la zona del script. */
@@ -203,26 +263,63 @@ function metaLeerTienda_(sheetId, tienda, token, dias) {
   const desde = metaFecha_(Math.max(1, dias || META_DIAS_DIARIO));
   informe.desde = desde; informe.hasta = hasta;
 
-  const url = META_API + 'act_' + cuenta + '/insights' +
-    '?level=' + META_NIVEL +
-    '&time_increment=1' +
-    '&time_range=' + encodeURIComponent(JSON.stringify({ since: desde, until: hasta })) +
-    '&fields=' + META_CAMPOS.join(',') +
-    '&limit=200' +
-    '&access_token=' + encodeURIComponent(token);
+  /**
+   * Por tramos de un mes, y cada uno se escribe apenas llega.
+   *
+   * Pedir un año de una sentada cabe de sobra en el presupuesto de Meta
+   * —son miles de llamadas por hora y esto son decenas— pero no en los
+   * seis minutos que Apps Script le da a una ejecución. Por tramos,
+   * cuando se acaba el tiempo lo traído ya está guardado y se sabe
+   * exactamente qué falta.
+   */
+  const arranque = Date.now();
+  const tramos = metaTramos_(desde, hasta, META_DIAS_POR_TRAMO);
+  const crudas = [];
+  let llegueHasta = '';
 
-  const r = metaPedir_(url, token);
-  if (!r.ok) { informe.error = r.error; return informe; }
+  for (let ti = 0; ti < tramos.length; ti++) {
+    const tr = tramos[ti];
+    const url = META_API + 'act_' + cuenta + '/insights' +
+      '?level=' + META_NIVEL +
+      '&time_increment=1' +
+      '&time_range=' + encodeURIComponent(JSON.stringify({ since: tr.desde, until: tr.hasta })) +
+      '&fields=' + META_CAMPOS.join(',') +
+      '&limit=' + META_POR_PAGINA +
+      '&access_token=' + encodeURIComponent(token);
 
-  informe.filas = r.filas.length;
-  if (!r.filas.length) {
+    const r = metaPedir_(url, token);
+    // Un tramo que falla con algo ya traído no borra lo traído: se dice
+    // hasta dónde se llegó y se sigue desde ahí la próxima vez.
+    if (!r.ok) {
+      if (!crudas.length) { informe.error = r.error; return informe; }
+      informe.avisos.push('Traje hasta el ' + llegueHasta + ' y ahí Meta falló: ' + r.error);
+      break;
+    }
+    r.filas.forEach(function (f) { crudas.push(f); });
+    llegueHasta = tr.hasta;
+
+    if (r.truncado) {
+      informe.avisos.push('El tramo del ' + tr.desde + ' al ' + tr.hasta + ' trae más ' +
+        'filas de las que Nova puede pedir de una vez. Está INCOMPLETO: ' +
+        'pide ese mes por separado.');
+    }
+    if (Date.now() - arranque > META_MS_MAX && ti < tramos.length - 1) {
+      informe.avisos.push('Se acabó el tiempo en el ' + llegueHasta + '. Lo de antes ' +
+        'quedó guardado; vuelve a darle para seguir desde ahí.');
+      break;
+    }
+  }
+  if (llegueHasta && llegueHasta < hasta) informe.hasta = llegueHasta;
+
+  informe.filas = crudas.length;
+  if (!crudas.length) {
     informe.ok = true;
     informe.avisos.push('Meta no reportó gasto en esos días.');
     return informe;
   }
 
   const tiposCompra = {}, tiposResultado = {};
-  const filas = r.filas.map(function (f) {
+  const filas = crudas.map(function (f) {
     const fecha = String(f.date_start || '').slice(0, 10);
     const moneda = String(f.account_currency || '').toUpperCase();
     if (moneda) informe.moneda = moneda;
@@ -358,7 +455,8 @@ function metaLeerAnuncios_(sheetId, tienda, token, dias) {
   const ss = SpreadsheetApp.openById(sheetId);
   const cuenta = metaCuenta(ss, tienda);
   const informe = { tienda: tienda, ok: false, error: '', filas: 0,
-                    nuevas: 0, actualizadas: 0, iguales: 0, desde: '', hasta: '' };
+                    nuevas: 0, actualizadas: 0, iguales: 0,
+                    desde: '', hasta: '', avisos: [] };
 
   if (!cuenta) { informe.error = 'Esta tienda no tiene cuenta publicitaria.'; return informe; }
   if (!ss.getSheetByName('Anuncios')) {
@@ -370,21 +468,51 @@ function metaLeerAnuncios_(sheetId, tienda, token, dias) {
   const desde = metaFecha_(Math.max(1, dias || META_DIAS_ANUNCIOS));
   informe.desde = desde; informe.hasta = hasta;
 
-  const url = META_API + 'act_' + cuenta + '/insights' +
-    '?level=' + META_NIVEL_ANUNCIO +
-    '&time_increment=1' +
-    '&time_range=' + encodeURIComponent(JSON.stringify({ since: desde, until: hasta })) +
-    '&fields=' + META_CAMPOS_ANUNCIO.join(',') +
-    '&limit=200' +
-    '&access_token=' + encodeURIComponent(token);
+  /**
+   * Los anuncios son muchas más filas que los conjuntos —un conjunto con
+   * cuatro creativos son cuatro filas por día— así que los tramos son
+   * más cortos. Mismo trato: cada uno se escribe apenas llega.
+   */
+  const arranque = Date.now();
+  const tramos = metaTramos_(desde, hasta, Math.round(META_DIAS_POR_TRAMO / 2));
+  const crudas = [];
+  let llegueHasta = '';
 
-  const r = metaPedir_(url, token);
-  if (!r.ok) { informe.error = r.error; return informe; }
+  for (let ti = 0; ti < tramos.length; ti++) {
+    const tr = tramos[ti];
+    const url = META_API + 'act_' + cuenta + '/insights' +
+      '?level=' + META_NIVEL_ANUNCIO +
+      '&time_increment=1' +
+      '&time_range=' + encodeURIComponent(JSON.stringify({ since: tr.desde, until: tr.hasta })) +
+      '&fields=' + META_CAMPOS_ANUNCIO.join(',') +
+      '&limit=' + META_POR_PAGINA +
+      '&access_token=' + encodeURIComponent(token);
 
-  informe.filas = r.filas.length;
-  if (!r.filas.length) { informe.ok = true; return informe; }
+    const r = metaPedir_(url, token);
+    if (!r.ok) {
+      if (!crudas.length) { informe.error = r.error; return informe; }
+      informe.avisos.push('Los anuncios llegaron hasta el ' + llegueHasta + ': ' + r.error);
+      break;
+    }
+    r.filas.forEach(function (f) { crudas.push(f); });
+    llegueHasta = tr.hasta;
 
-  const filas = r.filas.map(function (f) {
+    if (r.truncado) {
+      informe.avisos.push('Del ' + tr.desde + ' al ' + tr.hasta + ' hay más anuncios de ' +
+        'los que caben en una consulta. Ese tramo está INCOMPLETO.');
+    }
+    if (Date.now() - arranque > META_MS_MAX && ti < tramos.length - 1) {
+      informe.avisos.push('Los anuncios llegaron hasta el ' + llegueHasta +
+        ' y ahí se acabó el tiempo. Vuelve a darle para seguir.');
+      break;
+    }
+  }
+  if (llegueHasta && llegueHasta < hasta) informe.hasta = llegueHasta;
+
+  informe.filas = crudas.length;
+  if (!crudas.length) { informe.ok = true; return informe; }
+
+  const filas = crudas.map(function (f) {
     const fecha = String(f.date_start || '').slice(0, 10);
     const compra = metaAccion_(f.actions, META_ACCIONES_COMPRA);
     const lead   = metaAccion_(f.actions, META_ACCIONES_LEAD);
@@ -533,18 +661,22 @@ function apiMetaTraer(s, p) {
   if (!informe.ok) return { ok: false, error: informe.error };
 
   /**
-   * Los anuncios se traen con menos días que los conjuntos, aunque se
-   * pidan muchos. Un año a nivel de anuncio son miles de filas y varias
-   * páginas por cuenta: se llenaría la cuota de la hora y quedaría a
-   * medias, que es peor que no traerlo.
+   * Y los anuncios, el mismo rango.
+   *
+   * Aquí hubo un tope de 90 días que puse «porque se llenaría la cuota
+   * de la hora». Contando las llamadas resultó falso: una lectura de una
+   * mañana son 2 o 5 llamadas y Meta da miles por hora. El tope tapaba
+   * un problema distinto —quedarse a medias sin decirlo— que ahora está
+   * resuelto donde tenía que estarlo: por tramos, y avisando.
    */
   const ss2 = SpreadsheetApp.openById(s.sheetId);
   if (norm(ajustes(ss2, tienda).meta_anuncios) === 'si') {
     try {
-      informe.anuncios = metaLeerAnuncios_(s.sheetId, tienda, token, Math.min(dias, 90));
+      informe.anuncios = metaLeerAnuncios_(s.sheetId, tienda, token, dias);
       if (!informe.anuncios.ok && informe.anuncios.error) {
         informe.avisos.push('Los anuncios no se pudieron traer: ' + informe.anuncios.error);
       }
+      (informe.anuncios.avisos || []).forEach(function (a) { informe.avisos.push(a); });
     } catch (e) {
       informe.avisos.push('Los anuncios no se pudieron traer: ' + e.message);
     }
