@@ -422,6 +422,22 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 
       <!-- ─── CLIENTES ─── -->
       <div class="view" id="v-clientes">
+
+        <!--
+          Lo automático vive aquí y no en la pantalla de la dueña porque
+          los disparadores son del proyecto entero: se prenden una vez y
+          sirven para todos los clientes. Un botón en la pantalla de un
+          cliente le daría un interruptor que afecta a los demás.
+        -->
+        <div class="card" id="auto-card">
+          <div class="card-ttl">Lo que Nova hace sola</div>
+          <div style="font:400 12.5px/1.6 'DM Sans';color:var(--ink3);margin-bottom:10px">
+            Las tasas de cambio y la revisión de alarmas tienen que correr todos
+            los días sin que nadie las pida. Se prenden una vez y sirven para
+            todas las cuentas.</div>
+          <div id="auto-cuerpo"><div class="nc-vacio">Revisando…</div></div>
+        </div>
+
         <div class="card">
           <div class="card-ttl">Clientes en la plataforma</div>
           <div style="font:400 12.5px/1.6 'DM Sans';color:var(--ink3);margin-bottom:4px">
@@ -624,7 +640,7 @@ let activeSt = 'gt';
  * La huella sale del contenido del archivo: cambia sola con cada cambio,
  * aunque sean dos versiones el mismo día.
  */
-const VERSION_PANTALLA = '2026-09-22 · 794b';
+const VERSION_PANTALLA = '2026-09-22 · 1e55';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -762,6 +778,7 @@ function entrarCentral() {
   renderDemoAccess();
   pintarOnboarding();
   cargarClientes();
+  cargarAutomatico();
   sellarEjemploCentral();
 
   const m = localStorage.getItem('nc_modo');
@@ -779,6 +796,128 @@ async function salirCentral(porVencimiento) {
   if (porVencimiento) errC('Tu sesión se cerró por seguridad. Pide un código nuevo.');
 }
 function logout() { salirCentral(false); }
+
+/* ─── LO QUE NOVA HACE SOLA ───
+ *
+ * Los dos trabajos diarios existían desde el principio y nunca se
+ * prendieron, porque prenderlos exigía abrir el Apps Script, encontrar
+ * la función y ejecutarla a mano. Eso no se le puede pedir a nadie.
+ *
+ * Esta tarjeta hace dos cosas, y la segunda importa más: prende, y
+ * comprueba. Un disparador puede estar puesto y fallar todos los días en
+ * silencio; lo que dice si sirve no es que esté instalado, es que las
+ * tasas estén al día.
+ */
+let AUTO_DATA = null;
+
+async function cargarAutomatico() {
+  const cont = document.getElementById('auto-cuerpo');
+  if (!cont) return;
+  try {
+    const r = await nc('nc_automatico');
+    if (!r || !r.ok) {
+      cont.innerHTML = '<div class="nc-vacio">' +
+        escC((r && r.error) || 'No se pudo revisar.') + '</div>';
+      return;
+    }
+    AUTO_DATA = r.automatico;
+    pintarAutomatico();
+  } catch (e) {
+    cont.innerHTML = '<div class="nc-vacio">Sin conexión con la hoja.</div>';
+  }
+}
+
+function pintarAutomatico() {
+  const cont = document.getElementById('auto-cuerpo');
+  if (!cont || !AUTO_DATA) return;
+  const a = AUTO_DATA;
+
+  const trabajos = (a.trabajos || []).map(function (t) {
+    return '<div class="row-item">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div class="row-nm">' + escC(t.nombre) + '</div>' +
+        '<div class="row-sub">' +
+          (t.prendido ? 'Todos los días a las ' + t.hora + ':00'
+                      : escC(t.porque)) + '</div>' +
+      '</div>' +
+      '<span class="bd ' + (t.prendido ? 'bd-g' : 'bd-r') + '">' +
+        (t.prendido ? 'Corriendo' : 'Apagado') + '</span>' +
+    '</div>';
+  }).join('');
+
+  // Las tasas, cuenta por cuenta. Solo se nombra a quien las necesita:
+  // decirle «te faltan tasas» a quien factura y paga en la misma moneda
+  // es mandarla a arreglar algo que no está roto.
+  const conTasas = (a.clientes || []).filter(function (c) { return c.necesita || c.error; });
+  const tasas = conTasas.map(function (c) {
+    if (c.error) {
+      return '<div class="row-item"><div style="flex:1"><div class="row-nm">' +
+        escC(c.empresa) + '</div><div class="nc-prob">No pude revisar: ' +
+        escC(c.error) + '</div></div></div>';
+    }
+    const detalle = (c.pares || []).map(function (p) {
+      if (p.dias < 0) return p.par + ' · sin ninguna tasa';
+      if (p.bien)     return p.par + ' · al ' + p.ultima;
+      return p.par + ' · ' + p.dias + ' días atrasado';
+    }).join('  ·  ');
+    return '<div class="row-item">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div class="row-nm">' + escC(c.empresa) + '</div>' +
+        '<div class="' + (c.alDia ? 'row-sub' : 'nc-prob') + '">' + escC(detalle) + '</div>' +
+      '</div>' +
+      '<span class="bd ' + (c.alDia ? 'bd-g' : 'bd-r') + '">' +
+        (c.alDia ? 'Al día' : 'Sin convertir') + '</span>' +
+    '</div>';
+  }).join('');
+
+  const hayQueHacer = !a.todoPrendido || a.enFalta > 0;
+
+  const aviso = !hayQueHacer ? '' :
+    '<div class="nc-prob" style="margin:10px 0 0">' +
+      (!a.todoPrendido
+        ? 'Hay trabajos apagados. Nova no está corriendo sola.'
+        : a.enFalta + (a.enFalta === 1 ? ' cuenta tiene' : ' cuentas tienen') +
+          ' gasto de pauta que no se puede convertir: esa plata no está ' +
+          'entrando al CPA ni al margen.') +
+    '</div>';
+
+  const boton = hayQueHacer
+    ? '<button class="btn" id="auto-btn" onclick="prenderAutomaticoC()" ' +
+      'style="margin-top:12px">Prender lo automático</button>'
+    : '<div style="font:400 12px/1.6 \'DM Sans\';color:var(--ink3);margin-top:10px">' +
+      'Todo corriendo. Esta tarjeta avisa sola si algo se cae.</div>';
+
+  cont.innerHTML = trabajos +
+    (tasas ? '<div style="font:600 11.5px/1 \'DM Sans\';color:var(--ink3);' +
+             'letter-spacing:.06em;text-transform:uppercase;margin:16px 0 6px">' +
+             'Tasas de cambio por cuenta</div>' + tasas : '') +
+    aviso + boton;
+}
+
+async function prenderAutomaticoC() {
+  const btn = document.getElementById('auto-btn');
+  if (btn) { btn.textContent = 'Prendiendo…'; btn.style.opacity = '.6'; }
+  try {
+    const r = await nc('nc_automatico_prender');
+    if (!r || !r.ok) {
+      if (btn) { btn.textContent = 'Prender lo automático'; btn.style.opacity = '1'; }
+      const cont = document.getElementById('auto-cuerpo');
+      if (cont) cont.insertAdjacentHTML('beforeend',
+        '<div class="nc-prob" style="margin-top:10px;white-space:pre-line">' +
+        escC((r && r.error) || 'No se pudo.') + '</div>');
+      return;
+    }
+    AUTO_DATA = r.automatico;
+    pintarAutomatico();
+    const cont = document.getElementById('auto-cuerpo');
+    if (cont && r.mensaje) cont.insertAdjacentHTML('beforeend',
+      '<div style="font:400 12px/1.6 \'DM Sans\';color:var(--ink3);margin-top:10px">' +
+      escC(r.mensaje) + '</div>');
+    showToast('Lo automático quedó prendido');
+  } catch (e) {
+    if (btn) { btn.textContent = 'Prender lo automático'; btn.style.opacity = '1'; }
+  }
+}
 
 /* ─── CLIENTES ─── */
 async function cargarClientes() {

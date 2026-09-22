@@ -31,6 +31,9 @@ chats/
 project/
 sheets/
 
+# Pruebas: se corren aquí, no se publican
+pruebas/
+
 # Herramientas de construcción: se corren aquí, no se publican
 *.py
 netlify/

@@ -7609,6 +7609,8 @@ function manejarCentral(accion, p) {
     case 'nc_clientes': return centralClientes(s, p);
     case 'nc_planes':   return centralPlanes(s, p);
     case 'nc_crear':    return centralCrearCliente(s, p);
+    case 'nc_automatico':        return centralAutomatico(s, p);
+    case 'nc_automatico_prender':return centralPrenderAutomatico(s, p);
     case 'nc_salir':
       CacheService.getScriptCache().remove('nc_' + p.token);
       return { ok: true };
@@ -7954,6 +7956,89 @@ function primeraSocia(nombre, correo) {
   ].join('\n');
   Logger.log(msg);
   return msg;
+}
+
+
+// ─── LO AUTOMÁTICO, DESDE LA CONSOLA ─────────────────────────
+
+/**
+ * ═══════════════════════════════════════════════════════════
+ *  EL INTERRUPTOR DE LO AUTOMÁTICO
+ * ═══════════════════════════════════════════════════════════
+ *
+ * Los disparadores que hacen correr a Nova sola —las tasas de cambio y
+ * la revisión de alarmas— vivían únicamente en el Apps Script. Estaban
+ * escritos desde el principio y nunca se prendieron, porque prenderlos
+ * exigía abrir el editor, encontrar la función y ejecutarla a mano.
+ *
+ * Eso no se le puede pedir a nadie, y menos a un cliente. Pero tampoco
+ * va en la pantalla de la dueña: los disparadores son del proyecto
+ * entero, no de cada cuenta, y un botón ahí le daría a cualquier cliente
+ * un interruptor que afecta a todos los demás.
+ *
+ * Así que va aquí, en la consola, que es de Manuela.
+ */
+function centralAutomatico(s, p) {
+  if (!puedeCentral(s, 'ver')) return { ok: false, error: 'Tu rol no ve esto.' };
+  return { ok: true, automatico: estadoAutomatico() };
+}
+
+/**
+ * Prende los dos trabajos y programa la carga de tasas para dentro de un
+ * minuto.
+ *
+ * La carga NO se hace aquí. Bajar noventa días de tasas de GOOGLEFINANCE
+ * para varios clientes tarda más de lo que un navegador espera, y el
+ * botón se quedaría colgado sin que nadie supiera si funcionó. En vez de
+ * eso se arma un disparador de un solo uso: la respuesta vuelve al
+ * instante y el trabajo pesado corre solo, por detrás.
+ */
+function centralPrenderAutomatico(s, p) {
+  if (!puedeCentral(s, 'crear_cliente')) {
+    return { ok: false, error: 'Tu rol no puede prender lo automático.' };
+  }
+
+  let hechos;
+  try {
+    hechos = prenderTrabajos_();
+  } catch (e) {
+    /**
+     * Crear disparadores pide un permiso que la autorización vieja del
+     * script puede no tener. No se disfraza de otro error: se dice qué
+     * pasó y cuál es la salida, que es abrir el editor una vez.
+     */
+    return { ok: false, error:
+      'No pude crear los disparadores: ' + e.message + '\n\n' +
+      'Suele ser que la autorización del script es anterior a esta ' +
+      'función. Abre el Apps Script, corre prenderAutomatico() una vez ' +
+      'y acepta los permisos; después este botón ya funciona.' };
+  }
+
+  // Y la carga inicial, por detrás.
+  let cargando = false;
+  try {
+    const yaHay = ScriptApp.getProjectTriggers().some(function (t) {
+      return t.getHandlerFunction() === 'cargaInicialTasas';
+    });
+    if (!yaHay) {
+      ScriptApp.newTrigger('cargaInicialTasas').timeBased().after(60 * 1000).create();
+    }
+    cargando = true;
+  } catch (e) {
+    cargando = false;
+  }
+
+  return {
+    ok: true,
+    prendidos: hechos,
+    cargando: cargando,
+    automatico: estadoAutomatico(),
+    mensaje: cargando
+      ? 'Listo. Las tasas de los últimos 90 días empiezan a bajar en un minuto; ' +
+        'según cuántas cuentas haya puede tardar varios. Vuelve a mirar en un rato.'
+      : 'Los trabajos quedaron prendidos, pero no pude programar la carga de ' +
+        'las tasas viejas. Córrela a mano: cargaInicialTasas() en el Apps Script.',
+  };
 }
 
 
@@ -8897,61 +8982,122 @@ function explicarErrorMeta(e) {
  * en dólares, y se quedaba esperando una conversión que nunca iba a pasar
  * porque la hoja Tasas estaba vacía — sin un error, sin una pista.
  *
- * Ahora es una función: `prenderAutomatico()`. Y `verAutomatico()` dice
- * qué está corriendo, porque un automatismo que no se puede comprobar es
- * un automatismo en el que no se puede confiar.
+ * Ahora es un interruptor. Se puede accionar desde el Apps Script
+ * (`prenderAutomatico`) o desde la consola, con un botón — y se puede
+ * comprobar por los dos lados, porque un automatismo que no se puede
+ * comprobar es un automatismo en el que no se puede confiar.
+ *
+ * Una advertencia que vale por toda esta sección: los disparadores son
+ * del PROYECTO, no de cada cliente. Un solo Apps Script atiende a todos,
+ * así que se prenden una vez y sirven para todos. Por eso el botón vive
+ * en Nova Central y no en la pantalla de la dueña: no es una decisión de
+ * cada cliente, y ponerlo ahí le daría a cualquiera un interruptor que
+ * afecta a los demás.
+ * ═══════════════════════════════════════════════════════════
+ */
+
+/**
+ * Los dos trabajos que Nova tiene que correr sola, y sus horas.
+ *
+ * Están en un solo sitio para que prender, revisar y mostrar hablen de
+ * lo mismo. Cuando cada función tenía su propia lista, prender uno y
+ * revisar otro era cuestión de tiempo.
+ */
+const TRABAJOS = [
+  {
+    fn: 'actualizarTasasDiario',
+    nombre: 'Tasas de cambio',
+    hora: 6,
+    // Va primero a propósito: sin tasas el gasto de pauta en otra moneda
+    // no se suma, así que las alarmas de CPA y margen estarían juzgando
+    // una operación a la que le falta el gasto.
+    porque: 'Sin esto, la pauta que Meta cobra en otra moneda no se puede sumar.',
+  },
+  {
+    fn: 'revisarAlarmasTodos',
+    nombre: 'Revisión de alarmas',
+    hora: 7,
+    porque: 'Sin esto, las alarmas solo se calculan cuando alguien abre Nova.',
+  },
+];
+
+/** Qué disparadores hay puestos ahora mismo, por función. */
+function trabajosPuestos_() {
+  const puestos = {};
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    puestos[t.getHandlerFunction()] = true;
+  });
+  return puestos;
+}
+
+/**
+ * Prende los dos trabajos. No toca las tasas: eso se hace aparte.
+ *
+ * Separado a propósito. Instalar un disparador es instantáneo; bajar
+ * noventa días de tasas de GOOGLEFINANCE tarda. Si fueran la misma
+ * llamada, el botón de la consola se quedaría colgado hasta que
+ * terminara lo lento, y quien lo aprieta no sabría si funcionó.
+ */
+function prenderTrabajos_() {
+  const puestos = trabajosPuestos_();
+  return TRABAJOS.map(function (t) {
+    if (puestos[t.fn]) return { fn: t.fn, nombre: t.nombre, ya: true, hora: t.hora };
+    ScriptApp.newTrigger(t.fn).timeBased().atHour(t.hora).everyDays(1).create();
+    return { fn: t.fn, nombre: t.nombre, ya: false, hora: t.hora };
+  });
+}
+
+/**
+ * Las tasas de los últimos noventa días de cada cliente, ahora.
+ *
+ * El disparador diario solo tapa los huecos de aquí en adelante. Sin
+ * esta primera carga, el gasto de pauta de los meses pasados se quedaría
+ * sin convertir para siempre — y los cierres que ya se hicieron no
+ * tendrían con qué cuadrar.
+ *
+ * Esta función es también la que corre el disparador de un solo uso que
+ * arma la consola, así que no puede recibir parámetros ni depender de
+ * una sesión.
+ */
+function cargaInicialTasas() {
+  const hechos = [];
+  let cargadas = 0;
+  listarClientes().forEach(function (c) {
+    if (!c.sheetId) return;
+    try { actualizarTasas(c.sheetId, 90); cargadas++; }
+    catch (e) { hechos.push('OJO · no pude cargar las tasas de ' + c.empresa + ': ' + e.message); }
+  });
+  hechos.unshift('Tasas de los últimos 90 días cargadas en ' + cargadas + ' cuenta(s).');
+
+  // Y se borra el disparador de un solo uso que la trajo hasta aquí, si
+  // lo hubo. Un disparador "after" que nadie limpia se queda ocupando
+  // una de las veinte ranuras que da Google, para siempre.
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'cargaInicialTasas' &&
+        t.getEventType() === ScriptApp.EventType.CLOCK) {
+      try { ScriptApp.deleteTrigger(t); } catch (e) {}
+    }
+  });
+
+  const msg = hechos.join('\n');
+  Logger.log(msg);
+  return msg;
+}
+
+/**
+ * Prender lo automático, desde el Apps Script.
+ *
+ * La consola hace lo mismo con un botón (`centralPrenderAutomatico`).
+ * Esta versión existe para cuando la consola todavía no está montada, o
+ * cuando hay que arreglar algo sin depender de que el sitio cargue.
  */
 function prenderAutomatico() {
-  const hechos = [];
-
-  // ── Tasas de cambio ──
-  //
-  // Va primero a propósito. Sin tasas, el gasto de pauta en otra moneda
-  // no se suma —se cuenta aparte y se dice—, así que las alarmas de CPA
-  // y margen estarían juzgando una operación a la que le falta el gasto.
-  const tasas = ScriptApp.getProjectTriggers().filter(function (t) {
-    return t.getHandlerFunction() === 'actualizarTasasDiario';
+  const hechos = prenderTrabajos_().map(function (r) {
+    return r.ya
+      ? '· ' + r.nombre + ': ya estaba corriendo.'
+      : '· ' + r.nombre + ': prendido, todos los días a las ' + r.hora + ':00.';
   });
-  if (tasas.length) {
-    hechos.push('· Tasas de cambio: ya estaba corriendo.');
-  } else {
-    ScriptApp.newTrigger('actualizarTasasDiario').timeBased().atHour(6).everyDays(1).create();
-    hechos.push('· Tasas de cambio: prendido, todos los días a las 6 a.m.');
-  }
-
-  // ── Alarmas ──
-  const alarmas = ScriptApp.getProjectTriggers().filter(function (t) {
-    return t.getHandlerFunction() === 'revisarAlarmasTodos';
-  });
-  const hora = Number(ALARMAS_DEFAULT.alarmas_hora) || 7;
-  if (alarmas.length) {
-    hechos.push('· Revisión de alarmas: ya estaba corriendo.');
-  } else {
-    ScriptApp.newTrigger('revisarAlarmasTodos').timeBased().atHour(hora).everyDays(1).create();
-    hechos.push('· Revisión de alarmas: prendido, todos los días a las ' + hora + ':00.');
-  }
-
-  /**
-   * Y las tasas de los últimos noventa días, ahora mismo.
-   *
-   * El disparador solo tapa los huecos de aquí en adelante. Sin esta
-   * primera carga, el gasto de pauta de los meses pasados se quedaría
-   * sin convertir para siempre — y los cierres que ya se hicieron no
-   * tendrían con qué cuadrar.
-   */
-  let cargadas = 0;
-  try {
-    const clientes = listarClientes();
-    clientes.forEach(function (c) {
-      if (!c.sheetId) return;
-      try { actualizarTasas(c.sheetId, 90); cargadas++; }
-      catch (e) { hechos.push('· OJO · no pude cargar las tasas de ' +
-                              c.empresa + ': ' + e.message); }
-    });
-    hechos.push('· Tasas de los últimos 90 días cargadas en ' + cargadas + ' cuenta(s).');
-  } catch (e) {
-    hechos.push('· OJO · no pude cargar las tasas: ' + e.message);
-  }
+  hechos.push('· ' + cargaInicialTasas());
 
   const msg = 'LO AUTOMÁTICO DE NOVA\n\n' + hechos.join('\n') +
     '\n\nPara comprobarlo cuando quieras, corre verAutomatico().';
@@ -8959,81 +9105,58 @@ function prenderAutomatico() {
   return msg;
 }
 
+// ─── COMPROBAR ───────────────────────────────────────────────
+
 /**
- * Qué está corriendo solo, y cuándo corrió por última vez.
+ * El estado de lo automático, en datos.
  *
- * Existe porque "instalado" y "funcionando" no son lo mismo. Un
- * disparador puede estar puesto y fallar todos los días en silencio —
- * Google lo reintenta, no avisa, y la hoja se queda vieja sin que nadie
- * lo note.
+ * Devuelve objetos y no texto porque lo consume la consola. `verAutomatico()`
+ * es esto mismo escrito para leer en el Apps Script — una sola fuente,
+ * dos formas de mirarla, para que no puedan contradecirse.
  */
-function verAutomatico() {
-  const esperados = {
-    actualizarTasasDiario: 'Tasas de cambio',
-    revisarAlarmasTodos:   'Revisión de alarmas',
-  };
-  const puestos = {};
-  ScriptApp.getProjectTriggers().forEach(function (t) {
-    puestos[t.getHandlerFunction()] = true;
+function estadoAutomatico() {
+  const puestos = trabajosPuestos_();
+  const trabajos = TRABAJOS.map(function (t) {
+    return { nombre: t.nombre, hora: t.hora, porque: t.porque, prendido: !!puestos[t.fn] };
   });
 
-  const lineas = Object.keys(esperados).map(function (fn) {
-    return (puestos[fn] ? '✓ ' : '✗ ' ) + esperados[fn] +
-           (puestos[fn] ? '' : '  ← APAGADO, corre prenderAutomatico()');
-  });
-
-  /**
-   * Y si las tasas están al día de verdad, no solo "instaladas".
-   *
-   * Se revisa cuenta por cuenta, no una sola hoja: las tasas viven en la
-   * hoja de cada cliente, que es donde actualizarTasas las escribe.
-   * Mirar una sola diría "al día" mientras la de otro cliente lleva
-   * meses vacía — la respuesta correcta a la pregunta equivocada.
-   */
-  lineas.push('');
+  const clientes = [];
+  let error = '';
   try {
-    const clientes = listarClientes();
-    if (!clientes.length) {
-      lineas.push('No hay clientes registrados todavía, así que no hay tasas que revisar.');
-    }
-    clientes.forEach(function (c) {
+    listarClientes().forEach(function (c) {
       if (!c.sheetId) return;
-      lineas.push(revisarTasasDe_(c.sheetId, c.empresa));
+      clientes.push(estadoTasasDe_(c.sheetId, c.empresa));
     });
   } catch (e) {
-    lineas.push('No pude revisar las tasas: ' + e.message);
+    error = e.message;
   }
 
-  const msg = 'LO AUTOMÁTICO DE NOVA\n\n' + lineas.join('\n');
-  Logger.log(msg);
-  return msg;
+  return {
+    trabajos: trabajos,
+    todoPrendido: trabajos.every(function (t) { return t.prendido; }),
+    clientes: clientes,
+    // Un cliente "en falta" es uno que necesita tasas y no las tiene al
+    // día. Es el número que decide si la consola avisa o se calla.
+    enFalta: clientes.filter(function (c) { return c.necesita && !c.alDia; }).length,
+    error: error,
+  };
 }
 
 /**
- * Una línea sobre las tasas de una cuenta.
+ * El estado de las tasas de una cuenta.
  *
  * Distingue tres cosas que se confunden: que la hoja esté vacía, que
  * esté vieja, y que no haga falta. Una tienda que factura en la misma
  * moneda en que le cobran no necesita ninguna tasa, y decirle que le
  * "faltan" sería mandarla a arreglar algo que no está roto.
  */
-function revisarTasasDe_(sheetId, nombre) {
+function estadoTasasDe_(sheetId, nombre) {
+  const out = { empresa: nombre, necesita: false, alDia: true, pares: [], error: '' };
   try {
     const ss = SpreadsheetApp.openById(sheetId);
     const pares = paresNecesarios(ss);
-    if (!pares.length) {
-      return '· ' + nombre + ': no necesita tasas — factura y le cobran en la misma moneda.';
-    }
-    const comoTexto = pares.map(function (p) {
-      return p.origen + '→' + p.destino;
-    }).join(', ');
-
-    const sh = ss.getSheetByName('Tasas');
-    if (!sh || sh.getLastRow() < 2) {
-      return '· ' + nombre + ': OJO · la hoja Tasas está VACÍA y esta cuenta sí ' +
-             'las necesita (' + comoTexto + '). El gasto de pauta no se va ' +
-             'a sumar hasta que las tenga — corre prenderAutomatico().';
-    }
+    if (!pares.length) return out;          // no necesita: alDia se queda en true
+    out.necesita = true;
 
     /**
      * Par por par, no la hoja entera.
@@ -9043,33 +9166,79 @@ function revisarTasasDe_(sheetId, nombre) {
      * otro par se esté actualizando bien para tapar el hueco.
      */
     const ultimaDe = {};
-    sh.getDataRange().getValues().slice(1).forEach(function (f) {
-      const fecha = aISO(f[0], 'UTC');
-      if (!fecha) return;
-      const o = String(f[1] || '').toUpperCase();
-      const d = String(f[2] || '').toUpperCase();
-      [o + '|' + d, d + '|' + o].forEach(function (k) {   // el inverso sirve igual
-        if (!ultimaDe[k] || fecha > ultimaDe[k]) ultimaDe[k] = fecha;
+    const sh = ss.getSheetByName('Tasas');
+    if (sh && sh.getLastRow() > 1) {
+      sh.getDataRange().getValues().slice(1).forEach(function (f) {
+        const fecha = aISO(f[0], 'UTC');
+        if (!fecha) return;
+        const o = String(f[1] || '').toUpperCase();
+        const d = String(f[2] || '').toUpperCase();
+        [o + '|' + d, d + '|' + o].forEach(function (k) {   // el inverso sirve igual
+          if (!ultimaDe[k] || fecha > ultimaDe[k]) ultimaDe[k] = fecha;
+        });
       });
-    });
+    }
 
     const hoy = ahoraISO().slice(0, 10);
-    const detalle = pares.map(function (p) {
-      const ultima = ultimaDe[p.origen + '|' + p.destino];
-      if (!ultima) return p.origen + '→' + p.destino + ' SIN NINGUNA TASA';
-      const dias = Math.floor(
-        (new Date(hoy + 'T00:00:00Z') - new Date(ultima + 'T00:00:00Z')) / 86400000);
-      return p.origen + '→' + p.destino +
-             (dias > 3 ? ' ' + dias + ' días atrasado (última: ' + ultima + ')'
-                       : ' ✓ al ' + ultima);
+    out.pares = pares.map(function (p) {
+      const ultima = ultimaDe[p.origen + '|' + p.destino] || '';
+      const dias = ultima
+        ? Math.floor((new Date(hoy + 'T00:00:00Z') - new Date(ultima + 'T00:00:00Z')) / 86400000)
+        : -1;
+      const bien = dias >= 0 && dias <= 3;
+      if (!bien) out.alDia = false;
+      return {
+        par: p.origen + '→' + p.destino,
+        ultima: ultima, dias: dias, bien: bien,
+      };
     });
-
-    const malo = detalle.some(function (t) {
-      return t.indexOf('✓') === -1;
-    });
-    return '· ' + nombre + ': ' + detalle.join(' · ') +
-           (malo ? '\n    ← corre prenderAutomatico() en esta cuenta' : '');
   } catch (e) {
-    return '· ' + nombre + ': no pude revisar las tasas — ' + e.message;
+    out.error = e.message;
+    out.alDia = false;
   }
+  return out;
+}
+
+/**
+ * Lo mismo, escrito para leer en el Apps Script.
+ *
+ * Existe porque "instalado" y "funcionando" no son lo mismo. Un
+ * disparador puede estar puesto y fallar todos los días en silencio —
+ * Google lo reintenta, no avisa, y la hoja se queda vieja sin que nadie
+ * lo note.
+ */
+function verAutomatico() {
+  const e = estadoAutomatico();
+
+  const lineas = e.trabajos.map(function (t) {
+    return (t.prendido ? '✓ ' : '✗ ') + t.nombre +
+           (t.prendido ? ' (todos los días a las ' + t.hora + ':00)'
+                       : '  ← APAGADO. ' + t.porque);
+  });
+
+  lineas.push('');
+  if (e.error) {
+    lineas.push('No pude revisar las tasas: ' + e.error);
+  } else if (!e.clientes.length) {
+    lineas.push('No hay clientes registrados todavía, así que no hay tasas que revisar.');
+  }
+
+  e.clientes.forEach(function (c) {
+    if (c.error) { lineas.push('· ' + c.empresa + ': no pude revisar — ' + c.error); return; }
+    if (!c.necesita) {
+      lineas.push('· ' + c.empresa + ': no necesita tasas — factura y le cobran en la misma moneda.');
+      return;
+    }
+    const detalle = c.pares.map(function (p) {
+      if (p.dias < 0) return p.par + ' SIN NINGUNA TASA';
+      return p.par + (p.bien ? ' ✓ al ' + p.ultima
+                             : ' ' + p.dias + ' días atrasado (última: ' + p.ultima + ')');
+    });
+    lineas.push('· ' + c.empresa + ': ' + detalle.join(' · ') +
+                (c.alDia ? '' : '\n    ← corre prenderAutomatico()'));
+  });
+
+  const msg = 'LO AUTOMÁTICO DE NOVA\n\n' + lineas.join('\n');
+  Logger.log(msg);
+  return msg;
 }

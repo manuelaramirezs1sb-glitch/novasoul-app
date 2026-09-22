@@ -90,6 +90,8 @@ function manejarCentral(accion, p) {
     case 'nc_clientes': return centralClientes(s, p);
     case 'nc_planes':   return centralPlanes(s, p);
     case 'nc_crear':    return centralCrearCliente(s, p);
+    case 'nc_automatico':        return centralAutomatico(s, p);
+    case 'nc_automatico_prender':return centralPrenderAutomatico(s, p);
     case 'nc_salir':
       CacheService.getScriptCache().remove('nc_' + p.token);
       return { ok: true };
@@ -435,4 +437,87 @@ function primeraSocia(nombre, correo) {
   ].join('\n');
   Logger.log(msg);
   return msg;
+}
+
+
+// ─── LO AUTOMÁTICO, DESDE LA CONSOLA ─────────────────────────
+
+/**
+ * ═══════════════════════════════════════════════════════════
+ *  EL INTERRUPTOR DE LO AUTOMÁTICO
+ * ═══════════════════════════════════════════════════════════
+ *
+ * Los disparadores que hacen correr a Nova sola —las tasas de cambio y
+ * la revisión de alarmas— vivían únicamente en el Apps Script. Estaban
+ * escritos desde el principio y nunca se prendieron, porque prenderlos
+ * exigía abrir el editor, encontrar la función y ejecutarla a mano.
+ *
+ * Eso no se le puede pedir a nadie, y menos a un cliente. Pero tampoco
+ * va en la pantalla de la dueña: los disparadores son del proyecto
+ * entero, no de cada cuenta, y un botón ahí le daría a cualquier cliente
+ * un interruptor que afecta a todos los demás.
+ *
+ * Así que va aquí, en la consola, que es de Manuela.
+ */
+function centralAutomatico(s, p) {
+  if (!puedeCentral(s, 'ver')) return { ok: false, error: 'Tu rol no ve esto.' };
+  return { ok: true, automatico: estadoAutomatico() };
+}
+
+/**
+ * Prende los dos trabajos y programa la carga de tasas para dentro de un
+ * minuto.
+ *
+ * La carga NO se hace aquí. Bajar noventa días de tasas de GOOGLEFINANCE
+ * para varios clientes tarda más de lo que un navegador espera, y el
+ * botón se quedaría colgado sin que nadie supiera si funcionó. En vez de
+ * eso se arma un disparador de un solo uso: la respuesta vuelve al
+ * instante y el trabajo pesado corre solo, por detrás.
+ */
+function centralPrenderAutomatico(s, p) {
+  if (!puedeCentral(s, 'crear_cliente')) {
+    return { ok: false, error: 'Tu rol no puede prender lo automático.' };
+  }
+
+  let hechos;
+  try {
+    hechos = prenderTrabajos_();
+  } catch (e) {
+    /**
+     * Crear disparadores pide un permiso que la autorización vieja del
+     * script puede no tener. No se disfraza de otro error: se dice qué
+     * pasó y cuál es la salida, que es abrir el editor una vez.
+     */
+    return { ok: false, error:
+      'No pude crear los disparadores: ' + e.message + '\n\n' +
+      'Suele ser que la autorización del script es anterior a esta ' +
+      'función. Abre el Apps Script, corre prenderAutomatico() una vez ' +
+      'y acepta los permisos; después este botón ya funciona.' };
+  }
+
+  // Y la carga inicial, por detrás.
+  let cargando = false;
+  try {
+    const yaHay = ScriptApp.getProjectTriggers().some(function (t) {
+      return t.getHandlerFunction() === 'cargaInicialTasas';
+    });
+    if (!yaHay) {
+      ScriptApp.newTrigger('cargaInicialTasas').timeBased().after(60 * 1000).create();
+    }
+    cargando = true;
+  } catch (e) {
+    cargando = false;
+  }
+
+  return {
+    ok: true,
+    prendidos: hechos,
+    cargando: cargando,
+    automatico: estadoAutomatico(),
+    mensaje: cargando
+      ? 'Listo. Las tasas de los últimos 90 días empiezan a bajar en un minuto; ' +
+        'según cuántas cuentas haya puede tardar varios. Vuelve a mirar en un rato.'
+      : 'Los trabajos quedaron prendidos, pero no pude programar la carga de ' +
+        'las tasas viejas. Córrela a mano: cargaInicialTasas() en el Apps Script.',
+  };
 }

@@ -18,7 +18,10 @@ function hoja(nombre) {
 const SS = { getSheetByName: hoja };
 
 global.SpreadsheetApp = { openById: () => SS };
-global.PropertiesService = { getScriptProperties: () => ({ getProperty: () => '', getProperties: () => ({}) }) };
+const PROPS = { ID_EMPRESARIAL: 'emp', ID_CENTRAL: 'cen', ID_SOUL: 'soul', ID_ACADEMY: 'aca' };
+global.PropertiesService = {
+  getScriptProperties: () => ({ getProperty: (k) => PROPS[k] || '', getProperties: () => PROPS }),
+};
 global.Logger = { log: () => {} };
 global.ScriptApp = { getProjectTriggers: () => [] };
 global.Session = { getScriptTimeZone: () => 'UTC', getActiveUser: () => ({ getEmail: () => '' }) };
@@ -37,7 +40,7 @@ global.CacheService = { getScriptCache: () => ({ get: () => null, put: () => {} 
 global.SpreadsheetApp.flush = () => {};
 
 // El bundle es un script clásico: se evalúa en el ámbito global.
-(0, eval)(src + '\n;globalThis.__F = { paresEnUso, paresDeGasto, paresNecesarios, revisarTasasDe_ };');
+(0, eval)(src + '\n;globalThis.__F = { paresEnUso, paresDeGasto, paresNecesarios, estadoTasasDe_, estadoAutomatico, verAutomatico };');
 const F = globalThis.__F;
 
 let fallas = 0;
@@ -67,6 +70,12 @@ function montar(reporte, tiendas, pauta, tasas) {
                   'resultados','compras','cpa','roas','valor_conv','visitas_lp']]
                  .concat(pauta);
   if (tasas) HOJAS.Tasas = [['fecha','moneda_origen','moneda_destino','tasa']].concat(tasas);
+  // listarClientes la lee para saber a quién hay que revisar. Una sola
+  // cuenta: el stub devuelve las mismas hojas para cualquier sheetId.
+  const cl = new Array(14).fill('');
+  cl[0] = 'c1'; cl[1] = 'La cuenta'; cl[6] = 'activo'; cl[12] = 1; cl[13] = 'hoja-1';
+  HOJAS.Clientes = [['id','empresa','pais','plan','tarifa','costo','estado','fecha_alta',
+                     'fecha_corte','ultimo_pago','nota','x','tiendas','sheet_id'], cl];
 }
 const T = (id, mon, estado) => [id, id, '', '', '', '', mon, 'America/Bogota', '', 'contraentrega', estado || 'activa'];
 const P = (tienda, mon, fecha) => { const f = new Array(26).fill(''); f[1] = fecha || '2026-09-01'; f[3] = tienda; f[10] = 100; f[11] = mon; return f; };
@@ -102,33 +111,49 @@ montar('COP', [T('Vieja', 'PEN', 'inactiva'), T('Tienda CO', 'COP')],
 caso('la tienda inactiva no arrastra su par, y las filas sin tienda o sin moneda se ignoran',
      [], F.paresNecesarios(SS));
 
-console.log('\nREVISAR TASAS — qué reporta verAutomatico');
+console.log('\nESTADO DE LAS TASAS — lo que ve la consola');
 montar('GTQ', [T('Tienda GT', 'GTQ')], [P('Tienda GT', 'USD')]);   // sin hoja Tasas
-contiene('sin hoja Tasas lo dice y manda a prenderAutomatico',
-         F.revisarTasasDe_('x', 'Tienda GT'), 'VACÍA');
+let e = F.estadoTasasDe_('x', 'Tienda GT');
+caso('sin hoja Tasas: las necesita y no está al día',
+     { necesita: true, alDia: false, dias: -1 },
+     { necesita: e.necesita, alDia: e.alDia, dias: e.pares[0].dias });
+
+montar('COP', [T('Tienda CO', 'COP')], [P('Tienda CO', 'COP')]);
+e = F.estadoTasasDe_('x', 'Tienda CO');
+caso('quien no las necesita queda al día, no en falta',
+     { necesita: false, alDia: true, pares: 0 },
+     { necesita: e.necesita, alDia: e.alDia, pares: e.pares.length });
 
 montar('GTQ', [T('Tienda GT', 'GTQ')], [P('Tienda GT', 'USD')],
        [[hoy, 'USD', 'GTQ', 7.8]]);
-contiene('con la tasa de hoy dice al día', F.revisarTasasDe_('x', 'Tienda GT'), '✓');
+e = F.estadoTasasDe_('x', 'Tienda GT');
+caso('con la tasa de hoy: al día', { alDia: true, bien: true, dias: 0 },
+     { alDia: e.alDia, bien: e.pares[0].bien, dias: e.pares[0].dias });
 
 montar('GTQ', [T('Tienda GT', 'GTQ')], [P('Tienda GT', 'USD')],
        [[hace(20), 'USD', 'GTQ', 7.8]]);
-contiene('con la tasa de hace 20 días dice atrasado',
-         F.revisarTasasDe_('x', 'Tienda GT'), '20 días atrasado');
+e = F.estadoTasasDe_('x', 'Tienda GT');
+caso('con la tasa de hace 20 días: atrasada', { alDia: false, dias: 20 },
+     { alDia: e.alDia, dias: e.pares[0].dias });
+
+montar('GTQ', [T('Tienda GT', 'GTQ')], [P('Tienda GT', 'USD')],
+       [[hoy, 'GTQ', 'USD', 0.128]]);
+caso('el par inverso cuenta como cargado', true, F.estadoTasasDe_('x', 'Tienda GT').alDia);
 
 // EL CASO QUE JUSTIFICA LA REVISIÓN POR PAR:
 // un par al día tapando otro que no tiene ni una fila.
 montar('COP', [T('Nutrea EC', 'USD'), T('Nutrea GT', 'GTQ')],
        [P('Nutrea EC', 'COP'), P('Nutrea GT', 'COP')],
        [[hoy, 'USD', 'COP', 4000]]);
-const r = F.revisarTasasDe_('x', 'Nutrea');
-contiene('un par al día no tapa al otro', r, 'GTQ→COP SIN NINGUNA TASA');
-contiene('y manda a arreglarlo', r, 'prenderAutomatico');
+e = F.estadoTasasDe_('x', 'Nutrea');
+caso('un par al día no tapa al otro', { alDia: false, uno: true, otro: -1 },
+     { alDia: e.alDia, uno: e.pares[0].bien, otro: e.pares[1].dias });
 
-// El inverso cargado sirve igual
-montar('GTQ', [T('Tienda GT', 'GTQ')], [P('Tienda GT', 'USD')],
-       [[hoy, 'GTQ', 'USD', 0.128]]);
-contiene('el par inverso cuenta como cargado', F.revisarTasasDe_('x', 'Tienda GT'), '✓');
+console.log('\nEL TEXTO DEL APPS SCRIPT dice lo mismo que los datos');
+const texto = F.verAutomatico();
+contiene('nombra el par que falta', texto, 'GTQ→COP SIN NINGUNA TASA');
+contiene('manda a prenderAutomatico', texto, 'prenderAutomatico');
+contiene('los trabajos apagados salen marcados', texto, '✗');
 
 console.log(fallas ? '\n' + fallas + ' FALLA(S)\n' : '\nTodo pasa.\n');
 process.exit(fallas ? 1 : 0);
