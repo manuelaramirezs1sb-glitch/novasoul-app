@@ -117,11 +117,74 @@ const MIO = {
     ok('y llevan a las páginas de verdad (@' + ancho + ')',
        fam.join(',').includes('novasoul.html') && fam.join(',').includes('empresarial.html'));
 
+
+    // ── HOY ──
+    await p.evaluate(() => {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+      document.getElementById('v-dashboard').classList.add('on');
+    });
+    const hoyTxt = await p.textContent('#hoy-cifras');
+    ok('Hoy cuenta los proyectos activos (@' + ancho + ')',
+       hoyTxt.includes('Proyectos activos'));
+    ok('y marca en rojo que hay una entrega vencida (@' + ancho + ')',
+       await p.$$eval('#hoy-cifras .kpi-val.mal', e => e.length) === 2,
+       await p.$$eval('#hoy-cifras .kpi-val.mal', e => e.length) + ' en rojo');
+
+    const cuerpo = await p.textContent('#hoy-cuerpo');
+    ok('reparte la semana por HORAS, no por plata (@' + ancho + ')',
+       cuerpo.includes('26 h comprometidas'), cuerpo.match(/\d+ h comprometidas/)?.[0]);
+    ok('y dice que los horarios fijos todavía no están (@' + ancho + ')',
+       cuerpo.includes('sería inventarte la semana'));
+    // Se mira SOLO la tercera tarjeta: «Son de Sky» también aparece en
+    // la repartición de arriba, y buscarlo en todo el cuerpo comparaba
+    // dos cosas distintas.
+    const viene = await p.$eval('#hoy-cuerpo .card:nth-child(3)', e => e.textContent);
+    ok('«Lo que viene» ordena por fecha y traduce a días (@' + ancho + ')',
+       viene.indexOf('Parcial de Estadística') < viene.indexOf('Son de Sky') &&
+       /venció hace \d+ días/.test(viene), viene.replace(/\s+/g, ' ').slice(0, 110));
+
+    const dias = await p.$$eval('.hoy-dia', e => e.length);
+    ok('la semana tiene siete días (@' + ancho + ')', dias === 7, dias + ' días');
+
+    const proy = await p.$$eval('#sb-proyectos .ni-proy', e => e.map(x => x.textContent));
+    ok('los proyectos salen también en el menú (@' + ancho + ')',
+       proy.length === 3, JSON.stringify(proy));
+    ok('y el vencido lleva su punto rojo (@' + ancho + ')',
+       await p.$$eval('#sb-proyectos .ni-proy.tarde', e => e.length) === 1);
+
+    const soul = await p.$$eval('.ni-link', e => e.map(x => x.getAttribute('href')));
+    ok('NovaSoul tiene acceso directo desde el menú (@' + ancho + ')',
+       soul.indexOf('./novasoul.html') !== -1, JSON.stringify(soul));
+
+    // Un error al dibujar no puede decir «sin conexión»
+    const msg = await p.evaluate(() => {
+      const viejo = window.pintarHoy;
+      window.pintarHoy = () => { throw new Error('a propósito'); };
+      (0, eval)('pintarHoy = window.pintarHoy;');
+      return cargarMio().then(() => {
+        const t = document.getElementById('trab-lista').textContent;
+        (0, eval)('pintarHoy = ' + viejo.toString() + ';');
+        return t;
+      });
+    });
+    ok('un fallo al dibujar NO se disfraza de falta de conexión (@' + ancho + ')',
+       msg.includes('no los pude dibujar') && !msg.includes('Sin conexión'), msg.slice(0, 90));
+    await p.evaluate(() => cargarMio());
+
     const lateral = await p.evaluate(() =>
       document.documentElement.scrollWidth - document.documentElement.clientWidth);
     ok('sin scroll lateral (@' + ancho + ')', lateral === 0, lateral + 'px');
 
     if (ancho === 1100) {
+      await p.evaluate(() => {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+        document.getElementById('v-trabajos').classList.add('on');
+      });
+      await p.evaluate(() => {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+        document.getElementById('v-dashboard').classList.add('on');
+      });
+      await p.locator('#v-dashboard').screenshot({ path: OUT + 'central-hoy.png' });
       await p.evaluate(() => {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
         document.getElementById('v-trabajos').classList.add('on');

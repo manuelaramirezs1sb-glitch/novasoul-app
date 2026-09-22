@@ -494,3 +494,52 @@ que entran a NovaSoul como entregables con fecha.
 con Salsabor y con PHH por sus horas, y pierde siempre: no tiene cliente
 que reclame. Marcarla como meta es lo que permite que NovaSoul diga «esta
 semana no tocaste lo único que es tuyo».
+
+### 7b · Central se organiza por PROYECTO (22-09-2026)
+
+Era una lista plana —Dashboard, Clientes, Equipo, Pipeline, Onboarding,
+Meta, Demo— que describía las partes de Nova. Pero **Nova es uno de los
+proyectos de Manuela**, y los demás no tenían dónde caer: la carta de un
+bar, un encargo de PHH, un parcial.
+
+Ahora el primer nivel son sus proyectos, y Nova Family es el primero de
+ellos. Lo que antes era el menú entero vive adentro de ese grupo.
+
+```
+Hoy
+Mis finanzas
+── MIS PROYECTOS ──   Todos + cada proyecto, con su punto de urgencia
+── NOVA FAMILY ──     Clientes · Nuevo cliente · Equipo · Pipeline ·
+                      Meta Ads · Demo para clientes
+── IR A ──            NovaSoul ↗ · Nova Empresarial ↗ · novAcademy ↗
+```
+
+**Hoy** toma la forma del tablero que mandó de referencia —cifras
+arriba, repartición a la izquierda, el centro, y lo que se debe a la
+derecha— con sus temas en vez de los del ejemplo.
+
+Dos decisiones de esa pantalla:
+
+- **La repartición es por HORAS, no por plata.** La plata dice qué paga;
+  las horas dicen qué ocupa, y son cosas distintas — la universidad no
+  paga nada y se lleva un pedazo grande. Repartir por plata la haría
+  desaparecer justo del sitio donde hay que verla.
+- **La semana solo dibuja entregas.** Las clases y los turnos no están
+  en ninguna hoja todavía, así que no se pintan, y la pantalla dice por
+  qué: dibujarlos sin saberlos sería inventarle la semana.
+
+### Los proyectos, y qué falta de cada uno
+
+| Proyecto | Artefacto | Qué falta |
+|---|---|---|
+| **Nova Family** | las cuatro pantallas | NovaSoul entera |
+| **Carta Skyblue** | ella ya lo tiene | volverlo PLANTILLA: costeo de cartas nuevas con fotos de carta, costos de licores y recetarios |
+| **Marketing** | no existe | cuánto cobrar por pieza de pauta en FB/TikTok |
+| **PHH** | no existe | lo crea cuando le asignen el primero |
+| **Universidad** | uno por materia | conectar horarios de clase |
+
+**El Demo cambia de significado y hay que decidirlo.** Hoy «Demo» es
+mostrarle Nova Empresarial a un cliente potencial. Manuela quiere que
+abra la plantilla de trabajo del proyecto. Son dos cosas distintas con
+el mismo nombre: por ahora el de clientes se llama «Demo para clientes»
+y el otro será «Plantilla» dentro de cada proyecto.

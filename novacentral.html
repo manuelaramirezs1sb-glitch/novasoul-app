@@ -141,6 +141,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .ni.on{background:var(--glow);color:var(--gold);}
 .ni-ico{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
 .sb-div{height:1px;background:var(--line);margin:6px 12px;}
+.ni-link{text-decoration:none;}
+.ni-link em{margin-left:auto;font-style:normal;color:var(--ink3);font-size:12px;}
+.ni-link:hover em{color:var(--gold);}
+.sb-grupo{font:600 9.5px/1 'DM Sans';letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink3);padding:16px 16px 7px;}
+.ni-proy{display:flex;align-items:center;gap:9px;padding:8px 16px 8px 30px;
+  font:500 12.5px/1.3 'DM Sans';color:var(--ink2);cursor:pointer;text-decoration:none;}
+.ni-proy:hover{color:var(--gold);}
+.ni-proy i{width:5px;height:5px;border-radius:50%;background:var(--ink3);flex-shrink:0;}
+.ni-proy.tarde i{background:var(--red);}
+.ni-proy.pronto i{background:var(--amber);}
 .sb-modo{display:flex;align-items:center;gap:8px;padding:8px 14px;}
 .sb-modo-lbl{font:400 11.5px 'DM Sans';color:var(--ink3);flex:1;}
 .tog-wrap{
@@ -341,6 +352,31 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 
 /* ─── Clientes y onboarding ─── */
 
+
+/* ─── HOY ───────────────────────────────────────────── */
+.hoy-cols{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:14px;align-items:start;}
+@media(max-width:1000px){ .hoy-cols{grid-template-columns:1fr;} }
+.hoy-repar{display:flex;flex-direction:column;gap:9px;}
+.hoy-rep{display:flex;align-items:center;gap:9px;font:500 12.5px/1.3 'DM Sans';color:var(--ink2);}
+.hoy-rep b{margin-left:auto;font:600 12.5px/1 'DM Sans';color:var(--ink);
+  font-variant-numeric:tabular-nums;}
+.hoy-rep i{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
+.hoy-anillo{display:flex;align-items:center;justify-content:center;padding:6px 0 12px;}
+.hoy-sem{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.hoy-dia{border:1px solid var(--line);border-radius:9px;padding:8px 5px;text-align:center;
+  background:var(--card);}
+.hoy-dia.hoy{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold);}
+.hoy-dia .d{font:600 9px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);}
+.hoy-dia .n{font:700 15px/1.2 'Playfair Display',serif;color:var(--ink);margin-top:4px;}
+.hoy-dia .c{font:500 9.5px/1.2 'DM Sans';color:var(--ink3);margin-top:3px;min-height:11px;}
+.hoy-dia.lleno .c{color:var(--red);}
+.hoy-ent{display:flex;flex-direction:column;gap:2px;padding:10px 0;
+  border-bottom:1px solid var(--line);}
+.hoy-ent:last-child{border-bottom:none;}
+.hoy-ent .t{font:600 12.5px/1.3 'DM Sans';color:var(--ink);}
+.hoy-ent .s{font:400 11.5px/1.4 'DM Sans';color:var(--ink3);}
+.hoy-ent.tarde .s{color:var(--red);}
+.hoy-ent.pronto .s{color:var(--amber);}
 /* ─── MI TRABAJO Y MI PLATA ─────────────────────────── */
 .fam-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
 .fam{display:flex;flex-direction:column;gap:3px;padding:14px 15px;border-radius:12px;
@@ -431,39 +467,67 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
       <img src="logo-nova-central-claro.png" alt="Nova Central" class="sb-logo-img logo-blanco">
       <img src="logo-nova-central.png" alt="Nova Central" class="sb-logo-img logo-tinta">
     </div>
+    <!--
+      El menú está agrupado por PROYECTO, no por función.
+
+      Antes era una lista plana —Dashboard, Clientes, Equipo, Pipeline,
+      Onboarding, Meta, Demo— que describía las partes de Nova. Pero Nova
+      es UNO de los proyectos de Manuela, y los demás no tenían dónde
+      caer: la carta de un bar, un encargo de PHH, un parcial.
+
+      Ahora el primer nivel son sus proyectos y Nova es el primero de
+      ellos. Lo que antes era el menú entero vive adentro de ese.
+    -->
     <nav class="sb-nav">
       <div class="ni on" data-v="dashboard" onclick="go('dashboard',this)">
-        <span class="ni-ico">⬡</span> Dashboard
-      </div>
-      <!--
-        Lo de ella va primero porque es lo que abre todos los días.
-        Los clientes de Nova son una parte de su trabajo, no todo.
-      -->
-      <div class="ni socia-solo" data-v="trabajos" onclick="go('trabajos',this)">
-        <span class="ni-ico">◈</span> Mi trabajo
+        <span class="ni-ico">◉</span> Hoy
       </div>
       <div class="ni socia-solo" data-v="plata" onclick="go('plata',this)">
-        <span class="ni-ico">◇</span> Mi plata
+        <span class="ni-ico">◇</span> Mis finanzas
       </div>
+
+      <div class="sb-grupo socia-solo">Mis proyectos</div>
+      <div class="ni socia-solo" data-v="trabajos" onclick="go('trabajos',this)">
+        <span class="ni-ico">◈</span> Todos
+      </div>
+      <!-- Los proyectos se pintan aquí, desde la hoja Trabajos. -->
+      <div id="sb-proyectos"></div>
+
+      <div class="sb-grupo">Nova Family</div>
       <div class="ni" data-v="clientes" onclick="go('clientes',this)">
-        <span class="ni-ico">🏪</span> Clientes
+        <span class="ni-ico">▣</span> Clientes
+      </div>
+      <div class="ni" data-v="onboarding" onclick="go('onboarding',this)">
+        <span class="ni-ico">＋</span> Nuevo cliente
       </div>
       <div class="ni" data-v="equipo" onclick="go('equipo',this)">
-        <span class="ni-ico">👥</span> Equipo
+        <span class="ni-ico">◍</span> Equipo
       </div>
       <div class="ni" data-v="pipeline" onclick="go('pipeline',this)">
-        <span class="ni-ico">🎓</span> Pipeline novAcademy
-      </div>
-      <div class="sb-div"></div>
-      <div class="ni" data-v="onboarding" onclick="go('onboarding',this)">
-        <span class="ni-ico">📁</span> Onboarding
+        <span class="ni-ico">◎</span> Pipeline novAcademy
       </div>
       <div class="ni" data-v="meta" onclick="go('meta',this)">
-        <span class="ni-ico">📊</span> Meta Ads
+        <span class="ni-ico">◱</span> Meta Ads
       </div>
       <div class="ni" data-v="demo" onclick="go('demo',this)">
-        <span class="ni-ico">🔐</span> Demo
+        <span class="ni-ico">◷</span> Demo para clientes
       </div>
+
+      <!--
+        Salidas, no secciones: son enlaces a las otras pantallas.
+        Van con flecha y no con el punto de las vistas para que se note
+        que al darles clic se sale de Central.
+      -->
+      <div class="sb-grupo">Ir a</div>
+      <a class="ni ni-link" href="./novasoul.html">
+        <span class="ni-ico">✦</span> NovaSoul <em>↗</em>
+      </a>
+      <a class="ni ni-link" href="./empresarial.html">
+        <span class="ni-ico">▤</span> Nova Empresarial <em>↗</em>
+      </a>
+      <a class="ni ni-link" href="./novacademy.html">
+        <span class="ni-ico">◈</span> novAcademy <em>↗</em>
+      </a>
     </nav>
     <div class="sb-modo">
       <span class="sb-modo-lbl" id="modo-lbl">Modo claro</span>
@@ -491,13 +555,31 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     <div class="content">
 
       <!-- ─── DASHBOARD ─── -->
+      <!--
+        HOY · la primera pantalla, con la forma del tablero que Manuela
+        mandó de referencia: una fila de cifras arriba, la repartición al
+        lado izquierdo, el movimiento en el centro y lo que se debe a la
+        derecha. Debajo, lo que pasó últimamente.
+
+        Lo que cambia respecto a la referencia son los TEMAS: ahí eran
+        activos, pasivos y patrimonio; aquí son sus proyectos, su plata y
+        sus entregas. La estructura sirve; el contenido es suyo.
+      -->
       <div class="view on" id="v-dashboard">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span style="font:500 11.5px 'DM Sans';color:var(--ink3)">Vista activa:</span>
-          <div class="store-tabs" id="store-tabs"></div>
+        <div id="hoy-cifras" class="kpi-grid"></div>
+        <div id="hoy-cuerpo" class="hoy-cols"></div>
+        <div id="hoy-reciente"></div>
+
+        <!-- Lo que sigue en ejemplo, marcado como tal -->
+        <div class="card" style="opacity:.75">
+          <div class="card-ttl">Tus tiendas de Nova</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font:500 11.5px 'DM Sans';color:var(--ink3)">Vista activa:</span>
+            <div class="store-tabs" id="store-tabs"></div>
+          </div>
+          <div class="kpi-grid" id="dash-kpis"></div>
+          <div class="card-row" id="dash-bottom"></div>
         </div>
-        <div class="kpi-grid" id="dash-kpis"></div>
-        <div class="card-row" id="dash-bottom"></div>
       </div>
 
       <!-- ─── MI TRABAJO ─── -->
@@ -774,7 +856,7 @@ let activeSt = 'gt';
  * La huella sale del contenido del archivo: cambia sola con cada cambio,
  * aunque sean dos versiones el mismo día.
  */
-const VERSION_PANTALLA = '2026-09-22 · b6d9';
+const VERSION_PANTALLA = '2026-09-22 · c2d7';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -933,6 +1015,160 @@ async function salirCentral(porVencimiento) {
 }
 function logout() { salirCentral(false); }
 
+/* ─── HOY ───
+ *
+ * La primera pantalla, con la forma del tablero que mandó de referencia.
+ * Se dibuja con lo que ya trajo `nc_mio`: no pide nada más al servidor,
+ * porque es la misma información mirada desde arriba.
+ */
+const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+// Los colores de la repartición salen del acento, aclarándolo. Una
+// paleta inventada por categoría se pelea con la de la pantalla.
+const TONOS = ['#2F5E4E', '#4A7A66', '#6B9683', '#8FB2A2', '#B4CCC0', '#D5E2DA'];
+
+function pintarHoy() {
+  const cif = document.getElementById('hoy-cifras');
+  const cue = document.getElementById('hoy-cuerpo');
+  const rec = document.getElementById('hoy-reciente');
+  if (!cif || !MIO) return;
+
+  const T = MIO.totales;
+  const activos = MIO.trabajos.filter(function (t) { return t.estado !== 'cerrado'; });
+  const conEntrega = activos.filter(function (t) { return t.entrega; });
+  const hoy = MIO.hoy;
+  const dias = function (f) {
+    return Math.round((new Date(f + 'T00:00:00Z') - new Date(hoy + 'T00:00:00Z')) / 86400000);
+  };
+  const vencidas = conEntrega.filter(function (t) { return dias(t.entrega) < 0; });
+  const proximas = conEntrega.filter(function (t) {
+    const d = dias(t.entrega); return d >= 0 && d <= 7;
+  });
+
+  cif.innerHTML = [
+    ['Proyectos activos', String(activos.length),
+     conEntrega.length + ' con fecha', ''],
+    ['Entregas esta semana', String(proximas.length),
+     vencidas.length ? vencidas.length + ' ya vencida(s)' : 'ninguna vencida',
+     vencidas.length ? 'mal' : ''],
+    ['Por cobrar', variasMonedas(T.porCobrar), MIO.porCobrar.length + ' cobro(s)', ''],
+    ['Atrasado', variasMonedas(T.atrasado), MIO.atrasados.length + ' cobro(s)',
+     MIO.atrasados.length ? 'mal' : ''],
+    ['Entró este mes', variasMonedas(T.ingresosMes), MIO.mes, ''],
+    ['Salió este mes', variasMonedas(T.gastosMes), MIO.mes, ''],
+  ].map(function (x) {
+    return '<div class="kpi"><div class="kpi-lbl">' + x[0] + '</div>' +
+      '<div class="kpi-val ' + x[3] + '">' + escC(x[1]) + '</div>' +
+      '<div class="kpi-sub">' + escC(x[2]) + '</div></div>';
+  }).join('');
+
+  /* 1 · En qué se te va la semana.
+   *
+   * Reparte por HORAS comprometidas, no por plata. La plata dice qué
+   * paga; las horas dicen qué te ocupa, y son cosas distintas — la
+   * universidad no paga nada y se lleva un pedazo grande. */
+  const conHoras = activos.filter(function (t) { return t.horasSemana > 0; });
+  const totalH = conHoras.reduce(function (a, t) { return a + t.horasSemana; }, 0);
+  const repar = conHoras.length
+    ? '<div class="hoy-repar">' + conHoras
+        .sort(function (a, b) { return b.horasSemana - a.horasSemana; })
+        .map(function (t, i) {
+          return '<div class="hoy-rep"><i style="background:' +
+            TONOS[i % TONOS.length] + '"></i>' + escC(t.nombre) +
+            '<b>' + t.horasSemana + ' h</b></div>';
+        }).join('') +
+      '<div class="hoy-rep" style="border-top:1px solid var(--line);padding-top:9px">' +
+        '<b style="margin-left:0">' + totalH + ' h comprometidas</b></div></div>'
+    : '<div class="nc-vacio">Ponles horas por semana a tus proyectos y aquí ves ' +
+      'en qué se te va el tiempo. Sin ese dato no hay nada que repartir.</div>';
+
+  /* 2 · La semana, día por día. Por ahora solo marca las entregas:
+   * los horarios fijos —clases y turnos— todavía no están en ninguna
+   * hoja, así que no se dibujan en vez de inventarse. */
+  const lunes = (function () {
+    const d = new Date(hoy + 'T00:00:00Z');
+    const dow = d.getUTCDay();
+    d.setUTCDate(d.getUTCDate() - (dow === 0 ? 6 : dow - 1));
+    return d.toISOString().slice(0, 10);
+  })();
+  let sem = '<div class="hoy-sem">';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(lunes + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + i);
+    const iso = d.toISOString().slice(0, 10);
+    const hoyEs = iso === hoy;
+    const entregas = conEntrega.filter(function (t) { return t.entrega === iso; });
+    sem += '<div class="hoy-dia' + (hoyEs ? ' hoy' : '') +
+      (entregas.length ? ' lleno' : '') + '">' +
+      '<div class="d">' + DIAS_CORTOS[i] + '</div>' +
+      '<div class="n">' + Number(iso.slice(8, 10)) + '</div>' +
+      '<div class="c">' + (entregas.length ? entregas.length + ' entrega' +
+        (entregas.length > 1 ? 's' : '') : '') + '</div></div>';
+  }
+  sem += '</div>';
+
+  /* 3 · Lo que viene, ordenado por urgencia de verdad. */
+  const pendientes = conEntrega.slice().sort(function (a, b) {
+    return a.entrega < b.entrega ? -1 : 1;
+  }).slice(0, 6);
+  const viene = pendientes.length ? pendientes.map(function (t) {
+    const d = dias(t.entrega);
+    const clase = d < 0 ? 'tarde' : d <= 3 ? 'pronto' : '';
+    const cuando = d < 0 ? 'venció hace ' + (-d) + ' día' + (-d > 1 ? 's' : '')
+                 : d === 0 ? 'HOY'
+                 : 'en ' + d + ' día' + (d > 1 ? 's' : '');
+    return '<div class="hoy-ent ' + clase + '">' +
+      '<div class="t">' + escC(t.nombre) + '</div>' +
+      '<div class="s">' + escC(cuando + ' · ' + t.entrega) + '</div></div>';
+  }).join('') : '<div class="nc-vacio">Ningún proyecto tiene fecha de entrega puesta.</div>';
+
+  cue.innerHTML =
+    '<div class="card"><div class="card-ttl">En qué se te va la semana</div>' + repar + '</div>' +
+    '<div class="card"><div class="card-ttl">Esta semana</div>' + sem +
+      '<div style="font:400 11.5px/1.6 \'DM Sans\';color:var(--ink3);margin-top:10px">' +
+      'Solo entregas por ahora. Las clases y los turnos entran cuando los ' +
+      'anotes: dibujarlos sin saberlos sería inventarte la semana.</div></div>' +
+    '<div class="card"><div class="card-ttl">Lo que viene</div>' + viene + '</div>';
+
+  /* 4 · Lo último que se movió, como el «recent changes» de la referencia. */
+  const movs = (MIO.finanzas || []).slice(0, 8);
+  rec.innerHTML = '<div class="card"><div class="card-ttl">Lo último que se movió</div>' +
+    (movs.length ? movs.map(function (x) {
+      const entra = x.flujo === 'ingreso';
+      return '<div class="mio-row">' +
+        '<div><div class="mio-nm">' + escC(x.concepto) + '</div>' +
+          '<div class="mio-sub">' + escC([x.fecha, x.categoria, x.cuenta]
+            .filter(Boolean).join(' · ')) + '</div></div>' +
+        '<div class="mio-cifra" style="color:' +
+          (entra ? 'var(--green)' : 'var(--ink)') + '">' +
+          (entra ? '+ ' : '− ') + plata(Math.abs(x.monto), x.moneda) + '</div>' +
+        '<div class="mio-acc"></div></div>';
+    }).join('') : '<div class="nc-vacio">Nada anotado este mes.</div>') + '</div>';
+}
+
+/** Los proyectos, también en el menú, con su punto de urgencia. */
+function pintarProyectosMenu() {
+  const c = document.getElementById('sb-proyectos');
+  if (!c || !MIO) return;
+  const hoy = MIO.hoy;
+  c.innerHTML = MIO.trabajos.filter(function (t) { return t.estado !== 'cerrado'; })
+    .map(function (t, i) {
+      let clase = '';
+      if (t.entrega) {
+        const d = Math.round((new Date(t.entrega + 'T00:00:00Z') -
+                              new Date(hoy + 'T00:00:00Z')) / 86400000);
+        clase = d < 0 ? ' tarde' : d <= 3 ? ' pronto' : '';
+      }
+      return '<div class="ni-proy' + clase + '" onclick="irAProyecto(' + i + ')">' +
+        '<i></i>' + escC(t.nombre) + '</div>';
+    }).join('');
+}
+
+function irAProyecto(i) {
+  go('trabajos', document.querySelector('[data-v=trabajos]'));
+  setTimeout(function () { formTrabajo(i); }, 60);
+}
+
 /* ─── MI TRABAJO Y MI PLATA ───
  *
  * Todo en UNA llamada: son cuatro hojas de la misma carpeta, y pedirlas
@@ -942,12 +1178,35 @@ function logout() { salirCentral(false); }
 let MIO = null;
 
 async function cargarMio() {
+  /**
+   * Traer y dibujar van en dos try distintos.
+   *
+   * Estaban juntos, y un error al DIBUJAR salía en pantalla como «sin
+   * conexión con la hoja» — mandando a revisar el internet por un fallo
+   * que estaba aquí. Lo encontró una prueba, y por poco: el mensaje era
+   * creíble.
+   */
+  let r;
   try {
-    const r = await nc('nc_mio');
-    if (!r || !r.ok) { MIO = null; pintarMio(r && r.error); return; }
-    MIO = r;
+    r = await nc('nc_mio');
+  } catch (e) {
+    MIO = null; pintarMio('Sin conexión con la hoja.'); return;
+  }
+  if (!r || !r.ok) { MIO = null; pintarMio(r && r.error); return; }
+  MIO = r;
+  try {
     pintarMio();
-  } catch (e) { MIO = null; pintarMio('Sin conexión con la hoja.'); }
+  } catch (e) {
+    /*
+      Se limpia MIO antes de volver a llamar.
+      Si no, pintarMio ve los datos puestos y vuelve a intentar dibujar
+      exactamente lo que acaba de fallar: la excepción sale otra vez, ya
+      sin nadie que la atrape, y la pantalla queda a medias sin mensaje.
+      Lo encontró la prueba que rompe el dibujo a propósito.
+    */
+    MIO = null;
+    pintarMio('Los datos llegaron pero no los pude dibujar: ' + e.message);
+  }
 }
 
 /** Una cifra con su moneda. Nunca se suman monedas distintas. */
@@ -989,6 +1248,8 @@ function pintarMio(error) {
 
   pintarTrabajos();
   pintarPlata();
+  pintarHoy();
+  pintarProyectosMenu();
 }
 
 const TIPO_ETIQ = { cliente: 'Cliente', empleo: 'Empleo', propio: 'Propio', estudio: 'U' };
@@ -1666,7 +1927,7 @@ function sellarEjemploCentral() {
 
 /* ─── NAV ─── */
 const TITLES = {
-  dashboard:'Dashboard', trabajos:'Mi trabajo', plata:'Mi plata',
+  dashboard:'Hoy', trabajos:'Mis proyectos', plata:'Mis finanzas',
   clientes:'Clientes', equipo:'Equipo',
   pipeline:'Pipeline novAcademy', onboarding:'Onboarding de clientes',
   meta:'Meta Ads', demo:'Gestión de demo'
