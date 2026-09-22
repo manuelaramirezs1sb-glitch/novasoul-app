@@ -811,6 +811,16 @@ input.li:focus{border-color:var(--acc-d);}
 .aud-val .antes{color:var(--t-mut3);text-decoration:line-through;}
 @media(max-width:720px){
   .eq-row{grid-template-columns:1fr 1fr;gap:8px;}
+  /*
+    En el teléfono, Editar y Quitar quedaban de últimos: había que pasar
+    por el rol, los pedidos, la entrega y los sin mover antes de llegar a
+    ellos. Existían y no se encontraban, que para quien los busca es lo
+    mismo que no existir. Suben justo debajo del nombre.
+  */
+  .eq-id{order:1;grid-column:1/-1;}
+  .eq-acc{order:2;grid-column:1/-1;}
+  .eq-rol{order:3;} .eq-num{order:4;}
+  .eq-acc .eq-btn{flex:1;text-align:center;padding:9px 10px;}
   .aud-row{grid-template-columns:1fr;gap:4px;}
   .aud-val{text-align:left;}
 }
@@ -6659,7 +6669,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-22 · 0475';
+const VERSION_PANTALLA = '2026-09-22 · 01bf';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
