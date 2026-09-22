@@ -300,3 +300,73 @@ correcto.
 - **Información de producto desde Dropi** — Manuela ya la tiene escrita
   en la plataforma. Falta el export para importarla en vez de que la
   vuelva a escribir.
+
+---
+
+## 6 · NovaSoul y Nova Central, como de verdad son (22-09-2026)
+
+Manuela describió para qué las necesita. No es lo que decían las maquetas,
+así que se escribe aquí antes de construir nada.
+
+### Lo que hay encima de ella ahora mismo
+
+| Compromiso | Qué forma tiene | Quién pone la fecha |
+|---|---|---|
+| **PHH** (EE. UU., por Upwork) | tareas sueltas, por horas | ellos |
+| **Salsabor** — mesera | turnos fijos | el local |
+| **Son de Sky** — carta, web, cocteles, precios, marketing | proyecto con entregables y precio | acordada |
+| **Nova** — Empresarial hoy, Academy pronto | producto propio, sin fecha externa | ella |
+| **Universidad** + prácticas el año entrante | entregas con fecha inamovible | la U |
+
+Cinco compromisos sobre las mismas veinticuatro horas. **El problema no
+es recordar: es repartir.** Una lista de tareas no lo resuelve — lo
+esconde, porque una lista siempre cabe en una pantalla aunque no quepa
+en una semana.
+
+### El reparto
+
+Nova Central y NovaSoul comparten un solo objeto, el **proyecto**, y lo
+miran por lados distintos:
+
+**Nova Central — el negocio**
+Contratos y su especificación · cotizaciones · qué se cobró, qué falta
+cobrar y de quién · finanzas de Nova (Empresarial, Academy) · **y sus
+finanzas personales**. Es la pantalla que algún día se le muestra a una
+socia o a un contador.
+
+**NovaSoul — el día a día**
+Los entregables de esos proyectos con su fecha · tareas de la
+universidad · **límites y riesgo de entrega** · cumplirse a sí misma ·
+comidas, ejercicio, astrología, tranquilidad.
+
+### La frontera, que es de privacidad y no de función
+
+**De Soul a Central sube solo lo que es trabajo**: entregas, fechas,
+plata. Las comidas, el ciclo y el ánimo no salen de Soul.
+
+Es de una sola vía a propósito. Central se abre delante de otra gente;
+Soul no se abre delante de nadie. Si se mezclan una vez, ya no se puede
+abrir Central sin pensarlo.
+
+### Lo que hay que construir primero, y por qué
+
+El **riesgo de entrega**. Es el mismo argumento del semáforo de pauta
+aplicado a ella: decirle **antes** que la semana no cabe, no después de
+que incumplió.
+
+Para eso hacen falta tres cosas y ninguna se puede adivinar:
+
+1. **Cuántas horas tiene libres cada día**, descontados turnos y clases.
+   Es el equivalente del techo de CPA: sin ese número no hay con qué
+   comparar.
+2. **Cuánto cree que cuesta cada entregable.** Estimado por ella, y
+   corregido con lo que de verdad tardó.
+3. **Qué pasa si no se entrega.** No es lo mismo un parcial que un
+   ajuste de carta que se puede correr una semana.
+
+Con eso, Nova puede decir: *«esta semana tienes 22 horas libres y 31
+comprometidas. Algo se va a caer; estas son las tres candidatas y esto
+cuesta cada una.»* Eso sí sirve. Una lista de pendientes no.
+
+**Y la misma regla de siempre:** si no hay con qué calcularlo, se dice
+que falta — no se dibuja una barra de progreso inventada.
