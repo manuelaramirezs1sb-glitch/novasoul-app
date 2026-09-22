@@ -214,3 +214,139 @@ function explicarErrorMeta(e) {
   }
   return { error: 'Meta dijo: ' + (e.message || 'error ' + cod), accion: '' };
 }
+
+
+// ─── LO QUE CORRE SOLO ───────────────────────────────────────
+
+/**
+ * ═══════════════════════════════════════════════════════════
+ *  UN SOLO INTERRUPTOR PARA TODO LO AUTOMÁTICO
+ * ═══════════════════════════════════════════════════════════
+ *
+ * Nova tiene trabajos que deberían correr sin que nadie los pida: bajar
+ * las tasas de cambio del día y revisar las alarmas. El código estaba,
+ * pero cada uno se prendía con su propia función y había que acordarse de
+ * las dos. Nadie se acuerda de dos cosas que se hacen una sola vez.
+ *
+ * El resultado era el peor posible: parecía automático y no lo era.
+ * Alguien conectaba Meta, veía la pauta llegar en pesos contra una tienda
+ * en dólares, y se quedaba esperando una conversión que nunca iba a pasar
+ * porque la hoja Tasas estaba vacía — sin un error, sin una pista.
+ *
+ * Ahora es una función: `prenderAutomatico()`. Y `verAutomatico()` dice
+ * qué está corriendo, porque un automatismo que no se puede comprobar es
+ * un automatismo en el que no se puede confiar.
+ */
+function prenderAutomatico() {
+  const hechos = [];
+
+  // ── Tasas de cambio ──
+  //
+  // Va primero a propósito. Sin tasas, el gasto de pauta en otra moneda
+  // no se suma —se cuenta aparte y se dice—, así que las alarmas de CPA
+  // y margen estarían juzgando una operación a la que le falta el gasto.
+  const tasas = ScriptApp.getProjectTriggers().filter(function (t) {
+    return t.getHandlerFunction() === 'actualizarTasasDiario';
+  });
+  if (tasas.length) {
+    hechos.push('· Tasas de cambio: ya estaba corriendo.');
+  } else {
+    ScriptApp.newTrigger('actualizarTasasDiario').timeBased().atHour(6).everyDays(1).create();
+    hechos.push('· Tasas de cambio: prendido, todos los días a las 6 a.m.');
+  }
+
+  // ── Alarmas ──
+  const alarmas = ScriptApp.getProjectTriggers().filter(function (t) {
+    return t.getHandlerFunction() === 'revisarAlarmasTodos';
+  });
+  const hora = Number(ALARMAS_DEFAULT.alarmas_hora) || 7;
+  if (alarmas.length) {
+    hechos.push('· Revisión de alarmas: ya estaba corriendo.');
+  } else {
+    ScriptApp.newTrigger('revisarAlarmasTodos').timeBased().atHour(hora).everyDays(1).create();
+    hechos.push('· Revisión de alarmas: prendido, todos los días a las ' + hora + ':00.');
+  }
+
+  /**
+   * Y las tasas de los últimos noventa días, ahora mismo.
+   *
+   * El disparador solo tapa los huecos de aquí en adelante. Sin esta
+   * primera carga, el gasto de pauta de los meses pasados se quedaría
+   * sin convertir para siempre — y los cierres que ya se hicieron no
+   * tendrían con qué cuadrar.
+   */
+  let cargadas = 0;
+  try {
+    const clientes = listarClientes();
+    clientes.forEach(function (c) {
+      if (!c.sheetId) return;
+      try { actualizarTasas(c.sheetId, 90); cargadas++; }
+      catch (e) { hechos.push('· OJO · no pude cargar las tasas de ' +
+                              c.empresa + ': ' + e.message); }
+    });
+    hechos.push('· Tasas de los últimos 90 días cargadas en ' + cargadas + ' cuenta(s).');
+  } catch (e) {
+    hechos.push('· OJO · no pude cargar las tasas: ' + e.message);
+  }
+
+  const msg = 'LO AUTOMÁTICO DE NOVA\n\n' + hechos.join('\n') +
+    '\n\nPara comprobarlo cuando quieras, corre verAutomatico().';
+  Logger.log(msg);
+  return msg;
+}
+
+/**
+ * Qué está corriendo solo, y cuándo corrió por última vez.
+ *
+ * Existe porque "instalado" y "funcionando" no son lo mismo. Un
+ * disparador puede estar puesto y fallar todos los días en silencio —
+ * Google lo reintenta, no avisa, y la hoja se queda vieja sin que nadie
+ * lo note.
+ */
+function verAutomatico() {
+  const esperados = {
+    actualizarTasasDiario: 'Tasas de cambio',
+    revisarAlarmasTodos:   'Revisión de alarmas',
+  };
+  const puestos = {};
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    puestos[t.getHandlerFunction()] = true;
+  });
+
+  const lineas = Object.keys(esperados).map(function (fn) {
+    return (puestos[fn] ? '✓ ' : '✗ ' ) + esperados[fn] +
+           (puestos[fn] ? '' : '  ← APAGADO, corre prenderAutomatico()');
+  });
+
+  // Y si las tasas están al día de verdad, no solo "instaladas"
+  try {
+    const ss = SpreadsheetApp.openById(IDS_().empresarial);
+    const sh = ss.getSheetByName('Tasas');
+    if (!sh || sh.getLastRow() < 2) {
+      lineas.push('');
+      lineas.push('OJO · la hoja Tasas está vacía. El gasto de pauta en otra ' +
+                  'moneda no se va a sumar hasta que tenga datos.');
+    } else {
+      const d = sh.getDataRange().getValues().slice(1);
+      let ultima = '';
+      d.forEach(function (f) {
+        const x = aISO(f[0], 'UTC');
+        if (x && x > ultima) ultima = x;
+      });
+      const hoy = ahoraISO().slice(0, 10);
+      const dias = ultima
+        ? Math.floor((new Date(hoy + 'T00:00:00Z') - new Date(ultima + 'T00:00:00Z')) / 86400000)
+        : 999;
+      lineas.push('');
+      lineas.push('Tasas: ' + d.length + ' filas, la más reciente del ' + (ultima || '—') +
+                  (dias > 3 ? '  ← lleva ' + dias + ' días sin actualizarse' : '  ✓ al día'));
+    }
+  } catch (e) {
+    lineas.push('');
+    lineas.push('No pude revisar la hoja Tasas: ' + e.message);
+  }
+
+  const msg = 'LO AUTOMÁTICO DE NOVA\n\n' + lineas.join('\n');
+  Logger.log(msg);
+  return msg;
+}

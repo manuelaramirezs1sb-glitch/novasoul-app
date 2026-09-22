@@ -188,10 +188,12 @@ footer{
   <a href="#p0"><span class="n">0</span> Comprobar que tienes un portfolio empresarial <span class="t">2 min</span></a>
   <a href="#p1"><span class="n">1</span> Registrarte como desarrolladora <span class="t">5 min</span></a>
   <a href="#p2"><span class="n">2</span> Crear la aplicación <span class="t">5 min</span></a>
+  <a href="#p2b"><span class="n">2½</span> Darle a Nova permiso sobre la app <span class="t">2 min</span></a>
   <a href="#p3"><span class="n">3</span> Crear el usuario de sistema <span class="t">2 min</span></a>
   <a href="#p4"><span class="n">4</span> Darle tu cuenta publicitaria, solo lectura <span class="t">2 min</span></a>
   <a href="#p5"><span class="n">5</span> Generar la llave <span class="t">2 min</span></a>
   <a href="#p6"><span class="n">6</span> Pegarla en Nova <span class="t">1 min</span></a>
+  <a href="#p7"><span class="n">7</span> Prender lo automático <span class="t">1 min</span></a>
   <a href="#mas-cuentas"><span class="n">+</span> Añadir más cuentas publicitarias <span class="t">después</span></a>
 </nav>
 
@@ -343,6 +345,52 @@ footer{
 </section>
 
 <!-- ─────────────────────────────────────────────── -->
+<section id="p2b">
+  <div class="paso-n">Paso 2 y medio</div>
+  <h2>Darle a Nova permiso sobre la aplicación</h2>
+
+  <p class="intro">
+    Este paso no está en ninguna documentación y es donde se atasca todo el
+    mundo. Si lo saltas, al llegar al final Meta te va a decir
+    <strong>«No hay permisos disponibles»</strong> sin explicar por qué.
+  </p>
+
+  <p>El usuario de sistema que vas a crear en el paso 3 necesita tener un rol
+  sobre la aplicación del paso 2. Son dos cosas de Meta que viven en pantallas
+  distintas y que hay que casar a mano.</p>
+
+  <div class="ojo">
+    <span class="et">Cuidado con la pantalla</span>
+    Hay dos sitios que se parecen y hacen lo contrario:
+    <br><br>
+    <strong>Cuentas → Aplicaciones</strong> le da cosas <em>a la app</em>. No es esa.
+    <br>
+    <strong>Usuarios → Usuarios del sistema</strong> le da cosas <em>al usuario</em>. Esa es.
+  </div>
+
+  <p>Desde <strong>Usuarios → Usuarios del sistema</strong>, con tu usuario
+  seleccionado:</p>
+
+  <ol>
+    <li><strong>Agregar activos</strong></li>
+    <li>En la columna izquierda: <strong>Aplicaciones</strong></li>
+    <li>Marca la aplicación que creaste</li>
+    <li>Enciende <strong>«Desarrollar la aplicación»</strong> — solo esa</li>
+    <li><strong>Asignar activos</strong></li>
+  </ol>
+
+  <div class="nota">
+    <span class="et">El nombre asusta, otra vez</span>
+    <strong>«Desarrollar la aplicación»</strong> es permiso sobre ese registro
+    que creaste, <strong>no sobre tu cuenta publicitaria</strong>. Lo que Nova
+    puede leer de tus anuncios se decide en el paso 4 y nada más.
+    <br><br>
+    No enciendas <strong>«Administrar la aplicación»</strong>: es acceso total y
+    no hace falta.
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
 <section id="p3">
   <div class="paso-n">Paso 3</div>
   <h2>Crear el usuario de sistema</h2>
@@ -404,6 +452,13 @@ footer{
     <li><strong>Generar</strong></li>
   </ol>
 
+  <div class="nota">
+    <span class="et">Si la lista de permisos sale vacía</span>
+    Meta dice <strong>«No hay permisos disponibles»</strong>. No es un error tuyo:
+    falta el <a href="#p2b">paso 2 y medio</a> — el usuario de sistema no tiene
+    rol sobre la aplicación. Vuelve, asígnalo, y regresa aquí.
+  </div>
+
   <div class="ojo">
     <span class="et">Cópiala antes de cerrar</span>
     Meta muestra la llave <strong>una sola vez</strong>. Si cierras la ventana sin
@@ -417,15 +472,71 @@ footer{
   <div class="paso-n">Paso 6</div>
   <h2>Pegarla en Nova</h2>
 
-  <p>En Nova: <strong>Configuración → Meta</strong>. Pega la llave y el
-  identificador de la cuenta que anotaste en el paso 0, y dale a
-  <strong>Probar conexión</strong>.</p>
+  <p>En Nova: <strong>Configuración → Conexión con Meta</strong>. Pega la llave y
+  el identificador de la cuenta que anotaste en el paso 0, <strong>Guardar</strong>,
+  y después <strong>Probar conexión</strong>.</p>
 
   <p>Nova hace una consulta de prueba ahí mismo y te dice qué encontró. Si algo
   está mal, te dice <strong>cuál</strong> de los dos falla — no un error genérico.</p>
 
-  <p>Desde ese momento, Nova trae el gasto del día anterior cada mañana, sola.
-  No vuelves a bajar un Excel de Meta.</p>
+  <div class="nota">
+    <span class="et">La llave no se puede volver a ver</span>
+    Ni tú, ni Nova, ni nadie. El servidor no la devuelve jamás — ni los últimos
+    cuatro caracteres. Para cambiarla se escribe otra encima.
+    <br><br>
+    Suena incómodo y es a propósito: <strong>lo que no se puede leer no se puede
+    filtrar</strong>. Por eso arriba de los campos hay una línea que dice si está
+    conectada y cuándo se comprobó — esa línea es la que te dice si funciona.
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<section id="p7">
+  <div class="paso-n">Paso 7 · el último</div>
+  <h2>Prender lo automático</h2>
+
+  <p class="intro">
+    Conectar Meta no basta si tu tienda factura en una moneda y Meta te cobra en
+    otra. Este paso es el que hace que el gasto se sume de verdad.
+  </p>
+
+  <p>En el <strong>Apps Script</strong> de tu cuenta, elige la función
+  <strong><code>prenderAutomatico</code></strong> y dale a <em>Ejecutar</em>.
+  Una sola vez, nunca más.</p>
+
+  <p>Eso deja corriendo dos trabajos diarios y carga las tasas de cambio de los
+  últimos noventa días:</p>
+
+  <ul class="pasos">
+    <li><strong>Tasas de cambio</strong>, cada día a las 6 a.m.</li>
+    <li><strong>Revisión de alarmas</strong>, cada día a las 7 a.m.</li>
+  </ul>
+
+  <h3>Por qué las tasas son imprescindibles</h3>
+
+  <p>Meta puede cobrarte en una moneda distinta a la que factura tu tienda —
+  cobrar en pesos una tienda que vende en dólares es lo más común de la región.
+  Cuando pasa eso, el gasto <strong>no se puede sumar a las ventas sin
+  convertirlo</strong>.</p>
+
+  <p>Y Nova convierte con la tasa <strong>del día de cada gasto</strong>, no con
+  la de hoy: una campaña de agosto se pagó al dólar de agosto. Para eso necesita
+  una tabla de tasas por día, y de ahí sale el trabajo diario.</p>
+
+  <div class="ojo">
+    <span class="et">Qué pasa si no lo prendes</span>
+    Nova <strong>no inventa una conversión</strong>. Ese gasto se cuenta aparte,
+    como «pauta sin convertir», y la pantalla lo dice.
+    <br><br>
+    Es la decisión correcta — restar pesos a dólares no es un error de redondeo,
+    es una cifra falsa con pinta de cierta — pero significa que tu CPA y tu
+    margen van a estar incompletos hasta que lo prendas.
+  </div>
+
+  <p>Para comprobar que quedó andando, en cualquier momento corre
+  <strong><code>verAutomatico</code></strong>. Te dice qué está prendido y si las
+  tasas están al día, porque «instalado» y «funcionando» no son lo mismo: un
+  trabajo puede estar puesto y fallar todos los días en silencio.</p>
 </section>
 
 <!-- ─────────────────────────────────────────────── -->
@@ -525,6 +636,18 @@ footer{
         <tr>
           <td>Nova dice que el permiso no alcanza</td>
           <td>En el paso 5 se marcó otro permiso, o ninguno. Genera otra llave con <code>ads_read</code>.</td>
+        </tr>
+        <tr>
+          <td>Meta dice «No hay permisos disponibles»</td>
+          <td>Falta el paso 2½: el usuario de sistema no tiene rol sobre la aplicación.</td>
+        </tr>
+        <tr>
+          <td>Al guardar en Nova te saca y te manda un código nuevo</td>
+          <td>Era un fallo de Nova, corregido el 21-09-2026. Si te pasa, avisa: significa que estás con una versión vieja.</td>
+        </tr>
+        <tr>
+          <td>Conecta, pero la pauta aparece «sin convertir»</td>
+          <td>Falta el paso 7. Corre <code>prenderAutomatico</code> en el Apps Script.</td>
         </tr>
         <tr>
           <td>Funcionaba y dejó de funcionar</td>
