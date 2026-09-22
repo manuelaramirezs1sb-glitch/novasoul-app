@@ -29,6 +29,7 @@ ORDEN = [
     ('65-central.gs',      '10 · NOVA CENTRAL'),
     ('70-importar.gs',     '11 · ESCRITURA'),
     ('75-meta.gs',         '12 · META'),
+    ('76-meta-leer.gs',    '13 · META · LECTURA DIARIA'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

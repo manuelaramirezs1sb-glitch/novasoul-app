@@ -92,8 +92,45 @@ Dos cosas que había que arreglar para que eso sirviera:
   `paresNecesarios()` junta las dos listas sin repetir inversos.
   Probado en `apps-script/pruebas/tasas.js`.
 
-**Falta:** la lectura diaria. Que Nova le pida a Meta el gasto de ayer
-cada mañana y lo escriba en Pauta, en vez de que alguien baje el Excel.
+### La lectura diaria — HECHA (22-09-2026)
+
+`76-meta-leer.gs`. Nova le pide a Meta el gasto y lo escribe en Pauta:
+sola cada mañana a las 6, o con el botón **Traer ahora** de la pantalla
+de la dueña, que además sirve para traer el historial la primera vez
+(hasta 400 días).
+
+Se pide a nivel de **conjunto** y con `time_increment=1` —una fila por
+día— porque el export manual trae una sola fila por todo el periodo, y
+repartirla entre los días dibuja una curva que nunca existió.
+
+Tres cosas que dejan de ser un problema al pedirlo así: la moneda la
+declara Meta (`account_currency`) en vez de adivinarse por el nombre de
+una columna; las fechas vienen en ISO, sin el 03/04 que es marzo o abril
+según el país; y el gasto entra como número, sin el punto y la coma
+latinoamericanos.
+
+**Lo que no se inventa.** Meta no entrega presupuesto ni estado de
+entrega en este informe: esas columnas quedan vacías, no en cero. Y si
+los conjuntos no reportan compras sino registros, se cuenta el registro
+y **se dice** — ese CPA no es por venta, y quien lo mire tiene que
+saberlo.
+
+**Volver a leer no duplica.** El identificador de cada fila es el mismo
+que arma el importador del Excel, así que traer dos veces el mismo día
+corrige la fila en vez de sumar otra. Eso también importa por una razón
+menos obvia: Meta sigue atribuyendo conversiones días después, así que
+las cifras de ayer cambian pasado mañana. Se vuelven a pedir siete días
+cada mañana y se reescriben encima.
+
+**La única fuga posible, y está tapada.** Una fila subida a mano que
+cubre un RANGO de varios días no comparte identificador con las diarias,
+así que se sumaría además de ellas. Nova las detecta y las cuenta en el
+informe — pero no las borra: borrar datos que alguien subió es decisión
+suya.
+
+Probado en `pruebas/meta-traer.js` con Meta remedado: 27 casos, entre
+ellos la doble lectura, la corrección de conversiones, la respuesta
+partida en páginas, el error de llave vencida y la fila que se solapa.
 
 ### Lo que se aprendió montándolo
 

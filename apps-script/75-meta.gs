@@ -258,16 +258,23 @@ const TRABAJOS = [
   {
     fn: 'actualizarTasasDiario',
     nombre: 'Tasas de cambio',
-    hora: 6,
+    hora: 5,
     // Va primero a propósito: sin tasas el gasto de pauta en otra moneda
     // no se suma, así que las alarmas de CPA y margen estarían juzgando
     // una operación a la que le falta el gasto.
     porque: 'Sin esto, la pauta que Meta cobra en otra moneda no se puede sumar.',
   },
   {
+    fn: 'leerMetaDiario',
+    nombre: 'Lectura de Meta',
+    hora: 6,
+    porque: 'Sin esto, el gasto de anuncios solo entra si alguien sube el Excel.',
+  },
+  {
     fn: 'revisarAlarmasTodos',
     nombre: 'Revisión de alarmas',
     hora: 7,
+    // De último: juzga el día con el gasto ya adentro y ya convertido.
     porque: 'Sin esto, las alarmas solo se calculan cuando alguien abre Nova.',
   },
 ];
@@ -282,6 +289,28 @@ function trabajosPuestos_() {
 }
 
 /**
+ * El orden de las horas importa, y por eso un disparador viejo se rehace.
+ *
+ * Las tasas tienen que estar antes de que entre el gasto de Meta, y las
+ * alarmas después, para que juzguen el día con el gasto ya adentro. Si
+ * una versión anterior dejó un disparador a otra hora, mantenerlo sería
+ * dejar el orden al azar — así que se borra y se vuelve a crear.
+ *
+ * Google no dice a qué hora quedó un disparador (`atHour` define una
+ * franja de una hora, no un minuto exacto), así que la hora se guarda
+ * aparte, en las Propiedades. Sin eso no habría forma de saber si el que
+ * está puesto es el de ahora o el de antes.
+ */
+const PROP_HORAS = 'NOVA_HORAS_TRABAJOS';
+
+function horasGuardadas_() {
+  try {
+    return JSON.parse(PropertiesService.getScriptProperties()
+      .getProperty(PROP_HORAS) || '{}');
+  } catch (e) { return {}; }
+}
+
+/**
  * Prende los dos trabajos. No toca las tasas: eso se hace aparte.
  *
  * Separado a propósito. Instalar un disparador es instantáneo; bajar
@@ -290,12 +319,30 @@ function trabajosPuestos_() {
  * terminara lo lento, y quien lo aprieta no sabría si funcionó.
  */
 function prenderTrabajos_() {
-  const puestos = trabajosPuestos_();
-  return TRABAJOS.map(function (t) {
-    if (puestos[t.fn]) return { fn: t.fn, nombre: t.nombre, ya: true, hora: t.hora };
+  const props = PropertiesService.getScriptProperties();
+  const horas = horasGuardadas_();
+  const disparadores = ScriptApp.getProjectTriggers();
+
+  const hechos = TRABAJOS.map(function (t) {
+    const mios = disparadores.filter(function (d) {
+      return d.getHandlerFunction() === t.fn;
+    });
+    const correcta = horas[t.fn] === t.hora;
+
+    if (mios.length === 1 && correcta) {
+      return { fn: t.fn, nombre: t.nombre, ya: true, hora: t.hora };
+    }
+    // Sobrantes o a la hora equivocada: se rehace. Dos disparadores de la
+    // misma función leerían Meta dos veces la misma mañana.
+    mios.forEach(function (d) { try { ScriptApp.deleteTrigger(d); } catch (e) {} });
     ScriptApp.newTrigger(t.fn).timeBased().atHour(t.hora).everyDays(1).create();
-    return { fn: t.fn, nombre: t.nombre, ya: false, hora: t.hora };
+    horas[t.fn] = t.hora;
+    return { fn: t.fn, nombre: t.nombre, ya: false, hora: t.hora,
+             rehecho: mios.length > 0 };
   });
+
+  props.setProperty(PROP_HORAS, JSON.stringify(horas));
+  return hechos;
 }
 
 /**
@@ -344,9 +391,9 @@ function cargaInicialTasas() {
  */
 function prenderAutomatico() {
   const hechos = prenderTrabajos_().map(function (r) {
-    return r.ya
-      ? '· ' + r.nombre + ': ya estaba corriendo.'
-      : '· ' + r.nombre + ': prendido, todos los días a las ' + r.hora + ':00.';
+    if (r.ya) return '· ' + r.nombre + ': ya estaba corriendo.';
+    return '· ' + r.nombre + ': ' + (r.rehecho ? 'reprogramado' : 'prendido') +
+           ', todos los días a las ' + r.hora + ':00.';
   });
   hechos.push('· ' + cargaInicialTasas());
 
@@ -367,8 +414,12 @@ function prenderAutomatico() {
  */
 function estadoAutomatico() {
   const puestos = trabajosPuestos_();
+  const horas = horasGuardadas_();
   const trabajos = TRABAJOS.map(function (t) {
-    return { nombre: t.nombre, hora: t.hora, porque: t.porque, prendido: !!puestos[t.fn] };
+    // "Puesto a otra hora" cuenta como apagado: el orden entre los tres
+    // es lo que hace que el gasto entre convertido y las alarmas lo vean.
+    return { nombre: t.nombre, hora: t.hora, porque: t.porque,
+             prendido: !!puestos[t.fn] && horas[t.fn] === t.hora };
   });
 
   const clientes = [];

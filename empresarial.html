@@ -6659,7 +6659,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-22 · f5c7';
+const VERSION_PANTALLA = '2026-09-22 · 1028';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -7909,7 +7909,107 @@ function pintarMeta() {
       '<button class="btn" onclick="guardarMeta()">Guardar</button>' +
       '<button class="btn-ghost" onclick="probarMeta()">Probar conexión</button>' +
     '</div>' +
-    '<div id="meta-msg" class="mt-msg" style="display:none"></div>';
+    '<div id="meta-msg" class="mt-msg" style="display:none"></div>' +
+    /**
+     * Traer la pauta solo aparece cuando la conexión ya está comprobada.
+     *
+     * Antes de eso el botón no puede funcionar, y un botón que falla
+     * siempre enseña a desconfiar de los que sí funcionan.
+     */
+    (prob ? bloqueTraerMeta() : '');
+}
+
+/**
+ * El botón que trae el gasto de Meta, y el informe de lo que trajo.
+ *
+ * El informe no es adorno. Esto escribe en Pauta, que es de donde salen
+ * el CPA y el margen: quien lo aprieta tiene derecho a ver cuántas filas
+ * entraron, cuántas se corrigieron y qué contó Meta como compra. Un
+ * número que no se puede auditar no se puede corregir.
+ */
+function bloqueTraerMeta() {
+  return '<div style="border-top:1px solid var(--s-line);margin-top:18px;padding-top:16px">' +
+    '<div style="font:600 13px/1.3 \'DM Sans\';color:var(--t-ink);margin-bottom:4px">' +
+      'Traer el gasto desde Meta</div>' +
+    '<div style="font:400 12px/1.6 \'DM Sans\';color:var(--t-mut);margin-bottom:12px">' +
+      'Nova lo trae sola cada mañana. Este botón es para no esperar hasta ' +
+      'mañana, y para traer el historial la primera vez.</div>' +
+    '<div class="row-btns" style="align-items:center">' +
+      '<select class="cm-sel" id="meta-dias" style="max-width:190px">' +
+        '<option value="7">Los últimos 7 días</option>' +
+        '<option value="30">El último mes</option>' +
+        '<option value="90">Los últimos 3 meses</option>' +
+        '<option value="365">El último año</option>' +
+      '</select>' +
+      '<button class="btn" onclick="traerMeta()">Traer ahora</button>' +
+    '</div>' +
+    '<div id="meta-informe" style="display:none;margin-top:14px"></div>' +
+  '</div>';
+}
+
+async function traerMeta() {
+  const sel = document.getElementById('meta-dias');
+  const inf = document.getElementById('meta-informe');
+  const dias = Number(sel && sel.value) || 7;
+  if (inf) {
+    inf.style.display = 'block';
+    inf.innerHTML = '<div class="mt-msg" style="margin:0">Pidiéndole a Meta ' +
+      (dias > 90 ? 'un año de datos. Esto puede tardar un par de minutos.'
+                 : 'los datos. Un momento.') + '</div>';
+  }
+  try {
+    const r = await api('meta_traer', { tienda: ST, dias: dias });
+    if (!r.ok) {
+      if (inf) inf.innerHTML = '<div class="mt-msg" style="margin:0;background:#f6e3db;' +
+        'color:#a8563a;white-space:pre-line">' + esc(r.error) + '</div>';
+      return;
+    }
+    pintarInformeMeta(r.informe);
+    // La pauta acaba de cambiar: lo que hay en pantalla ya no es lo que hay
+    await cargarReales();
+  } catch (e) {
+    if (inf) inf.innerHTML = '<div class="mt-msg" style="margin:0;background:#f6e3db;' +
+      'color:#a8563a">No se pudo traer: ' + esc(e.message) + '</div>';
+  }
+}
+
+function pintarInformeMeta(i) {
+  const inf = document.getElementById('meta-informe');
+  if (!inf) return;
+
+  const nada = !i.filas;
+  const cifras = [
+    ['Días pedidos', esc(i.desde) + ' → ' + esc(i.hasta)],
+    ['Filas que trajo Meta', String(i.filas)],
+    ['Nuevas en Pauta', String(i.nuevas)],
+    // "Corregidas" y no "actualizadas": son filas que ya estaban y cuyo
+    // número cambió porque Meta siguió atribuyendo conversiones.
+    ['Corregidas', String(i.actualizadas)],
+    ['Iguales que antes', String(i.iguales)],
+    ['Gasto del periodo', (i.moneda ? esc(i.moneda) + ' ' : '') +
+      Number(i.gasto || 0).toLocaleString('es-CO', { maximumFractionDigits: 2 })],
+    // De qué acción salió el CPA. Es la línea que permite discutirlo.
+    ['Qué contó como compra', i.accionCompra ? esc(i.accionCompra) : '— ninguna'],
+  ];
+
+  inf.style.display = 'block';
+  inf.innerHTML =
+    '<div class="mt-msg" style="margin:0 0 12px;background:' +
+      (nada ? '#f1f1ec;color:#5f6b52' : '#e6efe8;color:#2f5738') + '">' +
+      (nada ? 'Meta no reportó gasto en esos días.'
+            : 'Listo. ' + i.nuevas + ' filas nuevas y ' + i.actualizadas +
+              ' corregidas en Pauta.') + '</div>' +
+    '<div class="mt-grid">' +
+      cifras.map(function (c) {
+        return '<div class="mt-campo"><label>' + c[0] + '</label>' +
+          '<div style="font:600 13px/1.4 \'DM Sans\';color:var(--t-ink)">' +
+          c[1] + '</div></div>';
+      }).join('') +
+    '</div>' +
+    (i.avisos || []).map(function (a) {
+      return '<div class="mt-msg" style="margin-top:10px;background:#f6ecd0;' +
+        'color:#7a5c10">' + esc(a) + '</div>';
+    }).join('');
 }
 
 function metaMsg(texto, tipo) {

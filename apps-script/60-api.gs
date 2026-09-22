@@ -136,6 +136,7 @@ function manejar(e, metodo) {
       case 'meta_estado':  return json(apiMetaEstado(s, p));
       case 'meta_guardar': return json(apiMetaGuardar(s, p));
       case 'meta_probar':  return json(apiMetaProbar(s, p));
+      case 'meta_traer':   return json(apiMetaTraer(s, p));
       case 'estado_clasificar': return json(apiEstadoClasificar(s, p));
       case 'borrar':    return json(apiBorrar(s, p));
       case 'cerrarmes': return json(apiCerrarMes(s, p));
