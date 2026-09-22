@@ -370,3 +370,60 @@ cuesta cada una.»* Eso sí sirve. Una lista de pendientes no.
 
 **Y la misma regla de siempre:** si no hay con qué calcularlo, se dice
 que falta — no se dibuja una barra de progreso inventada.
+
+### 6b · La astrología no es adorno: es el criterio de CUÁNDO
+
+Manuela lo dijo claro y cambia el diseño: NovaSoul no es un calendario
+con horóscopo al lado. La carta y los tránsitos son **la regla que decide
+qué va en qué día**.
+
+> «Los planetas marcan el tiempo: hay tiempo para aprender, tiempo para
+> descansar y tiempo para cambiar.»
+
+Así que el repartidor de la semana no ordena solo por fecha e
+importancia. Ordena por fecha, importancia **y ventana** — y la ventana
+sale de su carta, de los tránsitos vigentes y de su ciclo.
+
+Piezas:
+
+- **Su carta natal**, cargada una vez. Es fija.
+- **Los tránsitos**, con su DURACIÓN: no es lo mismo la Luna, que dura
+  dos días y medio, que Saturno, que dura meses. Un consejo que no
+  distingue eso es ruido.
+- **Su ciclo menstrual**, que es fisiología medible y tiene su propio
+  patrón de energía.
+- **Las recompensas**, que son suyas y las define ella.
+
+**Lo que Nova puede afirmar y lo que no.** Nova puede decir «hoy tienes
+Luna en tu casa 10, que en tu marco es día de empujar lo público» —eso
+es aritmética sobre su carta, y es verdad dentro de su marco. Lo que
+Nova NO va a hacer es afirmar que por eso va a salir bien.
+
+Lo que sí va a hacer, y no hace ninguna app de astrología: **medir si le
+funcionó a ella**. Cada tarea queda con la ventana en que se hizo y con
+si se cumplió. A los tres meses Nova puede decirle «las entregas que
+pusiste en días de Luna menguante las terminaste el 80% de las veces; en
+Mercurio retrógrado, el 40%». Eso es su propio dato, no una creencia
+prestada — y si el patrón no aparece, también se lo dice.
+
+Es la misma regla de siempre: se muestra la cuenta, y se calla cuando no
+hay muestra.
+
+### 6c · Los accesos, decididos (22-09-2026)
+
+| Pantalla | Quién entra | Cómo |
+|---|---|---|
+| **Central** | solo Manuela | su propio código, lista Plataforma |
+| **Hub** | desde Central | sin volver a pedir código |
+| **Empresarial** | Manuela y clientes | correo + código, igual para todos |
+| **NovaSoul** | solo Manuela | **misma sesión de Central**, sin segundo código |
+| **novAcademy** | estudiantes y docentes | su propio usuario, que ella genera |
+| novAcademy · panel de ella | solo Manuela | misma sesión de Central |
+
+**Por qué NovaSoul NO puede ser «sin login».** Manuela pidió que no le
+pida contraseña. Eso está bien y así queda — pero una página sin sesión
+en un sitio público la ve cualquiera que escriba la dirección, y ahí
+adentro están su ciclo, sus finanzas personales y su ánimo. Lo que
+resuelve el pedido sin dejar la puerta abierta es **compartir la sesión
+de Central**: ella no escribe ningún código, y quien no tenga esa sesión
+no ve nada. Es lo mismo que ya se hizo entre el hub y Empresarial.
