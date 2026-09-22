@@ -92,6 +92,10 @@ function manejarCentral(accion, p) {
     case 'nc_crear':    return centralCrearCliente(s, p);
     case 'nc_automatico':        return centralAutomatico(s, p);
     case 'nc_automatico_prender':return centralPrenderAutomatico(s, p);
+    case 'nc_mio':          return centralMio(s, p);
+    case 'nc_mio_guardar':  return centralMioGuardar(s, p);
+    case 'nc_mio_borrar':   return centralMioBorrar(s, p);
+    case 'nc_mio_cobrar':   return centralMioCobrar(s, p);
     case 'nc_salir':
       CacheService.getScriptCache().remove('nc_' + p.token);
       return { ok: true };

@@ -304,6 +304,40 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 }
 
 /* ─── Clientes y onboarding ─── */
+
+/* ─── MI TRABAJO Y MI PLATA ─────────────────────────── */
+.fam-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+.fam{display:flex;flex-direction:column;gap:3px;padding:14px 15px;border-radius:12px;
+  background:var(--bg2);border:1px solid var(--line);text-decoration:none;transition:border-color .15s;}
+.fam:hover{border-color:var(--gold);}
+.fam b{font:600 13px/1.2 'DM Sans';color:var(--ink);}
+.fam span{font:400 11.5px/1.4 'DM Sans';color:var(--ink3);}
+.mio-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;
+  padding:12px 0;border-bottom:1px solid var(--line);}
+.mio-row:last-child{border-bottom:none;}
+.mio-nm{font:600 13px/1.25 'DM Sans';color:var(--ink);}
+.mio-sub{font:400 11.5px/1.45 'DM Sans';color:var(--ink3);margin-top:3px;}
+.mio-cifra{font:600 13.5px/1.2 'DM Sans';color:var(--ink);text-align:right;
+  font-variant-numeric:tabular-nums;white-space:nowrap;}
+.mio-cifra small{display:block;font:500 10.5px/1.3 'DM Sans';color:var(--ink3);font-weight:500;}
+.mio-acc{display:flex;gap:6px;}
+.mio-btn{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 10px;
+  font:600 11px/1 'DM Sans';color:var(--ink2);cursor:pointer;white-space:nowrap;}
+.mio-btn:hover{border-color:var(--gold);color:var(--gold);}
+.mio-btn.mal:hover{border-color:#A83636;color:#A83636;}
+.mio-form{background:var(--bg2);border:1px solid var(--line);border-radius:14px;
+  padding:16px;margin-top:12px;display:flex;flex-direction:column;gap:12px;}
+.mio-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+.mio-campos label{display:flex;flex-direction:column;gap:5px;
+  font:600 10px/1 'DM Sans';letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);}
+.mio-barra{height:5px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:6px;}
+.mio-barra i{display:block;height:100%;background:var(--gold);}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap;}
+@media(max-width:720px){
+  .mio-row{grid-template-columns:1fr auto;}
+  .mio-acc{grid-column:1/-1;}
+  .mio-btn{flex:1;text-align:center;}
+}
 .nc-vacio{font:400 12.5px/1.65 'DM Sans';color:var(--ink3);padding:14px 0;}
 .nc-prob{font:500 11.5px/1.5 'DM Sans';color:#A83636;margin-top:3px;}
 .nc-abrir{font:600 11.5px/1 'DM Sans';color:var(--gold);text-decoration:none;margin-left:12px;white-space:nowrap;}
@@ -365,6 +399,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
       <div class="ni on" data-v="dashboard" onclick="go('dashboard',this)">
         <span class="ni-ico">⬡</span> Dashboard
       </div>
+      <!--
+        Lo de ella va primero porque es lo que abre todos los días.
+        Los clientes de Nova son una parte de su trabajo, no todo.
+      -->
+      <div class="ni socia-solo" data-v="trabajos" onclick="go('trabajos',this)">
+        <span class="ni-ico">◈</span> Mi trabajo
+      </div>
+      <div class="ni socia-solo" data-v="plata" onclick="go('plata',this)">
+        <span class="ni-ico">◇</span> Mi plata
+      </div>
       <div class="ni" data-v="clientes" onclick="go('clientes',this)">
         <span class="ni-ico">🏪</span> Clientes
       </div>
@@ -418,6 +462,60 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
         </div>
         <div class="kpi-grid" id="dash-kpis"></div>
         <div class="card-row" id="dash-bottom"></div>
+      </div>
+
+      <!-- ─── MI TRABAJO ─── -->
+      <div class="view" id="v-trabajos">
+
+        <!--
+          Los accesos a la familia. Van aquí, en la pantalla de ella,
+          porque Central es su puerta: entra una vez y salta a donde
+          necesite sin volver a escribir un código.
+        -->
+        <div class="card">
+          <div class="card-ttl">La familia Nova</div>
+          <div class="fam-grid" id="fam-links"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-ttl">Lo que tengo encima</div>
+          <div style="font:400 12.5px/1.6 'DM Sans';color:var(--ink3);margin-bottom:4px">
+            Cada compromiso con su fecha y su plata. La universidad y lo propio
+            no facturan, pero ocupan las mismas horas que un cliente que sí —
+            por eso están en la misma lista.</div>
+          <div id="trab-lista"></div>
+        </div>
+        <button class="btn" onclick="formTrabajo(null)">+ Nuevo trabajo</button>
+        <div id="trab-form"></div>
+      </div>
+
+      <!-- ─── MI PLATA ─── -->
+      <div class="view" id="v-plata">
+        <div class="kpi-grid" id="plata-kpis"></div>
+
+        <div class="card">
+          <div class="card-ttl">Lo que me deben</div>
+          <div style="font:400 12.5px/1.6 'DM Sans';color:var(--ink3);margin-bottom:4px">
+            Lo atrasado va aparte de lo que todavía no vence. Son dos
+            conversaciones distintas: una es esperar y la otra es llamar.</div>
+          <div id="cobros-lista"></div>
+        </div>
+        <button class="btn" onclick="formCobro(null)">+ Nuevo cobro</button>
+        <div id="cobro-form"></div>
+
+        <div class="card">
+          <div class="card-ttl">Este mes</div>
+          <div id="fin-lista"></div>
+        </div>
+        <button class="btn-ghost" onclick="formFinanza(null)">+ Movimiento</button>
+        <div id="fin-form"></div>
+
+        <div class="card">
+          <div class="card-ttl">Deudas y ahorros</div>
+          <div id="metas-lista"></div>
+        </div>
+        <button class="btn-ghost" onclick="formMeta(null)">+ Deuda o ahorro</button>
+        <div id="meta-form"></div>
       </div>
 
       <!-- ─── CLIENTES ─── -->
@@ -640,7 +738,7 @@ let activeSt = 'gt';
  * La huella sale del contenido del archivo: cambia sola con cada cambio,
  * aunque sean dos versiones el mismo día.
  */
-const VERSION_PANTALLA = '2026-09-22 · b2a9';
+const VERSION_PANTALLA = '2026-09-22 · 07d8';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -779,6 +877,8 @@ function entrarCentral() {
   pintarOnboarding();
   cargarClientes();
   cargarAutomatico();
+  if (NC_SESION && (NC_SESION.permisos || []).indexOf('facturacion') !== -1) cargarMio();
+  else document.querySelectorAll('.socia-solo').forEach(function (e) { e.style.display = 'none'; });
   sellarEjemploCentral();
 
   const m = localStorage.getItem('nc_modo');
@@ -796,6 +896,340 @@ async function salirCentral(porVencimiento) {
   if (porVencimiento) errC('Tu sesión se cerró por seguridad. Pide un código nuevo.');
 }
 function logout() { salirCentral(false); }
+
+/* ─── MI TRABAJO Y MI PLATA ───
+ *
+ * Todo en UNA llamada: son cuatro hojas de la misma carpeta, y pedirlas
+ * por separado serían cuatro viajes para pintar una pantalla. Es el
+ * mismo error que hace lenta a Empresarial, que abre con quince.
+ */
+let MIO = null;
+
+async function cargarMio() {
+  try {
+    const r = await nc('nc_mio');
+    if (!r || !r.ok) { MIO = null; pintarMio(r && r.error); return; }
+    MIO = r;
+    pintarMio();
+  } catch (e) { MIO = null; pintarMio('Sin conexión con la hoja.'); }
+}
+
+/** Una cifra con su moneda. Nunca se suman monedas distintas. */
+function plata(monto, moneda) {
+  return (moneda ? moneda + ' ' : '') +
+    Number(monto || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+}
+function variasMonedas(mapa) {
+  const ks = Object.keys(mapa || {}).filter(function (k) { return mapa[k]; });
+  if (!ks.length) return '—';
+  return ks.map(function (k) { return plata(mapa[k], k); }).join(' · ');
+}
+
+const FAMILIA = [
+  ['./index.html',        'El hub',         'Las cuatro pantallas'],
+  ['./empresarial.html',  'Nova Empresarial','Tus tiendas y las de tus clientes'],
+  ['./novasoul.html',     'NovaSoul',       'Tu día a día'],
+  ['./novacademy.html',   'novAcademy',     'Formación y pipeline'],
+];
+
+function pintarMio(error) {
+  const fam = document.getElementById('fam-links');
+  if (fam) {
+    fam.innerHTML = FAMILIA.map(function (f) {
+      return '<a class="fam" href="' + f[0] + '"><b>' + escC(f[1]) + '</b>' +
+        '<span>' + escC(f[2]) + '</span></a>';
+    }).join('');
+  }
+
+  const caja = ['trab-lista', 'cobros-lista', 'fin-lista', 'metas-lista', 'plata-kpis'];
+  if (!MIO) {
+    caja.forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '<div class="nc-vacio">' +
+        escC(error || 'Buscando…') + '</div>';
+    });
+    return;
+  }
+
+  pintarTrabajos();
+  pintarPlata();
+}
+
+const TIPO_ETIQ = { cliente: 'Cliente', empleo: 'Empleo', propio: 'Propio', estudio: 'U' };
+
+function pintarTrabajos() {
+  const c = document.getElementById('trab-lista');
+  if (!c) return;
+  if (!MIO.trabajos.length) {
+    c.innerHTML = '<div class="nc-vacio">Todavía no has anotado ningún trabajo. ' +
+      'Empieza por los que tienes encima ahora: el cliente, el empleo, la U.</div>';
+    return;
+  }
+  const hoy = MIO.hoy;
+  c.innerHTML = MIO.trabajos.map(function (t, i) {
+    // Los días que faltan son un hecho; el color es la opinión.
+    let plazo = '', clase = 'bd-g';
+    if (t.entrega) {
+      const d = Math.round((new Date(t.entrega + 'T00:00:00Z') -
+                            new Date(hoy + 'T00:00:00Z')) / 86400000);
+      plazo = d < 0 ? 'venció hace ' + (-d) + ' días'
+            : d === 0 ? 'entrega HOY'
+            : 'faltan ' + d + ' días';
+      clase = d < 0 ? 'bd-r' : d <= 3 ? 'bd-w' : 'bd-g';
+    }
+    const sub = [TIPO_ETIQ[t.tipo] || t.tipo, t.contraparte,
+                 t.horasSemana ? t.horasSemana + ' h/semana' : null,
+                 plazo].filter(Boolean).join(' · ');
+    return '<div class="mio-row">' +
+      '<div><div class="mio-nm">' + escC(t.nombre) + '</div>' +
+        '<div class="mio-sub">' + escC(sub) + '</div>' +
+        (t.especificacion ? '<div class="mio-sub">' + escC(t.especificacion) + '</div>' : '') +
+      '</div>' +
+      '<div class="mio-cifra">' +
+        (t.valor ? plata(t.valor, t.moneda) : '—') +
+        (t.falta !== null && t.falta > 0
+          ? '<small>falta ' + plata(t.falta, t.moneda) + '</small>'
+          : t.valor ? '<small>cobrado</small>' : '<small>no factura</small>') +
+      '</div>' +
+      '<div class="mio-acc">' +
+        (t.documento ? '<a class="mio-btn" href="' + escC(t.documento) +
+                       '" target="_blank" rel="noopener">Doc</a>' : '') +
+        '<button class="mio-btn" onclick="formTrabajo(' + i + ')">Editar</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function pintarPlata() {
+  const k = document.getElementById('plata-kpis');
+  if (k) {
+    const T = MIO.totales;
+    k.innerHTML = [
+      ['Atrasado', variasMonedas(T.atrasado), MIO.atrasados.length + ' cobro(s)', 'gold'],
+      ['Por cobrar', variasMonedas(T.porCobrar), MIO.porCobrar.length + ' cobro(s)', ''],
+      ['Entró este mes', variasMonedas(T.ingresosMes), MIO.mes, ''],
+      ['Salió este mes', variasMonedas(T.gastosMes), MIO.mes, ''],
+    ].map(function (x) {
+      return '<div class="kpi"><div class="kpi-lbl">' + x[0] + '</div>' +
+        '<div class="kpi-val ' + x[3] + '">' + escC(x[1]) + '</div>' +
+        '<div class="kpi-sub">' + escC(x[2]) + '</div></div>';
+    }).join('');
+  }
+
+  const c = document.getElementById('cobros-lista');
+  if (c) {
+    const filas = MIO.atrasados.concat(MIO.porCobrar);
+    c.innerHTML = filas.length ? filas.map(function (x) {
+      const tarde = x.dias !== null && x.dias > 0;
+      return '<div class="mio-row">' +
+        '<div><div class="mio-nm">' + escC(x.concepto || '(sin concepto)') + '</div>' +
+          '<div class="' + (tarde ? 'nc-prob' : 'mio-sub') + '">' +
+            escC(x.trabajo) + (x.esperada ? ' · esperado el ' + x.esperada : '') +
+            (tarde ? ' · ' + x.dias + ' días tarde' : '') + '</div></div>' +
+        '<div class="mio-cifra">' + plata(x.monto, x.moneda) + '</div>' +
+        '<div class="mio-acc">' +
+          '<button class="mio-btn" onclick="marcarCobrado(\'' + x.id + '\')">Ya entró</button>' +
+        '</div></div>';
+    }).join('') : '<div class="nc-vacio">No hay nada pendiente de cobro.</div>';
+  }
+
+  const f = document.getElementById('fin-lista');
+  if (f) {
+    f.innerHTML = MIO.finanzas.length ? MIO.finanzas.map(function (x) {
+      const entra = x.flujo === 'ingreso';
+      return '<div class="mio-row">' +
+        '<div><div class="mio-nm">' + escC(x.concepto) + '</div>' +
+          '<div class="mio-sub">' + escC([x.fecha, x.categoria, x.cuenta]
+            .filter(Boolean).join(' · ')) + '</div></div>' +
+        '<div class="mio-cifra" style="color:' + (entra ? 'var(--green)' : 'var(--ink)') + '">' +
+          (entra ? '+ ' : '− ') + plata(Math.abs(x.monto), x.moneda) + '</div>' +
+        '<div class="mio-acc"><button class="mio-btn mal" onclick="borrarMio(\'Finanzas\',\'' +
+          x.id + '\')">Borrar</button></div></div>';
+    }).join('') : '<div class="nc-vacio">Nada anotado este mes.</div>';
+  }
+
+  const m = document.getElementById('metas-lista');
+  if (m) {
+    m.innerHTML = MIO.metas.length ? MIO.metas.map(function (x, i) {
+      const deuda = x.tipo === 'deuda';
+      return '<div class="mio-row">' +
+        '<div style="grid-column:1/-1">' +
+          '<div class="mio-nm">' + escC(x.nombre) +
+            ' <span class="bd ' + (deuda ? 'bd-w' : 'bd-g') + '">' +
+            (deuda ? 'Deuda' : 'Ahorro') + '</span></div>' +
+          '<div class="mio-sub">' + escC([x.conQuien,
+            plata(x.saldo, x.moneda) + (x.meta ? ' de ' + plata(x.meta, x.moneda) : ''),
+            x.cuota ? 'cuota ' + plata(x.cuota, x.moneda) +
+              (x.dia ? ' el ' + x.dia : '') : null,
+            x.fechaMeta ? 'meta ' + x.fechaMeta : null].filter(Boolean).join(' · ')) + '</div>' +
+          // Sin monto meta no hay barra: un 0% se lee como «no has
+          // avanzado», que es una afirmación y no un vacío.
+          (x.pct === null ? '' :
+            '<div class="mio-barra"><i style="width:' + Math.min(x.pct, 100) + '%"></i></div>') +
+        '</div></div>';
+    }).join('') : '<div class="nc-vacio">Ninguna deuda ni ahorro anotado.</div>';
+  }
+}
+
+/* ─── Guardar, borrar, cobrar ─── */
+async function guardarMio(hoja, datos, cajaForm) {
+  try {
+    const r = await nc('nc_mio_guardar', { hoja: hoja, datos: datos });
+    if (!r || !r.ok) { showToast((r && r.error) || 'No se pudo guardar'); return false; }
+    if (cajaForm) document.getElementById(cajaForm).innerHTML = '';
+    await cargarMio();
+    showToast('Guardado');
+    return true;
+  } catch (e) { showToast('Sin conexión'); return false; }
+}
+
+async function borrarMio(hoja, id) {
+  if (!confirm('¿Borrar esto? No se puede deshacer.')) return;
+  try {
+    const r = await nc('nc_mio_borrar', { hoja: hoja, id: id });
+    if (!r || !r.ok) { showToast((r && r.error) || 'No se pudo borrar'); return; }
+    await cargarMio();
+    showToast('Borrado');
+  } catch (e) { showToast('Sin conexión'); }
+}
+
+async function marcarCobrado(id) {
+  try {
+    const r = await nc('nc_mio_cobrar', { id: id });
+    if (!r || !r.ok) { showToast((r && r.error) || 'No se pudo'); return; }
+    await cargarMio();
+    // Se dice que entró a las dos partes: si solo dijera «cobrado»,
+    // habría que ir a mirar si además quedó anotado como ingreso.
+    showToast('Cobrado, y anotado como ingreso del mes');
+  } catch (e) { showToast('Sin conexión'); }
+}
+
+/* ─── Formularios ─── */
+function campo(id, etiqueta, valor, tipo, extra) {
+  return '<label>' + etiqueta +
+    '<input class="f-inp" id="' + id + '" type="' + (tipo || 'text') + '" ' +
+    (extra || '') + ' value="' + escC(valor === null || valor === undefined ? '' : valor) +
+    '"></label>';
+}
+function selector(id, etiqueta, valor, opciones) {
+  return '<label>' + etiqueta + '<select class="f-inp" id="' + id + '">' +
+    opciones.map(function (o) {
+      return '<option value="' + o[0] + '"' + (String(valor) === o[0] ? ' selected' : '') +
+        '>' + escC(o[1]) + '</option>';
+    }).join('') + '</select></label>';
+}
+const V = function (id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+
+function formTrabajo(i) {
+  const t = (i === null || i === undefined) ? {} : MIO.trabajos[i];
+  document.getElementById('trab-form').innerHTML = '<div class="mio-form">' +
+    '<div class="mio-campos">' +
+      campo('tr-nm', 'Nombre', t.nombre) +
+      campo('tr-cp', 'Con quién', t.contraparte) +
+      selector('tr-tp', 'Tipo', t.tipo || 'cliente',
+        [['cliente','Cliente'],['empleo','Empleo'],['propio','Propio (Nova)'],['estudio','Universidad']]) +
+      campo('tr-mo', 'Moneda', t.moneda || 'COP') +
+      campo('tr-va', 'Valor acordado', t.valor || '', 'number') +
+      campo('tr-hs', 'Horas por semana', t.horasSemana || '', 'number') +
+      campo('tr-fe', 'Fecha de entrega', t.entrega, 'date') +
+      campo('tr-dc', 'Enlace al documento', t.documento) +
+    '</div>' +
+    campo('tr-es', 'Qué hay que hacer', t.especificacion) +
+    '<div class="row-btns">' +
+      '<button class="btn" onclick="salvarTrabajo(' + (t.id ? "'" + t.id + "'" : 'null') + ')">' +
+        (t.id ? 'Guardar cambios' : 'Crear trabajo') + '</button>' +
+      '<button class="btn-ghost" onclick="document.getElementById(\'trab-form\').innerHTML=\'\'">Cancelar</button>' +
+      (t.id ? '<button class="btn-ghost" onclick="borrarMio(\'Trabajos\',\'' + t.id +
+              '\')">Borrar</button>' : '') +
+    '</div></div>';
+  document.getElementById('trab-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function salvarTrabajo(id) {
+  guardarMio('Trabajos', {
+    id: id || '', nombre: V('tr-nm'), contraparte: V('tr-cp'), tipo: V('tr-tp'),
+    moneda: V('tr-mo').toUpperCase(), valor_acordado: V('tr-va'),
+    horas_semana: V('tr-hs'), fecha_entrega: V('tr-fe'),
+    documento: V('tr-dc'), especificacion: V('tr-es'), estado: 'activo',
+  }, 'trab-form');
+}
+
+function formCobro(i) {
+  const c = {};
+  const trabajos = (MIO.trabajos || []).map(function (t) { return [t.id, t.nombre]; });
+  document.getElementById('cobro-form').innerHTML = '<div class="mio-form">' +
+    '<div class="mio-campos">' +
+      selector('co-tr', 'De qué trabajo', c.trabajo_id,
+        [['', '— ninguno —']].concat(trabajos)) +
+      campo('co-cn', 'Concepto', c.concepto) +
+      campo('co-mt', 'Monto', c.monto, 'number') +
+      campo('co-mo', 'Moneda', 'COP') +
+      campo('co-fe', 'Cuándo debería entrar', '', 'date') +
+    '</div>' +
+    '<div class="row-btns">' +
+      '<button class="btn" onclick="salvarCobro()">Anotar cobro</button>' +
+      '<button class="btn-ghost" onclick="document.getElementById(\'cobro-form\').innerHTML=\'\'">Cancelar</button>' +
+    '</div></div>';
+}
+
+function salvarCobro() {
+  guardarMio('Cobros', {
+    trabajo_id: V('co-tr'), concepto: V('co-cn'), monto: V('co-mt'),
+    moneda: V('co-mo').toUpperCase(), fecha_esperada: V('co-fe'), estado: 'pendiente',
+  }, 'cobro-form');
+}
+
+function formFinanza() {
+  document.getElementById('fin-form').innerHTML = '<div class="mio-form">' +
+    '<div class="mio-campos">' +
+      selector('fi-fl', 'Entra o sale', 'gasto', [['gasto','Sale'],['ingreso','Entra']]) +
+      campo('fi-cn', 'Concepto', '') +
+      campo('fi-ct', 'Categoría', '') +
+      campo('fi-mt', 'Monto', '', 'number') +
+      campo('fi-mo', 'Moneda', 'COP') +
+      campo('fi-cu', 'Cuenta', '') +
+      campo('fi-fe', 'Fecha', new Date().toISOString().slice(0, 10), 'date') +
+    '</div>' +
+    '<div class="row-btns">' +
+      '<button class="btn" onclick="salvarFinanza()">Anotar</button>' +
+      '<button class="btn-ghost" onclick="document.getElementById(\'fin-form\').innerHTML=\'\'">Cancelar</button>' +
+    '</div></div>';
+}
+
+function salvarFinanza() {
+  guardarMio('Finanzas', {
+    fecha: V('fi-fe'), flujo: V('fi-fl'), categoria: V('fi-ct'),
+    concepto: V('fi-cn'), monto: V('fi-mt'), moneda: V('fi-mo').toUpperCase(),
+    cuenta: V('fi-cu'),
+  }, 'fin-form');
+}
+
+function formMeta() {
+  document.getElementById('meta-form').innerHTML = '<div class="mio-form">' +
+    '<div class="mio-campos">' +
+      selector('me-tp', 'Qué es', 'ahorro', [['ahorro','Ahorro'],['deuda','Deuda']]) +
+      campo('me-nm', 'Nombre', '') +
+      campo('me-cq', 'Con quién', '') +
+      campo('me-mm', 'Monto total', '', 'number') +
+      campo('me-sl', 'Saldo hoy', '', 'number') +
+      campo('me-mo', 'Moneda', 'COP') +
+      campo('me-cu', 'Cuota', '', 'number') +
+      campo('me-di', 'Día del mes', '', 'number') +
+      campo('me-fm', 'Fecha meta', '', 'date') +
+    '</div>' +
+    '<div class="row-btns">' +
+      '<button class="btn" onclick="salvarMeta()">Guardar</button>' +
+      '<button class="btn-ghost" onclick="document.getElementById(\'meta-form\').innerHTML=\'\'">Cancelar</button>' +
+    '</div></div>';
+}
+
+function salvarMeta() {
+  guardarMio('Metas', {
+    tipo: V('me-tp'), nombre: V('me-nm'), con_quien: V('me-cq'),
+    monto_meta: V('me-mm'), saldo: V('me-sl'), moneda: V('me-mo').toUpperCase(),
+    cuota: V('me-cu'), dia_del_mes: V('me-di'), fecha_meta: V('me-fm'), estado: 'activa',
+  }, 'meta-form');
+}
 
 /* ─── LO QUE NOVA HACE SOLA ───
  *
@@ -1195,7 +1629,8 @@ function sellarEjemploCentral() {
 
 /* ─── NAV ─── */
 const TITLES = {
-  dashboard:'Dashboard', clientes:'Clientes', equipo:'Equipo',
+  dashboard:'Dashboard', trabajos:'Mi trabajo', plata:'Mi plata',
+  clientes:'Clientes', equipo:'Equipo',
   pipeline:'Pipeline novAcademy', onboarding:'Onboarding de clientes',
   meta:'Meta Ads', demo:'Gestión de demo'
 };

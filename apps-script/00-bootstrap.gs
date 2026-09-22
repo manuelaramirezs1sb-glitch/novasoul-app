@@ -436,6 +436,60 @@ const ESQUEMA_CENTRAL = {
    * planes ni tarifas).
    */
   Plataforma: ['id','nombre','correo','rol','estado','ultima_conexion','nota'],
+
+  /**
+   * ═══════════════════════════════════════════════════════════
+   *  EL LADO DE ELLA: SUS TRABAJOS Y SU PLATA
+   * ═══════════════════════════════════════════════════════════
+   *
+   * Nova Central no es solo la consola del producto: es el centro de
+   * trabajo de Manuela, que además de Nova tiene clientes propios, la
+   * universidad y un empleo. Todo eso tiene fechas y tiene plata, y
+   * hasta hoy vivía en la cabeza.
+   *
+   * Vive AQUÍ y no en NovaSoul a propósito. Central se abre delante de
+   * otra gente —una socia, un contador— y estas son cifras de negocio.
+   * NovaSoul guarda lo que no se le muestra a nadie.
+   */
+
+  /**
+   * Cada compromiso con nombre propio: Nutrea, PHH, Son de Sky, la U.
+   *
+   * `tipo` separa lo que se cobra de lo que no. La universidad no paga,
+   * pero ocupa las mismas horas que un cliente que sí — y una lista que
+   * solo mira lo que factura deja fuera justo lo que no se puede
+   * incumplir.
+   */
+  Trabajos: ['id','nombre','contraparte','tipo','estado','moneda',
+             'valor_acordado','forma_cobro','fecha_inicio','fecha_entrega',
+             'horas_semana','especificacion','documento','nota'],
+
+  /**
+   * Lo que debe entrar, con su fecha ESPERADA aparte de la real.
+   *
+   * Sin la esperada no se puede saber que algo está atrasado: solo se
+   * sabe que no ha llegado, que es otra cosa. Esa diferencia es la que
+   * permite llamar a tiempo en vez de darse cuenta a fin de mes.
+   */
+  Cobros: ['id','trabajo_id','concepto','monto','moneda',
+           'fecha_esperada','fecha_cobrada','estado','nota'],
+
+  /**
+   * Su plata personal, movimiento por movimiento.
+   *
+   * `cuenta` existe porque no es lo mismo tener el mes cubierto que
+   * tenerlo cubierto EN la cuenta de donde se paga. Un ingreso en
+   * dólares que todavía está en PayPal no paga un arriendo mañana.
+   */
+  Finanzas: ['id','fecha','flujo','categoria','concepto','monto','moneda',
+             'cuenta','recurrente','trabajo_id','nota'],
+
+  /**
+   * Deudas y ahorros van juntos porque son la misma cosa con el signo
+   * cambiado: un saldo que se mueve hacia una meta y una fecha.
+   */
+  Metas: ['id','tipo','nombre','con_quien','monto_meta','saldo','moneda',
+          'cuota','dia_del_mes','fecha_meta','estado','nota'],
 };
 
 const ESQUEMA_SOUL = {

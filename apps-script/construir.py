@@ -27,6 +27,7 @@ ORDEN = [
     ('50-tasas.gs',        '8 · TASAS DE CAMBIO'),
     ('60-api.gs',          '9 · API WEB'),
     ('65-central.gs',      '10 · NOVA CENTRAL'),
+    ('66-central-mio.gs',  '10b · CENTRAL · TRABAJOS Y PLATA'),
     ('70-importar.gs',     '11 · ESCRITURA'),
     ('75-meta.gs',         '12 · META'),
     ('76-meta-leer.gs',    '13 · META · LECTURA DIARIA'),
