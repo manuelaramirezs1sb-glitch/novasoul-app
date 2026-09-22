@@ -257,6 +257,32 @@ calculados, escriba el consejo en prosa y proponga metodología de pauta.
    exactamente lo contrario de la regla de callarse. Meterlo antes de que
    la capa determinista esté firme sería construir al revés.
 
+### Y NovaBot, que ya existe a medias
+
+Hoy vive solo en `novacademy.html`: un panel de chat con preguntas y
+respuestas ESCRITAS A MANO (`BOT_QS`, `BOT_R`), emparejadas por palabra
+clave. No lee ninguna hoja, no hay servidor y no hay modelo. Responde
+sobre el programa de la academia, nada más.
+
+Conectarlo a los datos de Meta es posible y hay dos caminos, muy
+distintos de precio:
+
+| | Qué contesta | Cuesta |
+|---|---|---|
+| **Determinista** | una lista fija de preguntas, con las cifras reales de las hojas | $0 |
+| **Con modelo** | cualquier cosa, en prosa | por consulta |
+
+El determinista se puede hacer ya: «¿cuánto gasté esta semana?»,
+«¿cuál anuncio va mejor?», «¿estoy sobre mi techo?» — Nova ya tiene
+todas esas cifras calculadas, el bot solo las leería.
+
+**Pero conviene decir lo que no cambia.** El semáforo del lunes ya
+responde «qué hago con la pauta» sin que nadie pregunte. Un bot es otra
+forma de PREGUNTAR lo mismo, no una capacidad nueva. Y la pregunta que
+importa —«¿qué hago?»— es justo la que no hay que tener que hacer.
+
+Por eso va después de NovaSoul, y el determinista antes que el modelo.
+
 **Cuándo tendría sentido.** Cuando el análisis del punto 3 lleve meses
 funcionando y el límite sea la redacción, no el cálculo. Entonces el
 modelo se apoya sobre números que ya están bien, que es el orden
