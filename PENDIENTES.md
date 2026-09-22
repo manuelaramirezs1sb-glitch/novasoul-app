@@ -55,7 +55,35 @@ Se descartaron:
 
 ---
 
-## 2 · Meta conectado directo
+## 2 · Meta conectado — LA LLAVE YA ESTÁ (21-09-2026)
+
+Nutrea EC conectada con la cuenta «CP Nutrea Ecuador» por el camino B:
+app y usuario de sistema creados en el portfolio de Manuela, permiso de
+activo "ver rendimiento", token con `ads_read` únicamente.
+
+**Ojo con la moneda.** Meta le cobra en COP y esa tienda factura en USD.
+La conversión funciona sola porque buscarTasa sabe invertir un par —con
+USD→COP cargado, el COP→USD sale de dividir— pero exige que la hoja
+Tasas tenga los días del gasto. Sin ellos ese gasto NO se suma: se cuenta
+aparte como "sin convertir" y la pantalla lo dice. Eso es lo correcto, y
+es la misma protección que evitó el margen de −181.817% de antes; pero
+hay que correr `actualizarTasas()` para que sume.
+
+**Falta:** la lectura diaria. Que Nova le pida a Meta el gasto de ayer
+cada mañana y lo escriba en Pauta, en vez de que alguien baje el Excel.
+
+### Lo que se aprendió montándolo
+
+- La opción de crear la app sale EN GRIS hasta que pasas el mouse por
+  encima y aparece "Confirmar cuenta". No lo dice ninguna documentación.
+- El usuario de sistema necesita rol sobre la app —"Desarrollar la
+  aplicación"— o la lista de permisos sale vacía sin explicar por qué.
+- Publicar una versión nueva del Apps Script mata todas las sesiones
+  abiertas. Conviene publicar cuando nadie esté gestionando pedidos.
+
+---
+
+## 2b · Meta, lo que sigue
 
 Que Nova le pida las cifras a Meta todos los días, en vez de que alguien
 baje un Excel.
