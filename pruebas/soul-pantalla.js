@@ -35,8 +35,15 @@ const PEND = [
   T('p5', 'Llamar a mamá', { fecha: '2026-09-21', dias: 2, estado: 'hecho', hechoEn: '2026-09-21' }),
 ];
 
-const dia = (f, dow, esHoy, libres, textos) => ({
+const BLOQUE_TURNO = { id: 'r1', tipo: 'turno', nombre: 'Salsabor', lugar: 'Salsabor',
+  inicio: '18:00', fin: '02:00', horas: 8 };
+const BLOQUE_CLASE = { id: 'r3', tipo: 'clase', nombre: 'Estadística', lugar: 'Bloque 3',
+  inicio: '07:00', fin: '09:00', horas: 2 };
+const dia = (f, dow, esHoy, libres, textos, bloques) => ({
   fecha: f, dow, esHoy, libres,
+  utiles: libres === null ? null : libres + (bloques || []).reduce((a, b) => a + b.horas, 0),
+  ocupadas: (bloques || []).reduce((a, b) => a + b.horas, 0),
+  bloques: bloques || [],
   entregas: textos.length, horas: textos.reduce((a, t) => a + t.horas, 0), textos,
 });
 
@@ -44,11 +51,11 @@ function foto(conHoras) {
   return {
     ok: true, hoy: HOY, mes: '2026-09',
     semana: { lunes: '2026-09-21', domingo: '2026-09-27', dias: [
-      dia('2026-09-21', 1, false, conHoras ? 4 : null, []),
+      dia('2026-09-21', 1, false, conHoras ? 4 : null, [], [BLOQUE_CLASE]),
       dia('2026-09-22', 2, false, conHoras ? 4 : null, []),
       dia('2026-09-23', 3, true, conHoras ? 4 : null, []),
       dia('2026-09-24', 4, false, conHoras ? 4 : null, [{ id: 'p3', texto: 'Encargo de PHH', proyecto: 'PHH', horas: 5 }]),
-      dia('2026-09-25', 5, false, conHoras ? 4 : null, [{ id: 'p1', texto: 'Entregar la carta de cocteles', proyecto: 'Son de Sky', horas: 6 }]),
+      dia('2026-09-25', 5, false, conHoras ? 4 : null, [{ id: 'p1', texto: 'Entregar la carta de cocteles', proyecto: 'Son de Sky', horas: 6 }], [BLOQUE_TURNO]),
       dia('2026-09-26', 6, false, conHoras ? 0 : null, [{ id: 'p4', texto: 'Comprar Omega 3', proyecto: '', horas: 1 }]),
       dia('2026-09-27', 7, false, conHoras ? 0 : null, []),
     ] },
@@ -69,16 +76,20 @@ function foto(conHoras) {
       ] },
     },
     riesgo: conHoras
-      ? { libres: 20, fijas: 18, extra: 7, comprometidas: 25, sobra: -5, dentroDeFijas: 2,
+      ? { libres: 20, fijas: 18, extra: 7, comprometidas: 25, sobra: -5, dentroDeFijas: 2, ocupadas: 10,
           candidatas: [
             { id: 'p4', texto: 'Comprar Omega 3', horas: 1, proyecto: '', riesgo: 'corrible', fecha: '2026-09-26' },
             { id: 'p1', texto: 'Entregar la carta de cocteles', horas: 6, proyecto: 'Son de Sky', riesgo: 'acordado', fecha: '2026-09-25' },
           ], noAlcanza: 0, sinHoras: false, porque: '' }
-      : { libres: null, fijas: 18, extra: 7, comprometidas: 25, sobra: null, dentroDeFijas: 2,
+      : { libres: null, fijas: 18, extra: 7, comprometidas: 25, sobra: null, dentroDeFijas: 2, ocupadas: 10,
           candidatas: [], noAlcanza: 0, sinHoras: true,
           porque: 'Todavía no me has dicho cuántas horas libres tienes cada día. ' +
                   'Sin ese número no puedo decirte si la semana cabe: lo demás sería un adorno.' },
     horas: conHoras ? { 1: 4, 2: 4, 3: 4, 4: 4, 5: 4, 6: 0, 7: 0 } : null,
+    horasUtiles: conHoras ? { 1: 6, 2: 4, 3: 4, 4: 4, 5: 12, 6: 0, 7: 0 } : null,
+    rutina: { bloques: 2, ocupadasSemana: 10 },
+    turnosPendientes: 1,
+    faltanHojas: [],
     mindlab: {
       inicio: '2026-09-28', fin: '2026-12-20', hechas: 1, total: 12, horasTotales: 37,
       semanaActual: null,
@@ -112,6 +123,58 @@ const FINANZAS = {
   ],
   totales: { plan: { COP: 1250000 }, ahorro: { COP: 300000 } },
   error: '',
+};
+
+const RUTINA = {
+  ok: true, hoy: HOY,
+  tipos: { turno: { nombre: 'Turno', paga: true, ayuda: 'Salsabor.' },
+           clase: { nombre: 'Clase', paga: false, ayuda: 'Una materia.' },
+           otro:  { nombre: 'Otro',  paga: false, ayuda: 'Gimnasio.' } },
+  rutinas: [
+    { id: 'r1', tipo: 'turno', nombre: 'Salsabor', dia: 5, inicio: '18:00', fin: '02:00',
+      horas: 8, lugar: 'Salsabor', trabajoId: 't1', materiaId: '', paga: 80000,
+      moneda: 'COP', desde: '', hasta: '', activo: true },
+    { id: 'r3', tipo: 'clase', nombre: 'Estadística', dia: 1, inicio: '07:00', fin: '09:00',
+      horas: 2, lugar: 'Bloque 3', trabajoId: '', materiaId: 'm1', paga: 0,
+      moneda: 'COP', desde: '2026-08-03', hasta: '2026-12-05', activo: true },
+  ],
+  ocupadasPorDia: { 1: 2, 2: 0, 3: 0, 4: 0, 5: 8, 6: 0, 7: 0 },
+  trabajos: TRABAJOS,
+  materias: [{ id: 'm1', nombre: 'Estadística' }],
+};
+
+const PLATA = {
+  ok: true, hoy: HOY, mes: '2026-09',
+  categorias: FINANZAS.categorias, totales: FINANZAS.totales, error: '',
+  hormigaCategorias: [
+    { id: 'bus', nombre: 'Buses' }, { id: 'transporte', nombre: 'Transporte' },
+    { id: 'uber', nombre: 'Uber' }, { id: 'antojos', nombre: 'Antojos' },
+    { id: 'salidas', nombre: 'Salidas' }, { id: 'hormiga', nombre: 'Otros sueltos' }],
+  turnosPendientes: [
+    { rutinaId: 'r1', nombre: 'Salsabor', lugar: 'Salsabor', fecha: '2026-09-18',
+      inicio: '18:00', fin: '02:00', horas: 8, paga: 80000, pagaFija: 80000,
+      moneda: 'COP', propinas: 0, escrito: false, turnoId: '' },
+  ],
+  resumen: {
+    mes: '2026-09', ultimoDia: '2026-09-30',
+    entro: { COP: 114000 }, salio: { COP: 97900 }, hormiga: { COP: 97900 },
+    hormigaPorCategoria: [
+      { id: 'bus', nombre: 'Buses', n: 1, monto: { COP: 2900 } },
+      { id: 'transporte', nombre: 'Transporte', n: 0, monto: null },
+      { id: 'uber', nombre: 'Uber', n: 1, monto: { COP: 18000 } },
+      { id: 'antojos', nombre: 'Antojos', n: 1, monto: { COP: 12000 } },
+      { id: 'salidas', nombre: 'Salidas', n: 1, monto: { COP: 65000 } },
+      { id: 'hormiga', nombre: 'Otros sueltos', n: 0, monto: null },
+    ],
+    resultado: [{ moneda: 'COP', entro: 114000, salio: 97900, queda: 16100,
+                  fijosPendientes: 1200000, porVenir: 160000, proyectado: -1023900 }],
+    turnosPorVenir: 2,
+    movimientosHormiga: [
+      { id: 'h1', fecha: '2026-09-23', categoria: 'bus', concepto: 'Buses', monto: 2900, moneda: 'COP' },
+      { id: 'h2', fecha: '2026-09-20', categoria: 'uber', concepto: 'Uber', monto: 18000, moneda: 'COP' },
+    ],
+    error: '',
+  },
 };
 
 const MATERIAS = {
@@ -176,7 +239,9 @@ const FAMILY = {
       window.nc = async (accion, datos) => {
         window.LLAMADAS.push({ accion, datos });
         if (accion === 'nc_soul') return x.foto;
-        if (accion === 'nc_soul_finanzas') return x.fin;
+        if (accion === 'nc_soul_plata') return x.plata;
+        if (accion === 'nc_soul_rutina') return x.rut;
+        if (accion === 'nc_soul_turno') return { ok: true, total: 114000, moneda: 'COP' };
         if (accion === 'nc_soul_family') return x.fam;
         if (accion === 'nc_soul_materias') return x.mat;
         if (accion === 'nc_soul_silabo') return x.sil;
@@ -186,8 +251,8 @@ const FAMILY = {
       (0, eval)('nc = window.nc;');
       (0, eval)('SES = ' + JSON.stringify({ correo: 'm@nova.com', nombre: 'Manuela', rol: x.rol }) + ';');
       (0, eval)('entrar();');
-    }, { foto: foto(conHoras), fin: FINANZAS, fam: FAMILY, mat: MATERIAS,
-         sil: SILABO_LEIDO, rol: rol || 'socia' });
+    }, { foto: foto(conHoras), plata: PLATA, fam: FAMILY, mat: MATERIAS,
+         rut: RUTINA, sil: SILABO_LEIDO, rol: rol || 'socia' });
     await p.waitForTimeout(200);
     return p;
   };
@@ -318,6 +383,120 @@ const FAMILY = {
     ok('el ahorro no se suma con los gastos' + A,
        /va aparte, no es un gasto/.test(await p.textContent('#fin-kpis')));
 
+    // ══ La rutina: se escribe una vez ══
+    await p.evaluate(() => go('rutina', null));
+    await p.waitForTimeout(180);
+    const rut = await p.textContent('#v-rutina');
+    ok('lista turnos y clases' + A, /Salsabor/.test(rut) && /Estadística/.test(rut));
+    ok('dice que se repite solo' + A, /no hay que volver a escribirlo/.test(rut));
+    ok('el turno de noche dura 8 h, no menos 16' + A, /8 h/.test(rut), rut.match(/[\d,]+ h/g) + '');
+    ok('marca lo que no tiene fecha de fin' + A, /sin fecha de fin/.test(rut));
+    ok('y la clase muestra hasta cuándo va' + A, /hasta 5 dic/.test(rut));
+
+    await p.evaluate(() => nuevaRutina());
+    ok('el formulario pregunta si es turno o clase' + A,
+       (await p.$$eval('#mr-tipo option', e => e.length)) === 3);
+    await p.selectOption('#mr-tipo', 'turno');
+    ok('un turno sí pregunta cuánto pagan' + A,
+       await p.$eval('#mr-pago', e => getComputedStyle(e).display) !== 'none');
+    await p.selectOption('#mr-tipo', 'clase');
+    ok('una clase NO pregunta paga' + A,
+       await p.$eval('#mr-pago', e => getComputedStyle(e).display) === 'none');
+    await p.selectOption('#mr-tipo', 'turno');
+    await p.fill('#mr-inicio', '18:00');
+    await p.fill('#mr-fin', '02:00');
+    await p.waitForTimeout(80);
+    ok('calcula la duración y avisa que cruza la medianoche' + A,
+       /8 h/.test(await p.textContent('#mr-dura')) &&
+       /cruza la medianoche/.test(await p.textContent('#mr-dura')),
+       await p.textContent('#mr-dura'));
+    await p.evaluate(() => cerrarModal('m-rutina'));
+
+    // ══ Las horas útiles, con la resta a la vista ══
+    await p.evaluate(() => abrirHoras());
+    const mh = await p.textContent('#m-horas');
+    ok('el modal avisa que cambió lo que pregunta' + A, /Cambió lo que te pregunto/.test(mh));
+    ok('y muestra la resta de cada día' + A,
+       /menos 2 h de turno o clase/.test(mh) && /menos 8 h de turno o clase/.test(mh), mh.slice(0, 200));
+    await p.fill('#mh-1', '9');
+    await p.waitForTimeout(80);
+    ok('la resta se actualiza mientras escribe' + A,
+       /7 h libres/.test(await p.textContent('#mh-r1')), await p.textContent('#mh-r1'));
+    await p.evaluate(() => cerrarModal('m-horas'));
+
+    // ══ La semana dibuja los bloques ══
+    await p.evaluate(() => go('semana', null));
+    const sem = await p.textContent('#sem-dias');
+    ok('el viernes muestra el turno con su horario' + A,
+       /Salsabor/.test(sem) && /18:00–02:00/.test(sem));
+    ok('y el lunes la clase' + A, /Estadística/.test(sem) && /07:00–09:00/.test(sem));
+    ok('cada día enseña la resta, no solo el resultado' + A,
+       /12 h − 8 h = 4 h/.test(sem.replace(/\s+/g, ' ')), sem.replace(/\s+/g, ' ').slice(0, 220));
+
+    // ══ Turnos sin cerrar ══
+    await p.evaluate(() => go('hoy', null));
+    const ht = await p.textContent('#hoy-turnos');
+    ok('Hoy avisa que falta cerrar un turno' + A, /1 turno sin cerrar/.test(ht));
+    ok('y dice por qué no lo puede hacer solo' + A, /solo lo sabes tú/.test(ht));
+    ok('el menú lo marca' + A,
+       await p.$eval('#nb-turnos', e => getComputedStyle(e).display) !== 'none');
+
+    // ══ Gasto del día, en dos toques ══
+    const hh = await p.textContent('#hoy-hormiga');
+    ok('Hoy tiene los botones de gasto rápido' + A,
+       /Bus/.test(hh) && /Uber/.test(hh) && /Antojo/.test(hh) && /Salida/.test(hh));
+    await p.evaluate(() => { window.LLAMADAS.length = 0; abrirHormiga('antojos'); });
+    await p.fill('#mho-monto', '12000');
+    await p.click('#m-hormiga .card-cta');
+    await p.waitForTimeout(150);
+    const gh = (await p.evaluate(() => window.LLAMADAS))
+      .filter(l => l.accion === 'nc_soul_hormiga')[0];
+    ok('guarda el gasto con su categoría' + A,
+       gh && gh.datos.categoria === 'antojos' && gh.datos.monto === '12000',
+       JSON.stringify(gh && gh.datos));
+
+    // ══ Mi plata: ¿sobra o falta? ══
+    await p.evaluate(() => go('plata', null));
+    await p.waitForTimeout(220);
+    const pl = await p.textContent('#pl-mes');
+    ok('dice lo que entró y lo que salió' + A,
+       /ENTRÓ/.test(pl) && /114.000/.test(pl) && /97.900/.test(pl));
+    ok('y lo que falta por pasar, aparte' + A,
+       /Y FALTA QUE PASE ESTO/.test(pl) && /Turnos que faltan por trabajar/.test(pl));
+    ok('no mezcla el hecho con la previsión, y lo explica' + A,
+       /Lo de arriba ya pasó/.test(pl));
+    ok('avisa que este mes faltaría plata' + A,
+       /TE FALTARÍAN COP 1.023.900/.test(pl), pl.replace(/\s+/g, ' ').slice(0, 160));
+    ok('y el bloque va en rojo, no en verde' + A,
+       (await p.$$eval('#pl-mes .card-rojo', e => e.length)) === 1);
+
+    const plt = await p.textContent('#pl-turnos');
+    ok('los turnos sin cerrar salen con su base' + A,
+       /TURNOS SIN CERRAR/.test(plt) && /COP 80.000 de base/.test(plt));
+    await p.click('#pl-turnos .kbtn');
+    await p.waitForTimeout(120);
+    ok('al abrirlo, la base viene puesta' + A,
+       (await p.inputValue('#mtu-paga')) === '80000');
+    await p.fill('#mtu-propinas', '34000');
+    await p.waitForTimeout(80);
+    ok('y el total se arma solo' + A,
+       /COP 114.000/.test(await p.textContent('#mtu-total')),
+       await p.textContent('#mtu-total'));
+    await p.evaluate(() => { window.LLAMADAS.length = 0; });
+    await p.click('#m-turno .card-cta');
+    await p.waitForTimeout(200);
+    const gt = (await p.evaluate(() => window.LLAMADAS))
+      .filter(l => l.accion === 'nc_soul_turno')[0];
+    ok('guarda el turno con sus propinas' + A,
+       gt && gt.datos.propinas === '34000' && gt.datos.fecha === '2026-09-18',
+       JSON.stringify(gt && gt.datos));
+
+    const ph = await p.textContent('#pl-hormiga');
+    ok('lo hormiga se ve por categoría' + A,
+       /Buses/.test(ph) && /Salidas/.test(ph) && /COP 65.000/.test(ph));
+    ok('y una categoría sin gastos dice «nada», no cero' + A, /nada/.test(ph));
+    await p.evaluate(() => avisoGlobal(''));
+
     // ══ Universidad ══
     await p.evaluate(() => go('uni', null));
     await p.waitForTimeout(180);
@@ -426,7 +605,7 @@ const FAMILY = {
     ok('sin scroll lateral' + A, lateral === 0, lateral + 'px');
 
     if (ancho === 1200) {
-      for (const [v, f] of [['uni', 'soul-uni'], ['hoy', 'soul-hoy'], ['pendientes', 'soul-tablero'],
+      for (const [v, f] of [['rutina', 'soul-rutina'], ['uni', 'soul-uni'], ['hoy', 'soul-hoy'], ['pendientes', 'soul-tablero'],
                             ['semana', 'soul-semana'], ['plata', 'soul-plata'],
                             ['family', 'soul-family'], ['mindlab', 'soul-mindlab']]) {
         await p.evaluate((x) => go(x, null), v);

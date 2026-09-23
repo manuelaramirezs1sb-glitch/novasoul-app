@@ -231,7 +231,7 @@ function soulMaterias(s, p) {
   const uid = soulUsuario_(s);
   const hoy = ahoraISO().slice(0, 10);
 
-  const pend = soulLeer_('Pendientes', uid);
+  const pend = soulLeerSuave_('Pendientes', uid, []);
   const cuenta = {};
   pend.forEach(function (f) {
     const m = String(f.materia_id || '').trim();
@@ -246,7 +246,7 @@ function soulMaterias(s, p) {
   return {
     ok: true, hoy: hoy,
     trabajos: soulTrabajos_().filter(function (t) { return t.tipo === 'estudio'; }),
-    materias: soulLeer_('Materias', uid)
+    materias: soulLeerSuave_('Materias', uid, [])
       .filter(function (f) { return String(f.id || '').trim(); })
       .map(function (f) {
         const c = cuenta[String(f.id)] || { abiertas: 0, vencidas: 0, proxima: '' };

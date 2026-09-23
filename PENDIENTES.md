@@ -755,3 +755,64 @@ el día del examen.
 
 **Falta**: los horarios de clase. Con ellos, las horas libres de cada
 día se calcularían solas en vez de escribirse a mano.
+
+### 9c · Turnos, clases y la plata chiquita (23-09-2026)
+
+Tres cosas que pidió y que resultaron ser la misma: lo que ocupa el
+tiempo y lo que mueve la plata.
+
+**Lo que se repite se escribe UNA vez.** La hoja `Rutina` guarda turnos
+y clases con su día, su horario y —si es turno— su paga. Se repiten
+solos. `desde`–`hasta` acotan el semestre o el contrato: sin eso, una
+clase de este semestre seguiría ocupando el jueves en marzo.
+
+**Cambió el significado de las horas.** Antes ella escribía las horas ya
+descontadas. Ahora escribe las **útiles** y Nova resta:
+
+```
+libres = útiles − (turnos + clases de ESE día)
+```
+
+El cambio no puede ser silencioso, así que el formulario muestra la
+resta día por día **mientras escribe**, y la cuadrícula de la semana la
+muestra también (`12 h − 8 h = 4 h`). Un texto explicando el cambio no
+habría bastado; el número nuevo tiene que verse en el momento.
+
+**La paga es fija, las propinas no.** La base vive en la rutina; las
+propinas se escriben al día siguiente. Hasta que no se escriban, el
+turno aparece pendiente en Hoy y en Mi plata. Cerrar un turno escribe el
+ingreso en Finanzas de Nova_Central, y **corregir las propinas actualiza
+ese mismo movimiento** en vez de crear otro: por eso existe
+`finanza_id`. Un día sin propinas se cierra con cero — un día malo es un
+dato, no un olvido.
+
+**Gastos hormiga**: buses, transporte, Uber, antojos, salidas y otros
+sueltos. Dos toques desde Hoy. Van a la misma hoja Finanzas con su
+categoría.
+
+**UNA SOLA CONTABILIDAD.** Turnos, propinas y hormiga se escriben en
+Finanzas de Nova_Central, que es donde ya viven sus movimientos. Si Soul
+llevara su propia caja, a fin de mes habría dos respuestas a «¿cuánto me
+queda?» y ninguna forma de saber cuál es la buena.
+
+**El fin de mes, en dos mitades que no se mezclan:**
+
+| Ya pasó (hecho) | Falta que pase (previsión) |
+|---|---|
+| entró · salió · queda | turnos por trabajar · fijos sin pagar |
+
+Un solo número que junta las dos se lee como un hecho, y con eso se
+deciden compras. Se muestran aparte y la pantalla dice por qué.
+
+**Tres errores que salieron al correrlo:**
+
+1. Un turno de 18:00 a 02:00 daba **−16 horas**, así que la semana salía
+   con horas de sobra justo los días que trabaja de noche.
+2. `soulHoy` se caía **entera** si faltaba una hoja nueva: entre
+   publicar el código y correr `bootstrapTodo()` pasan minutos, y en
+   esos minutos NovaSoul no mostraba una sección incompleta, no mostraba
+   nada. Ahora degrada y dice qué hojas faltan.
+3. Un «guardé 2 entregas» lo borraba la recarga que venía justo detrás.
+
+**Falta**: que los horarios de clase entren desde el sílabo, junto con
+las fechas de entrega. Hoy la clase se escribe a mano una vez.

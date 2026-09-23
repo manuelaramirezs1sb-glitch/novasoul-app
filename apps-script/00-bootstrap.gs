@@ -528,6 +528,38 @@ const ESQUEMA_SOUL = {
              'semestre','trabajo_id','estado','nota'],
 
   /**
+   * Lo que se repite todas las semanas: turnos y clases.
+   *
+   * Se escribe UNA vez y se repite solo. Una fila por día de la semana
+   * —el turno del viernes y el del sábado son dos filas— porque cada
+   * uno tiene su horario y su paga.
+   *
+   * `desde` y `hasta` acotan el semestre o el contrato. Sin ellos, una
+   * clase de este semestre seguiría apareciendo en marzo del año
+   * entrante y la semana diría que no cabe por una materia que ya pasó.
+   *
+   * `paga_fija` es lo que vale el turno. Las propinas NO van aquí: son
+   * distintas cada día y se escriben al día siguiente, en Turnos.
+   */
+  Rutina: ['id','usuario_id','tipo','nombre','dia_semana','hora_inicio','hora_fin',
+           'lugar','trabajo_id','materia_id','paga_fija','moneda','desde','hasta',
+           'activo','nota'],
+
+  /**
+   * Cada turno que de verdad se trabajó, con sus propinas.
+   *
+   * La rutina dice «los viernes»; esto dice «el viernes 25 fueron
+   * 80.000 de base y 34.000 de propinas». Sin esta hoja, el mes
+   * cuadraría con la paga fija y nunca con lo que entró.
+   *
+   * `finanza_id` es el enganche con el movimiento que se escribió en
+   * Nova_Central: existe para no escribirlo dos veces si ella corrige
+   * las propinas después.
+   */
+  Turnos: ['id','usuario_id','rutina_id','fecha','paga','propinas','moneda',
+           'estado','finanza_id','nota'],
+
+  /**
    * Cuántas horas libres tiene cada día de la semana.
    *
    * Es el techo contra el que se compara todo lo demás, y no se puede

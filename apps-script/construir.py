@@ -34,6 +34,7 @@ ORDEN = [
     ('77-semaforo.gs',     '14 · SEMÁFORO SEMANAL'),
     ('78-soul.gs',         '15 · NOVASOUL · EL DÍA A DÍA'),
     ('79-silabo.gs',       '16 · NOVASOUL · LA UNIVERSIDAD'),
+    ('80-rutina.gs',       '17 · NOVASOUL · RUTINA, TURNOS Y PLATA'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

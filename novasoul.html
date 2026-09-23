@@ -375,7 +375,8 @@ textarea,input,select,button{font-family:inherit;}
       <div class="sb-section">LO MÍO</div>
       <div class="ni" data-v="mindlab" onclick="go('mindlab',this)">◆ Mindlab<span class="ni-badge" id="nb-ml">·</span></div>
       <div class="ni" data-v="uni" onclick="go('uni',this)">▣ Universidad<span class="ni-mal" id="nb-uni" style="display:none;">·</span></div>
-      <div class="ni" data-v="plata" onclick="go('plata',this)">◇ Gastos fijos</div>
+      <div class="ni" data-v="rutina" onclick="go('rutina',this)">↻ Mi rutina</div>
+      <div class="ni" data-v="plata" onclick="go('plata',this)">◇ Mi plata<span class="ni-mal" id="nb-turnos" style="display:none;">·</span></div>
       <div class="ni" data-v="cielo" onclick="go('cielo',this)">◐ El cielo</div>
     </div>
 
@@ -430,7 +431,9 @@ textarea,input,select,button{font-family:inherit;}
       <div class="view on" id="v-hoy">
         <div class="kpis" id="hoy-kpis"></div>
         <div id="hoy-urgente"></div>
+        <div id="hoy-turnos"></div>
         <div class="card" id="hoy-riesgo"></div>
+        <div class="card-sage" id="hoy-hormiga"></div>
         <div class="g14">
           <div class="card">
             <div class="card-h"><span class="card-lbl">HOY</span><span class="link" onclick="go('pendientes',null)">VER EL TABLERO →</span></div>
@@ -463,7 +466,10 @@ textarea,input,select,button{font-family:inherit;}
             <div class="vista-t">Mi semana</div>
             <p class="vista-p" id="sem-sub">—</p>
           </div>
-          <button class="card-ghost" onclick="abrirHoras()">Cambiar mis horas libres</button>
+          <div class="row-btns">
+            <button class="card-ghost" onclick="abrirHoras()">Mis horas útiles</button>
+            <button class="card-ghost" onclick="go('rutina',null)">Turnos y clases</button>
+          </div>
         </div>
         <div class="card" id="sem-riesgo"></div>
         <div class="sem7" id="sem-dias"></div>
@@ -497,15 +503,37 @@ textarea,input,select,button{font-family:inherit;}
         <div class="card" id="uni-nota"></div>
       </div>
 
+      <!-- ════ RUTINA ════ -->
+      <div class="view" id="v-rutina">
+        <div class="vista-h">
+          <div>
+            <div class="vista-t">Mi rutina</div>
+            <p class="vista-p">Lo que se repite todas las semanas: turnos y clases.
+              <strong>Se escribe una vez.</strong> Se repite solo hasta la fecha en que se acaba,
+              y de ahí salen las horas que te quedan libres cada día.</p>
+          </div>
+          <button class="card-cta" onclick="nuevaRutina()">+ Turno o clase</button>
+        </div>
+        <div class="card" id="rut-resumen"></div>
+        <div id="rut-lista"></div>
+      </div>
+
       <!-- ════ GASTOS FIJOS ════ -->
       <div class="view" id="v-plata">
         <div class="vista-h">
           <div>
-            <div class="vista-t">Gastos fijos</div>
-            <p class="vista-p">Lo que planeas cada mes, contra lo que de verdad salió. Los movimientos los lleva Nova Central: aquí solo vive el plan, y por eso se pueden comparar.</p>
+            <div class="vista-t">Mi plata</div>
+            <p class="vista-p">Lo que entró, lo que salió y lo que falta del mes. Los gastos fijos son el
+              <em>plan</em>; los movimientos los lleva Nova Central, y por eso se pueden comparar.</p>
           </div>
-          <button class="card-cta" onclick="nuevoFijo()">+ Gasto fijo</button>
+          <div class="row-btns">
+            <button class="card-cta" onclick="abrirHormiga()">+ Gasto del día</button>
+            <button class="card-ghost" onclick="nuevoFijo()">+ Gasto fijo</button>
+          </div>
         </div>
+        <div id="pl-mes"></div>
+        <div id="pl-turnos"></div>
+        <div class="card" id="pl-hormiga"></div>
         <div class="kpis" id="fin-kpis"></div>
         <div class="card" id="fin-lista"></div>
       </div>
@@ -641,10 +669,74 @@ textarea,input,select,button{font-family:inherit;}
   </div>
 </div>
 
+<div class="modal" id="m-rutina" onclick="if(event.target===this)cerrarModal('m-rutina')">
+  <div class="modal-box">
+    <div class="card-h" style="margin:0;"><span class="card-h3" id="mr-titulo">Turno o clase</span><span class="link" onclick="cerrarModal('m-rutina')">CERRAR ✕</span></div>
+    <div class="aviso mal" id="mr-err"></div>
+    <div class="f-row">
+      <div class="f"><label>¿QUÉ ES?</label><select id="mr-tipo" onchange="rutinaTipoCambio()"></select><small id="mr-ayuda"></small></div>
+      <div class="f"><label>NOMBRE</label><input id="mr-nombre" placeholder="Salsabor"></div>
+    </div>
+    <div class="f-row">
+      <div class="f"><label>DÍA DE LA SEMANA</label><select id="mr-dia"></select><small>Si es dos días, créalo dos veces: cada uno tiene su horario.</small></div>
+      <div class="f"><label>DÓNDE</label><input id="mr-lugar" placeholder="Opcional"></div>
+    </div>
+    <div class="f-row">
+      <div class="f"><label>EMPIEZA</label><input type="time" id="mr-inicio" onchange="rutinaDuracion()"></div>
+      <div class="f"><label>TERMINA</label><input type="time" id="mr-fin" onchange="rutinaDuracion()"><small id="mr-dura"></small></div>
+    </div>
+    <div class="f-row" id="mr-pago">
+      <div class="f"><label>LO QUE TE PAGAN POR TURNO</label><input type="number" id="mr-paga" min="0" step="1000" placeholder="80000"><small>Fijo. Las propinas se escriben al día siguiente.</small></div>
+      <div class="f"><label>MONEDA</label><select id="mr-moneda"><option>COP</option><option>USD</option><option>GTQ</option></select></div>
+    </div>
+    <div class="f-row">
+      <div class="f"><label>DESDE</label><input type="date" id="mr-desde"></div>
+      <div class="f"><label>HASTA</label><input type="date" id="mr-hasta"><small>El fin del semestre o del contrato. Sin esto se repite para siempre.</small></div>
+    </div>
+    <div class="f"><label>PROYECTO EN NOVA CENTRAL</label><select id="mr-trabajo"></select></div>
+    <div class="f-btns">
+      <button class="card-cta" onclick="guardarRutina()">Guardar</button>
+      <button class="card-ghost" onclick="cerrarModal('m-rutina')">Cancelar</button>
+      <button class="btn-mal" id="mr-borrar" onclick="borrarRutina()">Borrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="m-turno" onclick="if(event.target===this)cerrarModal('m-turno')">
+  <div class="modal-box">
+    <div class="card-h" style="margin:0;"><span class="card-h3" id="mtu-titulo">Cerrar el turno</span><span class="link" onclick="cerrarModal('m-turno')">CERRAR ✕</span></div>
+    <div class="aviso mal" id="mtu-err"></div>
+    <p class="card-p" id="mtu-sub"></p>
+    <div class="f-row">
+      <div class="f"><label>LO QUE TE PAGARON</label><input type="number" id="mtu-paga" min="0" step="1000"><small>Viene de tu rutina. Cámbialo solo si ese día fue distinto.</small></div>
+      <div class="f"><label>PROPINAS</label><input type="number" id="mtu-propinas" min="0" step="1000" placeholder="0"><small>Si ese día no hubo, escribe 0: un día malo es un dato.</small></div>
+    </div>
+    <div class="card-amber" id="mtu-total"></div>
+    <div class="f-btns"><button class="card-cta" onclick="guardarTurno()">Guardar</button><button class="card-ghost" onclick="cerrarModal('m-turno')">Cancelar</button></div>
+  </div>
+</div>
+
+<div class="modal" id="m-hormiga" onclick="if(event.target===this)cerrarModal('m-hormiga')">
+  <div class="modal-box">
+    <div class="card-h" style="margin:0;"><span class="card-h3">Gasto del día</span><span class="link" onclick="cerrarModal('m-hormiga')">CERRAR ✕</span></div>
+    <div class="aviso mal" id="mho-err"></div>
+    <div class="f"><label>¿QUÉ FUE?</label><div class="row-btns" id="mho-cats"></div></div>
+    <div class="f-row">
+      <div class="f"><label>CUÁNTO</label><input type="number" id="mho-monto" min="0" step="500" placeholder="2900"></div>
+      <div class="f"><label>FECHA</label><input type="date" id="mho-fecha"></div>
+    </div>
+    <div class="f"><label>NOTA</label><input id="mho-concepto" placeholder="Opcional"></div>
+    <div class="f-btns"><button class="card-cta" onclick="guardarHormiga()">Guardar</button><button class="card-ghost" onclick="cerrarModal('m-hormiga')">Cancelar</button></div>
+  </div>
+</div>
+
 <div class="modal" id="m-horas" onclick="if(event.target===this)cerrarModal('m-horas')">
   <div class="modal-box">
     <div class="card-h" style="margin:0;"><span class="card-h3">Mis horas libres</span><span class="link" onclick="cerrarModal('m-horas')">CERRAR ✕</span></div>
-    <p class="card-p">Cuántas horas te quedan cada día <em>después</em> de clases, turnos y lo que ya no se mueve. Es el techo contra el que se compara todo lo demás, y no lo puedo adivinar.</p>
+    <p class="card-p"><strong>Cambió lo que te pregunto aquí.</strong> Antes eran las horas que te quedaban
+      ya descontando turnos y clases. Ahora esos los sé yo, así que lo que escribes son las horas
+      <em>útiles</em> del día: todo lo que puedes trabajar y estudiar, antes de descontar nada.
+      La resta la hago abajo, a la vista.</p>
     <div class="aviso mal" id="mh-err"></div>
     <div id="mh-dias" style="display:flex;flex-direction:column;gap:10px;"></div>
     <div class="f-btns"><button class="card-cta" onclick="guardarHoras()">Guardar</button><button class="card-ghost" onclick="cerrarModal('m-horas')">Cancelar</button></div>
@@ -689,12 +781,13 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-23 · 5b76';
+const VERSION_PANTALLA = '2026-09-23 · 00aa';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
 let D = null;        // la foto del día
 let FIN = null;      // gastos fijos
+let PLATA = null;    // el mes entero: entró, salió, lo que falta
 let FAM = null;      // Nova Family
 let FILTRO = '';     // proyecto elegido en el tablero
 let MD = localStorage.getItem('ns_modo') || 'claro';
@@ -911,10 +1004,15 @@ async function cargar() {
     return;
   }
   D = r;
+  if (r.faltanHojas && r.faltanHojas.length) {
+    avisoGlobal('Faltan hojas en Nova_Soul (' + r.faltanHojas.join(', ') +
+      '). Corre bootstrapTodo() una vez en Apps Script. Lo demás funciona igual.');
+  }
   try {
     pintarTodo();
     // Un «guardé 2 entregas» no se borra por recargar justo después.
-    if (!AVISO_BUENO) avisoGlobal('');
+    // Tampoco el aviso de las hojas que faltan, que lo acabamos de poner.
+    if (!AVISO_BUENO && !(r.faltanHojas && r.faltanHojas.length)) avisoGlobal('');
   } catch (e) {
     // D se limpia ANTES de avisar: si no, el siguiente intento vuelve a
     // entrar al mismo dibujo roto y el error se pierde sin mensaje.
@@ -947,6 +1045,9 @@ function pintarSidebar() {
   const mal = r.sobra !== null && r.sobra < 0;
   document.getElementById('nb-riesgo').style.display = mal ? 'inline-block' : 'none';
   document.getElementById('nb-ml').textContent = D.mindlab.hechas + '/' + D.mindlab.total;
+  const bt = document.getElementById('nb-turnos');
+  bt.style.display = D.turnosPendientes ? 'inline-block' : 'none';
+  bt.textContent = D.turnosPendientes || '';
   document.getElementById('pf-horas').textContent =
     r.libres === null ? 'todavía no me lo has dicho' : hfmt(r.libres);
 
@@ -1003,8 +1104,30 @@ function pintarHoy() {
     : '<div class="card-sage"><div class="card-lbl-sage">HOY</div>' +
       '<div class="card-h3" style="margin-top:8px;">No tienes nada abierto</div></div>';
 
+  // ── Turnos sin cerrar ──
+  document.getElementById('hoy-turnos').innerHTML = D.turnosPendientes
+    ? '<div class="card-amber" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">' +
+      '<div style="flex:1;min-width:220px;">' +
+        '<div class="card-lbl-amber">TE FALTAN LAS PROPINAS</div>' +
+        '<div class="card-h3" style="margin-top:8px;">' + D.turnosPendientes +
+          (D.turnosPendientes === 1 ? ' turno sin cerrar' : ' turnos sin cerrar') + '</div>' +
+        '<p class="card-p" style="margin-top:6px;">La base ya la sé. Falta lo que entró de ' +
+        'propinas, y eso solo lo sabes tú.</p></div>' +
+      '<button class="card-cta" onclick="go(\'plata\',null)">Ingresarlas</button></div>'
+    : '';
+
   // ── El riesgo de la semana ──
   document.getElementById('hoy-riesgo').innerHTML = bloqueRiesgo();
+
+  // ── Un gasto chiquito, en dos toques ──
+  document.getElementById('hoy-hormiga').innerHTML =
+    '<div class="card-h"><span class="card-lbl-sage">GASTO DEL DÍA</span>' +
+    '<button class="link" onclick="go(\'plata\',null)">VER EL MES →</button></div>' +
+    '<div class="row-btns">' +
+    [['bus','Bus'],['uber','Uber'],['antojos','Antojo'],['salidas','Salida'],
+     ['transporte','Transporte'],['hormiga','Otro']].map(function (c) {
+      return '<button class="kbtn" onclick="abrirHormiga(\'' + c[0] + '\')">+ ' + c[1] + '</button>';
+    }).join('') + '</div>';
 
   // ── La lista de hoy ──
   const hoyList = D.pendientes.filter(function (t) {
@@ -1215,8 +1338,20 @@ function pintarSemana() {
       '<div class="sdia-h"><span class="sdia-d">' + DOW[d.dow - 1] + '</span>' +
       '<span class="sdia-n">' + Number(d.fecha.split('-')[2]) + '</span></div>' +
       '<div class="sdia-lib">' +
-        (d.libres === null ? 'sin horas dichas' : hfmt(d.libres) + ' libres') +
+        (d.libres === null ? 'sin horas dichas'
+          : (d.ocupadas
+              ? hfmt(d.utiles) + ' − ' + hfmt(d.ocupadas) + ' = <strong>' + hfmt(d.libres) + '</strong>'
+              : hfmt(d.libres) + ' libres')) +
         (d.horas ? ' · ' + hfmt(d.horas) + ' pedidas' : '') + '</div>' +
+      (d.bloques && d.bloques.length
+        ? d.bloques.map(function (b) {
+            return '<div class="sdia-it" style="border-left:3px solid ' +
+              (b.tipo === 'turno' ? 'var(--acc)' : 'var(--sage-d)') + ';">' +
+              '<strong>' + esc(b.nombre) + '</strong><br>' +
+              '<span style="color:var(--mut4);">' + esc(b.inicio) + '–' + esc(b.fin) +
+              ' · ' + hfmt(b.horas) + '</span></div>';
+          }).join('')
+        : '') +
       (d.textos.length
         ? d.textos.map(function (t) {
             return '<div class="sdia-it" onclick="editarTarea(\'' + t.id + '\')" style="cursor:pointer;">' +
@@ -1399,18 +1534,43 @@ async function mover(id, estado) {
 // ── HORAS LIBRES ──────────────────────────────────────
 function abrirHoras() {
   if (!D) { avisoGlobal('Todavía no cargaron tus datos.'); return; }
-  const h = D.horas || {};
+  const h = D.horasUtiles || D.horas || {};
   document.getElementById('mh-dias').innerHTML = DOW.map(function (d, i) {
-    return '<div style="display:flex;align-items:center;gap:12px;">' +
-      '<span style="flex:1;font:600 12.5px/1 \'DM Sans\';color:var(--ink);">' + d + '</span>' +
+    return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+      '<span style="flex:1;min-width:52px;font:600 12.5px/1 \'DM Sans\';color:var(--ink);">' + d + '</span>' +
       '<input type="number" min="0" max="24" step="0.5" id="mh-' + (i + 1) + '" ' +
-      'value="' + (h[i + 1] !== undefined ? h[i + 1] : '') + '" ' +
-      'style="width:110px;border:1px solid var(--line4);background:var(--bg);border-radius:10px;' +
+      'value="' + (h[i + 1] !== undefined ? h[i + 1] : '') + '" oninput="pintarResta()" ' +
+      'style="width:96px;border:1px solid var(--line4);background:var(--bg);border-radius:10px;' +
       'padding:11px 12px;font:500 13.5px/1 \'DM Sans\';color:var(--ink);outline:none;">' +
-      '<span style="font:500 11.5px/1 \'DM Sans\';color:var(--mut3);width:56px;">horas</span></div>';
+      '<span class="kpi-s" id="mh-r' + (i + 1) + '" style="flex:1;min-width:150px;"></span></div>';
   }).join('');
+  pintarResta();
   errModal('mh-err', '');
   document.getElementById('m-horas').classList.add('on');
+}
+
+/**
+ * La resta, a la vista, mientras escribe.
+ *
+ * El número que se le pide cambió de significado: antes eran las horas
+ * ya descontadas y ahora son las de antes de descontar. Un cambio así
+ * no se puede anunciar solo con un texto — se muestra la cuenta al lado
+ * de cada día, y el número nuevo se ve en el momento.
+ */
+function pintarResta() {
+  const ocup = {};
+  (D && D.semana ? D.semana.dias : []).forEach(function (d) { ocup[d.dow] = d.ocupadas || 0; });
+  for (let i = 1; i <= 7; i++) {
+    const el = document.getElementById('mh-r' + i);
+    if (!el) continue;
+    const v = document.getElementById('mh-' + i).value;
+    const utiles = v === '' ? 0 : Number(v);
+    const o = ocup[i] || 0;
+    el.innerHTML = o
+      ? 'menos ' + hfmt(o) + ' de turno o clase → <strong>' +
+        hfmt(Math.max(0, utiles - o)) + ' libres</strong>'
+      : 'sin turnos ni clases';
+  }
 }
 async function guardarHoras() {
   const dias = {};
@@ -1424,29 +1584,110 @@ async function guardarHoras() {
   await cargar();
 }
 
-// ── GASTOS FIJOS ──────────────────────────────────────
-async function cargarFinanzas() {
+// ── MI PLATA ──────────────────────────────────────────
+async function cargarPlata() {
   let r;
-  try { r = await nc('nc_soul_finanzas'); }
+  try { r = await nc('nc_soul_plata'); }
   catch (e) {
-    FIN = null;
+    FIN = null; PLATA = null;
     document.getElementById('fin-lista').innerHTML =
       '<div class="vacio">No pude hablar con la hoja: ' + esc(e && e.message || e) + '</div>';
     return;
   }
   if (!r || !r.ok) {
-    FIN = null;
+    FIN = null; PLATA = null;
     document.getElementById('fin-lista').innerHTML =
       '<div class="vacio">' + esc(traducirError(r && r.error) || 'La hoja respondió sin datos.') + '</div>';
     return;
   }
-  FIN = r;
-  try { pintarFinanzas(); }
+  FIN = r; PLATA = r;
+  try { pintarMes(); pintarFinanzas(); }
   catch (e) {
-    FIN = null;
+    FIN = null; PLATA = null;
     document.getElementById('fin-lista').innerHTML =
       '<div class="vacio">Traje tus gastos pero no los pude dibujar: ' + esc(e && e.message || e) + '</div>';
   }
+}
+
+/**
+ * La respuesta a «¿me sobra o me falta?», en dos mitades.
+ *
+ * Lo que YA pasó es un hecho. Lo que falta del mes es una previsión.
+ * Van separadas porque un solo número que las mezcla se lee como un
+ * hecho, y con eso se deciden compras.
+ */
+function pintarMes() {
+  const R = PLATA.resumen;
+  document.getElementById('pl-mes').innerHTML = R.resultado.length
+    ? R.resultado.map(function (x) {
+        const bien = x.proyectado >= 0;
+        return '<div class="' + (bien ? 'card-sage' : 'card-rojo') + '" style="margin-bottom:18px;">' +
+          '<div class="card-h"><span class="' + (bien ? 'card-lbl-sage' : 'card-lbl-rojo') + '">' +
+            'ESTE MES EN ' + esc(x.moneda) + '</span>' +
+            '<span class="' + (bien ? 'card-lbl-sage' : 'card-lbl-rojo') + '">' +
+            (bien ? 'TE SOBRARÍAN ' : 'TE FALTARÍAN ') + esc(x.moneda) + ' ' +
+            nfmt(Math.abs(x.proyectado)) + '</span></div>' +
+          '<div class="g3" style="gap:14px;">' +
+            '<div><div class="kpi-l">ENTRÓ</div><div class="kpi-v" style="font-size:22px;">' +
+              nfmt(x.entro) + '</div></div>' +
+            '<div><div class="kpi-l">SALIÓ</div><div class="kpi-v" style="font-size:22px;">' +
+              nfmt(x.salio) + '</div></div>' +
+            '<div><div class="kpi-l">TIENES AHORA</div><div class="kpi-v' +
+              (x.queda < 0 ? ' mal' : '') + '" style="font-size:22px;">' +
+              nfmt(x.queda) + '</div></div>' +
+          '</div>' +
+          '<div style="border-top:1px solid var(--soft2);margin-top:14px;padding-top:12px;">' +
+            '<div class="card-lbl" style="margin-bottom:9px;">Y FALTA QUE PASE ESTO</div>' +
+            '<div class="fila"><span class="fila-t">Turnos que faltan por trabajar' +
+              (R.turnosPorVenir ? ' · ' + R.turnosPorVenir : '') + '</span>' +
+              '<span class="fila-m" style="color:var(--sage-d);">+ ' + nfmt(x.porVenir) + '</span></div>' +
+            '<div class="fila"><span class="fila-t">Gastos fijos que aún no se pagan</span>' +
+              '<span class="fila-m" style="color:var(--rojo);">− ' + nfmt(x.fijosPendientes) +
+              '</span></div>' +
+          '</div>' +
+          '<p class="card-p" style="margin-top:11px;">Lo de arriba ya pasó. Lo de abajo es lo que ' +
+          'todavía tiene que pasar, contando tu rutina y tus fijos: por eso van aparte.</p>' +
+          '</div>';
+      }).join('')
+    : '<div class="card"><div class="vacio">Este mes todavía no hay movimientos.</div></div>';
+
+  document.getElementById('pl-turnos').innerHTML = bloqueTurnos(PLATA.turnosPendientes, false);
+
+  // ── Gastos hormiga ──
+  const H = R.hormigaPorCategoria;
+  document.getElementById('pl-hormiga').innerHTML =
+    '<div class="card-h"><span class="card-lbl">GASTOS HORMIGA DEL MES</span>' +
+    '<span class="card-lbl">' + esc(porMoneda(R.hormiga, 'nada aún')) + '</span></div>' +
+    '<div class="row-btns" style="margin-bottom:14px;">' +
+      H.map(function (c) {
+        return '<button class="kbtn" onclick="abrirHormiga(\'' + c.id + '\')">+ ' +
+          esc(c.nombre) + '</button>';
+      }).join('') + '</div>' +
+    H.map(function (c) {
+      return '<div class="fila"><span class="fila-t">' + esc(c.nombre) + '</span>' +
+        '<span class="fila-m">' + (c.n ? c.n + (c.n === 1 ? ' vez' : ' veces') : '—') + '</span>' +
+        '<span class="fin-v' + (c.monto ? '' : ' sin') + '">' +
+        esc(porMoneda(c.monto, 'nada')) + '</span></div>';
+    }).join('') +
+    (R.movimientosHormiga.length
+      ? '<div style="border-top:1px solid var(--soft2);margin-top:14px;padding-top:12px;">' +
+        '<div class="card-lbl" style="margin-bottom:9px;">LOS ÚLTIMOS</div>' +
+        R.movimientosHormiga.slice(0, 8).map(function (m) {
+          return '<div class="fila"><span class="fila-t">' + esc(m.concepto) + '</span>' +
+            '<span class="fila-m">' + esc(fcorta(m.fecha)) + '</span>' +
+            '<span class="fila-m">' + esc(m.moneda) + ' ' + nfmt(m.monto) + '</span>' +
+            '<button class="kbtn" onclick="borrarHormiga(\'' + m.id + '\')">Quitar</button></div>';
+        }).join('') + '</div>'
+      : '<p class="card-p" style="margin-top:12px;">Todavía no has anotado ninguno este mes. ' +
+        'Son chiquitos, pero a fin de mes son la diferencia.</p>');
+}
+
+async function borrarHormiga(id) {
+  if (!confirm('¿Quitar este gasto?')) return;
+  const r = await nc('nc_soul_hormiga_borrar', { id: id });
+  if (!r || !r.ok) { avisoGlobal(traducirError(r && r.error) || 'No se pudo.'); return; }
+  PLATA = null;
+  await cargarPlata();
 }
 
 function pintarFinanzas() {
@@ -1570,7 +1811,7 @@ async function guardarFijo() {
   } });
   if (!r || !r.ok) { errModal('mf-err', r && r.error || 'No se pudo guardar.'); return; }
   cerrarModal('m-fijo');
-  await cargarFinanzas();
+  await cargarPlata();
 }
 async function borrarFijo() {
   if (!FIJO) return;
@@ -1578,7 +1819,268 @@ async function borrarFijo() {
   const r = await nc('nc_soul_fijo_borrar', { id: FIJO });
   if (!r || !r.ok) { errModal('mf-err', r && r.error || 'No se pudo borrar.'); return; }
   cerrarModal('m-fijo');
-  await cargarFinanzas();
+  await cargarPlata();
+}
+
+// ── RUTINA: TURNOS Y CLASES ───────────────────────────
+let RUT = null, RUTINA = '';
+
+async function cargarRutina() {
+  let r;
+  try { r = await nc('nc_soul_rutina'); }
+  catch (e) {
+    RUT = null;
+    document.getElementById('rut-lista').innerHTML =
+      '<div class="card"><div class="vacio">No pude hablar con la hoja: ' +
+      esc(e && e.message || e) + '</div></div>';
+    return;
+  }
+  if (!r || !r.ok) {
+    RUT = null;
+    document.getElementById('rut-lista').innerHTML =
+      '<div class="card"><div class="vacio">' +
+      esc(traducirError(r && r.error) || 'Sin datos.') + '</div></div>';
+    return;
+  }
+  RUT = r;
+  try { pintarRutina(); }
+  catch (e) {
+    RUT = null;
+    document.getElementById('rut-lista').innerHTML =
+      '<div class="card"><div class="vacio">Traje tu rutina pero no la pude dibujar: ' +
+      esc(e && e.message || e) + '</div></div>';
+  }
+}
+
+function pintarRutina() {
+  const total = [1,2,3,4,5,6,7].reduce(function (a, d) {
+    return a + (RUT.ocupadasPorDia[d] || 0); }, 0);
+  document.getElementById('rut-resumen').innerHTML =
+    '<div class="card-h"><span class="card-lbl">LO QUE OCUPA TU SEMANA</span>' +
+    '<span class="card-lbl">' + hfmt(total) + ' A LA SEMANA</span></div>' +
+    '<div class="sem7">' + DOW.map(function (d, i) {
+      const o = RUT.ocupadasPorDia[i + 1] || 0;
+      return '<div class="sdia" style="min-height:0;">' +
+        '<div class="sdia-d">' + d + '</div>' +
+        '<div class="sdia-n" style="color:' + (o ? 'var(--ink)' : 'var(--mut4)') + ';">' +
+        (o ? hfmt(o) : '—') + '</div></div>';
+    }).join('') + '</div>' +
+    '<p class="card-p" style="margin-top:13px;">Esto es lo que se descuenta de tus horas útiles ' +
+    'cada día. Se repite solo: no hay que volver a escribirlo nunca.</p>';
+
+  const porDia = {};
+  RUT.rutinas.forEach(function (r) {
+    if (!porDia[r.dia]) porDia[r.dia] = [];
+    porDia[r.dia].push(r);
+  });
+
+  document.getElementById('rut-lista').innerHTML = RUT.rutinas.length
+    ? [1,2,3,4,5,6,7].filter(function (d) { return porDia[d]; }).map(function (d) {
+        return '<div class="card" style="margin-bottom:14px;">' +
+          '<div class="card-h"><span class="card-lbl">' + DOW[d - 1] + '</span></div>' +
+          porDia[d].map(function (r) {
+            const t = (RUT.tipos[r.tipo] || {}).nombre || r.tipo;
+            return '<div class="fila">' +
+              '<span class="fila-t" onclick="editarRutina(\'' + r.id + '\')" style="cursor:pointer;">' +
+                '<strong>' + esc(r.nombre) + '</strong>' +
+                (r.lugar ? ' · ' + esc(r.lugar) : '') +
+                '<br><span style="color:var(--mut3);font-size:12px;">' +
+                esc(r.inicio) + '–' + esc(r.fin) + ' · ' + hfmt(r.horas) + '</span></span>' +
+              '<span class="chip' + (r.tipo === 'turno' ? ' hoy' : '') + '">' + esc(t) + '</span>' +
+              (r.paga ? '<span class="chip horas">' + esc(r.moneda) + ' ' + nfmt(r.paga) + '</span>' : '') +
+              (r.hasta ? '<span class="chip">hasta ' + esc(fcorta(r.hasta)) + '</span>'
+                       : '<span class="chip tarde">sin fecha de fin</span>') +
+              (!r.activo ? '<span class="chip">apagado</span>' : '') +
+              '<button class="kbtn" onclick="editarRutina(\'' + r.id + '\')">Cambiar</button>' +
+              '</div>';
+          }).join('') + '</div>';
+      }).join('')
+    : '<div class="card"><div class="vacio">Todavía no has puesto ningún turno ni clase. ' +
+      'Mientras no estén, tus horas libres son las que escribas a mano.</div></div>';
+}
+
+function nuevaRutina() { abrirRutina(null); }
+function editarRutina(id) {
+  abrirRutina((RUT.rutinas.filter(function (r) { return r.id === id; })[0]) || null);
+}
+function abrirRutina(r) {
+  if (!RUT) { avisoGlobal('Todavía no cargó tu rutina.'); return; }
+  RUTINA = r ? r.id : '';
+  document.getElementById('mr-titulo').textContent = r ? 'Cambiar' : 'Nuevo turno o clase';
+  document.getElementById('mr-tipo').innerHTML = Object.keys(RUT.tipos).map(function (k) {
+    return '<option value="' + k + '"' + (r && r.tipo === k ? ' selected' : '') + '>' +
+      esc(RUT.tipos[k].nombre) + '</option>';
+  }).join('');
+  document.getElementById('mr-dia').innerHTML = DOW.map(function (d, i) {
+    return '<option value="' + (i + 1) + '"' + (r && r.dia === i + 1 ? ' selected' : '') + '>' +
+      d + '</option>';
+  }).join('');
+  document.getElementById('mr-trabajo').innerHTML = '<option value="">— Sin proyecto —</option>' +
+    RUT.trabajos.map(function (x) {
+      return '<option value="' + esc(x.id) + '"' +
+        (r && r.trabajoId === x.id ? ' selected' : '') + '>' + esc(x.nombre) + '</option>';
+    }).join('');
+  document.getElementById('mr-nombre').value = r ? r.nombre : '';
+  document.getElementById('mr-lugar').value = r ? r.lugar : '';
+  document.getElementById('mr-inicio').value = r ? r.inicio : '';
+  document.getElementById('mr-fin').value = r ? r.fin : '';
+  document.getElementById('mr-paga').value = r && r.paga ? r.paga : '';
+  document.getElementById('mr-moneda').value = r ? r.moneda : 'COP';
+  document.getElementById('mr-desde').value = r ? r.desde : '';
+  document.getElementById('mr-hasta').value = r ? r.hasta : '';
+  document.getElementById('mr-borrar').style.display = r ? 'block' : 'none';
+  rutinaTipoCambio(); rutinaDuracion();
+  errModal('mr-err', '');
+  document.getElementById('m-rutina').classList.add('on');
+}
+function rutinaTipoCambio() {
+  const k = document.getElementById('mr-tipo').value;
+  const info = (RUT && RUT.tipos[k]) || {};
+  document.getElementById('mr-ayuda').textContent = info.ayuda || '';
+  // Lo que no se paga no pregunta por paga: un campo vacío que no
+  // aplica se llena por costumbre y después nadie sabe qué significa.
+  document.getElementById('mr-pago').style.display = info.paga ? 'grid' : 'none';
+}
+function rutinaDuracion() {
+  const a = document.getElementById('mr-inicio').value;
+  const b = document.getElementById('mr-fin').value;
+  const el = document.getElementById('mr-dura');
+  if (!a || !b) { el.textContent = ''; return; }
+  const n = function (s) { const p = s.split(':'); return Number(p[0]) + Number(p[1] || 0) / 60; };
+  let d = n(b) - n(a);
+  if (d <= 0) d += 24;
+  el.innerHTML = 'Ocupa <strong>' + hfmt(d) + '</strong>' +
+    (n(b) <= n(a) ? ' · cruza la medianoche' : '');
+}
+async function guardarRutina() {
+  const r = await nc('nc_soul_rutina_guardar', { datos: {
+    id: RUTINA,
+    tipo: document.getElementById('mr-tipo').value,
+    nombre: document.getElementById('mr-nombre').value,
+    dia_semana: document.getElementById('mr-dia').value,
+    lugar: document.getElementById('mr-lugar').value,
+    hora_inicio: document.getElementById('mr-inicio').value,
+    hora_fin: document.getElementById('mr-fin').value,
+    paga_fija: document.getElementById('mr-paga').value || 0,
+    moneda: document.getElementById('mr-moneda').value,
+    desde: document.getElementById('mr-desde').value,
+    hasta: document.getElementById('mr-hasta').value,
+    trabajo_id: document.getElementById('mr-trabajo').value,
+  } });
+  if (!r || !r.ok) { errModal('mr-err', traducirError(r && r.error) || 'No se pudo guardar.'); return; }
+  cerrarModal('m-rutina');
+  await cargarRutina();
+  await cargar();
+}
+async function borrarRutina() {
+  if (!RUTINA) return;
+  const r0 = RUT.rutinas.filter(function (x) { return x.id === RUTINA; })[0] || {};
+  if (!confirm('¿Quitar «' + (r0.nombre || 'esto') + '» de tu rutina?\n\n' +
+    'Los turnos que ya trabajaste y la plata que ya entró NO se borran.')) return;
+  const r = await nc('nc_soul_rutina_borrar', { id: RUTINA });
+  if (!r || !r.ok) { errModal('mr-err', traducirError(r && r.error) || 'No se pudo.'); return; }
+  cerrarModal('m-rutina');
+  await cargarRutina();
+  await cargar();
+}
+
+// ── TURNOS: LAS PROPINAS DEL DÍA SIGUIENTE ────────────
+let TURNO = null;
+function abrirTurno(t) {
+  TURNO = t;
+  document.getElementById('mtu-titulo').textContent = t.nombre + ' · ' + fcorta(t.fecha);
+  document.getElementById('mtu-sub').textContent =
+    'El ' + fcorta(t.fecha) + ', de ' + t.inicio + ' a ' + t.fin + ' · ' + hfmt(t.horas) + '.';
+  document.getElementById('mtu-paga').value = t.paga || '';
+  document.getElementById('mtu-propinas').value = t.propinas || '';
+  errModal('mtu-err', '');
+  totalTurno();
+  document.getElementById('m-turno').classList.add('on');
+}
+function totalTurno() {
+  const p = Number(document.getElementById('mtu-paga').value || 0);
+  const pr = Number(document.getElementById('mtu-propinas').value || 0);
+  document.getElementById('mtu-total').innerHTML =
+    '<div class="card-lbl-amber">ENTRA A TUS FINANZAS</div>' +
+    '<div style="font:600 27px/1 \'Fraunces\',serif;color:var(--ink);margin-top:8px;">' +
+    esc(TURNO.moneda) + ' ' + nfmt(p + pr) + '</div>' +
+    '<div class="kpi-s" style="margin-top:6px;">' + nfmt(p) + ' de base + ' + nfmt(pr) +
+    ' de propinas</div>';
+}
+async function guardarTurno() {
+  const r = await nc('nc_soul_turno', {
+    rutina: TURNO.rutinaId, fecha: TURNO.fecha,
+    paga: document.getElementById('mtu-paga').value,
+    propinas: document.getElementById('mtu-propinas').value || 0,
+  });
+  if (!r || !r.ok) { errModal('mtu-err', traducirError(r && r.error) || 'No se pudo.'); return; }
+  cerrarModal('m-turno');
+  avisoGlobal('Listo: entraron ' + r.moneda + ' ' + nfmt(r.total) + ' de ese turno.', true);
+  PLATA = null;
+  await cargar();
+  if (document.getElementById('v-plata').classList.contains('on')) await cargarPlata();
+}
+
+function bloqueTurnos(lista, compacto) {
+  if (!lista || !lista.length) return '';
+  return '<div class="card-amber" style="margin-bottom:18px;">' +
+    '<div class="card-h"><span class="card-lbl-amber">TURNOS SIN CERRAR · ' + lista.length +
+    '</span><span class="card-lbl-amber">FALTAN LAS PROPINAS</span></div>' +
+    lista.slice(0, compacto ? 3 : 30).map(function (t) {
+      return '<div class="fila"><span class="fila-t"><strong>' + esc(t.nombre) + '</strong>' +
+        (t.lugar ? ' · ' + esc(t.lugar) : '') +
+        '<br><span style="color:var(--mut3);font-size:12px;">' + esc(fcorta(t.fecha)) +
+        ' · ' + esc(t.inicio) + '–' + esc(t.fin) + '</span></span>' +
+        '<span class="chip horas">' + esc(t.moneda) + ' ' + nfmt(t.paga) + ' de base</span>' +
+        '<button class="kbtn" onclick="abrirTurno(' +
+        esc(JSON.stringify(t)).replace(/"/g, '&quot;') + ')">Ingresar propinas</button></div>';
+    }).join('') +
+    (compacto && lista.length > 3
+      ? '<div class="kpi-s" style="margin-top:9px;">y ' + (lista.length - 3) +
+        ' más en Mi plata</div>' : '') +
+    '</div>';
+}
+
+// ── GASTOS HORMIGA ────────────────────────────────────
+let HORMIGA_CAT = 'bus';
+function abrirHormiga(cat) {
+  const cats = (PLATA && PLATA.hormigaCategorias) || [
+    { id: 'bus', nombre: 'Buses' }, { id: 'transporte', nombre: 'Transporte' },
+    { id: 'uber', nombre: 'Uber' }, { id: 'antojos', nombre: 'Antojos' },
+    { id: 'salidas', nombre: 'Salidas' }, { id: 'hormiga', nombre: 'Otros sueltos' }];
+  HORMIGA_CAT = cat || cats[0].id;
+  document.getElementById('mho-cats').innerHTML = cats.map(function (c) {
+    return '<button class="kbtn" data-c="' + c.id + '" onclick="elegirHormiga(\'' + c.id + '\')">' +
+      esc(c.nombre) + '</button>';
+  }).join('');
+  elegirHormiga(HORMIGA_CAT);
+  document.getElementById('mho-monto').value = '';
+  document.getElementById('mho-concepto').value = '';
+  document.getElementById('mho-fecha').value = (D && D.hoy) || '';
+  errModal('mho-err', '');
+  document.getElementById('m-hormiga').classList.add('on');
+  setTimeout(function () { document.getElementById('mho-monto').focus(); }, 60);
+}
+function elegirHormiga(id) {
+  HORMIGA_CAT = id;
+  document.querySelectorAll('#mho-cats .kbtn').forEach(function (b) {
+    const on = b.getAttribute('data-c') === id;
+    b.style.borderColor = on ? 'var(--acc)' : '';
+    b.style.color = on ? 'var(--acc-d)' : '';
+  });
+}
+async function guardarHormiga() {
+  const r = await nc('nc_soul_hormiga', {
+    categoria: HORMIGA_CAT,
+    monto: document.getElementById('mho-monto').value,
+    concepto: document.getElementById('mho-concepto').value,
+    fecha: document.getElementById('mho-fecha').value,
+  });
+  if (!r || !r.ok) { errModal('mho-err', traducirError(r && r.error) || 'No se pudo.'); return; }
+  cerrarModal('m-hormiga');
+  avisoGlobal('Anotado.', true);
+  PLATA = null;
+  if (document.getElementById('v-plata').classList.contains('on')) await cargarPlata();
 }
 
 // ── UNIVERSIDAD ───────────────────────────────────────
@@ -1986,8 +2488,9 @@ function go(view, el) {
   }
   cerrarMenu();
   // Las dos secciones lentas se traen cuando se abren, no al arrancar.
-  if (view === 'plata' && !FIN) cargarFinanzas();
+  if (view === 'plata' && !PLATA) cargarPlata();
   if (view === 'uni' && !UNI) cargarUni();
+  if (view === 'rutina' && !RUT) cargarRutina();
   if (view === 'family' && !FAM) cargarFamily();
 }
 function abrirMenu() {
@@ -2024,6 +2527,9 @@ document.addEventListener('DOMContentLoaded', function () {
     d.classList.toggle('on', d.dataset.t === TM);
   });
   document.getElementById('mt-riesgo').addEventListener('change', ayudaRiesgo);
+  ['mtu-paga', 'mtu-propinas'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', totalTurno);
+  });
   document.getElementById('lgn-cod').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') verificarCodigo();
   });

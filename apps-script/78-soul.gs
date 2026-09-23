@@ -42,6 +42,11 @@ const SOUL_HOJAS = {
                'desde','hasta','estado','nota'],
   Fijos:      ['id','usuario_id','categoria','concepto','monto','moneda',
                'dia_del_mes','activo','nota'],
+  Rutina:     ['id','usuario_id','tipo','nombre','dia_semana','hora_inicio','hora_fin',
+               'lugar','trabajo_id','materia_id','paga_fija','moneda','desde','hasta',
+               'activo','nota'],
+  Turnos:     ['id','usuario_id','rutina_id','fecha','paga','propinas','moneda',
+               'estado','finanza_id','nota'],
 };
 
 /** Las tres columnas del tablero. Un pendiente está en una sola. */
@@ -173,6 +178,25 @@ function soulLeer_(nombre, uid) {
     // quedaron de antes de que existiera la columna.
     return !suyo || suyo === uid;
   });
+}
+
+/**
+ * Lee una hoja que puede no existir todavía.
+ *
+ * Una hoja nueva aparece cuando se corre `bootstrapTodo()`, y entre que
+ * se publica el código y se corre eso pasan minutos. Sin esto, abrir
+ * NovaSoul en esos minutos no mostraba una sección incompleta: no
+ * mostraba NADA, porque la excepción se llevaba la pantalla entera.
+ *
+ * Lo que falta se anota y se dice en pantalla. Degradar en silencio
+ * sería el otro error.
+ */
+function soulLeerSuave_(nombre, uid, faltan) {
+  try { return soulLeer_(nombre, uid); }
+  catch (e) {
+    if (faltan && faltan.indexOf(nombre) === -1) faltan.push(nombre);
+    return [];
+  }
 }
 
 /**
@@ -519,8 +543,10 @@ function soulHoy(s, p) {
   const domingo = masDias_(lunes, 6);
   const mes = hoy.slice(0, 7);
 
+  // Las hojas que no se puedan leer se anotan aquí y se dicen al final.
+  const faltan = [];
   const trabajos = soulTrabajos_();
-  const crudos = soulLeer_('Pendientes', uid);
+  const crudos = soulLeerSuave_('Pendientes', uid, faltan);
   const todos = crudos.map(function (f) { return soulPendiente_(f, hoy, trabajos); });
 
   /**
@@ -540,11 +566,42 @@ function soulHoy(s, p) {
   const vencidas = abiertos.filter(function (t) { return t.dias !== null && t.dias > 0; });
   const deHoy = abiertos.filter(function (t) { return t.fecha === hoy; });
 
-  // ── El riesgo de la semana ──
-  const libresPorDia = soulHorasLibres_(uid);
+  /**
+   * ── El riesgo de la semana ──
+   *
+   * Lo que ella escribe son las horas ÚTILES del día. Lo que ocupan sus
+   * turnos y sus clases lo sabe Nova, y se descuenta aquí:
+   *
+   *     libres = útiles − (turnos + clases de ESE día)
+   *
+   * Se descuenta por fecha y no por día de la semana suelto, porque una
+   * clase que ya terminó el semestre no ocupa el jueves que viene.
+   */
+  const utilesPorDia = (function () {
+    try { return soulHorasLibres_(uid); }
+    catch (e) { faltan.push('Horas'); return null; }
+  })();
+  const rutinas = rutinaDe_(uid, faltan);
+  const ocupadasPorDia = {}, bloquesPorDia = {};
+  for (let i = 0; i < 7; i++) {
+    const f = masDias_(lunes, i);
+    const bloques = rutinaDelDia_(rutinas, f);
+    bloquesPorDia[i + 1] = bloques;
+    ocupadasPorDia[i + 1] = bloques.reduce(function (a, b) { return a + b.horas; }, 0);
+  }
+  const netoDelDia = function (d) {
+    if (!utilesPorDia) return null;
+    return Math.max(0, (utilesPorDia[d] || 0) - (ocupadasPorDia[d] || 0));
+  };
+  const libresPorDia = utilesPorDia ? {} : null;
+  if (libresPorDia) {
+    for (let d = 1; d <= 7; d++) libresPorDia[d] = netoDelDia(d);
+  }
   const libres = libresPorDia
     ? [1, 2, 3, 4, 5, 6, 7].reduce(function (a, d) { return a + (libresPorDia[d] || 0); }, 0)
     : null;
+  const ocupadas = [1, 2, 3, 4, 5, 6, 7]
+    .reduce(function (a, d) { return a + (ocupadasPorDia[d] || 0); }, 0);
 
   const activos = trabajos.filter(function (t) { return t.estado === 'activo'; });
   const fijas = activos.reduce(function (a, t) { return a + t.horasSemana; }, 0);
@@ -613,6 +670,12 @@ function soulHoy(s, p) {
     dias.push({
       fecha: f, dow: i + 1, esHoy: f === hoy,
       libres: libresPorDia ? (libresPorDia[i + 1] || 0) : null,
+      utiles: utilesPorDia ? (utilesPorDia[i + 1] || 0) : null,
+      ocupadas: ocupadasPorDia[i + 1] || 0,
+      bloques: (bloquesPorDia[i + 1] || []).map(function (b) {
+        return { id: b.id, tipo: b.tipo, nombre: b.nombre, lugar: b.lugar,
+                 inicio: b.inicio, fin: b.fin, horas: b.horas };
+      }),
       entregas: delDia.length,
       horas: delDia.reduce(function (a, t) { return a + t.horas; }, 0),
       textos: delDia.sort(function (a, b) { return soulUrgencia_(b) - soulUrgencia_(a); })
@@ -679,6 +742,9 @@ function soulHoy(s, p) {
     },
     riesgo: {
       libres: libres, fijas: fijas, extra: extra,
+      // Lo que ocupan turnos y clases: no es «comprometido» en el mismo
+      // sentido —ya está fuera del día— pero hay que poder verlo.
+      ocupadas: ocupadas,
       comprometidas: comprometidas, sobra: sobra,
       dentroDeFijas: dentroDeFijas,
       candidatas: candidatas,
@@ -696,6 +762,14 @@ function soulHoy(s, p) {
           : '',
     },
     horas: libresPorDia,
+    horasUtiles: utilesPorDia,
+    rutina: { bloques: rutinas.length, ocupadasSemana: ocupadas },
+    turnosPendientes: turnosPendientes_(uid, hoy, rutinas, faltan).length,
+    /**
+     * Las hojas que todavía no existen. La pantalla lo dice en vez de
+     * dibujar una sección vacía que parece que no tiene nada.
+     */
+    faltanHojas: faltan,
     mindlab: {
       inicio: MINDLAB_INICIO, fin: masDias_(MINDLAB_INICIO, 12 * 7 - 1),
       plan: ml, semanaActual: mlSemana,
