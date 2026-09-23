@@ -1365,3 +1365,67 @@ la urgencia, en vez de que todo sea predeterminado.
 - NovaBot separado de NovaChat.
 - Onboarding: 3 planes, módulos por cliente, moneda de residencia.
 - Empresarial: 15 viajes al servidor al cargar → una sola llamada.
+
+### P1-bis · Lo que se averiguó de las efemérides (23 sep)
+
+Ella pidió comparar las dos APIs. **No se pudo: la política de red del
+contenedor bloquea `freeastroapi.com`, `openephemeris.com` y `rapidapi.com`.**
+No se inventó una comparación.
+
+Pero sí se pudo probar **el motor que hay debajo** de una de ellas
+(Astrologer API → Kerykeion → **Swiss Ephemeris**), instalando
+`pyswisseph` directo. Y la prueba que vale es contra SU carta:
+
+**Nacimiento: 20/09/1995 13:20, Palmira (3.5394 N, 76.3036 W), UTC−5.**
+
+| | Swiss Ephemeris | Horus |
+|---|---|---|
+| Sol | Virgo 27° | Virgo 27 ✓ |
+| Luna | Leo 10° | Leo 10 ✓ |
+| Mercurio | Libra 20° | Libra 20 ✓ |
+| Venus | Libra 5° | Libra 5 ✓ |
+| Marte | Escorpio 9° | Escorpio 9 ✓ |
+| Júpiter | Sagitario 8° | Sagitario 8 ✓ |
+| Saturno Rx | Piscis 20° | Piscis 20 ✓ |
+| Urano Rx | Capricornio 26° | Capricornio 26 ✓ |
+| Neptuno Rx | Capricornio 22° | Capricornio 22 ✓ |
+| Plutón | Escorpio 28° | Escorpio 28 ✓ |
+| Nodo Norte | Libra 26.86° | Libra 27 ✓ (redondeo) |
+| **Ascendente** | **Capricornio 15.10°** | **Capricornio 15 ✓** |
+| **Mediocielo** | **Libra 19.36°** | **Libra 19 ✓** |
+
+**Reproduce su carta entera.** Horus usa el mismo motor.
+
+**La consecuencia: puede que no haga falta ninguna API.** Un año completo
+de sus temporadas —cada vez que un planeta social o generacional toca
+algo de su carta, con orbe y con fecha de entrada y salida— son
+**33 filas**. Cinco años caben en unas 165. Eso entra en la hoja
+`Transitos` sin despeinarse: sin llave, sin factura, sin depender de que
+un servicio de terceros siga vivo, y exacto al mismo motor que ella ya
+usa.
+
+El costo honesto de ese camino: la tabla hay que regenerarla cuando se
+acabe el horizonte. No es «Nova la llama sola», que es lo que ella
+eligió. Por eso hay que preguntárselo.
+
+### P1-ter · Horus usa PLACIDUS, Nova usa casas enteras
+
+Se descubrió comprobando lo anterior. Contra las diez casas que dice su
+captura de Horus:
+
+- **Placidus acierta 10 de 10.**
+- **Casas enteras aciertan 6 de 10.**
+
+Las cuatro que se van: Luna (7 vs 8), Venus (9 vs 10), Marte (10 vs 11),
+Júpiter (11 vs 12).
+
+Esto **no** es un error en las profecciones: las profecciones son
+tradicionalmente de casas enteras y así deben quedar. Pero el día que
+Nova diga «este tránsito te cae en la casa N», si usa casas enteras va a
+contradecir lo que ella ve en Horus cuatro veces de cada diez — y va a
+creer, con razón, que Nova está mal.
+
+**Propuesta a confirmar con ella:** casas enteras para la profección
+(porque es la técnica) y Placidus para dónde cae un tránsito (porque es
+lo que coincide con su carta), diciéndolo en pantalla para que los dos
+números nunca parezcan una contradicción.
