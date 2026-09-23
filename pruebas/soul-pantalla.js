@@ -307,6 +307,21 @@ const FAMILY = {
     ok('pero deja cambiar de tienda' + A,
        (await p.$$eval('#fam-sel .kbtn', e => e.map(x => x.textContent))).join(',') === 'Nutrea GT,Nutrea EC');
 
+    // ══ «Acción desconocida» se traduce a qué hacer ══
+    const viejo = await p.evaluate(async () => {
+      const antes = window.nc;
+      window.nc = async () => ({ ok: false, error: 'Acción desconocida: nc_soul' });
+      (0, eval)('nc = window.nc;');
+      await cargar();
+      const t = document.getElementById('av-global').textContent;
+      window.nc = antes; (0, eval)('nc = window.nc;');
+      await cargar();
+      return t;
+    });
+    ok('«Acción desconocida» dice que falta publicar, y cómo' + A,
+       /c(ó|o)digo viejo/.test(viejo) && /Nueva/.test(viejo) && /bootstrapTodo/.test(viejo),
+       viejo.slice(0, 100));
+
     // ══ Un fallo al dibujar no se disfraza de falta de internet ══
     const msg = await p.evaluate(async () => {
       const viejo = window.pintarHoy;

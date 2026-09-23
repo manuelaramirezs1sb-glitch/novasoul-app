@@ -631,7 +631,7 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-23 · a3b3';
+const VERSION_PANTALLA = '2026-09-23 · 53c0';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
@@ -790,6 +790,25 @@ async function salir(porVencimiento) {
 }
 
 // ── CARGAR ────────────────────────────────────────────
+/**
+ * «Acción desconocida» no le sirve a nadie.
+ *
+ * Significa siempre lo mismo: la hoja está corriendo una versión del
+ * código anterior a esta pantalla. Ya me pasó dos veces que ella lo
+ * leyera como que algo se rompió, cuando lo único que falta es
+ * publicar. Así que se traduce, con los pasos.
+ */
+function traducirError(err) {
+  const e = String(err || '');
+  if (/Acci(ó|o)n desconocida/i.test(e)) {
+    return 'Tu Apps Script todavía tiene el código viejo: no conoce esta parte. ' +
+      'En el editor: pega NOVA-COMPLETO.gs, guarda, corre bootstrapTodo() una vez, ' +
+      'y después Implementar → Administrar implementaciones → el lápiz → ' +
+      'Versión: Nueva → Implementar. La URL no cambia. (' + e + ')';
+  }
+  return e;
+}
+
 function avisoGlobal(msg, bien) {
   const el = document.getElementById('av-global');
   el.textContent = msg || '';
@@ -813,7 +832,7 @@ async function cargar() {
   }
   if (!r || !r.ok) {
     D = null;
-    avisoGlobal(r && r.error ? r.error : 'La hoja respondió sin datos.');
+    avisoGlobal(traducirError(r && r.error) || 'La hoja respondió sin datos.');
     return;
   }
   D = r;
@@ -1342,7 +1361,7 @@ async function cargarFinanzas() {
   if (!r || !r.ok) {
     FIN = null;
     document.getElementById('fin-lista').innerHTML =
-      '<div class="vacio">' + esc(r && r.error || 'La hoja respondió sin datos.') + '</div>';
+      '<div class="vacio">' + esc(traducirError(r && r.error) || 'La hoja respondió sin datos.') + '</div>';
     return;
   }
   FIN = r;
@@ -1503,7 +1522,7 @@ async function cargarFamily(cliente, tienda) {
 
   if (!r || !r.ok) {
     FAM = null;
-    cuerpo.innerHTML = '<div class="vacio">' + esc(r && r.error || 'Sin datos.') + '</div>';
+    cuerpo.innerHTML = '<div class="vacio">' + esc(traducirError(r && r.error) || 'Sin datos.') + '</div>';
     return;
   }
   FAM = r;
