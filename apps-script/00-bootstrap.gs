@@ -495,8 +495,58 @@ const ESQUEMA_CENTRAL = {
 const ESQUEMA_SOUL = {
   Usuarios: ['id','nombre','correo','fecha_nacimiento','hora_nacimiento',
              'lugar_nacimiento','zona_horaria','acento','modo','idioma'],
+  /**
+   * Un pendiente de NovaSoul.
+   *
+   * `trabajo_id` apunta a la hoja Trabajos de Nova_Central: es el mismo
+   * proyecto visto por el otro lado. Central sabe cuánto vale y cuándo
+   * se cobra; Soul sabe qué hay que entregar y cuánto cuesta en horas.
+   *
+   * `horas_estimadas` las pone ella. `horas_reales` se llenan al
+   * cerrarlo, y son las que un día van a corregir sus estimaciones —
+   * por eso son dos columnas y no una.
+   *
+   * `riesgo` no es la prioridad: es qué pasa si NO se entrega. Un
+   * parcial es inamovible; un ajuste de carta se corre una semana. Sin
+   * esa diferencia, elegir qué se cae es adivinar.
+   */
   Pendientes: ['id','usuario_id','texto','tipo','origen','fecha','hecho',
-               'hecho_en','plataforma_id'],
+               'hecho_en','plataforma_id','trabajo_id','estado','prioridad',
+               'horas_estimadas','horas_reales','riesgo','nota'],
+
+  /**
+   * Cuántas horas libres tiene cada día de la semana.
+   *
+   * Es el techo contra el que se compara todo lo demás, y no se puede
+   * adivinar: descontados turnos de Salsabor y clases, lo que queda
+   * solo lo sabe ella. Mientras esta hoja esté vacía, NovaSoul dice que
+   * falta el dato en vez de inventar una semana de 24 horas.
+   */
+  Horas: ['usuario_id','dia_semana','horas_libres','nota'],
+
+  /**
+   * Mindlab: doce semanas, una tarea cada una.
+   *
+   * Vive en su propia hoja y no suelta en Pendientes porque el plan es
+   * una cosa y la tarea de esta semana es otra. De aquí baja a
+   * Pendientes de a una, cuando toca.
+   */
+  Mindlab: ['id','usuario_id','semana','mes','tema','tarea','horas_estimadas',
+            'desde','hasta','estado','nota'],
+
+  /**
+   * Los gastos fijos del mes: el PLAN, no lo que pasó.
+   *
+   * Arriendo, mercado, servicios, internet, crédito, deudas, móvil,
+   * varios y ahorro. Lo que de verdad salió vive en Finanzas, en
+   * Nova_Central, y esta pantalla compara una cosa contra la otra.
+   *
+   * Están separados a propósito: si el plan y el movimiento fueran la
+   * misma fila, no habría forma de ver que el mercado se pasó — el
+   * presupuesto se habría reescrito solo para darse la razón.
+   */
+  Fijos: ['id','usuario_id','categoria','concepto','monto','moneda',
+          'dia_del_mes','activo','nota'],
   Dias: ['usuario_id','fecha','comidas_marcadas','movimiento_hecho','puntos',
          'cerrado','cerrado_en','perdonado'],
   Recompensas: ['id','usuario_id','nombre','costo_puntos','canjeada','canjeada_en'],

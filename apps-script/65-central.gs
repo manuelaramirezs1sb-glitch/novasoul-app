@@ -96,6 +96,26 @@ function manejarCentral(accion, p) {
     case 'nc_mio_guardar':  return centralMioGuardar(s, p);
     case 'nc_mio_borrar':   return centralMioBorrar(s, p);
     case 'nc_mio_cobrar':   return centralMioCobrar(s, p);
+
+    /**
+     * NovaSoul entra por aquí, con la misma sesión.
+     *
+     * Ella lo decidió: Central y Soul son suyas y de nadie más, y pedir
+     * un segundo código para la misma persona en la misma máquina no
+     * protege nada. Lo que sí separa las dos es el rol — `soulPuede_`
+     * exige socia, así que una operadora con sesión de Central no abre
+     * NovaSoul aunque escriba la acción a mano.
+     */
+    case 'nc_soul':            return soulHoy(s, p);
+    case 'nc_soul_guardar':    return soulPendienteGuardar(s, p);
+    case 'nc_soul_borrar':     return soulPendienteBorrar(s, p);
+    case 'nc_soul_horas':      return soulHorasGuardar(s, p);
+    case 'nc_soul_mindlab':    return soulMindlabGuardar(s, p);
+    case 'nc_soul_mindlab_bajar': return soulMindlabAPendientes(s, p);
+    case 'nc_soul_finanzas':   return soulFinanzas(s, p);
+    case 'nc_soul_fijo':       return soulFijoGuardar(s, p);
+    case 'nc_soul_fijo_borrar':return soulFijoBorrar(s, p);
+    case 'nc_soul_family':     return soulFamily(s, p);
     case 'nc_salir':
       CacheService.getScriptCache().remove('nc_' + p.token);
       return { ok: true };

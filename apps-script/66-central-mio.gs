@@ -157,6 +157,17 @@ function centralMio(s, p) {
   const metas = mioLeer_('Metas');
 
   /**
+   * Cuánto pesa cada proyecto en NovaSoul: NÚMEROS, no tareas.
+   *
+   * Es la otra mitad del puente. Central le presta a Soul la lista de
+   * proyectos y Soul le devuelve cuántas entregas abiertas tiene cada
+   * uno y cuántas horas suman — nunca qué dicen. Lo de PHH es
+   * confidencial y Central es la pantalla que algún día se abre delante
+   * de una socia o un contador.
+   */
+  const carga = soulCargaPorTrabajo_(String(s.correo || '').toLowerCase());
+
+  /**
    * Lo que falta cobrar, y lo que YA está tarde.
    *
    * Se separan porque son dos conversaciones distintas: una es esperar
@@ -223,6 +234,7 @@ function centralMio(s, p) {
         especificacion: t.especificacion || '',
         documento: t.documento || '',
         nota: t.nota || '',
+        tareas: carga[t.id] || { abiertas: 0, horas: 0, vencidas: 0, proxima: '' },
       };
     }),
     porCobrar: porCobrar.sort(function (a, b) { return (a.esperada || '9') < (b.esperada || '9') ? -1 : 1; }),

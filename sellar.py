@@ -17,7 +17,7 @@ import hashlib, re, datetime, pathlib
 HOY = datetime.date.today().isoformat()
 RAIZ = pathlib.Path(__file__).parent
 
-for nombre in ['empresarial.html', 'novacentral.html', 'index.html']:
+for nombre in ['empresarial.html', 'novacentral.html', 'index.html', 'novasoul.html']:
     f = RAIZ / nombre
     if not f.exists():
         continue

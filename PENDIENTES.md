@@ -609,3 +609,101 @@ Solo dejan de correr si alguien los borra, o si Google los desactiva
 después de que fallen muchos días seguidos. Para eso está
 `verAutomatico()`, y la tarjeta de Clientes que los muestra: «instalado»
 y «funcionando» no son lo mismo.
+
+---
+
+## 9 · NovaSoul, construida (23-09-2026)
+
+Dejó de ser maqueta. Tiene servidor (`78-soul.gs`), cuatro hojas nuevas
+en Nova_Soul y una pantalla que lee y escribe de verdad.
+
+**Hay que correr `bootstrapTodo()` una vez** para que aparezcan las
+columnas y las hojas nuevas: `Pendientes` crece con `trabajo_id`,
+`estado`, `prioridad`, `horas_estimadas`, `horas_reales`, `riesgo` y
+`nota`; y nacen `Horas`, `Mindlab` y `Fijos`.
+
+### Lo que hace, y por qué así
+
+**Entra con la sesión de Central.** Sin segundo código, como quedó
+decidido en 6c. El servidor igual exige rol `socia` en cada llamada: una
+operadora con sesión de Central no abre esto aunque escriba la acción a
+mano.
+
+**El riesgo de entrega, que era lo primero que había que construir.**
+Compara las horas libres de la semana contra lo comprometido y, si no
+cabe, dice qué se puede correr. Tres decisiones dentro:
+
+- **Sin horas libres no calcula.** Mientras la hoja `Horas` esté vacía,
+  la pantalla pide el dato en vez de pintar una semana holgada. Es el
+  techo de todo lo demás y no se puede suponer.
+- **Las horas de un proyecto con horas fijas no se suman dos veces.**
+  Las doce semanales de PHH ya incluyen la tarea de PHH; sumarlas daría
+  una semana imposible, y una alarma falsa se apaga sola en una semana.
+- **Solo puede caerse lo que de verdad sumó.** Correr el encargo de PHH
+  no libera una hora, así que no aparece como candidata. Si corriendo
+  todo lo corrible sigue sin caber, lo dice: *«eso no se arregla
+  moviendo una entrega, se arregla hablando con alguien».*
+  Lo inamovible —un parcial— nunca se ofrece.
+
+**La frontera con Central es código, no una nota.**
+`soulCargaPorTrabajo_` devuelve **conteos y horas, nunca texto**, y
+Central pinta ese peso en cada proyecto. Lo de PHH es confidencial:
+Central se abre delante de una socia o un contador, Soul no se abre
+delante de nadie. Hay una prueba que falla si algún día el texto se
+cuela.
+
+### Mindlab, recortado para el trimestre
+
+Doce semanas, del **28 de septiembre al 20 de diciembre**. Las dos
+últimas del año quedan libres —son finales y fiestas, y un plan que las
+ocupa se incumple el primer día. Los doce temas son los suyos; lo que
+ajusté fue el calendario y el peso: **37 horas en total**, unas tres por
+semana, y las dos de diciembre a dos horas. Cada semana baja a
+Pendientes con un botón, con sus horas y su fecha.
+
+El plan vive en una constante, no en filas sembradas: la hoja guarda
+solo lo que ella marque. Así se puede corregir en una línea sin dejar
+doce filas viejas contando otra historia.
+
+### Gastos fijos
+
+Las nueve categorías que nombró: arriendo, mercado, servicios, internet,
+crédito, deudas, móvil, varios y ahorro. Todas modificables.
+
+**El plan vive en Soul y los movimientos en Central**, y por eso se
+pueden comparar. Si el presupuesto se reescribiera solo con lo que se
+gastó, siempre cuadraría y nunca serviría. Donde no hay monto dice «sin
+definir», no cero. El ahorro va aparte, no sumado a los gastos. Las
+monedas no se suman entre sí.
+
+### Nova Family, en vez del botón directo
+
+Quitado el botón grande de «Entrar a NOVA». En su lugar una sección con
+el resumen de las tres: las alarmas de la tienda, **el mismo semáforo de
+pauta que le llega por correo los lunes** —una sola cuenta, no dos—, los
+cobros atrasados y las entregas vencidas de Central, y novAcademy
+diciendo la verdad en vez de un cero mudo.
+
+**Una tienda a la vez**, con selector. Es la regla de toda Nova y aquí
+también: dos tiendas en la misma pantalla invitan a compararlas.
+
+Se carga cuando ella abre la sección, no al arrancar: abre la hoja del
+cliente y calcula el semáforo, y eso son segundos.
+
+### El cielo, dicho como es
+
+La sección sigue, pero ahora dice que **los tránsitos que muestra son
+inventados** y qué falta para que sean suyos: su carta cargada una vez,
+los tránsitos con su duración y su ciclo. Dejarlos pasar por reales era
+lo único que esa pantalla no podía hacer.
+
+### Lo que sigue de NovaSoul
+
+- **Los colores**: quedaron como estaban, a propósito. Ella decide
+  después de verlo.
+- **Horarios de clase y turnos de Salsabor**: hoy las horas libres se
+  escriben a mano día por día. Con los horarios, el cálculo sería solo.
+- **Comidas, movimiento, recompensas y ciclo**: siguen sin servidor.
+- **Medir si la astrología le funciona a ella**: guardar la ventana en
+  que se hizo cada tarea, que es lo que hace posible el dato de los tres
+  meses.

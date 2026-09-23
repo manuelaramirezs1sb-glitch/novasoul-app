@@ -22,6 +22,7 @@
   --lila:#F6F1E3; --lila-line:#E8E0CC;
   --sage:#EDF2E7; --sage-line:#d8e6cb; --sage-d:#3F5A3A;
   --acc-d:#A87A24;
+  --rojo:#A63A2C; --rojo-bg:#F8ECE9; --rojo-line:#E7C9C3;
   --shadow: 0 8px 28px rgba(60,40,18,.1);
 }
 @media (prefers-color-scheme: dark) {
@@ -36,6 +37,7 @@
     --acc-d:#EDC97E;
     --lila:#262620; --lila-line:#3A3A30;
     --sage:#23281F; --sage-line:#384232; --sage-d:#A8C4A2;
+    --rojo:#E08472; --rojo-bg:#2E1F1C; --rojo-line:#4A302B;
     --shadow: 0 8px 28px rgba(0,0,0,.35);
   }
 }
@@ -50,6 +52,7 @@
   --acc-d:#EDC97E;
   --lila:#262620; --lila-line:#3A3A30;
   --sage:#23281F; --sage-line:#384232; --sage-d:#A8C4A2;
+  --rojo:#E08472; --rojo-bg:#2E1F1C; --rojo-line:#4A302B;
   --shadow: 0 8px 28px rgba(0,0,0,.35);
 }
 /* ── TEMAS ── */
@@ -71,19 +74,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 textarea,input,select,button{font-family:inherit;}
 ::-webkit-scrollbar{width:0;height:0;}
 
-/* ── PUERTA (login/onboarding) ─────────────────────── */
-#puerta{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;}
+/* ── PUERTA ─────────────────────────────────────────── */
+#login-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;}
 .pt-left{width:420px;flex:0 0 420px;background:var(--lila);border-right:1px solid var(--lila-line);padding:52px 44px;display:flex;flex-direction:column;justify-content:space-between;gap:28px;}
 .pt-orbs{width:130px;height:130px;border-radius:50%;background:#EBDDBB;position:relative;flex:none;}
 .pt-orbs span:first-child{position:absolute;left:20px;top:16px;width:72px;height:72px;border-radius:50%;background:var(--acc);opacity:.5;}
 .pt-orbs span:last-child{position:absolute;right:14px;bottom:18px;width:32px;height:32px;border-radius:50%;background:var(--amber);}
 .pt-frase{font:600 32px/1.18 'Fraunces',serif;color:var(--ink);max-width:16ch;}
 .pt-nota{font:500 14px/1.7 'DM Sans';color:var(--mut);max-width:36ch;}
-.pt-privacy{font:500 11.5px/1.6 'DM Sans';color:var(--mut4);}
-
 .pt-right{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 52px;}
 .pt-form{width:400px;max-width:100%;display:flex;flex-direction:column;gap:22px;}
-.pt-star{width:160px;margin:0 auto 12px;border-radius:50%;background:var(--amber);border:1px solid var(--amber-line);height:160px;display:flex;align-items:center;justify-content:center;font:700 72px/1 'Fraunces',serif;color:var(--acc);}
+.pt-star{width:150px;height:150px;margin:0 auto 4px;border-radius:50%;background:var(--amber);border:1px solid var(--amber-line);display:flex;align-items:center;justify-content:center;font:700 64px/1 'Fraunces',serif;color:var(--acc);}
 .pt-lbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.4px;color:var(--acc-d);}
 .pt-h{font:600 30px/1.15 'Fraunces',serif;color:var(--ink);}
 .pt-sub{font:500 13.5px/1.7 'DM Sans';color:var(--mut);max-width:46ch;text-wrap:pretty;}
@@ -93,35 +94,13 @@ textarea,input,select,button{font-family:inherit;}
 .pt-field input:focus{border-color:var(--acc);}
 .pt-btn{background:var(--acc);color:var(--acc-ink);font:600 14.5px/1 'DM Sans';padding:16px;border-radius:12px;text-align:center;cursor:pointer;border:none;width:100%;}
 .pt-btn:hover{opacity:.88;}
-.pt-links{display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.pt-link{font:600 12.5px/1 'DM Sans';color:var(--acc-d);cursor:pointer;}
-.pt-quiet{font:500 12.5px/1 'DM Sans';color:var(--mut3);cursor:pointer;}
-
-/* onboarding choices */
-.ob-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.ob-choice{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:13px;cursor:pointer;transition:border-color .15s;}
-.ob-choice:hover{border-color:var(--acc);}
-.ob-thumb{height:88px;border-radius:12px;border:1px dashed var(--line5);background:var(--lila);display:flex;align-items:center;justify-content:center;font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--mut3);}
-.ob-thumb-bars{height:88px;border-radius:12px;background:var(--lila);padding:18px;display:flex;flex-direction:column;justify-content:center;gap:8px;}
-.ob-bar{height:9px;border-radius:5px;background:#EBDDBB;}
-.ob-ch{font:600 18px/1.2 'Fraunces',serif;color:var(--ink);}
-.ob-cs{font:500 12.5px/1.55 'DM Sans';color:var(--mut);}
-.ob-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px;}
-.ob-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.ob-ghost{border:1px solid var(--line4);color:var(--ink3);font:600 13.5px/1 'DM Sans';padding:14px 20px;border-radius:11px;cursor:pointer;}
-.ob-confirm-chip{font:600 11.5px/1 'DM Sans';color:var(--ink2);background:var(--soft);border-radius:99px;padding:10px 14px;}
-.ob-loading{background:var(--lila);border:1px solid var(--lila-line);border-radius:16px;padding:26px;display:flex;flex-direction:column;gap:13px;}
-.ob-prog-track{height:7px;border-radius:5px;background:#EBDDBB;overflow:hidden;}
-.ob-prog-fill{height:100%;border-radius:5px;background:var(--acc);width:0;transition:width 2s ease-out;}
+.pt-quiet{font:500 12.5px/1 'DM Sans';color:var(--mut3);cursor:pointer;text-align:center;}
+.pt-err{background:var(--rojo-bg);border:1px solid var(--rojo-line);color:var(--rojo);border-radius:11px;padding:12px 14px;font:500 12.5px/1.5 'DM Sans';display:none;}
 
 /* ── APP SHELL ──────────────────────────────────────── */
 #app{display:none;height:100dvh;overflow:hidden;}
-#app.on{display:flex;}
-
-/* sidebar */
-.sidebar{width:230px;flex:0 0 230px;background:var(--panel);border-right:1px solid var(--panel-line);padding:22px 15px 18px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;}
-.sb-brand{display:flex;align-items:center;gap:9px;padding:0 9px 4px;}
-/* Logo modo */
+.sidebar{width:236px;flex:0 0 236px;background:var(--panel);border-right:1px solid var(--panel-line);padding:22px 15px 18px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;}
+.sb-brand{display:flex;align-items:center;gap:9px;padding:0 4px 4px;}
 .ns-logo-light{display:none!important;}
 .ns-logo-dark{display:block!important;}
 [data-modo="claro"] .ns-logo-dark{display:none!important;}
@@ -132,63 +111,32 @@ textarea,input,select,button{font-family:inherit;}
 .ni:hover{background:var(--soft);color:var(--ink);}
 .ni.on{background:var(--soft2);color:var(--ink);font-weight:600;}
 .ni-badge{font:700 9px/1 'DM Sans';background:var(--acc);color:var(--acc-ink);border-radius:20px;padding:4px 7px;}
-.ni-sage{font:700 9px/1 'DM Sans';background:var(--sage);color:var(--sage-d);border-radius:20px;padding:4px 7px;}
-
-/* sidebar energy card */
+.ni-mal{font:700 9px/1 'DM Sans';background:var(--rojo-bg);color:var(--rojo);border:1px solid var(--rojo-line);border-radius:20px;padding:3px 6px;}
 .sb-energy{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;display:flex;flex-direction:column;gap:9px;}
 .sb-energy-lbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--mut3);}
 .sb-scores{display:flex;gap:0;}
 .sb-sc{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:0 4px;}
 .sb-sc-v{font:600 18px/1 'Fraunces',serif;}
-.sb-sc-l{font:500 9px/1 'DM Sans';color:var(--mut3);}
+.sb-sc-l{font:500 9px/1 'DM Sans';color:var(--mut3);text-align:center;}
 .sb-div{width:1px;background:var(--line);}
-
-/* sidebar rewards mini */
-.sb-rewards{background:var(--amber);border:1px solid var(--amber-line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;cursor:pointer;}
-.sb-rew-h{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.sb-rew-lbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--acc-d);}
-.sb-rew-pct{font:600 10px/1 'DM Sans';color:var(--acc-d);}
-.sb-rew-big{font:600 24px/1 'Fraunces',serif;color:var(--ink);}
-.sb-rew-sub{font:500 10px/1.3 'DM Sans';color:var(--mut3);}
-.sb-rew-bar{height:8px;border-radius:6px;background:var(--soft);overflow:hidden;}
-.sb-rew-fill{height:100%;border-radius:6px;background:var(--acc);}
-.sb-rew-bars{display:flex;gap:4px;align-items:flex-end;height:28px;}
-.sb-rew-day{flex:1;border-radius:3px 3px 0 0;background:var(--acc);opacity:.5;}
-.sb-rew-day.hoy{opacity:1;}
-
-/* streak */
-.sb-streak-lbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--mut5);}
-.sb-streak-bar{display:flex;gap:5px;}
-.sb-streak-seg{flex:1;height:5px;border-radius:3px;}
-.sb-nova-btn{border-radius:14px;padding:13px 14px;background:var(--acc);display:flex;align-items:center;gap:11px;cursor:pointer;box-shadow:0 6px 16px rgba(221,164,60,.22);text-decoration:none;color:inherit;}
-.sb-nova-tag{font:700 9px/1 'DM Sans';letter-spacing:1.5px;color:var(--acc-ink);background:rgba(255,255,255,.34);border-radius:9px;padding:9px 7px;flex:none;}
-.sb-nova-txt strong{display:block;font:600 13px/1 'DM Sans';color:var(--acc-ink);}
-.sb-nova-txt small{display:block;font:500 10px/1 'DM Sans';color:var(--acc-ink);}
+.sb-user{border-top:1px solid var(--panel-line);padding-top:12px;display:flex;align-items:center;gap:10px;margin-top:auto;}
+.sb-user-av{width:32px;height:32px;border-radius:50%;background:var(--amber);border:1px solid var(--amber-line);display:flex;align-items:center;justify-content:center;font:600 13px/1 'DM Sans';color:var(--acc-d);flex:none;}
+.sb-user-nm{font:600 12.5px/1.2 'DM Sans';color:var(--ink);}
+.sb-user-rl{font:500 10.5px/1 'DM Sans';color:var(--mut3);margin-top:3px;}
 
 /* ── MAIN ───────────────────────────────────────────── */
 .main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
 .topbar{flex:0 0 58px;border-bottom:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:space-between;padding:0 26px;gap:16px;}
-.semana{display:flex;align-items:center;gap:4px;}
-.sem-day{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 12px;border-radius:10px;cursor:pointer;min-width:42px;}
-.sem-day:hover{background:var(--soft);}
-.sem-day.on{background:var(--acc);color:var(--acc-ink);}
-.sem-dow{font:600 9px/1 'DM Sans';letter-spacing:.8px;opacity:.65;}
-.sem-num{font:600 17px/1 'Fraunces',serif;}
-.sem-day.on .sem-dow,.sem-day.on .sem-num{color:var(--acc-ink);}
+.tb-fecha{font:600 13.5px/1 'DM Sans';color:var(--ink);}
+.tb-fecha small{display:block;font:500 10.5px/1 'DM Sans';color:var(--mut3);margin-top:5px;}
 .tb-right{display:flex;align-items:center;gap:12px;}
-.tb-lang{font:600 10.5px/1 'DM Sans';color:var(--mut3);border:1px solid var(--panel-line);border-radius:20px;padding:5px 9px;cursor:pointer;}
-.tb-av{width:30px;height:30px;border-radius:50%;background:var(--line3);display:flex;align-items:center;justify-content:center;font:600 12px/1 'DM Sans';color:var(--acc-d);cursor:pointer;}
 .tb-mode{display:flex;gap:3px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:3px;}
 .tb-mbtn{font:600 11px/1 'DM Sans';color:var(--mut3);padding:6px 11px;border-radius:17px;cursor:pointer;}
 .tb-mbtn.on{background:var(--soft2);color:var(--ink);}
 .tb-cdots{display:flex;gap:5px;align-items:center;margin-left:6px;}
 .tb-cdot{width:15px;height:15px;border-radius:50%;cursor:pointer;transition:transform .15s;border:2.5px solid transparent;flex-shrink:0;}
 .tb-cdot.on{border-color:var(--ink2);transform:scale(1.2);}
-.tb-cdot:hover:not(.on){transform:scale(1.1);}
-
 .content{flex:1;overflow-y:auto;padding:24px 26px 40px;display:flex;flex-direction:column;gap:18px;}
-
-/* ── VIEWS ──────────────────────────────────────────── */
 .view{display:none;flex-direction:column;gap:18px;}
 .view.on{display:flex;}
 
@@ -197,132 +145,152 @@ textarea,input,select,button{font-family:inherit;}
 .card-lila{background:var(--lila);border:1px solid var(--lila-line);border-radius:18px;padding:22px 26px;}
 .card-amber{background:var(--amber);border:1.5px solid var(--amber-line);border-radius:18px;padding:20px 22px;}
 .card-sage{background:var(--sage);border:1px solid var(--sage-line);border-radius:18px;padding:20px 22px;}
-.card-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
+.card-rojo{background:var(--rojo-bg);border:1.5px solid var(--rojo-line);border-radius:18px;padding:20px 22px;}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
 .card-lbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.2px;color:var(--mut3);}
 .card-lbl-amber{font:600 9.5px/1 'DM Sans';letter-spacing:1.2px;color:var(--acc-d);}
 .card-lbl-sage{font:600 9.5px/1 'DM Sans';letter-spacing:1.2px;color:var(--sage-d);}
-.card-lbl-lila{font:600 9.5px/1 'DM Sans';letter-spacing:1.2px;color:var(--acc-d);}
+.card-lbl-rojo{font:600 9.5px/1 'DM Sans';letter-spacing:1.2px;color:var(--rojo);}
 .card-h2{font:600 28px/1.1 'Fraunces',serif;color:var(--ink);}
-.card-h3{font:600 22px/1.15 'Fraunces',serif;color:var(--ink);}
-.card-it{font:400 14px/1.2 'Fraunces',serif;font-style:italic;color:var(--mut3);}
+.card-h3{font:600 20px/1.15 'Fraunces',serif;color:var(--ink);}
 .card-p{font:500 13.5px/1.65 'DM Sans';color:var(--mut);text-wrap:pretty;}
 .card-cta{background:var(--acc);color:var(--acc-ink);font:600 12.5px/1 'DM Sans';padding:13px 18px;border-radius:11px;cursor:pointer;border:none;display:inline-block;}
-.card-ghost{border:1px solid var(--line4);color:var(--acc-d);font:600 12.5px/1 'DM Sans';padding:13px 18px;border-radius:11px;cursor:pointer;}
-.link{font:600 10.5px/1 'DM Sans';letter-spacing:.8px;color:var(--acc-d);cursor:pointer;}
+.card-ghost{border:1px solid var(--line4);background:none;color:var(--acc-d);font:600 12.5px/1 'DM Sans';padding:13px 18px;border-radius:11px;cursor:pointer;}
+.link{font:600 10.5px/1 'DM Sans';letter-spacing:.8px;color:var(--acc-d);cursor:pointer;background:none;border:none;padding:0;}
+.vista-h{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.vista-t{font:600 28px/1.1 'Fraunces',serif;color:var(--ink);margin-bottom:6px;}
+.vista-p{font:500 13px/1.6 'DM Sans';color:var(--mut);max-width:78ch;}
 
-/* layout helpers */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
-.g155{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
 .g14{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;}
-.g15-1{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;}
+.g155{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;}
 .slbl{font:600 9.5px/1 'DM Sans';letter-spacing:1.2px;color:var(--mut3);}
+.row-btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.vacio{font:500 12.5px/1.6 'DM Sans';color:var(--mut3);padding:14px 0;}
 
-/* ─── TELÉFONO ───────────────────────────────────────
-   Esta pantalla se diseñó en computador y no tenía una sola regla para
-   pantalla chica: dos columnas fijas y una barra lateral de 230px que
-   dejaban el contenido en una franja ilegible, con el cuerpo corriéndose
-   de lado. La barra pasa a cajón y las rejillas a una sola columna. */
-.ns-mobbtn{
-  display:none;background:var(--card);border:1px solid var(--line);border-radius:10px;
-  padding:7px 11px;font:600 13px/1 'DM Sans';color:var(--ink);cursor:pointer;
-}
+/* ── CIFRAS ─────────────────────────────────────────── */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:7px;}
+.kpi-l{font:600 9px/1.3 'DM Sans';letter-spacing:1.1px;color:var(--mut3);}
+.kpi-v{font:600 30px/1 'Fraunces',serif;color:var(--ink);font-variant-numeric:tabular-nums;}
+.kpi-v.mal{color:var(--rojo);}
+.kpi-v.bien{color:var(--sage-d);}
+.kpi-s{font:500 11px/1.4 'DM Sans';color:var(--mut3);}
+
+/* ── BARRA DE HORAS ─────────────────────────────────── */
+.hbar{height:26px;border-radius:9px;background:var(--soft);overflow:hidden;display:flex;}
+.hbar span{height:100%;display:block;}
+.hleg{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;}
+.hleg div{display:flex;align-items:center;gap:7px;font:500 11.5px/1 'DM Sans';color:var(--mut);}
+.hleg i{width:11px;height:11px;border-radius:4px;display:block;flex:none;}
+.htope{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--rojo);border-radius:2px;}
+
+/* ── TABLERO ────────────────────────────────────────── */
+.kan{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start;}
+.kcol{background:var(--soft);border:1px solid var(--line);border-radius:16px;padding:13px;display:flex;flex-direction:column;gap:10px;min-height:120px;}
+.kcol.drag{border-color:var(--acc);background:var(--amber);}
+.kcol-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 3px;}
+.kcol-t{font:600 11px/1 'DM Sans';letter-spacing:.8px;color:var(--ink2);}
+.kcol-n{font:600 10px/1 'DM Sans';color:var(--mut3);background:var(--card);border-radius:20px;padding:5px 9px;}
+.kcard{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--line4);border-radius:12px;padding:12px 13px;display:flex;flex-direction:column;gap:8px;cursor:grab;}
+.kcard:hover{border-color:var(--acc);}
+.kcard.tarde{border-left-color:var(--rojo);}
+.kcard.hoy{border-left-color:var(--acc);}
+.kcard.lista{opacity:.62;}
+.kcard-t{font:500 13px/1.4 'DM Sans';color:var(--ink);}
+.kcard.lista .kcard-t{text-decoration:line-through;}
+.kcard-m{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.chip{font:600 9.5px/1 'DM Sans';border-radius:20px;padding:5px 8px;background:var(--soft2);color:var(--mut2);white-space:nowrap;}
+.chip.proy{background:var(--lila);color:var(--acc-d);}
+.chip.tarde{background:var(--rojo-bg);color:var(--rojo);}
+.chip.hoy{background:var(--amber);color:var(--acc-d);}
+.chip.fijo{background:var(--rojo-bg);color:var(--rojo);border:1px solid var(--rojo-line);}
+.chip.horas{background:var(--sage);color:var(--sage-d);}
+.kcard-b{display:flex;gap:6px;justify-content:flex-end;}
+.kbtn{font:600 10.5px/1 'DM Sans';border:1px solid var(--line4);background:var(--card);color:var(--mut2);border-radius:8px;padding:6px 9px;cursor:pointer;}
+.kbtn:hover{border-color:var(--acc);color:var(--acc-d);}
+
+/* ── SEMANA ─────────────────────────────────────────── */
+.sem7{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+.sdia{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 11px;display:flex;flex-direction:column;gap:9px;min-height:130px;}
+.sdia.hoy{border-color:var(--acc);background:var(--amber);}
+.sdia-h{display:flex;align-items:baseline;justify-content:space-between;gap:6px;}
+.sdia-d{font:600 9px/1 'DM Sans';letter-spacing:.9px;color:var(--mut3);}
+.sdia-n{font:600 19px/1 'Fraunces',serif;color:var(--ink);}
+.sdia-lib{font:500 10px/1 'DM Sans';color:var(--mut4);}
+.sdia-it{font:500 11px/1.35 'DM Sans';color:var(--ink2);background:var(--soft);border-radius:8px;padding:7px 8px;}
+.sdia.hoy .sdia-it{background:var(--card);}
+
+/* ── LISTAS ─────────────────────────────────────────── */
+.fila{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--soft2);flex-wrap:wrap;}
+.fila:last-child{border-bottom:none;}
+.fila-t{flex:1;min-width:140px;font:500 13px/1.4 'DM Sans';color:var(--ink);}
+.fila-m{font:500 11px/1 'DM Sans';color:var(--mut4);white-space:nowrap;}
+
+/* ── FINANZAS ───────────────────────────────────────── */
+.fin-row{display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid var(--soft2);}
+.fin-row:last-child{border-bottom:none;}
+.fin-cat{font:600 13px/1.3 'DM Sans';color:var(--ink);}
+.fin-cat small{display:block;font:500 11px/1.3 'DM Sans';color:var(--mut3);margin-top:4px;}
+.fin-v{font:600 14px/1 'DM Sans';color:var(--ink);font-variant-numeric:tabular-nums;}
+.fin-v.sin{font-weight:500;color:var(--mut4);font-size:12px;}
+.fin-v.mal{color:var(--rojo);}
+.fin-v.bien{color:var(--sage-d);}
+.fin-lbl{font:600 8.5px/1 'DM Sans';letter-spacing:1px;color:var(--mut4);margin-bottom:6px;}
+/* En computador la tabla ya tiene encabezado: repetirlo en cada fila es
+   ruido. En el teléfono las filas se apilan y sin él no se sabe cuál
+   número es el plan y cuál lo que salió. */
+@media(min-width:821px){ .fin-row:not(.fin-head) .fin-lbl{display:none;} }
+@media(max-width:820px){ .fin-head{display:none!important;} }
+
+/* ── FORMULARIO / MODAL ─────────────────────────────── */
+.modal{position:fixed;inset:0;background:rgba(20,16,8,.5);z-index:80;display:none;align-items:center;justify-content:center;padding:18px;}
+.modal.on{display:flex;}
+.modal-box{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;width:520px;max-width:100%;max-height:90dvh;overflow-y:auto;display:flex;flex-direction:column;gap:16px;box-shadow:var(--shadow);}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.f{display:flex;flex-direction:column;gap:7px;}
+.f label{font:600 9.5px/1 'DM Sans';letter-spacing:1.1px;color:var(--mut3);}
+.f input,.f select,.f textarea{border:1px solid var(--line4);background:var(--bg);border-radius:10px;padding:12px 13px;font:500 13.5px/1.3 'DM Sans';color:var(--ink);outline:none;width:100%;}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--acc);}
+.f small{font:500 10.5px/1.45 'DM Sans';color:var(--mut4);}
+.f-btns{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.btn-mal{border:1px solid var(--rojo-line);background:var(--rojo-bg);color:var(--rojo);font:600 12.5px/1 'DM Sans';padding:13px 16px;border-radius:11px;cursor:pointer;margin-left:auto;}
+
+/* ── AVISOS ─────────────────────────────────────────── */
+.aviso{border-radius:14px;padding:14px 16px;font:500 12.5px/1.6 'DM Sans';display:none;}
+.aviso.on{display:block;}
+.aviso.mal{background:var(--rojo-bg);border:1px solid var(--rojo-line);color:var(--rojo);}
+.aviso.bien{background:var(--sage);border:1px solid var(--sage-line);color:var(--sage-d);}
+.luz{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--soft2);}
+.luz:last-child{border-bottom:none;}
+.luz-p{width:12px;height:12px;border-radius:50%;flex:none;}
+.luz-n{flex:1;font:500 12.5px/1.35 'DM Sans';color:var(--ink2);}
+.luz-v{font:600 13px/1 'DM Sans';color:var(--ink);font-variant-numeric:tabular-nums;}
+.ejemplo{font:600 8.5px/1 'DM Sans';letter-spacing:1px;background:var(--soft2);color:var(--mut3);border-radius:20px;padding:5px 9px;}
+
+/* ─── TELÉFONO ─────────────────────────────────────── */
+.ns-mobbtn{display:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:7px 11px;font:600 13px/1 'DM Sans';color:var(--ink);cursor:pointer;}
 .ns-lay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;}
-
+@media(max-width:900px){
+  .kpis{grid-template-columns:1fr 1fr;}
+  .kan{grid-template-columns:1fr;}
+  .sem7{grid-template-columns:1fr 1fr;}
+}
 @media(max-width:820px){
   .ns-mobbtn{display:block;}
-  .sidebar{
-    position:fixed;left:-260px;top:0;bottom:0;z-index:60;width:240px;height:100dvh;
-    transition:left .25s;box-shadow:6px 0 24px rgba(0,0,0,.35);
-  }
+  .sidebar{position:fixed;left:-260px;top:0;bottom:0;z-index:60;width:244px;height:100dvh;transition:left .25s;box-shadow:6px 0 24px rgba(0,0,0,.35);}
   .sidebar.open{left:0;}
   .ns-lay.open{display:block;}
-  .g2,.g3,.g155,.g14,.g15-1,.ob-grid,.ob-row{grid-template-columns:1fr;}
+  .g2,.g3,.g14,.g155,.f-row{grid-template-columns:1fr;}
   .content{padding:16px 14px 32px;}
-  /* La barra de arriba se acomoda en dos renglones en vez de esconder
-     cosas: el modo y los colores son lo único que hay para cambiarlos. */
   .topbar{flex:0 0 auto;flex-wrap:wrap;padding:9px 14px;gap:9px;}
   .tb-right{flex-wrap:wrap;gap:9px;}
-  .semana{font-size:11.5px;}
+  .pt-left{display:none;}
+  .pt-right{padding:26px 18px;}
+  .fin-row{grid-template-columns:1fr 1fr;gap:9px;}
+  .fin-row > :last-child{grid-column:span 2;}
 }
-.row-btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-
-/* task row */
-.task-row{display:flex;align-items:center;gap:13px;padding:12px 0;border-bottom:1px solid var(--soft2);}
-.task-row:last-child{border-bottom:none;padding-bottom:0;}
-.task-box{width:20px;height:20px;border-radius:7px;border:2px solid var(--line5);flex:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font:700 11px/1 'DM Sans';color:var(--acc-d);transition:background .15s;}
-.task-box.done{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);}
-.task-lbl{flex:1;font:500 13.5px/1.35 'DM Sans';color:var(--ink);}
-.task-lbl.done{text-decoration:line-through;color:var(--mut3);}
-.task-meta{font:500 10.5px/1 'DM Sans';color:var(--mut4);white-space:nowrap;}
-
-/* intensity ring (CSS conic) */
-.ring-wrap{width:160px;height:160px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;}
-.ring-inner{width:120px;height:120px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
-
-/* progress bar */
-.prog-track{height:10px;border-radius:7px;background:var(--soft);overflow:hidden;}
-.prog-fill{height:100%;border-radius:7px;background:var(--acc);}
-
-/* tema card */
-.tema-card{background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;cursor:pointer;transition:border-color .15s;}
-.tema-card:hover{border-color:var(--acc);}
-.tema-card.on{border-color:var(--acc);background:var(--card);}
-.tema-kicker{font:600 9px/1 'DM Sans';letter-spacing:1px;color:var(--acc-d);}
-.tema-h{font:600 18px/1.2 'Fraunces',serif;color:var(--ink);}
-.tema-p{font:500 11.5px/1.5 'DM Sans';color:var(--mut);}
-.tema-bar{height:5px;border-radius:4px;background:var(--line2);overflow:hidden;margin-top:2px;}
-.tema-fill{height:100%;border-radius:4px;background:var(--acc);}
-.tema-cta{font:600 10.5px/1 'DM Sans';letter-spacing:.8px;color:var(--acc-d);}
-
-/* tema detail */
-.det-why{background:var(--lila);border:1px solid var(--lila-line);border-radius:14px;padding:18px 20px;}
-.det-how{background:var(--sage);border:1px solid var(--sage-line);border-radius:14px;padding:18px 20px;}
-.det-shadow{background:var(--amber);border:1px solid var(--amber-line);border-radius:14px;padding:16px 20px;display:flex;align-items:flex-start;gap:14px;}
-.det-accent{width:6px;align-self:stretch;border-radius:4px;background:var(--acc);flex:none;}
-.det-step{display:flex;align-items:flex-start;gap:11px;}
-.det-num{width:20px;height:20px;border-radius:50%;background:var(--card);color:var(--sage-d);font:700 10px/20px 'DM Sans';text-align:center;flex:none;}
-
-/* recompensas row */
-.rew-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--soft2);}
-.rew-dot{width:10px;height:10px;border-radius:50%;flex:none;}
-.rew-dot.done{background:var(--acc);}
-.rew-dot.pend{background:var(--line4);}
-.rew-lbl{flex:1;font:500 12.5px/1 'DM Sans';color:var(--ink2);}
-.rew-val{font:500 11px/1 'DM Sans';color:var(--mut3);}
-.rew-pts{font:600 12px/1 'DM Sans';background:var(--amber);color:var(--acc-d);border-radius:20px;padding:5px 9px;}
-.rew-pts.done{background:var(--sage);color:var(--sage-d);}
-
-/* bar chart */
-.bars{display:flex;gap:6px;align-items:flex-end;height:120px;}
-.bcol{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:7px;}
-.bfill{width:100%;border-radius:4px 4px 0 0;}
-.blbl{font:600 9px/1 'DM Sans';letter-spacing:.6px;color:var(--mut4);}
-.blbl.hoy{color:var(--acc-d);}
-.bpts{font:500 9px/1 'DM Sans';color:var(--mut3);}
-
-/* plataformas */
-.plat-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;display:flex;flex-direction:column;gap:14px;cursor:pointer;transition:border-color .15s;text-decoration:none;color:inherit;position:relative;overflow:hidden;}
-.plat-card:hover{border-color:var(--acc);}
-.plat-pronto{opacity:.65;cursor:default;pointer-events:none;}
-.plat-chip{position:absolute;top:14px;right:14px;font:600 9px/1 'DM Sans';letter-spacing:1px;background:var(--soft2);color:var(--mut);border-radius:20px;padding:4px 9px;}
-.plat-ico{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font:700 14px/1 'DM Sans';color:#fff;}
-.plat-h{font:600 18px/1.15 'Fraunces',serif;color:var(--ink);}
-.plat-sub{font:500 12px/1.55 'DM Sans';color:var(--mut);}
-.plat-stat{font:600 9.5px/1 'DM Sans';letter-spacing:.8px;color:var(--mut3);}
-.plat-val{font:700 22px/1 'Fraunces',serif;color:var(--ink);}
-.plat-kpis{display:flex;gap:18px;flex-wrap:wrap;}
-
-/* perfil */
-.perf-av{width:80px;height:80px;border-radius:50%;background:var(--amber);border:3px solid var(--amber-line);display:flex;align-items:center;justify-content:center;font:700 32px/1 'Fraunces',serif;color:var(--acc-d);}
-.pref-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--soft2);gap:12px;}
-.pref-row:last-child{border-bottom:none;}
-.pref-key{font:600 12px/1 'DM Sans';color:var(--ink);}
-.pref-val{font:500 12px/1 'DM Sans';color:var(--mut3);}
-.pref-tag{font:600 10px/1 'DM Sans';padding:6px 10px;border-radius:20px;background:var(--soft);color:var(--ink3);}
-.pref-select{display:flex;gap:6px;flex-wrap:wrap;}
-.pref-chip{font:600 10px/1 'DM Sans';padding:6px 11px;border-radius:20px;border:1px solid var(--line3);color:var(--mut2);cursor:pointer;}
-.pref-chip.on{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);}
 
 /* ── Nova brand harmony ───────────────────────────────── */
 .sidebar{background:#0d1528!important;border-right:1px solid #192d42!important;}
@@ -336,115 +304,51 @@ textarea,input,select,button{font-family:inherit;}
 .sidebar .sb-sc-v{color:#d4c5a0!important;}
 .sidebar .sb-sc-l{color:#46576e!important;}
 .sidebar .sb-div{background:#1e3050!important;}
-.sidebar .sb-rewards{background:rgba(201,168,76,.09)!important;border-color:rgba(201,168,76,.2)!important;}
-.sidebar .sb-rew-lbl,.sidebar .sb-rew-pct{color:#c9a84c!important;}
-.sidebar .sb-rew-big{color:#d4c5a0!important;}
-.sidebar .sb-rew-sub{color:#46576e!important;}
-.sidebar .sb-rew-bar{background:rgba(255,255,255,.08)!important;}
-.sidebar .sb-rew-day{background:#c9a84c!important;}
+.sidebar .sb-user{border-top-color:#192d42!important;}
+.sidebar .sb-user-nm{color:#d4c5a0!important;}
+.sidebar .sb-user-rl{color:#46576e!important;}
 .pt-left{background:#0d1528!important;border-right-color:#192d42!important;}
 .pt-left .pt-orbs{background:rgba(201,168,76,.12)!important;}
 .pt-left .pt-orbs span:first-child{background:#c9a84c!important;opacity:.4!important;}
 .pt-left .pt-orbs span:last-child{background:rgba(201,168,76,.18)!important;}
 .pt-frase{color:#d4c5a0!important;}
 .pt-nota{color:#6a7a8e!important;}
-.pt-privacy{color:#46576e!important;}
 </style>
 </head>
 <body>
 
 <!-- ════════════ PUERTA ════════════ -->
-<div id="puerta">
+<div id="login-screen">
   <div class="pt-left">
-    <img src="logo-novasoul.png" alt="NovaSoul" style="max-width:160px;height:auto;margin-bottom:4px;filter:brightness(1.1);">
+    <img src="logo-novasoul.png" alt="NovaSoul" style="max-width:160px;height:auto;">
     <div class="pt-orbs"><span></span><span></span></div>
     <div>
-      <div style="font:600 9.5px/1 'DM Sans';letter-spacing:1.3px;color:var(--mut3);margin-bottom:8px;">ENERGÍA · PLUTÓN EN CAPRICORNIO</div>
-      <div class="pt-frase">Lo que sigues sosteniendo</div>
+      <div style="font:600 9.5px/1 'DM Sans';letter-spacing:1.3px;color:#46576e;margin-bottom:10px;">TU DÍA, TU SEMANA, TU MES</div>
+      <div class="pt-frase">Repartir, no solo recordar</div>
     </div>
-    <p class="pt-nota">Tus datos natales no se comparten ni se usan para nada más que tu lectura.</p>
+    <p class="pt-nota">Esta pantalla no se abre delante de nadie. Entra con el mismo código de Nova Central.</p>
   </div>
 
   <div class="pt-right">
-    <!-- LOGIN -->
-    <div class="pt-form" id="pt-login">
+    <div class="pt-form">
       <div class="pt-star">🌙</div>
       <div style="text-align:center;display:flex;flex-direction:column;gap:6px;">
-        <div class="pt-lbl">ENTRAR</div>
+        <div class="pt-lbl">NOVASOUL</div>
         <div class="pt-h">Hola de nuevo</div>
       </div>
-      <div class="pt-field"><label>CORREO</label><input type="email" value="manuela@nutrea.ec" id="pt-email"></div>
-      <div class="pt-field"><label>CONTRASEÑA</label><input type="password" value="soulnova"></div>
-      <button class="pt-btn" onclick="enterApp()">Entrar a Soul</button>
-      <div class="pt-links">
-        <span class="pt-link" onclick="showOnb()">Crear mi cuenta</span>
-        <span class="pt-quiet">Olvidé mi contraseña</span>
-      </div>
-    </div>
+      <div class="pt-err" id="lgn-err"></div>
 
-    <!-- ONBOARDING -->
-    <div class="pt-form" id="pt-onb" style="display:none;max-width:520px;width:100%;">
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <div class="pt-lbl" id="onb-step-lbl">PASO 1 DE 2</div>
-        <div class="pt-h" id="onb-title">Tu carta natal</div>
-        <p class="pt-sub" id="onb-sub">Para leer tu cielo cada día necesito saber cuándo y dónde naciste. Son dos segundos.</p>
+      <div id="lgn-p1" style="display:flex;flex-direction:column;gap:16px;">
+        <p class="pt-sub" style="text-align:center;">Te mando un código de 6 dígitos al correo. Es el mismo de Nova Central: si ya entraste allá, aquí no te lo vuelve a pedir.</p>
+        <div class="pt-field"><label>CORREO</label><input type="email" id="lgn-email" autocomplete="email" placeholder="tu@correo.com"></div>
+        <button class="pt-btn" id="lgn-btn" onclick="pedirCodigo()">Enviarme el código</button>
       </div>
 
-      <div id="onb-elige">
-        <div class="ob-grid">
-          <div class="ob-choice" onclick="showOnbSubir()">
-            <div class="ob-thumb">JPG · PNG · PDF</div>
-            <div class="ob-ch">Subir mi carta</div>
-            <div class="ob-cs">La leo y confirmo las casas contigo.</div>
-          </div>
-          <div class="ob-choice" onclick="showOnbManual()">
-            <div class="ob-thumb-bars"><span class="ob-bar" style="width:72%;"></span><span class="ob-bar" style="width:46%;"></span><span class="ob-bar" style="width:58%;"></span></div>
-            <div class="ob-ch">Fecha, hora y lugar</div>
-            <div class="ob-cs">Dos minutos. Si no sabes la hora exacta, te muestro el margen.</div>
-          </div>
-        </div>
-        <div style="margin-top:16px;"><span class="pt-link" onclick="backLogin()">← Volver al login</span></div>
-      </div>
-
-      <div id="onb-manual" style="display:none;">
-        <div class="ob-card">
-          <div class="ob-row">
-            <div class="pt-field"><label>FECHA</label><input value="14 / 09 / 1998"></div>
-            <div class="pt-field"><label>HORA</label><input value="04:20"></div>
-            <div class="pt-field" style="grid-column:span 2;"><label>LUGAR DE NACIMIENTO</label><input value="Medellín, Colombia"></div>
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="pt-btn" style="width:auto;padding:14px 22px;" onclick="showOnbLoading()">Generar mi carta</button>
-            <span class="ob-ghost" onclick="showOnbElige()">Atrás</span>
-          </div>
-        </div>
-      </div>
-
-      <div id="onb-subir" style="display:none;">
-        <div class="ob-card">
-          <div style="display:flex;align-items:center;gap:15px;">
-            <div style="width:58px;height:58px;border-radius:12px;background:var(--lila);display:flex;align-items:center;justify-content:center;font:600 10px/1 'DM Sans';letter-spacing:1px;color:var(--acc-d);">PDF</div>
-            <div><div style="font:600 14.5px/1 'DM Sans';color:var(--ink);">carta-manuela.pdf</div><div style="font:500 12px/1 'DM Sans';color:var(--mut3);margin-top:4px;">Leí fecha, hora y lugar. Confírmalos.</div></div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <span class="ob-confirm-chip">14 sep 1998</span>
-            <span class="ob-confirm-chip">04:20</span>
-            <span class="ob-confirm-chip">Medellín</span>
-          </div>
-          <div style="display:flex;gap:10px;">
-            <button class="pt-btn" style="width:auto;padding:14px 22px;" onclick="showOnbLoading()">Está correcto</button>
-            <span class="ob-ghost" onclick="showOnbElige()">Atrás</span>
-          </div>
-        </div>
-      </div>
-
-      <div id="onb-loading" style="display:none;">
-        <div class="ob-loading">
-          <div style="font:600 22px/1.2 'Fraunces',serif;color:var(--ink);">Calculando tus casas…</div>
-          <div class="ob-prog-track"><div class="ob-prog-fill" id="prog-fill"></div></div>
-          <p style="font:500 12.5px/1.6 'DM Sans';color:var(--mut);">Ubicando el ascendente y los regentes. Tarda unos segundos.</p>
-          <button class="pt-btn" style="width:auto;padding:13px 20px;" onclick="enterApp()">Ver mi día →</button>
-        </div>
+      <div id="lgn-p2" style="display:none;flex-direction:column;gap:16px;">
+        <p class="pt-sub" style="text-align:center;">Te lo mandé a <strong id="lgn-eco"></strong>. Vence en 10 minutos.</p>
+        <div class="pt-field"><label>CÓDIGO</label><input type="text" id="lgn-cod" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="······"></div>
+        <button class="pt-btn" id="lgn-btn2" onclick="verificarCodigo()">Entrar</button>
+        <span class="pt-quiet" onclick="pasoLogin(1)">← Cambiar el correo</span>
       </div>
     </div>
   </div>
@@ -452,67 +356,59 @@ textarea,input,select,button{font-family:inherit;}
 
 <!-- ════════════ APP ════════════ -->
 <div id="app">
-
   <div class="ns-lay" id="ns-lay" onclick="cerrarMenu()"></div>
 
-  <!-- SIDEBAR -->
   <nav class="sidebar" id="sidebar">
-    <div class="sb-brand" style="padding:0 4px 4px;">
+    <div class="sb-brand">
       <img src="logo-novasoul.png" alt="NovaSoul" class="ns-logo-dark" style="max-width:130px;height:auto;">
-      <img src="logo-novasoul-claro.png" alt="NovaSoul" class="ns-logo-light" style="max-width:130px;height:auto;display:none;">
+      <img src="logo-novasoul-claro.png" alt="NovaSoul" class="ns-logo-light" style="max-width:130px;height:auto;">
     </div>
 
     <div style="display:flex;flex-direction:column;gap:3px;">
       <div class="sb-section">MI DÍA</div>
       <div class="ni on" data-v="hoy" onclick="go('hoy',this)">✦ Hoy</div>
-      <div class="ni" data-v="pendientes" onclick="go('pendientes',this)">◎ Pendientes<span class="ni-badge">5</span></div>
+      <div class="ni" data-v="pendientes" onclick="go('pendientes',this)">◎ Pendientes<span class="ni-badge" id="nb-pend">·</span></div>
+      <div class="ni" data-v="semana" onclick="go('semana',this)">▦ Mi semana<span class="ni-mal" id="nb-riesgo" style="display:none;">!</span></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:3px;">
+      <div class="sb-section">LO MÍO</div>
+      <div class="ni" data-v="mindlab" onclick="go('mindlab',this)">◆ Mindlab<span class="ni-badge" id="nb-ml">·</span></div>
+      <div class="ni" data-v="plata" onclick="go('plata',this)">◇ Gastos fijos</div>
       <div class="ni" data-v="cielo" onclick="go('cielo',this)">◐ El cielo</div>
-      <div class="ni" data-v="recompensas" onclick="go('recompensas',this)">◈ Recompensas</div>
-      <div class="ni" data-v="diagnostico" onclick="go('diagnostico',this)">◉ Diagnóstico</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:3px;">
+      <div class="sb-section">NOVA FAMILY</div>
+      <div class="ni" data-v="family" onclick="go('family',this)">⊕ Resumen<span class="ni-mal" id="nb-fam" style="display:none;">·</span></div>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:3px;">
       <div class="sb-section">MI CUENTA</div>
-      <div class="ni" data-v="plataformas" onclick="go('plataformas',this)">⊕ Mis plataformas<span class="ni-sage">3</span></div>
       <div class="ni" data-v="perfil" onclick="go('perfil',this)">◈ Mi perfil</div>
     </div>
 
     <div class="sb-energy">
-      <div class="sb-energy-lbl">✨ CÓMO ESTOY HOY</div>
-      <div class="sb-scores">
-        <div class="sb-sc"><span class="sb-sc-v" style="color:var(--sage-d);">7</span><span class="sb-sc-l">Energía</span></div>
-        <div class="sb-div"></div>
-        <div class="sb-sc"><span class="sb-sc-v" style="color:var(--acc-d);">6</span><span class="sb-sc-l">Enfoque</span></div>
-        <div class="sb-div"></div>
-        <div class="sb-sc"><span class="sb-sc-v" style="color:var(--acc-d);">3</span><span class="sb-sc-l">Prior.</span></div>
+      <div class="sb-energy-lbl">✨ ESTA SEMANA</div>
+      <div class="sb-scores" id="sb-scores"></div>
+    </div>
+
+    <div class="sb-user">
+      <div class="sb-user-av" id="sb-av">·</div>
+      <div style="flex:1;min-width:0;">
+        <div class="sb-user-nm" id="sb-nm">—</div>
+        <div class="sb-user-rl" id="sb-rl">—</div>
       </div>
-    </div>
-
-    <div class="sb-rewards" onclick="go('recompensas',null)">
-      <div class="sb-rew-h"><span class="sb-rew-lbl">RECOMPENSAS</span><span class="sb-rew-pct">82%</span></div>
-      <div style="display:flex;align-items:baseline;gap:7px;"><span class="sb-rew-big">74</span><span class="sb-rew-sub">de 90 esta semana</span></div>
-      <div class="sb-rew-bar"><div class="sb-rew-fill" style="width:82%;"></div></div>
-      <div class="sb-rew-bars" id="sb-bars"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--amber-line);padding-top:9px;"><span style="font:500 10px/1 'DM Sans';color:var(--mut3);">Hoy 12 de 15</span><span class="link">VER →</span></div>
-    </div>
-
-    <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto;">
-      <div style="display:flex;align-items:center;justify-content:space-between;"><span class="sb-streak-lbl">RACHA · 12 DÍAS</span><span style="font:600 9.5px/1 'DM Sans';color:var(--sage-d);">▲ 2 vs semana ant.</span></div>
-      <div class="sb-streak-bar" id="sb-streak"></div>
-      <a class="sb-nova-btn" href="./empresarial.html">
-        <span class="sb-nova-tag">NOVA</span>
-        <div class="sb-nova-txt"><strong>Entrar a NOVA</strong><small>Tus dos tiendas</small></div>
-        <span style="color:var(--acc-ink);">→</span>
-      </a>
+      <span class="link" onclick="salir()" title="Salir">↪</span>
     </div>
   </nav>
 
-  <!-- MAIN -->
   <div class="main">
     <div class="topbar">
       <button class="ns-mobbtn" onclick="abrirMenu()" aria-label="Abrir menú">☰</button>
-      <div class="semana" id="semana"></div>
+      <div class="tb-fecha" id="tb-fecha">—<small id="tb-sub"></small></div>
       <div class="tb-right">
+        <button class="card-cta" onclick="nuevaTarea()">+ Pendiente</button>
         <div class="tb-mode">
           <div class="tb-mbtn on" id="bcl" onclick="setModo('claro')">Claro</div>
           <div class="tb-mbtn" id="bos" onclick="setModo('oscuro')">Oscuro</div>
@@ -523,323 +419,138 @@ textarea,input,select,button{font-family:inherit;}
           <div class="tb-cdot" data-t="terracota" style="background:#C4775C" onclick="setTema('terracota')"></div>
           <div class="tb-cdot" data-t="azul" style="background:#5B8AAE" onclick="setTema('azul')"></div>
         </div>
-        <span class="tb-lang">ES</span>
-        <div class="tb-av">M</div>
       </div>
     </div>
 
     <div class="content">
+      <div class="aviso mal" id="av-global"></div>
 
       <!-- ════ HOY ════ -->
       <div class="view on" id="v-hoy">
-
-        <!-- Cielo + intensidad -->
-        <div class="g155">
-          <div class="card-lila" style="display:flex;flex-direction:column;gap:11px;">
-            <div class="card-lbl-lila">EL CIELO DE HOY · CASA 8 ACTIVADA</div>
-            <div style="font:600 33px/1.08 'Fraunces',serif;color:var(--ink);">Lo que sigues sosteniendo</div>
-            <div class="card-it">what you still hold</div>
-            <p class="card-p" style="margin-top:4px;">No es una pérdida nueva. Es la mano que no abriste todavía. Hoy el tránsito toca lo que decidiste no mirar en marzo: por eso cuesta empezar, el día pide cerrar y no abrir.</p>
-            <div class="row-btns" style="margin-top:8px;">
-              <button class="card-cta" onclick="go('cielo',null)">Por qué me toca esto</button>
-              <button class="card-ghost" onclick="go('diagnostico',null)">Diagnóstico de hoy</button>
-            </div>
-          </div>
-          <div class="card" style="display:flex;flex-direction:column;gap:14px;align-items:center;">
-            <div style="align-self:stretch;" class="card-h">
-              <span class="card-lbl">INTENSIDAD DE LA SEMANA</span>
-              <span style="font:500 10px/1 'DM Sans';color:var(--mut4);">luna en escorpio · 21%</span>
-            </div>
-            <div class="ring-wrap" style="background:conic-gradient(var(--acc) 0% 73%,var(--line2) 73% 100%);">
-              <div class="ring-inner">
-                <span style="font:600 30px/1 'Fraunces',serif;color:var(--ink);">73</span>
-                <span style="font:500 10.5px/1 'DM Sans';color:var(--mut3);">densidad kármica</span>
-              </div>
-            </div>
-            <p style="font:500 12px/1.55 'DM Sans';color:var(--mut);text-align:center;">Tres casas activas a la vez. Semana de cierre, no de arranque.</p>
-          </div>
-        </div>
-
-        <!-- Lo primero -->
-        <div class="card-amber" style="display:flex;align-items:center;gap:24px;">
-          <div style="flex:1;display:flex;flex-direction:column;gap:9px;">
-            <div class="card-lbl-amber">LO PRIMERO · Y NADA MÁS HASTA QUE ESTÉ</div>
-            <div style="font:600 27px/1.15 'Fraunces',serif;color:var(--ink);">Responder la propuesta de Camila</div>
-            <div style="font:500 13px/1.55 'DM Sans';color:var(--mut);">Lleva 3 días esperando. Esta semana pide resolver, no agregar.</div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:9px;flex:none;">
-            <button class="card-cta" style="padding:15px 22px;box-shadow:0 6px 16px rgba(224,164,60,.26);">Empezar ahora</button>
-            <span style="font:500 11.5px/1 'DM Sans';color:var(--mut3);text-align:center;cursor:pointer;">No hoy, dame otra</span>
-          </div>
-        </div>
-
-        <!-- Pendientes + Comidas -->
+        <div class="kpis" id="hoy-kpis"></div>
+        <div id="hoy-urgente"></div>
+        <div class="card" id="hoy-riesgo"></div>
         <div class="g14">
-          <div style="display:flex;flex-direction:column;gap:18px;">
-            <div class="card">
-              <div class="card-h">
-                <span class="card-lbl">PENDIENTES DE HOY</span>
-                <span style="font:500 11px/1 'DM Sans';color:var(--mut4);">2 de 5 hechos</span>
-              </div>
-              <div id="pend-hoy-list"></div>
-            </div>
-            <div class="card">
-              <div class="card-h">
-                <span class="card-lbl">MIS PENDIENTES DE LAS TIENDAS</span>
-                <span style="font:500 11px/1 'DM Sans';color:var(--mut4);">lo que no puede hacer la gestora</span>
-              </div>
-              <div id="pend-tienda-list"></div>
-            </div>
+          <div class="card">
+            <div class="card-h"><span class="card-lbl">HOY</span><span class="link" onclick="go('pendientes',null)">VER EL TABLERO →</span></div>
+            <div id="hoy-lista"></div>
           </div>
           <div style="display:flex;flex-direction:column;gap:18px;">
-            <div class="card">
-              <div class="card-h"><span class="card-lbl">COMIDAS DE HOY</span></div>
-              <div id="comidas-list"></div>
-            </div>
-            <div class="card-sage" style="display:flex;flex-direction:column;gap:13px;">
-              <div class="card-lbl-sage">MOVIMIENTO</div>
-              <div style="display:flex;align-items:flex-end;gap:12px;">
-                <span style="font:600 34px/1 'Fraunces',serif;color:var(--ink);">3</span>
-                <span style="font:500 11.5px/1.4 'DM Sans';color:var(--sage-d);padding-bottom:5px;">de 4 sesiones<br>esta semana</span>
-              </div>
-              <div style="display:flex;gap:6px;" id="mov-dots"></div>
-              <button class="card-cta" style="background:var(--card);border:1px solid var(--sage-line);color:var(--sage-d);box-shadow:none;">Registrar sesión de hoy</button>
-            </div>
-            <div class="card-amber" style="cursor:pointer;" onclick="go('recompensas',null)">
-              <div class="card-h">
-                <span class="card-lbl-amber">RECOMPENSAS</span>
-                <span style="font:600 10px/1 'DM Sans';color:var(--sage-d);background:var(--sage);border-radius:20px;padding:5px 9px;">80% del día</span>
-              </div>
-              <div style="display:flex;align-items:baseline;gap:10px;">
-                <span style="font:600 32px/1 'Fraunces',serif;color:var(--ink);">12</span>
-                <span style="font:500 11.5px/1.4 'DM Sans';color:var(--mut);">de 15 puntos hoy</span>
-              </div>
-              <div class="prog-track" style="margin:4px 0;"><div class="prog-fill" style="width:80%;"></div></div>
-              <div style="display:flex;align-items:center;justify-content:space-between;"><span style="font:500 11px/1 'DM Sans';color:var(--mut3);">Semana: 74 de 90</span><span class="link">VER PREMIOS →</span></div>
-            </div>
+            <div class="card" id="hoy-mes"></div>
+            <div class="card-amber" id="hoy-ml"></div>
           </div>
         </div>
-
-        <!-- Temas de la semana -->
-        <div class="card">
-          <div class="card-h">
-            <span class="card-lbl">TEMAS DE LA SEMANA</span>
-            <span class="link" onclick="go('cielo',null)">VER TODO →</span>
-          </div>
-          <div class="g3" id="temas-grid"></div>
-          <div id="tema-det" style="display:none;border-top:1px solid var(--soft2);padding-top:18px;margin-top:6px;"></div>
-        </div>
-      </div><!-- /hoy -->
+      </div>
 
       <!-- ════ PENDIENTES ════ -->
       <div class="view" id="v-pendientes">
-        <div>
-          <div style="font:600 28px/1.1 'Fraunces',serif;color:var(--ink);margin-bottom:6px;">Pendientes</div>
-          <p style="font:500 13px/1.6 'DM Sans';color:var(--mut);">Lo que tienes abierto. Márcalo aquí y suma puntos en recompensas.</p>
-        </div>
-        <div class="g2">
+        <div class="vista-h">
           <div>
-            <div class="slbl" style="margin-bottom:12px;">PERSONALES</div>
-            <div class="card" style="display:flex;flex-direction:column;gap:0;" id="pend-pers-full"></div>
+            <div class="vista-t">Pendientes</div>
+            <p class="vista-p">Arrastra una tarjeta de una columna a otra, o usa los botones. Todo lo que pongas aquí con un proyecto le suma peso a ese proyecto en Nova Central —cuántas entregas y cuántas horas, nunca qué dicen.</p>
           </div>
+          <button class="card-cta" onclick="nuevaTarea()">+ Pendiente</button>
+        </div>
+        <div class="row-btns" id="pend-filtros"></div>
+        <div class="kan" id="pend-kan"></div>
+      </div>
+
+      <!-- ════ SEMANA ════ -->
+      <div class="view" id="v-semana">
+        <div class="vista-h">
           <div>
-            <div class="slbl" style="margin-bottom:12px;">DE LAS TIENDAS</div>
-            <div class="card" id="pend-tienda-full"></div>
+            <div class="vista-t">Mi semana</div>
+            <p class="vista-p" id="sem-sub">—</p>
+          </div>
+          <button class="card-ghost" onclick="abrirHoras()">Cambiar mis horas libres</button>
+        </div>
+        <div class="card" id="sem-riesgo"></div>
+        <div class="sem7" id="sem-dias"></div>
+        <div class="card" id="sem-proy"></div>
+      </div>
+
+      <!-- ════ MINDLAB ════ -->
+      <div class="view" id="v-mindlab">
+        <div class="vista-h">
+          <div>
+            <div class="vista-t">Mindlab</div>
+            <p class="vista-p" id="ml-sub">—</p>
           </div>
         </div>
-        <div class="card-amber" style="display:flex;align-items:flex-start;gap:18px;">
-          <div style="display:flex;flex-direction:column;gap:8px;flex:1;">
-            <div class="card-lbl-amber">AGREGAR PENDIENTE</div>
-            <input style="border:1px solid var(--amber-line);background:var(--soft);border-radius:11px;padding:13px 15px;font:500 13.5px/1 'DM Sans';color:var(--ink);outline:none;width:100%;" placeholder="Escribe y presiona Agregar">
+        <div class="card-amber" id="ml-ahora"></div>
+        <div class="card"><div class="card-h"><span class="card-lbl">LAS DOCE SEMANAS</span><span class="card-lbl" id="ml-cuenta"></span></div><div id="ml-lista"></div></div>
+      </div>
+
+      <!-- ════ GASTOS FIJOS ════ -->
+      <div class="view" id="v-plata">
+        <div class="vista-h">
+          <div>
+            <div class="vista-t">Gastos fijos</div>
+            <p class="vista-p">Lo que planeas cada mes, contra lo que de verdad salió. Los movimientos los lleva Nova Central: aquí solo vive el plan, y por eso se pueden comparar.</p>
           </div>
-          <button class="card-cta" style="margin-top:22px;padding:14px 20px;">Agregar</button>
+          <button class="card-cta" onclick="nuevoFijo()">+ Gasto fijo</button>
         </div>
+        <div class="kpis" id="fin-kpis"></div>
+        <div class="card" id="fin-lista"></div>
+      </div>
+
+      <!-- ════ NOVA FAMILY ════ -->
+      <div class="view" id="v-family">
+        <div class="vista-h">
+          <div>
+            <div class="vista-t">Nova Family</div>
+            <p class="vista-p">Lo pendiente de cada pantalla, sin tener que abrirlas. Una tienda a la vez: son negocios distintos, en países distintos, con monedas distintas.</p>
+          </div>
+          <button class="card-ghost" id="fam-btn" onclick="cargarFamily()">Actualizar</button>
+        </div>
+        <div class="row-btns" id="fam-sel"></div>
+        <div id="fam-cuerpo"><div class="vacio">Tocá «Actualizar» para traer las alarmas y el semáforo de la semana.</div></div>
       </div>
 
       <!-- ════ EL CIELO ════ -->
       <div class="view" id="v-cielo">
-        <div>
-          <div style="font:600 28px/1.1 'Fraunces',serif;color:var(--ink);margin-bottom:6px;">El cielo de esta semana</div>
-          <p style="font:500 13px/1.6 'DM Sans';color:var(--mut);">Tránsitos activos sobre tu carta natal. Calculados con tus datos.</p>
-        </div>
-        <div class="g155">
-          <div style="display:flex;flex-direction:column;gap:14px;" id="cielo-list"></div>
-          <div class="card" style="display:flex;flex-direction:column;gap:14px;align-items:center;">
-            <div class="slbl" style="align-self:stretch;">INTENSIDAD</div>
-            <div class="ring-wrap" style="background:conic-gradient(var(--acc) 0% 73%,var(--line2) 73% 100%);">
-              <div class="ring-inner">
-                <span style="font:600 30px/1 'Fraunces',serif;color:var(--ink);">73</span>
-                <span style="font:500 10.5px/1 'DM Sans';color:var(--mut3);">densidad</span>
-              </div>
-            </div>
-            <p style="font:500 12px/1.55 'DM Sans';color:var(--mut);text-align:center;">Tres casas activas. Semana de integración, no de arranque nuevo.</p>
-            <div style="align-self:stretch;background:var(--soft);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;">
-              <div class="slbl">TU CARTA NATAL</div>
-              <div style="font:500 12.5px/1 'DM Sans';color:var(--ink2);">14 sep 1998 · 04:20 · Medellín</div>
-              <div style="font:500 11px/1.4 'DM Sans';color:var(--mut3);">Ascendente en Leo · Sol en Virgo · Luna en Capricornio</div>
-              <span class="link" style="margin-top:4px;">Editar datos →</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ════ RECOMPENSAS ════ -->
-      <div class="view" id="v-recompensas">
-        <div>
-          <div style="font:600 28px/1.1 'Fraunces',serif;color:var(--ink);margin-bottom:6px;">Recompensas</div>
-          <p style="font:500 13px/1.6 'DM Sans';color:var(--mut);max-width:74ch;">Cada día suma puntos según lo que marcaste: comidas, pendientes, movimiento y cierre del día. La semana y la quincena se calculan solos.</p>
-        </div>
-        <div class="g2">
-          <div class="card-amber" style="display:flex;flex-direction:column;gap:16px;">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">
-              <div>
-                <div class="card-lbl-amber" style="margin-bottom:8px;">HOY · JUEVES 3</div>
-                <div style="display:flex;align-items:baseline;gap:10px;">
-                  <span style="font:600 50px/1 'Fraunces',serif;color:var(--ink);">12</span>
-                  <span style="font:500 13px/1.4 'DM Sans';color:var(--mut);">de 15 puntos</span>
-                </div>
-              </div>
-              <span style="font:600 10px/1 'DM Sans';color:var(--sage-d);background:var(--sage);border-radius:20px;padding:7px 11px;">80%</span>
-            </div>
-            <div class="prog-track" style="height:16px;border-radius:9px;"><div class="prog-fill" style="width:80%;"></div></div>
-            <div style="display:flex;flex-direction:column;" id="rew-rows"></div>
-          </div>
-          <div class="card" style="display:flex;flex-direction:column;gap:16px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
-              <div style="display:flex;gap:8px;">
-                <div style="font:600 12px/1 'DM Sans';color:var(--ink2);background:var(--soft2);border-radius:20px;padding:8px 14px;cursor:pointer;">Semana</div>
-                <div style="font:600 12px/1 'DM Sans';color:var(--mut3);border-radius:20px;padding:8px 14px;cursor:pointer;border:1px solid var(--line);">Quincena</div>
-              </div>
-              <div style="display:flex;align-items:baseline;gap:9px;">
-                <span style="font:600 24px/1 'Fraunces',serif;color:var(--ink);">74</span>
-                <span style="font:500 11.5px/1 'DM Sans';color:var(--mut3);">de 90 · 82%</span>
-              </div>
-            </div>
-            <div class="prog-track" style="height:14px;border-radius:9px;"><div class="prog-fill" style="width:82%;"></div></div>
-            <div class="bars" id="rew-bars"></div>
-            <p style="font:500 12.5px/1.6 'DM Sans';color:var(--mut);border-top:1px solid var(--soft2);padding-top:14px;">El miércoles bajó porque no cerraste el día antes de las 22:00. Ayer lo recuperaste con el bono de racha.</p>
-          </div>
-        </div>
-
-        <!-- Cerrar el día -->
-        <div class="card" style="display:flex;flex-direction:column;gap:15px;">
-          <div class="card-h">
-            <span class="card-lbl">CERRAR EL DÍA · 21:00</span>
-            <span style="font:500 11px/1 'DM Sans';color:var(--mut3);">Aún no cerrado</span>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:8px;" id="cierre-items"></div>
-          <button class="card-cta" style="align-self:flex-start;">Cerrar el día completo</button>
-        </div>
-      </div>
-
-      <!-- ════ DIAGNÓSTICO ════ -->
-      <div class="view" id="v-diagnostico">
-        <div>
-          <div style="font:600 28px/1.1 'Fraunces',serif;color:var(--ink);margin-bottom:6px;">Diagnóstico de hoy</div>
-          <p style="font:500 13px/1.6 'DM Sans';color:var(--mut);">Cómo el cielo de hoy se cruza con tu natal. Específico para tu carta.</p>
-        </div>
-        <div class="card-lila" style="display:flex;flex-direction:column;gap:14px;">
-          <div class="card-lbl-lila">TRÁNSITO PRINCIPAL · PLUTÓN ☍ LUNA NATAL</div>
-          <div style="font:600 26px/1.15 'Fraunces',serif;color:var(--ink);">La resistencia no es tuya. Es el patrón.</div>
-          <p class="card-p">Plutón en oposición a tu Luna natal en Capricornio activa la Casa 8: pérdida, transformación y lo que heredaste sin pedirlo. La resistencia que sientes hoy no es nueva — es el eco de lo que dejaste sin cerrar en marzo cuando Saturno hizo el mismo aspecto.</p>
-        </div>
-        <div class="g2">
-          <div class="det-why" style="display:flex;flex-direction:column;gap:11px;">
-            <div class="slbl" style="color:var(--acc-d);">POR QUÉ TE TOCA ESTA SEMANA</div>
-            <p style="font:500 13px/1.65 'DM Sans';color:var(--ink2);">Plutón ha estado en esta posición desde enero, pero esta semana forma el ángulo exacto a tu Luna natal por primera vez en 12 años. Coincide con la Luna nueva en Escorpio del domingo.</p>
-            <p style="font:500 11px/1.5 'DM Sans';color:var(--mut3);border-top:1px solid var(--lila-line);padding-top:9px;">Se activa: 2–9 sep · pico máximo hoy y mañana</p>
-          </div>
-          <div class="det-how" style="display:flex;flex-direction:column;gap:11px;">
-            <div class="slbl" style="color:var(--sage-d);">CÓMO TRABAJARLO A FAVOR</div>
-            <div style="display:flex;flex-direction:column;gap:12px;">
-              <div class="det-step"><div class="det-num">1</div><span style="font:500 12.5px/1.55 'DM Sans';color:var(--ink2);">Cierra algo incompleto — una conversación, un archivo, un hábito. Plutón premia el cierre real.</span></div>
-              <div class="det-step"><div class="det-num">2</div><span style="font:500 12.5px/1.55 'DM Sans';color:var(--ink2);">Mueve el cuerpo antes del mediodía. La Luna en Capricornio necesita tierra física, no mental.</span></div>
-              <div class="det-step"><div class="det-num">3</div><span style="font:500 12.5px/1.55 'DM Sans';color:var(--ink2);">Anota lo que resististe hoy. La escritura desactiva el patrón inconsciente que Plutón expone.</span></div>
-            </div>
-          </div>
-        </div>
-        <div class="det-shadow">
-          <div class="det-accent"></div>
+        <div class="vista-h">
           <div>
-            <div class="slbl" style="color:var(--acc-d);margin-bottom:9px;">EL OTRO LADO · SI NO LO MIRAS</div>
-            <p style="font:500 12.5px/1.65 'DM Sans';color:var(--ink2);">Si evitas la incomodidad de hoy, Plutón la amplifica. El patrón no desaparece: se asienta más hondo y vuelve más denso en el siguiente ciclo de 12 años. La resistencia de hoy es exactamente la puerta.</p>
+            <div class="vista-t">El cielo</div>
+            <p class="vista-p">Los planetas marcan el tiempo: hay tiempo para aprender, para descansar y para cambiar. Esta parte va a decidir en qué día cae cada entrega.</p>
           </div>
+          <span class="ejemplo">EJEMPLO</span>
+        </div>
+        <div class="card-lila" style="display:flex;flex-direction:column;gap:12px;">
+          <div class="card-lbl-amber">LO QUE FALTA PARA QUE ESTO SEA TUYO Y NO UN HORÓSCOPO</div>
+          <div class="card-h3">Todavía no calculo tu carta</div>
+          <p class="card-p">Lo que ves abajo es una maqueta con datos inventados, y lo digo en vez de dejártelo pasar por real. Para que sea tuyo faltan tres cosas: tu carta natal cargada una vez, los tránsitos <em>con su duración</em> —la Luna dura dos días y medio, Saturno meses, y un consejo que no distingue eso es ruido— y tu ciclo.</p>
+          <p class="card-p">Cuando estén, NovaSoul va a hacer lo que ninguna app de astrología hace: medir si te funcionó <strong>a ti</strong>. Cada tarea queda con la ventana en que se hizo y con si se cumplió, y a los tres meses te puede decir «las entregas que pusiste en menguante las terminaste el 80% de las veces». Si el patrón no aparece, también te lo dice.</p>
+        </div>
+        <div class="g3" style="opacity:.6;">
+          <div class="card"><div class="slbl" style="margin-bottom:8px;">CASA 8 · PLUTÓN</div><div class="card-h3">Lo que sigues sosteniendo</div><p class="card-p" style="margin-top:8px;">Cierre y transformación. Ejemplo, no tu cielo.</p></div>
+          <div class="card"><div class="slbl" style="margin-bottom:8px;">CASA 5 · VENUS</div><div class="card-h3">Creatividad que pide salida</div><p class="card-p" style="margin-top:8px;">Impulso creativo. Ejemplo, no tu cielo.</p></div>
+          <div class="card"><div class="slbl" style="margin-bottom:8px;">CASA 10 · MARTE</div><div class="card-h3">Ambición que no espera</div><p class="card-p" style="margin-top:8px;">Visibilidad pública. Ejemplo, no tu cielo.</p></div>
         </div>
       </div>
 
-      <!-- ════ MIS PLATAFORMAS ════ -->
-      <div class="view" id="v-plataformas">
-        <div>
-          <div style="font:600 28px/1.1 'Fraunces',serif;color:var(--ink);margin-bottom:6px;">Mis plataformas</div>
-          <p style="font:500 13px/1.6 'DM Sans';color:var(--mut);">Acceso directo a cada producto Nova. Tu resumen al día.</p>
-        </div>
-        <div class="g3" id="plat-grid"></div>
-        <div class="card" style="display:flex;align-items:center;gap:20px;">
-          <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
-            <div class="slbl">SINCRONIZACIÓN</div>
-            <div style="font:600 14px/1.2 'DM Sans';color:var(--ink);">Los datos de tus tiendas se actualizan solos</div>
-            <div style="font:500 12px/1.5 'DM Sans';color:var(--mut);">Tus pendientes de Nova Empresarial y Nova Central aparecen en Soul automáticamente. Último sync hace 4 minutos.</div>
-          </div>
-          <div style="width:48px;height:48px;border-radius:50%;background:var(--sage);border:1px solid var(--sage-line);display:flex;align-items:center;justify-content:center;font:700 20px/1 'DM Sans';color:var(--sage-d);">✓</div>
-        </div>
-      </div>
-
-      <!-- ════ MI PERFIL ════ -->
+      <!-- ════ PERFIL ════ -->
       <div class="view" id="v-perfil">
-        <div style="display:flex;align-items:center;gap:20px;">
-          <div class="perf-av">M</div>
-          <div>
-            <div style="font:600 24px/1.1 'Fraunces',serif;color:var(--ink);">Manuela Ramírez</div>
-            <div style="font:500 13px/1 'DM Sans';color:var(--mut3);margin-top:5px;">manuela@nutrea.ec</div>
-          </div>
-        </div>
+        <div class="vista-h"><div><div class="vista-t">Mi perfil</div><p class="vista-p">Con quién entraste y cómo se ve NovaSoul.</p></div></div>
         <div class="g2">
           <div class="card">
-            <div class="slbl" style="margin-bottom:12px;">DATOS NATALES</div>
-            <div class="pref-row"><span class="pref-key">Fecha</span><span class="pref-val">14 septiembre 1998</span></div>
-            <div class="pref-row"><span class="pref-key">Hora</span><span class="pref-val">04:20</span></div>
-            <div class="pref-row"><span class="pref-key">Lugar</span><span class="pref-val">Medellín, Colombia</span></div>
-            <div class="pref-row"><span class="pref-key">Ascendente</span><span class="pref-tag">Leo</span></div>
-            <div class="pref-row"><span class="pref-key">Sol</span><span class="pref-tag">Virgo</span></div>
-            <div class="pref-row"><span class="pref-key">Luna</span><span class="pref-tag">Capricornio</span></div>
+            <div class="slbl" style="margin-bottom:14px;">LA SESIÓN</div>
+            <div class="fila"><span class="fila-t">Correo</span><span class="fila-m" id="pf-correo">—</span></div>
+            <div class="fila"><span class="fila-t">Rol</span><span class="fila-m" id="pf-rol">—</span></div>
+            <div class="fila"><span class="fila-t">La sesión vence</span><span class="fila-m" id="pf-vence">—</span></div>
+            <div class="fila"><span class="fila-t">Horas libres a la semana</span><span class="fila-m" id="pf-horas">—</span></div>
+            <div class="fila"><span class="fila-t">Versión de esta pantalla</span><span class="fila-m" id="pf-version">—</span></div>
+            <div class="row-btns" style="margin-top:14px;">
+              <button class="card-ghost" onclick="abrirHoras()">Cambiar mis horas</button>
+              <button class="card-ghost" onclick="salir()">Cerrar sesión</button>
+            </div>
           </div>
           <div class="card">
-            <div class="slbl" style="margin-bottom:12px;">PREFERENCIAS</div>
-            <div class="pref-row">
-              <span class="pref-key">Idioma</span>
-              <div class="pref-select">
-                <div class="pref-chip on">Español</div>
-                <div class="pref-chip">English</div>
-              </div>
-            </div>
-            <div class="pref-row">
-              <span class="pref-key">Acento</span>
-              <div class="pref-select">
-                <div class="pref-chip on">Colombia</div>
-                <div class="pref-chip">México</div>
-                <div class="pref-chip">España</div>
-              </div>
-            </div>
-            <div class="pref-row">
-              <span class="pref-key">Modo</span>
-              <div class="pref-select">
-                <div class="pref-chip on" onclick="setModo('claro');this.closest('.pref-select').querySelectorAll('.pref-chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">Claro</div>
-                <div class="pref-chip" onclick="setModo('oscuro');this.closest('.pref-select').querySelectorAll('.pref-chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">Oscuro</div>
-              </div>
-            </div>
-            <div class="pref-row">
-              <span class="pref-key">Color</span>
-              <div class="tb-cdots" style="margin-left:0">
-                <div class="tb-cdot on" data-t="amarillo" style="background:#DDA43C" onclick="setTema('amarillo')"></div>
-                <div class="tb-cdot" data-t="verde" style="background:#6E9B5A" onclick="setTema('verde')"></div>
-                <div class="tb-cdot" data-t="terracota" style="background:#C4775C" onclick="setTema('terracota')"></div>
-                <div class="tb-cdot" data-t="azul" style="background:#5B8AAE" onclick="setTema('azul')"></div>
-              </div>
-            </div>
-            <div class="pref-row">
-              <span class="pref-key">Zona horaria</span>
-              <span class="pref-val">America/Bogota (UTC−5)</span>
-            </div>
+            <div class="slbl" style="margin-bottom:14px;">IR A</div>
+            <div class="fila"><span class="fila-t">Nova Central</span><a class="link" href="./novacentral.html">ABRIR →</a></div>
+            <div class="fila"><span class="fila-t">Nova Empresarial</span><a class="link" href="./empresarial.html">ABRIR →</a></div>
+            <div class="fila"><span class="fila-t">novAcademy</span><a class="link" href="./novacademy.html">ABRIR →</a></div>
+            <p class="card-p" style="margin-top:12px;">El resumen de las tres está en <strong>Nova Family</strong>, sin salir de aquí.</p>
           </div>
         </div>
       </div>
@@ -848,336 +559,1123 @@ textarea,input,select,button{font-family:inherit;}
   </div><!-- /main -->
 </div><!-- /app -->
 
+<!-- ════════════ MODALES ════════════ -->
+<div class="modal" id="m-tarea" onclick="if(event.target===this)cerrarModal('m-tarea')">
+  <div class="modal-box">
+    <div class="card-h" style="margin:0;"><span class="card-h3" id="mt-titulo">Nuevo pendiente</span><span class="link" onclick="cerrarModal('m-tarea')">CERRAR ✕</span></div>
+    <div class="aviso mal" id="mt-err"></div>
+    <div class="f"><label>QUÉ HAY QUE HACER</label><input id="mt-texto" placeholder="Entregar la carta de cocteles"></div>
+    <div class="f-row">
+      <div class="f"><label>PROYECTO</label><select id="mt-trabajo"></select><small>Sale de tus proyectos en Nova Central.</small></div>
+      <div class="f"><label>FECHA DE ENTREGA</label><input type="date" id="mt-fecha"></div>
+    </div>
+    <div class="f-row">
+      <div class="f"><label>HORAS QUE CREES QUE CUESTA</label><input type="number" id="mt-horas" min="0" step="0.5" placeholder="3"><small>Es el estimado tuyo. Sin él no puedo decirte si la semana cabe.</small></div>
+      <div class="f"><label>PRIORIDAD</label><select id="mt-prioridad"><option value="alta">Alta</option><option value="media" selected>Media</option><option value="baja">Baja</option></select></div>
+    </div>
+    <div class="f"><label>SI NO SE ENTREGA…</label><select id="mt-riesgo"></select><small id="mt-riesgo-ayuda"></small></div>
+    <div class="f"><label>NOTA</label><input id="mt-nota" placeholder="Opcional"></div>
+    <div class="f-btns">
+      <button class="card-cta" id="mt-guardar" onclick="guardarTarea()">Guardar</button>
+      <button class="card-ghost" onclick="cerrarModal('m-tarea')">Cancelar</button>
+      <button class="btn-mal" id="mt-borrar" onclick="borrarTarea()">Borrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="m-horas" onclick="if(event.target===this)cerrarModal('m-horas')">
+  <div class="modal-box">
+    <div class="card-h" style="margin:0;"><span class="card-h3">Mis horas libres</span><span class="link" onclick="cerrarModal('m-horas')">CERRAR ✕</span></div>
+    <p class="card-p">Cuántas horas te quedan cada día <em>después</em> de clases, turnos y lo que ya no se mueve. Es el techo contra el que se compara todo lo demás, y no lo puedo adivinar.</p>
+    <div class="aviso mal" id="mh-err"></div>
+    <div id="mh-dias" style="display:flex;flex-direction:column;gap:10px;"></div>
+    <div class="f-btns"><button class="card-cta" onclick="guardarHoras()">Guardar</button><button class="card-ghost" onclick="cerrarModal('m-horas')">Cancelar</button></div>
+  </div>
+</div>
+
+<div class="modal" id="m-fijo" onclick="if(event.target===this)cerrarModal('m-fijo')">
+  <div class="modal-box">
+    <div class="card-h" style="margin:0;"><span class="card-h3" id="mf-titulo">Gasto fijo</span><span class="link" onclick="cerrarModal('m-fijo')">CERRAR ✕</span></div>
+    <div class="aviso mal" id="mf-err"></div>
+    <div class="f-row">
+      <div class="f"><label>CATEGORÍA</label><select id="mf-cat"></select></div>
+      <div class="f"><label>CONCEPTO</label><input id="mf-concepto" placeholder="Apartamento"></div>
+    </div>
+    <div class="f-row">
+      <div class="f"><label>MONTO AL MES</label><input type="number" id="mf-monto" min="0" step="1000"></div>
+      <div class="f"><label>MONEDA</label><select id="mf-moneda"><option>COP</option><option>USD</option><option>GTQ</option></select></div>
+    </div>
+    <div class="f-row">
+      <div class="f"><label>DÍA DEL MES</label><input type="number" id="mf-dia" min="0" max="31" placeholder="5"></div>
+      <div class="f"><label>¿SIGUE ACTIVO?</label><select id="mf-activo"><option value="si">Sí</option><option value="no">No, ya no lo pago</option></select></div>
+    </div>
+    <div class="f-btns">
+      <button class="card-cta" onclick="guardarFijo()">Guardar</button>
+      <button class="card-ghost" onclick="cerrarModal('m-fijo')">Cancelar</button>
+      <button class="btn-mal" id="mf-borrar" onclick="borrarFijo()">Borrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
-// ── STATE ─────────────────────────────────────────────
+/**
+ * NovaSoul · la pantalla
+ * ─────────────────────────────────────────────────────────────
+ * Entra con la MISMA sesión de Nova Central. Lo decidió así: Central y
+ * Soul son suyas y de nadie más, y pedir un segundo código para la
+ * misma persona en la misma máquina no protege nada.
+ *
+ * El servidor igual verifica el rol en cada llamada: una operadora con
+ * sesión de Central no abre esto aunque escriba la acción a mano.
+ */
+const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
+
+/** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
+const VERSION_PANTALLA = '2026-09-23 · a3b3';
+
+let NC_TOKEN = localStorage.getItem('nc_token') || '';
+let SES = null;      // quién es
+let D = null;        // la foto del día
+let FIN = null;      // gastos fijos
+let FAM = null;      // Nova Family
+let FILTRO = '';     // proyecto elegido en el tablero
 let MD = localStorage.getItem('ns_modo') || 'claro';
 let TM = localStorage.getItem('ns_tema') || 'amarillo';
-let SEL_DIA = 3; // today index (0=Mon ... 6=Sun)
-let SEL_TEMA = -1;
 
-// ── PUERTA FLOW ───────────────────────────────────────
-function showOnb(){
-  document.getElementById('pt-login').style.display='none';
-  document.getElementById('pt-onb').style.display='flex';
-  showOnbElige();
-}
-function backLogin(){
-  document.getElementById('pt-onb').style.display='none';
-  document.getElementById('pt-login').style.display='flex';
-}
-function showOnbElige(){
-  ['onb-elige','onb-manual','onb-subir','onb-loading'].forEach(id=>{
-    document.getElementById(id).style.display=id==='onb-elige'?'block':'none';
+const DOW = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio',
+               'agosto','septiembre','octubre','noviembre','diciembre'];
+
+// ── UTILIDADES ────────────────────────────────────────
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
   });
-  document.getElementById('onb-step-lbl').textContent='PASO 1 DE 2';
-  document.getElementById('onb-title').textContent='Tu carta natal';
-  document.getElementById('onb-sub').textContent='Para leer tu cielo cada día necesito saber cuándo y dónde naciste.';
 }
-function showOnbManual(){
-  document.getElementById('onb-elige').style.display='none';
-  document.getElementById('onb-manual').style.display='block';
-  document.getElementById('onb-step-lbl').textContent='PASO 2 DE 2';
-  document.getElementById('onb-title').textContent='Fecha, hora y lugar';
+function nfmt(n) {
+  return (Math.round(Number(n) || 0)).toLocaleString('es-CO');
 }
-function showOnbSubir(){
-  document.getElementById('onb-elige').style.display='none';
-  document.getElementById('onb-subir').style.display='block';
-  document.getElementById('onb-step-lbl').textContent='PASO 2 DE 2';
-  document.getElementById('onb-title').textContent='Tu carta subida';
+/** 2.5 h se escribe «2,5 h»; 3 h no se escribe «3,0 h». */
+function hfmt(n) {
+  const v = Math.round((Number(n) || 0) * 10) / 10;
+  return (v % 1 === 0 ? String(v) : v.toFixed(1).replace('.', ',')) + ' h';
 }
-function showOnbLoading(){
-  ['onb-manual','onb-subir','onb-loading'].forEach(id=>{
-    document.getElementById(id).style.display=id==='onb-loading'?'block':'none';
-  });
-  document.getElementById('onb-title').textContent='Calculando tu cielo…';
-  const fill=document.getElementById('prog-fill');
-  fill.style.width='0'; setTimeout(()=>{ fill.style.width='68%'; },50);
+function fcorta(iso) {
+  if (!iso) return '';
+  const p = String(iso).split('-');
+  if (p.length !== 3) return iso;
+  return Number(p[2]) + ' ' + (MESES[Number(p[1]) - 1] || '').slice(0, 3);
 }
-function enterApp(){
-  document.getElementById('puerta').style.display='none';
-  document.getElementById('app').classList.add('on');
-  applyModo(); buildAll();
+/** «vence hoy», «faltan 3 días», «venció hace 2 días». Nunca solo la fecha. */
+function cuando(dias) {
+  if (dias === null || dias === undefined) return 'sin fecha';
+  if (dias === 0) return 'hoy';
+  if (dias > 0) return 'venció hace ' + dias + (dias === 1 ? ' día' : ' días');
+  const f = -dias;
+  return (f === 1 ? 'falta 1 día' : 'faltan ' + f + ' días');
+}
+function porMoneda(obj, vacio) {
+  const ks = Object.keys(obj || {});
+  if (!ks.length) return vacio || 'sin definir';
+  return ks.map(function (k) { return k + ' ' + nfmt(obj[k]); }).join(' · ');
 }
 
-// ── NAVIGATION ────────────────────────────────────────
-const TITLES={hoy:'Hoy',pendientes:'Pendientes',cielo:'El cielo',recompensas:'Recompensas',diagnostico:'Diagnóstico',plataformas:'Mis plataformas',perfil:'Mi perfil'};
-function go(view,el){
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
-  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
-  document.getElementById('v-'+view).classList.add('on');
-  if(el)el.classList.add('on');
-  else{const m=document.querySelector('[data-v="'+view+'"]');if(m)m.classList.add('on');}
+// ── API ───────────────────────────────────────────────
+async function nc(accion, datos, intento) {
+  intento = intento || 0;
+  const r = await fetch(NOVA_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ accion: accion, token: NC_TOKEN }, datos || {})),
+  });
+  const texto = await r.text();
+  let j;
+  try { j = JSON.parse(texto); }
+  catch (err) {
+    if (intento < 3) {
+      await new Promise(function (ok) { setTimeout(ok, 2000 * Math.pow(2, intento)); });
+      return nc(accion, datos, intento + 1);
+    }
+    throw new Error('La hoja respondió algo que no es JSON (HTTP ' + r.status + ').');
+  }
+  if (j && j.diagnostico && j.diagnostico.metodo === 'GET' && intento < 3) {
+    await new Promise(function (ok) { setTimeout(ok, 2000 * Math.pow(2, intento)); });
+    return nc(accion, datos, intento + 1);
+  }
+  if (j && j.reautenticar) salir(true);
+  return j;
+}
+
+// ── PUERTA ────────────────────────────────────────────
+function errL(msg) {
+  const el = document.getElementById('lgn-err');
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+function pasoLogin(n) {
+  ['lgn-p1', 'lgn-p2'].forEach(function (id, i) {
+    document.getElementById(id).style.display = (i + 1 === n) ? 'flex' : 'none';
+  });
+}
+async function pedirCodigo() {
+  const email = (document.getElementById('lgn-email').value || '').trim();
+  const btn = document.getElementById('lgn-btn');
+  errL('');
+  if (!email || email.indexOf('@') === -1) { errL('Escribe un correo válido.'); return; }
+  btn.textContent = 'Enviando…'; btn.style.opacity = '.6';
+  try {
+    const r = await nc('nc_login', { email: email });
+    if (!r.ok) { errL(r.error || 'No se pudo enviar el código.'); return; }
+    document.getElementById('lgn-eco').textContent = email;
+    pasoLogin(2);
+    setTimeout(function () { document.getElementById('lgn-cod').focus(); }, 80);
+  } catch (e) {
+    errL('Falló la conexión: ' + (e && e.message || e));
+  } finally { btn.textContent = 'Enviarme el código'; btn.style.opacity = '1'; }
+}
+async function verificarCodigo() {
+  const email = (document.getElementById('lgn-email').value || '').trim();
+  const codigo = (document.getElementById('lgn-cod').value || '').trim();
+  const btn = document.getElementById('lgn-btn2');
+  errL('');
+  if (codigo.length !== 6) { errL('El código son 6 dígitos.'); return; }
+  btn.textContent = 'Verificando…'; btn.style.opacity = '.6';
+  try {
+    const r = await nc('nc_verificar', { email: email, codigo: codigo });
+    if (!r.ok) { errL(r.error || 'Código incorrecto.'); return; }
+    NC_TOKEN = r.token;
+    localStorage.setItem('nc_token', NC_TOKEN);
+    localStorage.setItem('nc_email', email);
+    SES = r.sesion;
+    entrar();
+  } catch (e) {
+    errL('Falló al verificar: ' + (e && e.message || e));
+  } finally { btn.textContent = 'Entrar'; btn.style.opacity = '1'; }
+}
+async function reanudar() {
+  const guardado = localStorage.getItem('nc_email') || '';
+  if (guardado) document.getElementById('lgn-email').value = guardado;
+  pasoLogin(1);
+  if (!NC_TOKEN) return;
+  try {
+    const r = await nc('nc_yo');
+    if (r && r.ok && r.sesion) { SES = r.sesion; entrar(); }
+  } catch (e) { /* sin conexión se queda en la puerta */ }
+}
+function entrar() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  const nm = SES.nombre || SES.correo || '';
+  document.getElementById('sb-nm').textContent = nm;
+  document.getElementById('sb-rl').textContent = SES.rol === 'socia' ? 'Socia' : 'Operadora';
+  document.getElementById('sb-av').textContent = (nm.trim()[0] || '·').toUpperCase();
+  document.getElementById('pf-version').textContent = VERSION_PANTALLA;
+  document.getElementById('pf-correo').textContent = SES.correo || '—';
+  document.getElementById('pf-rol').textContent = SES.rol === 'socia' ? 'Socia' : 'Operadora';
+  if (SES.vence) {
+    const v = new Date(SES.vence);
+    document.getElementById('pf-vence').textContent =
+      isNaN(v) ? '—' : v.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  }
+  cargar();
+}
+async function salir(porVencimiento) {
+  if (NC_TOKEN && !porVencimiento) { try { await nc('nc_salir'); } catch (e) {} }
+  NC_TOKEN = ''; SES = null; D = null;
+  localStorage.removeItem('nc_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  pasoLogin(1);
+  if (porVencimiento) errL('Tu sesión se cerró por seguridad. Pide un código nuevo.');
+}
+
+// ── CARGAR ────────────────────────────────────────────
+function avisoGlobal(msg, bien) {
+  const el = document.getElementById('av-global');
+  el.textContent = msg || '';
+  el.className = 'aviso ' + (bien ? 'bien' : 'mal') + (msg ? ' on' : '');
+}
+
+/**
+ * Traer y pintar son DOS try distintos.
+ *
+ * Con uno solo, un error al dibujar salía en pantalla como «sin
+ * conexión», y eso manda a revisar el internet por un error mío.
+ */
+async function cargar() {
+  let r;
+  try {
+    r = await nc('nc_soul');
+  } catch (e) {
+    D = null;
+    avisoGlobal('No pude hablar con la hoja: ' + (e && e.message || e));
+    return;
+  }
+  if (!r || !r.ok) {
+    D = null;
+    avisoGlobal(r && r.error ? r.error : 'La hoja respondió sin datos.');
+    return;
+  }
+  D = r;
+  try {
+    pintarTodo();
+    avisoGlobal('');
+  } catch (e) {
+    // D se limpia ANTES de avisar: si no, el siguiente intento vuelve a
+    // entrar al mismo dibujo roto y el error se pierde sin mensaje.
+    D = null;
+    avisoGlobal('Traje tus datos pero no los pude dibujar: ' + (e && e.message || e));
+  }
+}
+
+function pintarTodo() {
+  pintarCabecera();
+  pintarHoy();
+  pintarTablero();
+  pintarSemana();
+  pintarMindlab();
+  pintarSidebar();
+}
+
+function pintarCabecera() {
+  const p = D.hoy.split('-');
+  const d = new Date(D.hoy + 'T12:00:00Z');
+  document.getElementById('tb-fecha').innerHTML =
+    esc(DOW[(d.getUTCDay() + 6) % 7]) + ' ' + Number(p[2]) + ' de ' + esc(MESES[Number(p[1]) - 1]) +
+    '<small>' + (D.urgente ? 'Lo más urgente: ' + esc(D.urgente.texto) : 'Nada vencido. Buen día.') + '</small>';
+}
+
+function pintarSidebar() {
+  const abiertos = D.pendientes.filter(function (t) { return t.estado !== 'hecho'; });
+  document.getElementById('nb-pend').textContent = abiertos.length;
+  const r = D.riesgo;
+  const mal = r.sobra !== null && r.sobra < 0;
+  document.getElementById('nb-riesgo').style.display = mal ? 'inline-block' : 'none';
+  document.getElementById('nb-ml').textContent = D.mindlab.hechas + '/' + D.mindlab.total;
+  document.getElementById('pf-horas').textContent =
+    r.libres === null ? 'todavía no me lo has dicho' : hfmt(r.libres);
+
+  document.getElementById('sb-scores').innerHTML =
+    '<div class="sb-sc"><span class="sb-sc-v" style="color:' +
+      (mal ? 'var(--rojo)' : 'var(--sage-d)') + ';">' +
+      (r.libres === null ? '—' : Math.round(r.comprometidas)) +
+    '</span><span class="sb-sc-l">horas<br>comprometidas</span></div>' +
+    '<div class="sb-div"></div>' +
+    '<div class="sb-sc"><span class="sb-sc-v" style="color:var(--acc-d);">' +
+      (r.libres === null ? '—' : Math.round(r.libres)) +
+    '</span><span class="sb-sc-l">horas<br>libres</span></div>' +
+    '<div class="sb-div"></div>' +
+    '<div class="sb-sc"><span class="sb-sc-v" style="color:' +
+      (D.resumen.dia.vencidas ? 'var(--rojo)' : 'var(--mut3)') + ';">' +
+      D.resumen.dia.vencidas +
+    '</span><span class="sb-sc-l">vencidas</span></div>';
+}
+
+// ── HOY ───────────────────────────────────────────────
+function pintarHoy() {
+  const R = D.resumen, r = D.riesgo;
+  const kpi = function (l, v, s, cl) {
+    return '<div class="kpi"><span class="kpi-l">' + esc(l) + '</span>' +
+           '<span class="kpi-v' + (cl ? ' ' + cl : '') + '">' + esc(v) + '</span>' +
+           '<span class="kpi-s">' + esc(s) + '</span></div>';
+  };
+  document.getElementById('hoy-kpis').innerHTML =
+    kpi('ENTREGAS DE HOY', R.dia.entregas, R.dia.horas ? hfmt(R.dia.horas) + ' estimadas' : 'sin horas estimadas') +
+    kpi('VENCIDAS', R.dia.vencidas, R.dia.vencidas ? 'de semanas pasadas' : 'nada atrasado',
+        R.dia.vencidas ? 'mal' : 'bien') +
+    kpi('ESTA SEMANA', R.semana.entregas, R.semana.hechas + ' ya cerradas') +
+    kpi('ESTE MES', R.mes.abiertas, R.mes.hechas + ' de ' + R.mes.entregas + ' cerradas');
+
+  // ── Lo más urgente: UNA sola cosa ──
+  const u = D.urgente;
+  document.getElementById('hoy-urgente').innerHTML = u
+    ? '<div class="' + (u.dias !== null && u.dias > 0 ? 'card-rojo' : 'card-amber') +
+      '" style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;">' +
+        '<div style="flex:1;min-width:230px;display:flex;flex-direction:column;gap:9px;">' +
+          '<div class="' + (u.dias !== null && u.dias > 0 ? 'card-lbl-rojo' : 'card-lbl-amber') +
+            '">LO PRIMERO · Y NADA MÁS HASTA QUE ESTÉ</div>' +
+          '<div style="font:600 25px/1.2 \'Fraunces\',serif;color:var(--ink);">' + esc(u.texto) + '</div>' +
+          '<div class="card-p">' + esc(cuando(u.dias)) +
+            (u.proyecto ? ' · ' + esc(u.proyecto) : '') +
+            (u.horas ? ' · ' + hfmt(u.horas) : '') +
+            ' · ' + esc((D.riesgos[u.riesgo] || {}).nombre || '') + '</div>' +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:9px;">' +
+          '<button class="card-cta" onclick="mover(\'' + u.id + '\',\'haciendo\')">Estoy en esto</button>' +
+          '<button class="link" onclick="editarTarea(\'' + u.id + '\')">VER / CAMBIAR</button>' +
+        '</div>' +
+      '</div>'
+    : '<div class="card-sage"><div class="card-lbl-sage">HOY</div>' +
+      '<div class="card-h3" style="margin-top:8px;">No tienes nada abierto</div></div>';
+
+  // ── El riesgo de la semana ──
+  document.getElementById('hoy-riesgo').innerHTML = bloqueRiesgo();
+
+  // ── La lista de hoy ──
+  const hoyList = D.pendientes.filter(function (t) {
+    return t.estado !== 'hecho' && (t.fecha === D.hoy || (t.dias !== null && t.dias > 0));
+  }).sort(function (a, b) { return (b.dias || 0) - (a.dias || 0); });
+  document.getElementById('hoy-lista').innerHTML = hoyList.length
+    ? hoyList.map(filaTarea).join('')
+    : '<div class="vacio">Nada con fecha de hoy ni vencido. Lo que sigue está en Mi semana.</div>';
+
+  // ── El mes, por proyecto ──
+  const pm = D.resumen.mes.porProyecto;
+  document.getElementById('hoy-mes').innerHTML =
+    '<div class="card-h"><span class="card-lbl">LO ABIERTO, POR PROYECTO</span>' +
+    '<span class="card-lbl">' + pm.length + '</span></div>' +
+    (pm.length ? pm.map(function (p) {
+      return '<div class="fila"><span class="fila-t">' + esc(p.nombre) +
+        (p.vencidas ? ' <span class="chip tarde">' + p.vencidas + ' vencida' +
+          (p.vencidas === 1 ? '' : 's') + '</span>' : '') + '</span>' +
+        '<span class="fila-m">' + p.abiertas + ' · ' + hfmt(p.horas) + '</span></div>';
+    }).join('') : '<div class="vacio">Sin pendientes abiertos.</div>');
+
+  // ── Mindlab de la semana ──
+  const m = D.mindlab.semanaActual;
+  document.getElementById('hoy-ml').innerHTML = m
+    ? '<div class="card-lbl-amber">MINDLAB · SEMANA ' + m.semana + ' DE 12</div>' +
+      '<div class="card-h3" style="margin:9px 0;">' + esc(m.tema) + '</div>' +
+      '<p class="card-p">' + esc(m.tarea) + '</p>' +
+      '<div class="row-btns" style="margin-top:13px;">' +
+        '<span class="chip horas">' + hfmt(m.horas) + '</span>' +
+        '<span class="chip">' + esc(m.estado === 'hecho' ? 'hecha' : 'sin empezar') + '</span>' +
+        '<button class="link" onclick="go(\'mindlab\',null)">VER EL PLAN →</button>' +
+      '</div>'
+    : '<div class="card-lbl-amber">MINDLAB</div>' +
+      '<p class="card-p" style="margin-top:9px;">Esta semana está fuera de las doce del plan. Arranca el ' +
+      esc(fcorta(D.mindlab.inicio)) + '.</p>';
+}
+
+/** El bloque de horas: el mismo en Hoy y en Mi semana, una sola cuenta. */
+function bloqueRiesgo() {
+  const r = D.riesgo;
+  if (r.sinHoras) {
+    return '<div class="card-h"><span class="card-lbl">LA SEMANA</span></div>' +
+      '<p class="card-p">' + esc(r.porque) + '</p>' +
+      '<div class="row-btns" style="margin-top:14px;">' +
+      '<button class="card-cta" onclick="abrirHoras()">Decirle cuántas horas tengo</button></div>';
+  }
+  const total = Math.max(r.libres, r.comprometidas) || 1;
+  const pFijas = Math.round(r.fijas / total * 100);
+  const pExtra = Math.round(r.extra / total * 100);
+  const pLibre = Math.max(0, 100 - pFijas - pExtra);
+  const mal = r.sobra < 0;
+
+  let html =
+    '<div class="card-h"><span class="card-lbl">SI LA SEMANA CABE</span>' +
+      '<span class="' + (mal ? 'card-lbl-rojo' : 'card-lbl-sage') + '">' +
+        (mal ? 'FALTAN ' + hfmt(-r.sobra) : 'SOBRAN ' + hfmt(r.sobra)) + '</span></div>' +
+    '<div style="font:600 21px/1.35 \'Fraunces\',serif;color:var(--ink);margin-bottom:14px;">' +
+      'Tienes ' + hfmt(r.libres) + ' libres y ' + hfmt(r.comprometidas) + ' comprometidas.' +
+    '</div>' +
+    /**
+     * Cuando no cabe, la barra se llena entera y el exceso deja de
+     * verse: una barra al 100% se lee igual si sobran dos horas que si
+     * faltan diez. La marca dice dónde se te acabó el tiempo.
+     */
+    '<div class="hbar" style="position:relative;">' +
+      '<span style="width:' + pFijas + '%;background:var(--acc);"></span>' +
+      '<span style="width:' + pExtra + '%;background:var(--acc-hi);"></span>' +
+      '<span style="width:' + pLibre + '%;background:var(--soft2);"></span>' +
+      (mal ? '<i class="htope" style="left:' + Math.round(r.libres / total * 100) + '%;"></i>' : '') +
+    '</div>' +
+    (mal ? '<div style="font:600 9.5px/1 \'DM Sans\';letter-spacing:1px;color:var(--rojo);' +
+           'margin-top:7px;">▲ AHÍ SE TE ACABAN LAS HORAS</div>' : '') +
+    '<div class="hleg">' +
+      '<div><i style="background:var(--acc);"></i>Horas fijas de tus proyectos · ' + hfmt(r.fijas) + '</div>' +
+      '<div><i style="background:var(--acc-hi);"></i>Entregas con fecha · ' + hfmt(r.extra) + '</div>' +
+      '<div><i style="background:var(--soft2);"></i>Libres · ' + hfmt(Math.max(0, r.sobra)) + '</div>' +
+    '</div>';
+
+  if (r.dentroDeFijas) {
+    html += '<p class="card-p" style="margin-top:13px;">' + r.dentroDeFijas +
+      ' de esas entregas son de proyectos que ya tienen horas fijas, así que sus horas ' +
+      '<strong>no se suman otra vez</strong>: ya están contadas ahí dentro.</p>';
+  }
+  if (mal && r.candidatas.length) {
+    html += '<div style="margin-top:16px;border-top:1px solid var(--soft2);padding-top:14px;">' +
+      '<div class="card-lbl-rojo" style="margin-bottom:10px;">ALGO SE VA A CAER · ESTAS SON LAS CANDIDATAS</div>' +
+      r.candidatas.map(function (c) {
+        return '<div class="fila"><span class="fila-t">' + esc(c.texto) +
+          (c.proyecto ? ' <span class="chip proy">' + esc(c.proyecto) + '</span>' : '') + '</span>' +
+          '<span class="fila-m">' + hfmt(c.horas) + ' · ' + esc(fcorta(c.fecha)) + '</span>' +
+          '<button class="kbtn" onclick="editarTarea(\'' + c.id + '\')">Correr</button></div>';
+      }).join('') +
+      '<p class="card-p" style="margin-top:10px;">Ninguna de estas tiene fecha de otra persona. ' +
+      'Lo que no se puede mover no aparece aquí.</p></div>';
+  }
+  if (r.porque && !r.sinHoras) {
+    html += '<p class="card-p" style="margin-top:13px;color:var(--rojo);">' + esc(r.porque) + '</p>';
+  }
+  return html;
+}
+
+function filaTarea(t) {
+  return '<div class="fila">' +
+    '<button class="kbtn" onclick="mover(\'' + t.id + '\',\'hecho\')" title="Marcar hecho">✓</button>' +
+    '<span class="fila-t" onclick="editarTarea(\'' + t.id + '\')" style="cursor:pointer;">' +
+      esc(t.texto) + '</span>' +
+    (t.proyecto ? '<span class="chip proy">' + esc(t.proyecto) + '</span>' : '') +
+    (t.horas ? '<span class="chip horas">' + hfmt(t.horas) + '</span>' : '') +
+    '<span class="chip' + (t.dias > 0 ? ' tarde' : t.dias === 0 ? ' hoy' : '') + '">' +
+      esc(cuando(t.dias)) + '</span></div>';
+}
+
+// ── TABLERO ───────────────────────────────────────────
+function pintarTablero() {
+  const proyectos = {};
+  D.pendientes.forEach(function (t) {
+    if (t.trabajoId) proyectos[t.trabajoId] = t.proyecto;
+  });
+  const chips = ['<button class="kbtn' + (FILTRO ? '' : ' on') + '" style="' +
+    (FILTRO ? '' : 'border-color:var(--acc);color:var(--acc-d);') +
+    '" onclick="filtrar(\'\')">Todo</button>']
+    .concat(Object.keys(proyectos).map(function (id) {
+      return '<button class="kbtn" style="' +
+        (FILTRO === id ? 'border-color:var(--acc);color:var(--acc-d);' : '') +
+        '" onclick="filtrar(\'' + id + '\')">' + esc(proyectos[id]) + '</button>';
+    }));
+  document.getElementById('pend-filtros').innerHTML = chips.join('');
+
+  const cols = [
+    { k: 'pendiente', t: 'PENDIENTE' },
+    { k: 'haciendo', t: 'HACIENDO' },
+    { k: 'hecho', t: 'HECHO' },
+  ];
+  document.getElementById('pend-kan').innerHTML = cols.map(function (c) {
+    const items = D.pendientes
+      .filter(function (t) { return t.estado === c.k && (!FILTRO || t.trabajoId === FILTRO); })
+      .sort(function (a, b) {
+        if (c.k === 'hecho') return (b.hechoEn || '') < (a.hechoEn || '') ? -1 : 1;
+        return (a.fecha || '9') < (b.fecha || '9') ? -1 : 1;
+      });
+    const horas = items.reduce(function (a, t) { return a + t.horas; }, 0);
+    return '<div class="kcol" id="kcol-' + c.k + '" ondragover="sobre(event,\'' + c.k + '\')" ' +
+      'ondragleave="fuera(\'' + c.k + '\')" ondrop="soltar(event,\'' + c.k + '\')">' +
+      '<div class="kcol-h"><span class="kcol-t">' + c.t + '</span>' +
+      '<span class="kcol-n">' + items.length + (horas ? ' · ' + hfmt(horas) : '') + '</span></div>' +
+      (items.length ? items.map(tarjeta).join('')
+        : '<div class="vacio" style="padding:8px 3px;">Vacío.</div>') +
+      '</div>';
+  }).join('');
+}
+
+function tarjeta(t) {
+  const cl = t.estado === 'hecho' ? ' lista' : (t.dias > 0 ? ' tarde' : t.dias === 0 ? ' hoy' : '');
+  return '<div class="kcard' + cl + '" draggable="true" ondragstart="arrastrar(event,\'' + t.id + '\')" ' +
+    'onclick="editarTarea(\'' + t.id + '\')">' +
+    '<div class="kcard-t">' + esc(t.texto) + '</div>' +
+    '<div class="kcard-m">' +
+      (t.proyecto ? '<span class="chip proy">' + esc(t.proyecto) + '</span>' : '') +
+      (t.horas ? '<span class="chip horas">' + hfmt(t.horas) + '</span>' : '') +
+      (t.estado === 'hecho'
+        ? '<span class="chip">' + esc(fcorta(t.hechoEn) || 'hecho') + '</span>'
+        : '<span class="chip' + (t.dias > 0 ? ' tarde' : t.dias === 0 ? ' hoy' : '') + '">' +
+          esc(cuando(t.dias)) + '</span>') +
+      (t.riesgo === 'inamovible' ? '<span class="chip fijo">no se mueve</span>' : '') +
+    '</div>' +
+    '<div class="kcard-b" onclick="event.stopPropagation()">' +
+      (t.estado !== 'pendiente' ? '<button class="kbtn" onclick="mover(\'' + t.id + '\',\'' +
+        (t.estado === 'hecho' ? 'haciendo' : 'pendiente') + '\')">←</button>' : '') +
+      (t.estado !== 'hecho' ? '<button class="kbtn" onclick="mover(\'' + t.id + '\',\'' +
+        (t.estado === 'pendiente' ? 'haciendo' : 'hecho') + '\')">→</button>' : '') +
+    '</div></div>';
+}
+
+function filtrar(id) { FILTRO = id; pintarTablero(); }
+
+let ARRASTRA = '';
+function arrastrar(ev, id) {
+  ARRASTRA = id;
+  try { ev.dataTransfer.setData('text/plain', id); } catch (e) {}
+}
+function sobre(ev, col) {
+  ev.preventDefault();
+  const el = document.getElementById('kcol-' + col);
+  if (el) el.classList.add('drag');
+}
+function fuera(col) {
+  const el = document.getElementById('kcol-' + col);
+  if (el) el.classList.remove('drag');
+}
+function soltar(ev, col) {
+  ev.preventDefault();
+  fuera(col);
+  const id = ARRASTRA || (ev.dataTransfer && ev.dataTransfer.getData('text/plain'));
+  if (id) mover(id, col);
+  ARRASTRA = '';
+}
+
+// ── SEMANA ────────────────────────────────────────────
+function pintarSemana() {
+  document.getElementById('sem-sub').textContent =
+    'Del ' + fcorta(D.semana.lunes) + ' al ' + fcorta(D.semana.domingo) +
+    '. Solo se dibuja lo que tiene fecha: tus clases y tus turnos todavía no están en ninguna hoja, ' +
+    'y pintarlos sin saberlos sería inventarte la semana.';
+  document.getElementById('sem-riesgo').innerHTML = bloqueRiesgo();
+
+  document.getElementById('sem-dias').innerHTML = D.semana.dias.map(function (d) {
+    return '<div class="sdia' + (d.esHoy ? ' hoy' : '') + '">' +
+      '<div class="sdia-h"><span class="sdia-d">' + DOW[d.dow - 1] + '</span>' +
+      '<span class="sdia-n">' + Number(d.fecha.split('-')[2]) + '</span></div>' +
+      '<div class="sdia-lib">' +
+        (d.libres === null ? 'sin horas dichas' : hfmt(d.libres) + ' libres') +
+        (d.horas ? ' · ' + hfmt(d.horas) + ' pedidas' : '') + '</div>' +
+      (d.textos.length
+        ? d.textos.map(function (t) {
+            return '<div class="sdia-it" onclick="editarTarea(\'' + t.id + '\')" style="cursor:pointer;">' +
+              esc(t.texto) + (t.proyecto ? '<br><span style="color:var(--mut4);">' +
+              esc(t.proyecto) + '</span>' : '') + '</div>';
+          }).join('')
+        : '<div class="sdia-lib" style="opacity:.6;">—</div>') +
+      (d.entregas > d.textos.length
+        ? '<div class="sdia-lib">+' + (d.entregas - d.textos.length) + ' más</div>' : '') +
+      '</div>';
+  }).join('');
+
+  const activos = D.trabajos.filter(function (t) { return t.estado === 'activo'; });
+  document.getElementById('sem-proy').innerHTML =
+    '<div class="card-h"><span class="card-lbl">LAS HORAS FIJAS DE CADA PROYECTO</span>' +
+    '<a class="link" href="./novacentral.html">CAMBIARLAS EN CENTRAL →</a></div>' +
+    (activos.length ? activos.map(function (t) {
+      const c = (D.resumen.mes.porProyecto.filter(function (x) { return x.id === t.id; })[0]) || null;
+      return '<div class="fila"><span class="fila-t">' + esc(t.nombre) +
+        ' <span class="chip">' + esc((D.tipos[t.tipo] || {}).nombre || t.tipo) + '</span></span>' +
+        '<span class="fila-m">' + (t.horasSemana ? hfmt(t.horasSemana) + '/semana' : 'sin horas fijas') +
+        (c ? ' · ' + c.abiertas + (c.abiertas === 1 ? ' abierta' : ' abiertas') : '') +
+        '</span></div>';
+    }).join('')
+    : '<div class="vacio">Todavía no tienes proyectos en Nova Central. ' +
+      'Se crean allá, en «Mis proyectos».</div>');
+}
+
+// ── MINDLAB ───────────────────────────────────────────
+function pintarMindlab() {
+  const M = D.mindlab;
+  document.getElementById('ml-sub').textContent =
+    'Doce semanas para monetizar tu marca, del ' + fcorta(M.inicio) + ' al ' + fcorta(M.fin) +
+    '. Lo recorté a este último trimestre y le bajé el peso: ' + hfmt(M.horasTotales) +
+    ' en total, unas tres por semana. Las dos últimas del año quedan libres —son finales y fiestas, ' +
+    'y un plan que las ocupa se incumple el primer día.';
+  document.getElementById('ml-cuenta').textContent = M.hechas + ' de ' + M.total + ' hechas';
+
+  const m = M.semanaActual;
+  document.getElementById('ml-ahora').innerHTML = m
+    ? '<div class="card-h" style="margin-bottom:9px;">' +
+        '<span class="card-lbl-amber">ESTA SEMANA · ' + m.semana + ' DE 12</span>' +
+        '<span class="card-lbl-amber">' + esc(fcorta(m.desde)) + ' – ' + esc(fcorta(m.hasta)) + '</span></div>' +
+      '<div class="card-h3">' + esc(m.tema) + '</div>' +
+      '<p class="card-p" style="margin-top:8px;">' + esc(m.tarea) + '</p>' +
+      '<div class="row-btns" style="margin-top:14px;">' +
+        '<button class="card-cta" onclick="bajarMindlab(' + m.semana + ')">Pasarla a mis pendientes</button>' +
+        '<button class="card-ghost" onclick="marcarMindlab(' + m.semana + ',\'' +
+          (m.estado === 'hecho' ? 'pendiente' : 'hecho') + '\')">' +
+          (m.estado === 'hecho' ? 'Devolverla a pendiente' : 'Marcarla hecha') + '</button>' +
+      '</div>'
+    : '<div class="card-lbl-amber">FUERA DEL PLAN</div>' +
+      '<p class="card-p" style="margin-top:9px;">Hoy no cae dentro de las doce semanas. ' +
+      'El plan va del ' + esc(fcorta(M.inicio)) + ' al ' + esc(fcorta(M.fin)) + '.</p>';
+
+  const mesNom = { 1: 'MES 1 · TRÁFICO', 2: 'MES 2 · NUTRICIÓN', 3: 'MES 3 · VENTA' };
+  let ultimoMes = 0;
+  document.getElementById('ml-lista').innerHTML = M.plan.map(function (s) {
+    let cab = '';
+    if (s.mes !== ultimoMes) {
+      ultimoMes = s.mes;
+      cab = '<div class="card-lbl" style="margin:16px 0 6px;">' + mesNom[s.mes] + '</div>';
+    }
+    const ahora = M.semanaActual && M.semanaActual.semana === s.semana;
+    return cab + '<div class="fila"' + (ahora ? ' style="background:var(--amber);border-radius:10px;padding-left:10px;padding-right:10px;"' : '') + '>' +
+      '<button class="kbtn" onclick="marcarMindlab(' + s.semana + ',\'' +
+        (s.estado === 'hecho' ? 'pendiente' : 'hecho') + '\')">' +
+        (s.estado === 'hecho' ? '✓' : '○') + '</button>' +
+      '<span class="fila-t"' + (s.estado === 'hecho' ? ' style="text-decoration:line-through;color:var(--mut3);"' : '') + '>' +
+        '<strong>' + s.semana + '.</strong> ' + esc(s.tema) +
+        '<br><span style="color:var(--mut3);font-size:12px;">' + esc(s.tarea) + '</span></span>' +
+      '<span class="chip horas">' + hfmt(s.horas) + '</span>' +
+      '<span class="fila-m">' + esc(fcorta(s.desde)) + '</span>' +
+      '<button class="kbtn" onclick="bajarMindlab(' + s.semana + ')">A pendientes</button></div>';
+  }).join('');
+}
+
+async function marcarMindlab(semana, estado) {
+  const r = await nc('nc_soul_mindlab', { semana: semana, estado: estado });
+  if (!r || !r.ok) { avisoGlobal(r && r.error || 'No se pudo guardar.'); return; }
+  await cargar();
+}
+async function bajarMindlab(semana) {
+  const r = await nc('nc_soul_mindlab_bajar', { semana: semana });
+  if (!r || !r.ok) { avisoGlobal(r && r.error || 'No se pudo.'); return; }
+  avisoGlobal('Listo: la semana ' + semana + ' está en tus pendientes.', true);
+  await cargar();
+}
+
+// ── TAREAS ────────────────────────────────────────────
+function opcionesProyecto(sel) {
+  return '<option value="">— Sin proyecto —</option>' +
+    D.trabajos.map(function (t) {
+      return '<option value="' + esc(t.id) + '"' + (t.id === sel ? ' selected' : '') + '>' +
+        esc(t.nombre) + '</option>';
+    }).join('');
+}
+function opcionesRiesgo(sel) {
+  return Object.keys(D.riesgos).map(function (k) {
+    return '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' +
+      esc(D.riesgos[k].nombre) + '</option>';
+  }).join('');
+}
+
+let EDITANDO = '';
+function nuevaTarea() { abrirTarea(null); }
+function editarTarea(id) {
+  const t = D.pendientes.filter(function (x) { return x.id === id; })[0];
+  if (t) abrirTarea(t);
+}
+function abrirTarea(t) {
+  if (!D) { avisoGlobal('Todavía no cargaron tus datos.'); return; }
+  EDITANDO = t ? t.id : '';
+  document.getElementById('mt-titulo').textContent = t ? 'Cambiar el pendiente' : 'Nuevo pendiente';
+  document.getElementById('mt-texto').value = t ? t.texto : '';
+  document.getElementById('mt-trabajo').innerHTML = opcionesProyecto(t ? t.trabajoId : '');
+  document.getElementById('mt-fecha').value = t ? t.fecha : '';
+  document.getElementById('mt-horas').value = t && t.horas ? t.horas : '';
+  document.getElementById('mt-prioridad').value = t ? t.prioridad : 'media';
+  document.getElementById('mt-riesgo').innerHTML = opcionesRiesgo(t ? t.riesgo : 'corrible');
+  document.getElementById('mt-nota').value = t ? t.nota : '';
+  document.getElementById('mt-borrar').style.display = t ? 'block' : 'none';
+  ayudaRiesgo();
+  errModal('mt-err', '');
+  document.getElementById('m-tarea').classList.add('on');
+  setTimeout(function () { document.getElementById('mt-texto').focus(); }, 60);
+}
+function ayudaRiesgo() {
+  const k = document.getElementById('mt-riesgo').value;
+  document.getElementById('mt-riesgo-ayuda').textContent =
+    (D.riesgos[k] || {}).ayuda || '';
+}
+function errModal(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg || '';
+  el.className = 'aviso mal' + (msg ? ' on' : '');
+}
+function cerrarModal(id) { document.getElementById(id).classList.remove('on'); }
+
+async function guardarTarea() {
+  const texto = (document.getElementById('mt-texto').value || '').trim();
+  if (!texto) { errModal('mt-err', 'Escribe qué hay que hacer.'); return; }
+  const btn = document.getElementById('mt-guardar');
+  btn.textContent = 'Guardando…'; btn.style.opacity = '.6';
+  try {
+    const r = await nc('nc_soul_guardar', { datos: {
+      id: EDITANDO,
+      texto: texto,
+      trabajo_id: document.getElementById('mt-trabajo').value,
+      fecha: document.getElementById('mt-fecha').value,
+      horas: document.getElementById('mt-horas').value || 0,
+      prioridad: document.getElementById('mt-prioridad').value,
+      riesgo: document.getElementById('mt-riesgo').value,
+      nota: document.getElementById('mt-nota').value,
+    } });
+    if (!r || !r.ok) { errModal('mt-err', r && r.error || 'No se pudo guardar.'); return; }
+    cerrarModal('m-tarea');
+    await cargar();
+  } catch (e) {
+    errModal('mt-err', 'Falló al guardar: ' + (e && e.message || e));
+  } finally { btn.textContent = 'Guardar'; btn.style.opacity = '1'; }
+}
+
+async function borrarTarea() {
+  if (!EDITANDO) return;
+  const t = D.pendientes.filter(function (x) { return x.id === EDITANDO; })[0];
+  if (!confirm('¿Borrar «' + (t ? t.texto : 'este pendiente') + '»? No se puede deshacer.')) return;
+  const r = await nc('nc_soul_borrar', { id: EDITANDO });
+  if (!r || !r.ok) { errModal('mt-err', r && r.error || 'No se pudo borrar.'); return; }
+  cerrarModal('m-tarea');
+  await cargar();
+}
+
+async function mover(id, estado) {
+  const r = await nc('nc_soul_guardar', { datos: { id: id, estado: estado } });
+  if (!r || !r.ok) { avisoGlobal(r && r.error || 'No se pudo mover.'); return; }
+  await cargar();
+}
+
+// ── HORAS LIBRES ──────────────────────────────────────
+function abrirHoras() {
+  if (!D) { avisoGlobal('Todavía no cargaron tus datos.'); return; }
+  const h = D.horas || {};
+  document.getElementById('mh-dias').innerHTML = DOW.map(function (d, i) {
+    return '<div style="display:flex;align-items:center;gap:12px;">' +
+      '<span style="flex:1;font:600 12.5px/1 \'DM Sans\';color:var(--ink);">' + d + '</span>' +
+      '<input type="number" min="0" max="24" step="0.5" id="mh-' + (i + 1) + '" ' +
+      'value="' + (h[i + 1] !== undefined ? h[i + 1] : '') + '" ' +
+      'style="width:110px;border:1px solid var(--line4);background:var(--bg);border-radius:10px;' +
+      'padding:11px 12px;font:500 13.5px/1 \'DM Sans\';color:var(--ink);outline:none;">' +
+      '<span style="font:500 11.5px/1 \'DM Sans\';color:var(--mut3);width:56px;">horas</span></div>';
+  }).join('');
+  errModal('mh-err', '');
+  document.getElementById('m-horas').classList.add('on');
+}
+async function guardarHoras() {
+  const dias = {};
+  for (let i = 1; i <= 7; i++) {
+    const v = document.getElementById('mh-' + i).value;
+    dias[i] = v === '' ? 0 : Number(v);
+  }
+  const r = await nc('nc_soul_horas', { dias: dias });
+  if (!r || !r.ok) { errModal('mh-err', r && r.error || 'No se pudo guardar.'); return; }
+  cerrarModal('m-horas');
+  await cargar();
+}
+
+// ── GASTOS FIJOS ──────────────────────────────────────
+async function cargarFinanzas() {
+  let r;
+  try { r = await nc('nc_soul_finanzas'); }
+  catch (e) {
+    FIN = null;
+    document.getElementById('fin-lista').innerHTML =
+      '<div class="vacio">No pude hablar con la hoja: ' + esc(e && e.message || e) + '</div>';
+    return;
+  }
+  if (!r || !r.ok) {
+    FIN = null;
+    document.getElementById('fin-lista').innerHTML =
+      '<div class="vacio">' + esc(r && r.error || 'La hoja respondió sin datos.') + '</div>';
+    return;
+  }
+  FIN = r;
+  try { pintarFinanzas(); }
+  catch (e) {
+    FIN = null;
+    document.getElementById('fin-lista').innerHTML =
+      '<div class="vacio">Traje tus gastos pero no los pude dibujar: ' + esc(e && e.message || e) + '</div>';
+  }
+}
+
+function pintarFinanzas() {
+  const F = FIN;
+  document.getElementById('fin-kpis').innerHTML =
+    '<div class="kpi"><span class="kpi-l">PLAN DEL MES</span>' +
+      '<span class="kpi-v" style="font-size:22px;">' + esc(porMoneda(F.totales.plan)) + '</span>' +
+      '<span class="kpi-s">sin contar el ahorro</span></div>' +
+    '<div class="kpi"><span class="kpi-l">AHORRO PLANEADO</span>' +
+      '<span class="kpi-v" style="font-size:22px;">' + esc(porMoneda(F.totales.ahorro)) + '</span>' +
+      '<span class="kpi-s">va aparte, no es un gasto</span></div>' +
+    '<div class="kpi"><span class="kpi-l">MES</span>' +
+      '<span class="kpi-v" style="font-size:22px;">' + esc(F.mes) + '</span>' +
+      '<span class="kpi-s">lo que salió lo lleva Central</span></div>' +
+    '<div class="kpi"><span class="kpi-l">CATEGORÍAS</span>' +
+      '<span class="kpi-v">' + F.categorias.filter(function (c) { return c.planeado; }).length +
+      '<span style="font-size:15px;color:var(--mut3);">/' + F.categorias.length + '</span></span>' +
+      '<span class="kpi-s">con monto definido</span></div>';
+
+  let html = '<div class="card-h"><span class="card-lbl">EL PLAN CONTRA LO QUE SALIÓ</span>' +
+    '<span class="card-lbl">' + esc(F.mes) + '</span></div>';
+  if (F.error) {
+    html += '<div class="aviso mal on" style="margin-bottom:12px;">' + esc(F.error) + '</div>';
+  }
+  html += '<div class="fin-row fin-head" style="border-bottom:1px solid var(--line);padding-bottom:9px;">' +
+    '<span class="fin-lbl" style="margin:0;">CATEGORÍA</span>' +
+    '<span class="fin-lbl" style="margin:0;">PLANEADO</span>' +
+    '<span class="fin-lbl" style="margin:0;">SALIÓ ESTE MES</span><span></span></div>';
+
+  html += F.categorias.map(function (c) {
+    const dif = diferencia(c);
+    return '<div class="fin-row">' +
+      '<div class="fin-cat">' + esc(c.nombre) +
+        (c.lineas.length ? '<small>' + c.lineas.map(function (l) {
+          return esc(l.concepto || '—') + (l.dia ? ' · día ' + l.dia : '');
+        }).join(' · ') + '</small>' : '<small>sin definir</small>') + '</div>' +
+      '<div><div class="fin-lbl">PLANEADO</div>' +
+        '<span class="fin-v' + (c.planeado ? '' : ' sin') + '">' +
+        esc(porMoneda(c.planeado, 'sin definir')) + '</span></div>' +
+      '<div><div class="fin-lbl">SALIÓ</div>' +
+        '<span class="fin-v' + (c.gastado ? (dif.cl || '') : ' sin') + '">' +
+        esc(porMoneda(c.gastado, 'nada aún')) + '</span>' +
+        (dif.txt ? '<div class="kpi-s" style="margin-top:4px;">' + esc(dif.txt) + '</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">' +
+        c.lineas.map(function (l) {
+          return '<button class="kbtn" onclick="editarFijo(\'' + l.id + '\')">' +
+            esc(l.concepto || 'editar') + '</button>';
+        }).join('') +
+        '<button class="kbtn" onclick="nuevoFijo(\'' + c.id + '\')">+</button>' +
+      '</div></div>';
+  }).join('');
+
+  html += '<p class="card-p" style="margin-top:16px;border-top:1px solid var(--soft2);padding-top:14px;">' +
+    'Donde dice «sin definir» es que todavía no le has puesto monto, no que valga cero. ' +
+    'Y las monedas no se suman entre sí: un total mezclado cambiaría solo mañana con la tasa.</p>';
+  document.getElementById('fin-lista').innerHTML = html;
+}
+
+/** Cuánto se pasó o cuánto queda, solo cuando hay con qué compararlo. */
+function diferencia(c) {
+  if (!c.planeado || !c.gastado) return { txt: '', cl: '' };
+  const ks = Object.keys(c.planeado).filter(function (k) { return c.gastado[k] !== undefined; });
+  if (!ks.length) return { txt: '', cl: '' };
+  const k = ks[0];
+  const d = c.gastado[k] - c.planeado[k];
+  if (Math.abs(d) < 1) return { txt: 'justo', cl: '' };
+  return d > 0
+    ? { txt: 'se pasó ' + k + ' ' + nfmt(d), cl: ' mal' }
+    : { txt: 'queda ' + k + ' ' + nfmt(-d), cl: ' bien' };
+}
+
+let FIJO = '';
+function nuevoFijo(cat) {
+  if (!FIN) { avisoGlobal('Todavía no cargaron tus gastos.'); return; }
+  FIJO = '';
+  document.getElementById('mf-titulo').textContent = 'Nuevo gasto fijo';
+  document.getElementById('mf-cat').innerHTML = FIN.categorias.map(function (c) {
+    return '<option value="' + c.id + '"' + (c.id === cat ? ' selected' : '') + '>' +
+      esc(c.nombre) + '</option>';
+  }).join('');
+  document.getElementById('mf-concepto').value = '';
+  document.getElementById('mf-monto').value = '';
+  document.getElementById('mf-moneda').value = 'COP';
+  document.getElementById('mf-dia').value = '';
+  document.getElementById('mf-activo').value = 'si';
+  document.getElementById('mf-borrar').style.display = 'none';
+  errModal('mf-err', '');
+  document.getElementById('m-fijo').classList.add('on');
+}
+function editarFijo(id) {
+  let linea = null, cat = '';
+  FIN.categorias.forEach(function (c) {
+    c.lineas.forEach(function (l) { if (l.id === id) { linea = l; cat = c.id; } });
+  });
+  if (!linea) return;
+  FIJO = id;
+  document.getElementById('mf-titulo').textContent = 'Cambiar el gasto fijo';
+  document.getElementById('mf-cat').innerHTML = FIN.categorias.map(function (c) {
+    return '<option value="' + c.id + '"' + (c.id === cat ? ' selected' : '') + '>' +
+      esc(c.nombre) + '</option>';
+  }).join('');
+  document.getElementById('mf-concepto').value = linea.concepto;
+  document.getElementById('mf-monto').value = linea.monto || '';
+  document.getElementById('mf-moneda').value = linea.moneda || 'COP';
+  document.getElementById('mf-dia').value = linea.dia || '';
+  document.getElementById('mf-activo').value = linea.activo ? 'si' : 'no';
+  document.getElementById('mf-borrar').style.display = 'block';
+  errModal('mf-err', '');
+  document.getElementById('m-fijo').classList.add('on');
+}
+async function guardarFijo() {
+  const r = await nc('nc_soul_fijo', { datos: {
+    id: FIJO,
+    categoria: document.getElementById('mf-cat').value,
+    concepto: document.getElementById('mf-concepto').value,
+    monto: document.getElementById('mf-monto').value || 0,
+    moneda: document.getElementById('mf-moneda').value,
+    dia: document.getElementById('mf-dia').value || 0,
+    activo: document.getElementById('mf-activo').value === 'si',
+  } });
+  if (!r || !r.ok) { errModal('mf-err', r && r.error || 'No se pudo guardar.'); return; }
+  cerrarModal('m-fijo');
+  await cargarFinanzas();
+}
+async function borrarFijo() {
+  if (!FIJO) return;
+  if (!confirm('¿Borrar esta línea del plan? Los movimientos de Nova Central no se tocan.')) return;
+  const r = await nc('nc_soul_fijo_borrar', { id: FIJO });
+  if (!r || !r.ok) { errModal('mf-err', r && r.error || 'No se pudo borrar.'); return; }
+  cerrarModal('m-fijo');
+  await cargarFinanzas();
+}
+
+// ── NOVA FAMILY ───────────────────────────────────────
+async function cargarFamily(cliente, tienda) {
+  const btn = document.getElementById('fam-btn');
+  btn.textContent = 'Trayendo…'; btn.style.opacity = '.6';
+  const cuerpo = document.getElementById('fam-cuerpo');
+  cuerpo.innerHTML = '<div class="vacio">Leyendo alarmas y calculando el semáforo de la semana. ' +
+    'Esto sí se demora: abre la hoja de la tienda y cruza pauta con pedidos.</div>';
+  let r;
+  try { r = await nc('nc_soul_family', { cliente: cliente || '', tienda: tienda || '' }); }
+  catch (e) {
+    FAM = null;
+    cuerpo.innerHTML = '<div class="vacio">No pude hablar con la hoja: ' + esc(e && e.message || e) + '</div>';
+    return;
+  } finally { btn.textContent = 'Actualizar'; btn.style.opacity = '1'; }
+
+  if (!r || !r.ok) {
+    FAM = null;
+    cuerpo.innerHTML = '<div class="vacio">' + esc(r && r.error || 'Sin datos.') + '</div>';
+    return;
+  }
+  FAM = r;
+  try { pintarFamily(); }
+  catch (e) {
+    FAM = null;
+    cuerpo.innerHTML = '<div class="vacio">Traje el resumen pero no lo pude dibujar: ' +
+      esc(e && e.message || e) + '</div>';
+  }
+}
+
+function pintarFamily() {
+  const F = FAM;
+
+  // El selector: una tienda a la vez, siempre.
+  document.getElementById('fam-sel').innerHTML =
+    F.tiendas.map(function (t) {
+      return '<button class="kbtn" style="' +
+        (t.id === F.tienda ? 'border-color:var(--acc);color:var(--acc-d);' : '') +
+        '" onclick="cargarFamily(\'' + esc(F.cliente ? F.cliente.id : '') + '\',\'' + esc(t.id) + '\')">' +
+        esc(t.nombre || t.id) + '</button>';
+    }).join('') +
+    (F.clientes.length > 1
+      ? '<span style="font:500 11.5px/1 \'DM Sans\';color:var(--mut3);margin-left:8px;">' +
+        F.clientes.length + ' clientes</span>'
+      : '');
+
+  let html = '';
+
+  // ── Empresarial ──
+  html += '<div class="card" style="margin-bottom:18px;">' +
+    '<div class="card-h"><span class="card-lbl">NOVA EMPRESARIAL · ' +
+      esc((F.tiendas.filter(function (t) { return t.id === F.tienda; })[0] || {}).nombre || F.tienda || '—') +
+      '</span><a class="link" href="./empresarial.html">ABRIR →</a></div>';
+
+  if (F.errorTienda) {
+    html += '<div class="vacio">' + esc(F.errorTienda) + '</div>';
+  } else {
+    html += F.alarmas.length
+      ? F.alarmas.map(function (a) {
+          const rojo = a.nivel === 'rojo' || a.nivel === 'alto';
+          return '<div class="luz"><span class="luz-p" style="background:' +
+            (rojo ? 'var(--rojo)' : 'var(--acc)') + ';"></span>' +
+            '<span class="luz-n"><strong>' + esc(a.titulo) + '</strong><br>' +
+            '<span style="color:var(--mut3);font-size:11.5px;">' + esc(a.detalle) + '</span></span>' +
+            (a.casos ? '<span class="luz-v">' + a.casos + '</span>' : '') + '</div>';
+        }).join('')
+      : '<div class="vacio">Ninguna alarma abierta en esta tienda.</div>';
+  }
+  html += '</div>';
+
+  // ── El semáforo de la pauta ──
+  if (F.semaforo) {
+    const s = F.semaforo;
+    html += '<div class="card" style="margin-bottom:18px;">' +
+      '<div class="card-h"><span class="card-lbl">EL SEMÁFORO DE LA PAUTA · SEMANA DEL ' +
+        esc(fcorta(s.semana.lunes)) + '</span>' +
+        '<span class="card-lbl">' + esc(s.moneda || '') + '</span></div>';
+    if (!s.hayDatos) {
+      html += '<div class="vacio">Esa semana no tiene pedidos cargados. No es que la pauta ' +
+        'haya ido mal: es que la hoja no se actualizó.</div>';
+    } else {
+      html += Object.keys(s.luces).map(function (k) {
+        const l = s.luces[k];
+        const color = l.estado === 'verde' ? 'var(--sage-d)'
+          : l.estado === 'rojo' ? 'var(--rojo)'
+          : l.estado === 'amarillo' ? 'var(--acc)' : 'var(--line4)';
+        return '<div class="luz"><span class="luz-p" style="background:' + color + ';"></span>' +
+          '<span class="luz-n">' + esc(l.etiqueta || k) +
+          (l.porque ? '<br><span style="color:var(--mut3);font-size:11.5px;">' +
+            esc(l.porque) + '</span>' : '') + '</span>' +
+          '<span class="luz-v">' + esc(l.valor === null || l.valor === undefined ? '—' : l.valor) +
+          '</span></div>';
+      }).join('');
+      if ((s.alertas || []).length) {
+        html += '<div style="margin-top:14px;border-top:1px solid var(--soft2);padding-top:13px;">' +
+          '<div class="card-lbl-rojo" style="margin-bottom:9px;">LO QUE PIDE ALGO HOY</div>' +
+          s.alertas.map(function (a) {
+            return '<div class="fila"><span class="fila-t">' + esc(a.titulo || a.texto || a) + '</span></div>';
+          }).join('') + '</div>';
+      }
+    }
+    html += '<p class="card-p" style="margin-top:13px;">Es el mismo semáforo que te llega por ' +
+      'correo los lunes. Una sola cuenta: si fueran dos, el correo y esta pantalla podrían ' +
+      'decirte cosas distintas el mismo día.</p></div>';
+  }
+
+  // ── Central ──
+  const c = F.central || {};
+  html += '<div class="g2">';
+  html += '<div class="card"><div class="card-h"><span class="card-lbl">NOVA CENTRAL</span>' +
+    '<a class="link" href="./novacentral.html">ABRIR →</a></div>' +
+    (c.error ? '<div class="vacio">' + esc(c.error) + '</div>'
+      : '<div class="fila"><span class="fila-t">Proyectos abiertos</span>' +
+        '<span class="fila-m">' + (c.proyectos || 0) + '</span></div>' +
+        '<div class="fila"><span class="fila-t">Entregas vencidas</span>' +
+        '<span class="fila-m"' + (c.entregasVencidas ? ' style="color:var(--rojo);"' : '') + '>' +
+        (c.entregasVencidas || 0) + '</span></div>' +
+        '<div class="fila"><span class="fila-t">Cobros atrasados</span>' +
+        '<span class="fila-m"' + (c.cobrosAtrasados ? ' style="color:var(--rojo);"' : '') + '>' +
+        (c.cobrosAtrasados || 0) +
+        (c.cobrosAtrasados ? ' · ' + esc(porMoneda(c.atrasadoPorMoneda)) : '') + '</span></div>') +
+    '</div>';
+
+  const a = F.academy || {};
+  html += '<div class="card"><div class="card-h"><span class="card-lbl">NOVACADEMY</span>' +
+    '<a class="link" href="./novacademy.html">ABRIR →</a></div>' +
+    '<div class="fila"><span class="fila-t">Estudiantes</span>' +
+    '<span class="fila-m">' + (a.estudiantes || 0) + '</span></div>' +
+    (a.porque ? '<p class="card-p" style="margin-top:10px;">' + esc(a.porque) + '</p>' : '') +
+    '</div>';
+  html += '</div>';
+
+  document.getElementById('fam-cuerpo').innerHTML = html;
+}
+
+// ── NAVEGACIÓN ────────────────────────────────────────
+function go(view, el) {
+  document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('on'); });
+  document.querySelectorAll('.ni').forEach(function (n) { n.classList.remove('on'); });
+  document.getElementById('v-' + view).classList.add('on');
+  if (el) el.classList.add('on');
+  else {
+    const m = document.querySelector('[data-v="' + view + '"]');
+    if (m) m.classList.add('on');
+  }
   cerrarMenu();
+  // Las dos secciones lentas se traen cuando se abren, no al arrancar.
+  if (view === 'plata' && !FIN) cargarFinanzas();
+  if (view === 'family' && !FAM) cargarFamily();
 }
-
-/* Menú de teléfono. En computador estas clases no aplican. */
-function abrirMenu(){
+function abrirMenu() {
   document.getElementById('sidebar').classList.add('open');
   document.getElementById('ns-lay').classList.add('open');
 }
-function cerrarMenu(){
+function cerrarMenu() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('ns-lay').classList.remove('open');
 }
 
 // ── MODO / TEMA ───────────────────────────────────────
-function setModo(m){
-  MD=m; localStorage.setItem('ns_modo',m);
-  document.documentElement.setAttribute('data-modo',m);
-  document.getElementById('bcl').classList.toggle('on',m==='claro');
-  document.getElementById('bos').classList.toggle('on',m==='oscuro');
+function setModo(m) {
+  MD = m; localStorage.setItem('ns_modo', m);
+  document.documentElement.setAttribute('data-modo', m);
+  document.getElementById('bcl').classList.toggle('on', m === 'claro');
+  document.getElementById('bos').classList.toggle('on', m === 'oscuro');
 }
-function setTema(t){
-  TM=t; localStorage.setItem('ns_tema',t);
-  if(t==='amarillo') document.documentElement.removeAttribute('data-tema');
-  else document.documentElement.setAttribute('data-tema',t);
-  document.querySelectorAll('.tb-cdot').forEach(d=>d.classList.toggle('on',d.dataset.t===t));
-}
-function applyModo(){
-  document.documentElement.setAttribute('data-modo',MD);
-  document.getElementById('bcl').classList.toggle('on',MD==='claro');
-  document.getElementById('bos').classList.toggle('on',MD==='oscuro');
-  if(TM==='amarillo') document.documentElement.removeAttribute('data-tema');
-  else document.documentElement.setAttribute('data-tema',TM);
-  document.querySelectorAll('.tb-cdot').forEach(d=>d.classList.toggle('on',d.dataset.t===TM));
+function setTema(t) {
+  TM = t; localStorage.setItem('ns_tema', t);
+  if (t === 'amarillo') document.documentElement.removeAttribute('data-tema');
+  else document.documentElement.setAttribute('data-tema', t);
+  document.querySelectorAll('.tb-cdot').forEach(function (d) {
+    d.classList.toggle('on', d.dataset.t === t);
+  });
 }
 
-// ── DATA BUILDERS ─────────────────────────────────────
-function buildAll(){
-  buildSidebar(); buildSemana(); buildHoy();
-  buildPendientes(); buildCielo(); buildRecompensas();
-  buildPlataformas();
-}
-
-function buildSidebar(){
-  const days=[1,2,3,4,5,6,7];
-  document.getElementById('sb-bars').innerHTML=days.map((d,i)=>`<div class="sb-rew-day${i===SEL_DIA?' hoy':''}" style="height:${[60,80,55,90,70,100,80][i]}%;"></div>`).join('');
-  const streak='✓✓✗✓✓●✗'.split('');
-  document.getElementById('sb-streak').innerHTML=streak.map(s=>`<span class="sb-streak-seg" style="background:${s==='✓'?'#8FA98A':s==='●'?'var(--acc)':'var(--line3)'};"></span>`).join('');
-}
-
-function buildSemana(){
-  const days=['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
-  const nums=[28,29,30,31,1,2,3];
-  document.getElementById('semana').innerHTML=days.map((d,i)=>`
-    <div class="sem-day${i===SEL_DIA?' on':''}" onclick="selDia(${i})">
-      <span class="sem-dow">${d}</span>
-      <span class="sem-num">${nums[i]}</span>
-    </div>`).join('');
-}
-function selDia(i){SEL_DIA=i;buildSemana();buildSidebar();}
-
-function buildHoy(){
-  // Pendientes hoy
-  const pHoy=[
-    {txt:'Responder propuesta de Camila',hecho:false,meta:'Nova · urgente'},
-    {txt:'Revisar flujo de Dropi',       hecho:false,meta:'Tienda · EC'},
-    {txt:'Llamar al proveedor de Omega',  hecho:true, meta:'Inventario'},
-    {txt:'Publicar story Colágeno',       hecho:true, meta:'Pauta'},
-    {txt:'Revisar novedades del día',     hecho:false,meta:'Pendiente'},
-  ];
-  document.getElementById('pend-hoy-list').innerHTML=pHoy.map((p,i)=>`
-    <div class="task-row">
-      <div class="task-box${p.hecho?' done':''}" onclick="toggleTask(this)">${p.hecho?'✓':''}</div>
-      <span class="task-lbl${p.hecho?' done':''}">${p.txt}</span>
-      <span class="task-meta">${p.meta}</span>
-    </div>`).join('');
-
-  // Pendientes tiendas
-  const pTienda=[
-    {txt:'Decidir renovación Dropi 6 meses',hecho:false,meta:'Vence 30 sep'},
-    {txt:'Presupuesto extra pauta · Colágeno',hecho:false,meta:'$500 pendiente'},
-    {txt:'Bonificación Camila agosto',        hecho:false,meta:'$120'},
-  ];
-  document.getElementById('pend-tienda-list').innerHTML=pTienda.map(p=>`
-    <div class="task-row">
-      <div class="task-box${p.hecho?' done':''}" onclick="toggleTask(this)">${p.hecho?'✓':''}</div>
-      <span class="task-lbl${p.hecho?' done':''}">${p.txt}</span>
-      <span class="task-meta">${p.meta}</span>
-    </div>`).join('');
-
-  // Comidas
-  const comidas=[
-    {nm:'Desayuno',  meta:'7:30 · proteína y fruta',     hecho:true},
-    {nm:'Merienda',  meta:'10:30 · frutos secos',         hecho:true},
-    {nm:'Almuerzo',  meta:'13:00 · carbohidratos + vegetal',hecho:false},
-    {nm:'Cena',      meta:'19:00 · ligero',               hecho:false},
-  ];
-  document.getElementById('comidas-list').innerHTML=comidas.map(c=>`
-    <div class="task-row">
-      <div class="task-box${c.hecho?' done':''}" onclick="toggleTask(this)">${c.hecho?'✓':''}</div>
-      <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
-        <span class="task-lbl${c.hecho?' done':''}">${c.nm}</span>
-        <span style="font:500 10.5px/1 'DM Sans';color:var(--mut4);">${c.meta}</span>
-      </div>
-    </div>`).join('');
-
-  // Movimiento dots
-  document.getElementById('mov-dots').innerHTML=['L','M','M','J'].map((d,i)=>`
-    <span style="flex:1;height:10px;border-radius:6px;background:${i<3?'#8FA98A':'var(--line3)'};"></span>`).join('');
-
-  // Temas de la semana
-  const temas=[
-    {k:'CASA 8 · PLUTÓN',tit:'Lo que sigues sosteniendo',nota:'Cierre y transformación profunda. Plutón toca tu Luna.',cta:'Por qué me toca →',pct:73,det:{porQue:'Plutón en oposición a tu Luna natal activa la Casa 8 por primera vez en 12 años. El patrón de resistencia de hoy no es nuevo: es el eco de lo que no cerraste en marzo.',cuando:'Pico: 3–4 sep · se libera el 9 sep',como:['Cierra algo incompleto hoy — conversación, archivo o hábito.','Mueve el cuerpo antes del mediodía. Luna en Cap necesita tierra.','Escribe lo que resististe. La escritura desactiva el patrón.'],sombra:'Si evitas la incomodidad hoy, Plutón la amplifica. El patrón vuelve más denso en el siguiente ciclo.',en:'what you still hold'}},
-    {k:'CASA 5 · VENUS',tit:'Creatividad que pide salida',nota:'Venus en tu Casa 5 trae impulso creativo. No lo racionalices.',cta:'Cómo aprovecharlo →',pct:45,det:{porQue:'Venus transita tu Casa 5 nativa, donde tienes Neptuno. La energía creativa que sientes no es distracción: es el canal que menos usas.',cuando:'Activo 28 ago – 11 sep',como:['Reserva 20 minutos sin agenda para crear sin propósito.','Propón algo fuera de lo cotidiano en el trabajo.','El miedo a hacer algo imperfecto es la señal de que hay que hacerlo.'],sombra:'Sin salida, Venus en Casa 5 se convierte en procrastinación disfrazada de preparación.',en:'creativity seeking release'}},
-    {k:'CASA 10 · MARTE',tit:'Ambición que no espera',nota:'Marte directo sobre tu MC. Visibilidad y acción pública.',cta:'Ver el momento →',pct:38,det:{porQue:'Marte directo sobre tu Medio Cielo amplifica todo lo que hagas en el ámbito público. Decisiones tomadas esta semana se consolidan.',cuando:'Activo 1–15 sep · pico el 7',como:['Lanza lo que tengas listo. El timing es inusual.','Evita defensividad en reuniones — Marte en MC exagera el ego.','Una decisión de carrera tomada hoy vale por tres en otra semana.'],sombra:'La inacción en semanas de Marte directo suele costar más que el error de acción.',en:'ambition that won\'t wait'}},
-  ];
-  document.getElementById('temas-grid').innerHTML=temas.map((t,i)=>`
-    <div class="tema-card${SEL_TEMA===i?' on':''}" onclick="selTema(${i})">
-      <div class="tema-kicker">${t.k}</div>
-      <div class="tema-h">${t.tit}</div>
-      <div class="tema-p">${t.nota}</div>
-      <div class="tema-bar"><div class="tema-fill" style="width:${t.pct}%;"></div></div>
-      <div class="tema-cta">${t.cta}</div>
-    </div>`).join('');
-  if(SEL_TEMA>=0) renderTemaDet(temas[SEL_TEMA]);
-}
-
-function selTema(i){
-  const temas=[
-    {k:'CASA 8 · PLUTÓN',tit:'Lo que sigues sosteniendo',det:{porQue:'Plutón en oposición a tu Luna natal activa la Casa 8 por primera vez en 12 años.',cuando:'Pico: 3–4 sep · se libera el 9 sep',como:['Cierra algo incompleto hoy.','Mueve el cuerpo antes del mediodía.','Escribe lo que resististe.'],sombra:'Si evitas la incomodidad hoy, Plutón la amplifica.',en:'what you still hold'}},
-    {k:'CASA 5 · VENUS',tit:'Creatividad que pide salida',det:{porQue:'Venus transita tu Casa 5 nativa, donde tienes Neptuno.',cuando:'Activo 28 ago – 11 sep',como:['Reserva 20 minutos para crear sin propósito.','Propón algo fuera de lo cotidiano.','El miedo a hacer algo imperfecto es la señal.'],sombra:'Sin salida, Venus en Casa 5 se convierte en procrastinación.',en:'creativity seeking release'}},
-    {k:'CASA 10 · MARTE',tit:'Ambición que no espera',det:{porQue:'Marte directo sobre tu Medio Cielo amplifica lo público.',cuando:'Activo 1–15 sep · pico el 7',como:['Lanza lo que tengas listo.','Evita defensividad en reuniones.','Una decisión de carrera vale por tres esta semana.'],sombra:'La inacción en semanas de Marte directo cuesta más que el error.',en:'ambition that won\'t wait'}},
-  ];
-  SEL_TEMA = SEL_TEMA===i ? -1 : i;
-  document.querySelectorAll('.tema-card').forEach((c,j)=>c.classList.toggle('on',j===SEL_TEMA));
-  const det = document.getElementById('tema-det');
-  if(SEL_TEMA<0){det.style.display='none';return;}
-  renderTemaDet(temas[SEL_TEMA]);
-  det.style.display='block';
-}
-
-function renderTemaDet(t){
-  const det=document.getElementById('tema-det');
-  det.innerHTML=`
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:15px;">
-      <div>
-        <div style="font:600 9.5px/1 'DM Sans';letter-spacing:1.2px;color:var(--acc-d);margin-bottom:6px;">${t.k}</div>
-        <div style="font:600 25px/1.15 'Fraunces',serif;color:var(--ink);">${t.tit}</div>
-        <div style="font:400 14px/1.2 'Fraunces',serif;font-style:italic;color:var(--mut3);margin-top:4px;">${t.det.en}</div>
-      </div>
-      <span onclick="selTema(${SEL_TEMA})" style="font:600 11.5px/1 'DM Sans';color:var(--mut3);cursor:pointer;white-space:nowrap;padding:6px;">Cerrar ✕</span>
-    </div>
-    <div class="g2" style="margin-bottom:14px;">
-      <div class="det-why"><div class="slbl" style="color:var(--acc-d);margin-bottom:10px;">POR QUÉ TE TOCA</div><p style="font:500 13px/1.65 'DM Sans';color:var(--ink2);">${t.det.porQue}</p><p style="font:500 11px/1.5 'DM Sans';color:var(--mut3);border-top:1px solid var(--lila-line);padding-top:9px;margin-top:9px;">${t.det.cuando}</p></div>
-      <div class="det-how"><div class="slbl" style="color:var(--sage-d);margin-bottom:10px;">CÓMO TRABAJARLO</div>${t.det.como.map((p,i)=>`<div class="det-step" style="margin-bottom:10px;"><div class="det-num">${i+1}</div><span style="font:500 12.5px/1.55 'DM Sans';color:var(--ink2);">${p}</span></div>`).join('')}</div>
-    </div>
-    <div class="det-shadow"><div class="det-accent"></div><div><div class="slbl" style="color:var(--acc-d);margin-bottom:8px;">EL OTRO LADO</div><p style="font:500 12.5px/1.65 'DM Sans';color:var(--ink2);">${t.det.sombra}</p></div></div>`;
-}
-
-function buildPendientes(){
-  const pers=[
-    {txt:'Responder propuesta de Camila',hecho:false,meta:'urgente'},
-    {txt:'Agendar cita médica anual',     hecho:false,meta:'esta semana'},
-    {txt:'Comprar Omega 3 personal',      hecho:true, meta:'farmacia'},
-    {txt:'Revisión del contrato de arriendo',hecho:false,meta:'antes del 10'},
-    {txt:'Llamar a mamá',                 hecho:true, meta:'viernes'},
-  ];
-  document.getElementById('pend-pers-full').innerHTML=pers.map(p=>`
-    <div class="task-row">
-      <div class="task-box${p.hecho?' done':''}" onclick="toggleTask(this)">${p.hecho?'✓':''}</div>
-      <span class="task-lbl${p.hecho?' done':''}">${p.txt}</span>
-      <span class="task-meta">${p.meta}</span>
-    </div>`).join('');
-  const tienda=[
-    {txt:'Decidir renovación Dropi',hecho:false,meta:'Vence 30 sep'},
-    {txt:'Presupuesto extra Colágeno',hecho:false,meta:'$500'},
-    {txt:'Bonificación Camila',      hecho:false,meta:'$120'},
-  ];
-  document.getElementById('pend-tienda-full').innerHTML=tienda.map(p=>`
-    <div class="task-row">
-      <div class="task-box${p.hecho?' done':''}" onclick="toggleTask(this)">${p.hecho?'✓':''}</div>
-      <span class="task-lbl${p.hecho?' done':''}">${p.txt}</span>
-      <span class="task-meta">${p.meta}</span>
-    </div>`).join('');
-}
-
-function buildCielo(){
-  const transits=[
-    {k:'PLUTÓN ☍ LUNA NATAL',tit:'Lo que sigues sosteniendo',nota:'Casa 8 activa. Cierre y transformación.',int:73,cl:'lila'},
-    {k:'VENUS → CASA 5',    tit:'Creatividad que pide salida',nota:'Neptuno natal amplifica el impulso creativo.',int:45,cl:'amber'},
-    {k:'MARTE → MEDIO CIELO',tit:'Ambición que no espera',nota:'Visibilidad y acción pública amplificadas.',int:38,cl:'sage'},
-  ];
-  document.getElementById('cielo-list').innerHTML=transits.map(t=>`
-    <div class="card-${t.cl}" style="display:flex;flex-direction:column;gap:11px;cursor:pointer;" onclick="go('diagnostico',null)">
-      <div style="font:600 9px/1 'DM Sans';letter-spacing:1.2px;color:var(--${t.cl==='lila'?'acc-d':t.cl==='sage'?'sage-d':'acc-d'});">${t.k}</div>
-      <div style="font:600 20px/1.2 'Fraunces',serif;color:var(--ink);">${t.tit}</div>
-      <div style="font:500 12.5px/1.55 'DM Sans';color:var(--mut);">${t.nota}</div>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="flex:1;height:8px;border-radius:5px;background:var(--line3);overflow:hidden;"><div style="height:100%;border-radius:5px;background:var(--acc);width:${t.int}%;"></div></div>
-        <span style="font:600 14px/1 'Fraunces',serif;color:var(--ink);">${t.int}%</span>
-      </div>
-    </div>`).join('');
-}
-
-function buildRecompensas(){
-  const reglas=[
-    {lbl:'Comidas del día',      val:'4 de 4',pts:'+4 pts', done:true},
-    {lbl:'Pendientes completados',val:'2 de 5',pts:'+2 pts', done:false},
-    {lbl:'Lo primero del día',   val:'Pendiente',pts:'+3 pts',done:false},
-    {lbl:'Movimiento',           val:'Sí',     pts:'+2 pts', done:true},
-    {lbl:'Cerrar el día a tiempo',val:'Sin cerrar',pts:'+4 pts',done:false},
-  ];
-  document.getElementById('rew-rows').innerHTML=reglas.map(r=>`
-    <div class="rew-row">
-      <div class="rew-dot${r.done?' done':' pend'}"></div>
-      <span class="rew-lbl">${r.lbl}</span>
-      <span class="rew-val">${r.val}</span>
-      <span class="rew-pts${r.done?' done':''}">${r.pts}</span>
-    </div>`).join('');
-
-  const dias=[{l:'L',p:8},{l:'M',p:13},{l:'M',p:9},{l:'J',p:12},{l:'V',p:0},{l:'S',p:0},{l:'D',p:0}];
-  const mx=13;
-  document.getElementById('rew-bars').innerHTML=dias.map((d,i)=>`
-    <div class="bcol">
-      <span class="bpts">${d.p||''}</span>
-      <div class="bfill" style="height:${d.p?Math.round(d.p/mx*100):2}%;background:${i===3?'var(--acc)':d.p?'var(--line4)':'var(--line2)'};"></div>
-      <span class="blbl${i===3?' hoy':''}">${d.l}</span>
-    </div>`).join('');
-
-  document.getElementById('cierre-items').innerHTML=[
-    {txt:'Pendiente principal · hecho',hecho:true},
-    {txt:'Comidas cerradas',hecho:true},
-    {txt:'Movimiento registrado',hecho:true},
-    {txt:'Novedades de tienda revisadas',hecho:false},
-    {txt:'Una reflexión del día',hecho:false},
-  ].map(c=>`
-    <div style="display:flex;align-items:center;gap:13px;padding:13px 16px;border-radius:13px;background:var(--soft);border:1px solid var(--soft2);cursor:pointer;">
-      <div class="task-box${c.hecho?' done':''}" onclick="toggleTask(this)">${c.hecho?'✓':''}</div>
-      <span class="task-lbl${c.hecho?' done':''}">${c.txt}</span>
-    </div>`).join('');
-}
-
-function buildPlataformas(){
-  const plats=[
-    {nm:'Nova Empresarial',sub:'Gestión de tus tiendas',    ico:'NE',bg:'#5f7a3a',href:'./empresarial.html', kpis:[{k:'VENTAS HOY',v:'$1,240'},{k:'PENDIENTES',v:'3'}]},
-    {nm:'novAcademy',     sub:'Tu equipo en formación',     ico:'NA',bg:'#A85E3C',href:'./novacademy.html',  kpis:[{k:'ESTUDIANTES',v:'12'}, {k:'PROGRESO',v:'68%'}], pronto:true},
-    {nm:'Nova Central',  sub:'Administración de plataforma',ico:'NC',bg:'#3C6684',href:'./novacentral.html', kpis:[{k:'CLIENTES',v:'18'},    {k:'TICKETS',v:'2'}],   pronto:true},
-  ];
-  document.getElementById('plat-grid').innerHTML=plats.map(p=>`
-    <${p.pronto?'div':'a'} class="plat-card${p.pronto?' plat-pronto':''}" ${p.pronto?'':'href="'+p.href+'"'}>
-      ${p.pronto?'<span class="plat-chip">Próximamente</span>':''}
-      <div style="display:flex;align-items:center;gap:13px;">
-        <div class="plat-ico" style="background:${p.bg};">${p.ico}</div>
-        <div><div class="plat-h">${p.nm}</div><div class="plat-sub">${p.sub}</div></div>
-      </div>
-      <div class="plat-kpis">${p.kpis.map(k=>`<div><div class="plat-stat">${k.k}</div><div class="plat-val">${k.v}</div></div>`).join('')}</div>
-      ${p.pronto?'':'<span class="link">Abrir →</span>'}
-    </${p.pronto?'div':'a'}>`).join('');
-}
-
-// ── HELPERS ───────────────────────────────────────────
-function toggleTask(el){
-  const done=el.classList.toggle('done');
-  el.textContent=done?'✓':'';
-  const lbl=el.nextElementSibling;
-  if(lbl&&lbl.classList.contains('task-lbl'))lbl.classList.toggle('done',done);
-}
-
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded', function () {
   document.documentElement.setAttribute('data-modo', MD);
-  if(TM!=='amarillo') document.documentElement.setAttribute('data-tema',TM);
-  document.querySelectorAll('.tb-cdot').forEach(d=>d.classList.toggle('on',d.dataset.t===TM));
+  document.getElementById('bcl').classList.toggle('on', MD === 'claro');
+  document.getElementById('bos').classList.toggle('on', MD === 'oscuro');
+  if (TM !== 'amarillo') document.documentElement.setAttribute('data-tema', TM);
+  document.querySelectorAll('.tb-cdot').forEach(function (d) {
+    d.classList.toggle('on', d.dataset.t === TM);
+  });
+  document.getElementById('mt-riesgo').addEventListener('change', ayudaRiesgo);
+  document.getElementById('lgn-cod').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') verificarCodigo();
+  });
+  document.getElementById('lgn-email').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') pedirCodigo();
+  });
+  reanudar();
 });
 </script>
 </body>
