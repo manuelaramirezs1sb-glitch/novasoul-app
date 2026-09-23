@@ -287,6 +287,27 @@ const TRABAJOS = [
     dia: 'MONDAY',
     porque: 'Sin esto, el cierre de la semana solo existe si alguien lo pide.',
   },
+
+  /**
+   * Los dos de ELLA. Lo de arriba mira las tiendas de los clientes; esto
+   * mira sus proyectos, sus cobros y su semana, que hasta ahora Nova
+   * sabía y no decía hasta que ella abriera la pantalla — que es justo
+   * lo que no pasa el día que la semana no cabe.
+   */
+  {
+    fn: 'centralDiario',
+    nombre: 'Tu día en Nova Central',
+    hora: 9,
+    porque: 'Sin esto, un cobro atrasado solo se ve si abres Central ese día.',
+  },
+  {
+    fn: 'soulLunes',
+    nombre: 'Tu semana en NovaSoul',
+    hora: 9,
+    // El lunes y no el domingo: el domingo la respuesta no se puede usar.
+    dia: 'MONDAY',
+    porque: 'Sin esto, sabes que la semana no cabe cuando ya no cabe.',
+  },
 ];
 
 /** Cómo se dice la frecuencia de un trabajo, en castellano. */

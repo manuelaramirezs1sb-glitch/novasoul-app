@@ -1095,3 +1095,81 @@ El formulario ahora lo dice antes de que escriba: que es otra carta, que
 en su natal es casa 9 y que en la revolución casi seguro es otra, y
 dónde sacarlo en Horus. Un formulario que pide un número sin decir de
 dónde sale invita a poner el que uno tenga a mano.
+
+### 11d · Lo que rige su año: la profección
+
+Ella pidió «algo que rija mi año», y en tiempos distintos: hoy completo
+e informativo, y algo más grande encima.
+
+La respuesta es la **profección**: una casa por año cumplido, una casa
+por mes solar. Es lo único del cielo que es **aritmética pura** — no
+hace falta ninguna efeméride, no hay nada que adivinar, y con los mismos
+datos da siempre lo mismo. Por eso puede estar en pantalla sabiendo solo
+dos cosas suyas: su **Ascendente** y su **fecha de nacimiento**.
+
+Para ella, hoy:
+
+| | |
+|---|---|
+| **El año** | Cumplió 31 → casa **8**. Con Ascendente Capricornio, casas enteras, la 8 cae en **Leo**. Lo rige el **Sol**, que en su carta está en **Virgo, casa 9** — ahí es donde se le va a notar el año. Casa sucedente: el año pide **descansar**. |
+| **El mes** | Mes solar 1 de 12, del **20 sep al 19 oct**, casa 8 otra vez. El mes solar cuenta desde su cumpleaños, no desde el 1° del calendario. |
+| **El día** | La luna y su pensum, que ya estaban. |
+
+En pantalla: bloque ámbar `ci-anio`, con el año, el mes y **los doce
+meses de un vistazo**. Dice explícitamente que **es una cuenta, no una
+lectura** — para que no se confunda con lo que sí es interpretación.
+
+**Su revolución solar 2026–2027**, del PDF que ella encontró (Horus no
+la dejaba sacarla). Momento exacto 20/09/2026 01:09, residencia Armenia:
+
+- **Ascendente Cáncer 16°20'** ← este es «el ascendente del año» que preguntaba
+- **Sol en Virgo 27°19' → casa 3** ← NO es la casa 9 de su natal
+
+Esos son los **dos únicos números** que hay que escribir en el
+formulario de revolución. Lo demás lo compone Nova.
+
+### 12 · Lo automático de Nova Central y NovaSoul
+
+Lo que ya corría solo era todo del lado del **cliente**: tasas (5h),
+Meta (6h), alarmas (7h), semáforo el lunes (8h). Todo eso mira las
+tiendas de Nutrea y le escribe a la dueña.
+
+De **su** lado no corría nada. Nova sabía que la semana no cabía y que
+un cobro llevaba once días tarde, y no lo decía hasta que ella abriera
+la pantalla — que es justo lo que no pasa esos días.
+
+`apps-script/83-automatico-mio.gs`, registrados en `TRABAJOS` para que
+aparezcan solos en la tarjeta de «lo automático» de Central:
+
+| Trabajo | Cuándo | Qué dice |
+|---|---|---|
+| `soulLunes` | lunes 9h | ¿cabe la semana?, qué se puede mover, qué ya está vencido, turnos sin propinas, la semana de Mindlab, qué momento es |
+| `centralDiario` | diario 9h | cobros tarde, cobros que vencen en ≤3 días, entregas de proyecto |
+
+**Dos reglas que no se negocian, y que están en la prueba:**
+
+1. **Correo vacío no se manda.** La misma regla de `revisarAlarmas`. Un
+   aviso diario que dice «todo bien» deja de leerse en dos semanas, y
+   entonces tampoco se lee el día que sí traía algo.
+2. **Lo de PHH no sale de NovaSoul.** El correo de Central dice el
+   nombre del proyecto y **cuántas** tareas abiertas tiene; nunca qué
+   dicen. Un correo se reenvía y se imprime. `pruebas/automatico-mio.js`
+   lo comprueba por las dos puntas.
+
+Y una tercera que ya existía y aquí se nota más: el correo del lunes
+**no ofrece correr lo que no libera horas**. Ni el parcial (inamovible),
+ni lo de PHH (ya está dentro de sus 12 h fijas). Ofrecerlo sería
+proponerle un sacrificio que no arregla nada y hacerle creer que la
+semana ya cabe.
+
+**Falta prenderlos:** correr `prenderAutomatico()` una vez, o el botón
+de la consola en Nova Central. Los disparadores son del proyecto, no de
+cada cliente.
+
+**Una prueba se corrigió, y vale decir por qué.** `pruebas/semaforo.js`
+exigía que el semáforo corriera *después de todos los trabajos
+diarios*. Esa regla es más ancha de lo que hace falta: lo que importa es
+que corra después de los **tres que lo alimentan** (tasas → Meta →
+alarmas), para juzgar con el gasto ya adentro y convertido.
+`centralDiario`, que lee el libro de ella y no toca la tienda, la
+rompía sin que hubiera nada roto. Ahora los tres se nombran uno por uno.

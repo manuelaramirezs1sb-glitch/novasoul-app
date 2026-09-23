@@ -258,6 +258,26 @@ const CIELO = {
                                 que: 'Cómo te presentas y qué cuerpo le pones al año.',
                                 momento: 'cambiar' }] }],
                   faltan: [], porque: '' } },
+  profecciones: { hay: true, edad: 28, ascendente: 'leo', ascendenteNombre: 'Leo',
+    anual: { casa: 5, signo: 'sagitario', signoNombre: 'Sagitario',
+             area: 'Lo que creas', que: 'Creación, juego, lo que sale de ti y te gusta.',
+             momento: 'descansar', clase: 'sucedente',
+             regente: 'jupiter', regenteNombre: 'Júpiter', regenteModerno: '',
+             regenteEn: { signo: 'piscis', signoNombre: 'Piscis', casa: 8, retrogrado: false },
+             desde: '2026-09-14', hasta: '2027-09-13' },
+    mes: { indice: 1, casa: 5, signo: 'sagitario', signoNombre: 'Sagitario',
+           area: 'Lo que creas', que: 'Creación, juego, lo que sale de ti y te gusta.',
+           momento: 'descansar', clase: 'sucedente',
+           desde: '2026-09-14', hasta: '2026-10-13', diasRestantes: 21 },
+    calendario: [5,6,7,8,9,10,11,12,1,2,3,4].map(function (c, k) {
+      const d = new Date(Date.UTC(2026, 8, 14 + k * 30));
+      const f = new Date(Date.UTC(2026, 8, 13 + (k + 1) * 30));
+      return { indice: k + 1, casa: c,
+               desde: d.toISOString().slice(0, 10), hasta: f.toISOString().slice(0, 10),
+               area: 'Área ' + c,
+               momento: ['descansar', 'aprender', 'cambiar'][c % 3], esAhora: k === 0 };
+    }),
+    porque: '' },
   casas: [], pensumPropuesto: [],
   medicion: { minimo: 8, conFecha: 30, promedio: 62,
     fases: [{ id: 'llena', nombre: 'Luna llena', momento: 'cambiar', n: 12, hechas: 5, pct: 42, faltan: 0 },
@@ -681,6 +701,25 @@ const FAMILY = {
     ok('Marte retrógrado se marca' + A, /\bR\b/.test(ci));
     ok('los tránsitos llevan su duración' + A, /91 días/.test(ci) && /3 días/.test(ci),
        (ci.match(/\d+ días?/g) || []).join(','));
+    /**
+     * «Algo que rija mi año», dicho en tres escalas. La profección es la
+     * única parte del cielo que es una cuenta y no una lectura, así que
+     * es la que tiene que estar siempre, aunque no haya cargado nada más.
+     */
+    ok('dice qué casa rige el año' + A,
+       /LO QUE RIGE TU AÑO/.test(ci) && /Casa 5 · Sagitario/.test(ci) &&
+       /Lo que creas/.test(ci));
+    ok('y quién manda ese año, y dónde está en SU carta' + A,
+       /QUIÉN MANDA ESTE AÑO/.test(ci) && /Júpiter/.test(ci) &&
+       /En tu carta está en Piscis, casa 8/.test(ci));
+    ok('el mes solar va aparte, con sus días' + A,
+       /ESTE MES SOLAR · 1 de 12/.test(ci) && /quedan 21 días/.test(ci));
+    ok('y se ve el año entero, mes a mes' + A,
+       (await p.$$eval('#ci-anio [style*="minmax(88px"] > div', e => e.length)) === 12);
+    ok('se dice que es cuenta, no lectura' + A,
+       /no es una lectura, es una cuenta/.test(ci) &&
+       /Ascendente en Leo/.test(ci));
+
     ok('la revolución solar sale con su ventana' + A,
        /28 años/.test(ci) && /14 sep/.test(ci) && /quedan 355 días/.test(ci));
     /**

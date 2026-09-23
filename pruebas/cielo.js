@@ -72,6 +72,7 @@ global.Date = class extends RealDate {
   + ' revolucionLectura_, pensumProponer_, soulPensumDesdeTransitos, CIELO_CASAS,' +
   ' soulCielo, soulCartaLeer, soulCartaGuardar, soulNacimientoGuardar,' +
   ' soulPensumGuardar, soulTransitoGuardar, soulRevolucionGuardar, cieloMedir_,' +
+  ' profecciones_, signoDeCasa_, CIELO_REGENTES,' +
   ' CIELO_CUERPOS, CIELO_MINIMO, LUNA_FASES };');
 const F = globalThis.__F;
 
@@ -279,6 +280,81 @@ igual('y Nova los agrupa como ella los piensa',
       [5, 2, 3, 4, 11],
       ['personal','social','generacional','angulo','punto']
         .map(gp => (cl0.cartaPorGrupo[gp] || []).length));
+
+/**
+ * ── LO QUE RIGE SU AÑO ──
+ *
+ * Aquí no se estima nada: es contar. Nació el 20/09/1995, hoy es el
+ * 23/09/2026, acaba de cumplir 31. Casa de profección = (31 % 12) + 1 = 8.
+ * Con Ascendente Capricornio, casas enteras, la 8 cae en LEO, y Leo lo
+ * rige el SOL — que en SU carta está en Virgo, casa 9.
+ *
+ * Si algún día esto empieza a dar otra cosa, es un error, no una lectura.
+ */
+console.log('\n── La profección: qué casa rige su año ──');
+sembrarHojas();
+F.soulCartaGuardar(SOCIA, { filas: F.soulCartaLeer(SOCIA, { texto: HORUS }).encontradas });
+F.soulNacimientoGuardar(SOCIA, { fecha: '1995-09-20', hora: '13:20',
+  lugar: 'Palmira, Valle del Cauca', zona: 'America/Bogota' });
+const CL = F.soulCielo(SOCIA, {});
+const P = CL.profecciones;
+ok('hay profección', P.hay === true, P.porque);
+igual('cumplió 31', 31, P.edad);
+igual('le toca la casa 8', 8, P.anual.casa);
+igual('que con Ascendente Capricornio cae en Leo', 'leo', P.anual.signo);
+igual('y a Leo lo rige el Sol', 'sol', P.anual.regente);
+igual('su Sol está en Virgo, casa 9 — por eso el año es SUYO',
+      ['virgo', 9], [P.anual.regenteEn.signo, P.anual.regenteEn.casa]);
+igual('la 8 es sucedente: el momento es descansar',
+      ['sucedente', 'descansar'], [P.anual.clase, P.anual.momento]);
+igual('y el año va de cumpleaños a cumpleaños',
+      ['2026-09-20', '2027-09-19'], [P.anual.desde, P.anual.hasta]);
+
+/** El mes solar arranca el día del cumpleaños, no el 1 de calendario. */
+igual('a tres días del cumpleaños va el primer mes solar', 1, P.mes.indice);
+igual('que empieza en la misma casa del año', 8, P.mes.casa);
+igual('del 20 de septiembre al 19 de octubre',
+      ['2026-09-20', '2026-10-19'], [P.mes.desde, P.mes.hasta]);
+igual('le quedan 27 días', 27, P.mes.diasRestantes);
+igual('el calendario trae los doce meses', 12, P.calendario.length);
+igual('avanzando una casa cada uno', [8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7],
+      P.calendario.map(m => m.casa));
+ok('marca en cuál está hoy',
+   P.calendario.filter(m => m.esAhora).length === 1 && P.calendario[0].esAhora === true);
+igual('y el último cierra justo el día antes del cumpleaños',
+      '2027-09-19', P.calendario[11].hasta);
+ok('los doce tramos se encadenan sin huecos ni solapes',
+   P.calendario.every((m, i) => i === 0 ||
+     new Date(m.desde) - new Date(P.calendario[i - 1].hasta) === 86400000),
+   JSON.stringify(P.calendario.map(m => m.desde + '→' + m.hasta)));
+
+/** La vuelta de los doce años: a los 12 se vuelve a la casa 1. */
+[[0, 1], [11, 12], [12, 1], [24, 1], [31, 8]].forEach(function (par) {
+  igual('a los ' + par[0] + ' años, casa ' + par[1], par[1],
+        F.profecciones_(F.soulCielo(SOCIA, {}).carta,
+          '1995-09-20', '2026-09-23', { edad: par[0], desde: '2026-09-20',
+            hasta: '2027-09-19' }).anual.casa);
+});
+igual('las casas enteras cuentan desde el Ascendente',
+      ['capricornio', 'acuario', 'sagitario'],
+      [F.signoDeCasa_('capricornio', 1), F.signoDeCasa_('capricornio', 2),
+       F.signoDeCasa_('capricornio', 12)]);
+ok('Escorpio dice su regente tradicional y también el moderno',
+   F.CIELO_REGENTES.escorpio.cuerpo === 'marte' &&
+   F.CIELO_REGENTES.escorpio.moderno === 'pluton');
+
+/** Sin Ascendente no hay casas enteras. Se dice, no se inventa. */
+sembrarHojas();
+F.soulNacimientoGuardar(SOCIA, { fecha: '1995-09-20' });
+F.soulCartaGuardar(SOCIA, { filas: [{ cuerpo: 'sol', signo: 'virgo', casa: 9 }] });
+const sinAsc = F.soulCielo(SOCIA, {}).profecciones;
+ok('sin Ascendente no hay profección', sinAsc.hay === false);
+ok('y dice por qué', /Ascendente/.test(sinAsc.porque), sinAsc.porque);
+sembrarHojas();
+F.soulCartaGuardar(SOCIA, { filas: F.soulCartaLeer(SOCIA, { texto: HORUS }).encontradas });
+const sinNac = F.soulCielo(SOCIA, {}).profecciones;
+ok('sin fecha de nacimiento tampoco', sinNac.hay === false);
+ok('y también dice por qué', /nacimiento/.test(sinNac.porque), sinNac.porque);
 
 console.log('\n── Guardar la carta ──');
 sembrarHojas();

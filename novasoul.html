@@ -566,6 +566,7 @@ textarea,input,select,button{font-family:inherit;}
           </div>
         </div>
         <div id="ci-hoy"></div>
+        <div id="ci-anio"></div>
         <div id="ci-semana"></div>
         <div class="g14">
           <div style="display:flex;flex-direction:column;gap:18px;">
@@ -900,7 +901,7 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-23 · b611';
+const VERSION_PANTALLA = '2026-09-23 · 595f';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
@@ -2006,6 +2007,9 @@ function pintarCielo() {
       '</div>' +
     '</div>';
 
+  // ── Lo que rige el año y el mes ──
+  document.getElementById('ci-anio').innerHTML = bloqueProfeccion(CI.profecciones);
+
   // ── La semana, día por día ──
   document.getElementById('ci-semana').innerHTML =
     '<div class="card"><div class="card-h"><span class="card-lbl">QUÉ MOMENTO ES CADA DÍA</span>' +
@@ -2243,6 +2247,104 @@ async function guardarCarta() {
  * mismos datos dice siempre lo mismo, y eso es lo que permite que ella
  * la discuta y la corrija. Y cuando falta algo para decir más, lo dice.
  */
+/* ─── Lo que rige el año y el mes ───
+ *
+ * Esto es lo único del cielo que es aritmética y no lectura: una casa
+ * por año cumplido, una casa por mes solar. Por eso puede estar en
+ * pantalla sin que ella cargue nada más que su Ascendente y su fecha
+ * de nacimiento, y por eso siempre da lo mismo.
+ */
+function bloqueProfeccion(P) {
+  if (!P) return '';
+  if (!P.hay) {
+    return '<div class="card"><div class="card-h"><span class="card-lbl">LO QUE RIGE TU AÑO</span></div>' +
+      '<p class="card-p">' + esc(P.porque || '') + '</p>' +
+      '<div class="row-btns" style="margin-top:12px;">' +
+      '<button class="card-cta" onclick="abrirCarta()">Completar mis datos</button></div></div>';
+  }
+
+  const A = P.anual, M = P.mes;
+  const col = function (m) { return MOM_COLOR[m] || 'var(--ink)'; };
+  const nomMom = function (m) { return ((CI.momentos || {})[m] || {}).nombre || ''; };
+
+  let h = '<div class="card-amber" style="margin-bottom:18px;">' +
+    '<div class="card-h"><span class="card-lbl-amber">LO QUE RIGE TU AÑO</span>' +
+    '<span class="card-lbl-amber">' + esc(fcorta(A.desde)) + ' – ' + esc(fcorta(A.hasta)) + '</span></div>' +
+    '<div class="g2" style="align-items:start;">';
+
+  // ── EL AÑO ──
+  h += '<div>' +
+    '<div class="kpi-s">A LOS ' + P.edad + ' AÑOS TE TOCA</div>' +
+    '<div style="font:600 32px/1.1 \'Fraunces\',serif;color:var(--ink);margin:8px 0 4px;">' +
+      'Casa ' + A.casa + ' · ' + esc(A.signoNombre) + '</div>' +
+    '<div style="font:600 15px/1.3 \'DM Sans\';color:var(--ink);">' + esc(A.area) + '</div>' +
+    '<p class="card-p" style="margin-top:6px;">' + esc(A.que) + '</p>' +
+    '<div class="kcard-m" style="margin-top:12px;">' +
+      '<span class="chip" style="color:' + col(A.momento) + ';">el año pide ' +
+        esc(nomMom(A.momento)) + '</span>' +
+      '<span class="chip">casa ' + esc(A.clase) + '</span></div>';
+
+  if (A.regenteNombre) {
+    h += '<div style="border-top:1px solid var(--amber-line);padding-top:12px;margin-top:14px;">' +
+      '<div class="card-lbl-amber">QUIÉN MANDA ESTE AÑO</div>' +
+      '<div style="font:600 19px/1.25 \'Fraunces\',serif;color:var(--ink);margin:6px 0;">' +
+        esc(A.regenteNombre) + '</div>' +
+      (A.regenteEn
+        ? '<p class="card-p">En <strong>tu</strong> carta está en ' + esc(A.regenteEn.signoNombre) +
+          (A.regenteEn.casa ? ', casa ' + A.regenteEn.casa : '') +
+          (A.regenteEn.retrogrado ? ', retrógrado' : '') + '. Ahí es donde se te va a notar el año.</p>'
+        : '<p class="card-p">Todavía no tengo ' + esc(A.regenteNombre) + ' en tu carta, así que ' +
+          'puedo decirte qué casa rige el año pero no dónde se te va a notar.</p>') +
+      (A.regenteModerno
+        ? '<div class="kpi-s" style="margin-top:6px;">Por tradición lo rige ' +
+          esc(A.regenteNombre) + '; en lectura moderna se le suma ' + esc(A.regenteModerno) + '.</div>'
+        : '') +
+      '</div>';
+  }
+  h += '</div>';
+
+  // ── EL MES ──
+  h += '<div>' +
+    '<div class="kpi-s">ESTE MES SOLAR · ' + M.indice + ' de 12</div>' +
+    '<div style="font:600 32px/1.1 \'Fraunces\',serif;color:var(--ink);margin:8px 0 4px;">' +
+      'Casa ' + M.casa + ' · ' + esc(M.signoNombre) + '</div>' +
+    '<div style="font:600 15px/1.3 \'DM Sans\';color:var(--ink);">' + esc(M.area) + '</div>' +
+    '<p class="card-p" style="margin-top:6px;">' + esc(M.que) + '</p>' +
+    '<div class="kcard-m" style="margin-top:12px;">' +
+      '<span class="chip" style="color:' + col(M.momento) + ';">el mes pide ' +
+        esc(nomMom(M.momento)) + '</span>' +
+      '<span class="chip hoy">' + esc(fcorta(M.desde)) + ' – ' + esc(fcorta(M.hasta)) + '</span>' +
+      '<span class="chip horas">quedan ' + M.diasRestantes +
+        (M.diasRestantes === 1 ? ' día' : ' días') + '</span></div>' +
+    '<p class="card-p" style="margin-top:12px;">El mes solar cuenta desde tu cumpleaños, no desde ' +
+      'el 1° del calendario. Por eso empieza un ' + Number(M.desde.split('-')[2]) + '.</p>' +
+    '</div>';
+
+  h += '</div>';   // /g2
+
+  // ── Los doce meses de un vistazo ──
+  h += '<div style="border-top:1px solid var(--amber-line);padding-top:14px;margin-top:16px;">' +
+    '<div class="card-lbl-amber" style="margin-bottom:10px;">TU AÑO COMPLETO, MES A MES</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:8px;">' +
+    P.calendario.map(function (m) {
+      return '<div style="border:1px solid ' + (m.esAhora ? col(m.momento) : 'var(--amber-line)') +
+        ';border-radius:12px;padding:9px 10px;' +
+        (m.esAhora ? 'box-shadow:inset 0 0 0 1px ' + col(m.momento) + ';' : '') + '">' +
+        '<div class="kpi-s">' + esc(fcorta(m.desde)) + '</div>' +
+        '<div style="font:600 17px/1.2 \'Fraunces\',serif;color:var(--ink);margin:3px 0;">' +
+          'C' + m.casa + '</div>' +
+        '<div style="font:600 10.5px/1.25 \'DM Sans\';color:var(--mut3);">' + esc(m.area) + '</div>' +
+        '<div style="font:600 10px/1.2 \'DM Sans\';color:' + col(m.momento) + ';margin-top:4px;">' +
+          esc(nomMom(m.momento)) + '</div></div>';
+    }).join('') + '</div></div>';
+
+  h += '<p class="card-p" style="margin-top:14px;">Esto no es una lectura, es una cuenta: una casa ' +
+    'por cada año cumplido y una por cada mes solar, contadas desde tu Ascendente en ' +
+    esc(P.ascendenteNombre) + '. Da siempre lo mismo, hoy y dentro de diez años.</p>';
+
+  return h + '</div>';
+}
+
 function bloqueLectura(rv) {
   const L = rv.lectura;
   if (!L || !L.hay) {

@@ -240,10 +240,25 @@ ok('el plan manda sobre el permiso: sin módulo no basta el permiso',
 console.log('\nEL DISPARADOR DEL LUNES');
 const sem = F.TRABAJOS.filter(t => t.fn === 'semaforoLunes')[0];
 ok('existe y es semanal', !!sem && sem.dia === 'MONDAY');
+/**
+ * El semáforo tiene que correr después de los TRES que lo alimentan, y
+ * se nombran uno por uno a propósito.
+ *
+ * Antes esto decía «después de todos los diarios», que es una regla más
+ * ancha de lo que hace falta: el primer trabajo diario que no tuviera
+ * nada que ver con la tienda —el aviso de cobros de ella, por ejemplo—
+ * rompía la prueba sin que hubiera nada roto. Lo que importa es que el
+ * gasto de pauta esté adentro y convertido cuando el semáforo juzgue.
+ */
+const ALIMENTAN = ['actualizarTasasDiario', 'leerMetaDiario', 'revisarAlarmasTodos'];
+const previos = F.TRABAJOS.filter(t => ALIMENTAN.indexOf(t.fn) !== -1);
+ok('los tres que lo alimentan siguen existiendo y son diarios',
+   previos.length === 3 && previos.every(t => !t.dia),
+   previos.map(t => t.fn).join(','));
 ok('corre después de las tasas, Meta y las alarmas',
-   sem.hora > Math.max.apply(null, F.TRABAJOS.filter(t => !t.dia).map(t => t.hora)),
-   'semáforo ' + (sem && sem.hora) + ' vs diarios ' +
-   F.TRABAJOS.filter(t => !t.dia).map(t => t.hora).join(','));
+   sem.hora > Math.max.apply(null, previos.map(t => t.hora)),
+   'semáforo ' + (sem && sem.hora) + ' vs ' +
+   previos.map(t => t.fn + '@' + t.hora).join(', '));
 
 console.log(fallas ? '\n' + fallas + ' FALLA(S)\n' : '\nTodo pasa.\n');
 process.exit(fallas ? 1 : 0);

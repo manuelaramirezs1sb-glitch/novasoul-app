@@ -911,6 +911,153 @@ function soulPensumDesdeTransitos(s, p) {
   return { ok: true, creadas: creadas, repetidas: repetidas };
 }
 
+// ─── LO QUE RIGE EL AÑO Y EL MES ─────────────────────────────
+
+/**
+ * ┌─ POR QUÉ LAS PROFECCIONES Y NO OTRA COSA ──────────────────┐
+ * │                                                            │
+ * │ Ella pidió «algo que rija mi año», en tiempos distintos.   │
+ * │ Las profecciones son la única técnica que da eso y que     │
+ * │ además es ARITMÉTICA PURA: una casa por año de vida, una   │
+ * │ casa por mes. No hace falta ninguna efeméride, no hay nada │
+ * │ que adivinar, y con los mismos datos da siempre lo mismo.  │
+ * │                                                            │
+ * │ Así queda su marco en tres escalas:                        │
+ * │   EL AÑO   la casa de profección + su revolución solar     │
+ * │   EL MES   la casa que le toca a ese mes                   │
+ * │   EL DÍA   la luna y la temporada de su pensum             │
+ * │                                                            │
+ * │ Se usan CASAS ENTERAS —un signo, una casa— porque es como  │
+ * │ se hacen las profecciones desde siempre, y porque no       │
+ * │ depende de la hora exacta de nacimiento.                   │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+
+/** Los regentes tradicionales. Donde el moderno difiere, se dice. */
+const CIELO_REGENTES = {
+  aries:       { cuerpo: 'marte',    moderno: '' },
+  tauro:       { cuerpo: 'venus',    moderno: '' },
+  geminis:     { cuerpo: 'mercurio', moderno: '' },
+  cancer:      { cuerpo: 'luna',     moderno: '' },
+  leo:         { cuerpo: 'sol',      moderno: '' },
+  virgo:       { cuerpo: 'mercurio', moderno: '' },
+  libra:       { cuerpo: 'venus',    moderno: '' },
+  escorpio:    { cuerpo: 'marte',    moderno: 'pluton' },
+  sagitario:   { cuerpo: 'jupiter',  moderno: '' },
+  capricornio: { cuerpo: 'saturno',  moderno: '' },
+  acuario:     { cuerpo: 'saturno',  moderno: 'urano' },
+  piscis:      { cuerpo: 'jupiter',  moderno: 'neptuno' },
+};
+
+/** Qué signo cae en cada casa, contando de a uno desde el Ascendente. */
+function signoDeCasa_(signoAsc, casa) {
+  const i = CIELO_SIGNOS.indexOf(norm(signoAsc));
+  if (i === -1 || !(casa >= 1 && casa <= 12)) return '';
+  return CIELO_SIGNOS[(i + casa - 1) % 12];
+}
+
+function casaInfo_(n) {
+  return CIELO_CASAS.filter(function (c) { return c.n === n; })[0] || null;
+}
+
+/**
+ * La casa que rige el año y la que rige el mes.
+ *
+ * Una casa por año cumplido: a los 0 manda la 1, a los 12 vuelve a la 1.
+ * Dentro del año, una casa por mes solar, empezando por la del año.
+ */
+function profecciones_(carta, nacimientoISO, hoyISO, ventana) {
+  const asc = (carta || []).filter(function (c) { return c.cuerpo === 'ascendente'; })[0];
+  if (!asc || !asc.signo) {
+    return { hay: false,
+      porque: 'Para saber qué casa rige tu año necesito tu Ascendente, y todavía no ' +
+              'está en tu carta.' };
+  }
+  if (!ventana) {
+    return { hay: false,
+      porque: 'Necesito tu fecha de nacimiento para contar los años cumplidos.' };
+  }
+
+  const edad = ventana.edad;
+  const casaAnual = (edad % 12) + 1;
+  const signoAnual = signoDeCasa_(asc.signo, casaAnual);
+  const reg = CIELO_REGENTES[signoAnual] || null;
+  const regenteEn = reg
+    ? (carta || []).filter(function (c) { return c.cuerpo === reg.cuerpo; })[0] || null
+    : null;
+
+  /**
+   * El mes solar. Doce tramos iguales entre cumpleaños y cumpleaños —
+   * no meses de calendario, que no empiezan el día de su cumpleaños y
+   * darían un corte distinto cada año.
+   */
+  const largo = Math.round((new Date(masDias_(ventana.hasta, 1) + 'T00:00:00Z') -
+                            new Date(ventana.desde + 'T00:00:00Z')) / 86400000);
+  const tramo = largo / 12;
+  const pasados = Math.round((new Date(hoyISO + 'T00:00:00Z') -
+                              new Date(ventana.desde + 'T00:00:00Z')) / 86400000);
+  let idx = Math.floor(pasados / tramo);
+  if (idx < 0) idx = 0;
+  if (idx > 11) idx = 11;
+
+  const casaMes = ((casaAnual - 1 + idx) % 12) + 1;
+  const desdeMes = masDias_(ventana.desde, Math.round(idx * tramo));
+  const hastaMes = masDias_(ventana.desde, Math.round((idx + 1) * tramo) - 1);
+
+  const cA = casaInfo_(casaAnual), cM = casaInfo_(casaMes);
+  const nombreSigno = function (s) {
+    const i = CIELO_SIGNOS.indexOf(s);
+    return i === -1 ? '' : CIELO_SIGNOS_NOMBRE[i];
+  };
+
+  return {
+    hay: true, edad: edad, ascendente: asc.signo, ascendenteNombre: nombreSigno(asc.signo),
+    anual: {
+      casa: casaAnual, signo: signoAnual, signoNombre: nombreSigno(signoAnual),
+      area: cA ? cA.area : '', que: cA ? cA.que : '',
+      momento: cA ? cA.momento : '', clase: cA ? cA.clase : '',
+      regente: reg ? reg.cuerpo : '',
+      regenteNombre: reg ? CIELO_CUERPOS[reg.cuerpo].nombre : '',
+      regenteModerno: reg && reg.moderno ? CIELO_CUERPOS[reg.moderno].nombre : '',
+      // Dónde está ese regente en SU carta: es lo que vuelve el año suyo
+      // y no el de cualquiera que tenga la misma edad.
+      regenteEn: regenteEn
+        ? { signo: regenteEn.signo, signoNombre: regenteEn.signoNombre,
+            casa: regenteEn.casa, retrogrado: regenteEn.retrogrado }
+        : null,
+      desde: ventana.desde, hasta: ventana.hasta,
+    },
+    mes: {
+      indice: idx + 1, casa: casaMes,
+      signo: signoDeCasa_(asc.signo, casaMes),
+      signoNombre: nombreSigno(signoDeCasa_(asc.signo, casaMes)),
+      area: cM ? cM.area : '', que: cM ? cM.que : '',
+      momento: cM ? cM.momento : '', clase: cM ? cM.clase : '',
+      desde: desdeMes, hasta: hastaMes,
+      diasRestantes: Math.round((new Date(hastaMes + 'T00:00:00Z') -
+                                 new Date(hoyISO + 'T00:00:00Z')) / 86400000) + 1,
+    },
+    // Los doce meses del año, para poder ver el año entero de una.
+    calendario: (function () {
+      const out = [];
+      for (let k = 0; k < 12; k++) {
+        const c = ((casaAnual - 1 + k) % 12) + 1;
+        const info = casaInfo_(c);
+        out.push({
+          indice: k + 1, casa: c,
+          desde: masDias_(ventana.desde, Math.round(k * tramo)),
+          hasta: masDias_(ventana.desde, Math.round((k + 1) * tramo) - 1),
+          area: info ? info.area : '', momento: info ? info.momento : '',
+          esAhora: k === idx,
+        });
+      }
+      return out;
+    })(),
+    porque: '',
+  };
+}
+
 // ─── SI LE FUNCIONÓ A ELLA ───────────────────────────────────
 
 /**
@@ -1093,6 +1240,12 @@ function soulCielo(s, p) {
         revGuardada && revGuardada.planetas ? revGuardada.planetas : []),
     }) : null,
     casas: CIELO_CASAS,
+    momentos_: CIELO_MOMENTOS,
+    /**
+     * Lo que rige el año y el mes. Aritmética pura: una casa por año
+     * cumplido y una por mes solar, sin efemérides de por medio.
+     */
+    profecciones: profecciones_(carta, nac.fecha, hoy, rev),
     // Las temporadas que se podrían armar solas desde sus tránsitos.
     pensumPropuesto: pensumProponer_(uid),
     medicion: cieloMedir_(uid, hoy),
