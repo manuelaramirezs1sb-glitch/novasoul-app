@@ -364,17 +364,27 @@ input.li:focus{border-color:var(--acc-d);}
    ──────────────────────────────────────────────────── */
 .tsplit{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);
         gap:16px;align-items:start;}
-.tbl{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.tbl{display:flex;flex-direction:column;gap:7px;min-width:0;}
 .thead{display:grid;grid-template-columns:var(--cols);gap:12px;padding:0 13px 7px;
        font:600 9.5px/1 'DM Sans';letter-spacing:.9px;color:var(--t-mut3);
        text-transform:uppercase;}
+/* Cada pedido tiene que leerse como UNO, no como un renglón de una
+   plancha. Tres cosas lo separan: el aire entre filas, una sombra propia
+   que lo levanta del fondo, y la franja gruesa del color de su estado.
+   Con solo la franja se veía plano — que es justo lo que ella dijo. */
 .trow{display:grid;grid-template-columns:var(--cols);gap:12px;align-items:center;
-      background:var(--s-bg);border:1px solid var(--s-line2);border-left:3px solid var(--fila,var(--s-line4));
-      border-radius:10px;padding:11px 13px;cursor:pointer;min-width:0;
-      transition:border-color .12s,background .12s;}
-.trow:hover{background:var(--s-bg2,var(--s-bg));border-color:var(--s-line4);border-left-color:var(--fila,var(--s-line4));}
+      background:var(--s-bg);border:1px solid var(--s-line2);
+      border-left:5px solid var(--fila,var(--s-line4));
+      border-radius:12px;padding:14px 16px;cursor:pointer;min-width:0;
+      box-shadow:0 1px 2px rgba(0,0,0,.05);
+      transition:border-color .12s,box-shadow .14s,transform .12s;}
+.trow:hover{border-color:var(--s-line4);border-left-color:var(--fila,var(--s-line4));
+            box-shadow:0 3px 10px rgba(0,0,0,.09);transform:translateY(-1px);}
 .trow.on{border-color:var(--acc-d);border-left-color:var(--fila,var(--acc-d));
-         box-shadow:inset 0 0 0 1px var(--acc-d);}
+         box-shadow:0 3px 14px rgba(0,0,0,.12);}
+/* Se probó una franja de color al pie de cada fila y se quitó: con el
+   texto encima se leía como un subrayado, no como el estado. La franja
+   gruesa de la izquierda ya hace ese trabajo sin ambigüedad. */
 .trow:focus-visible{outline:2px solid var(--acc-d);outline-offset:2px;}
 .tc{min-width:0;font:500 12px/1.35 'DM Sans';color:var(--t-mut);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -485,6 +495,11 @@ input.li:focus{border-color:var(--acc-d);}
 .isub{font:500 11px/1.4 'DM Sans';color:var(--t-mut);margin-top:3px;}
 .itog{font:500 11px/1 'DM Sans';color:var(--acc-d);white-space:nowrap;}
 .inv-dtl{display:none;flex-direction:column;gap:11px;border-top:1px solid var(--s-line2);margin-top:12px;padding-top:12px;}
+/* Un campo cuya columna todavía no existe en la hoja. Se ve apagado y
+   dice por qué, en vez de dejarse escribir y perder lo escrito. */
+.sin-col{opacity:.55;}
+.sin-col .inv-lbl,.sin-col .preg-q{color:#a8563a;}
+.sin-col .inv-inp,.sin-col .narea{background:var(--s-dark2);cursor:not-allowed;}
 .irow.open .inv-dtl{display:flex;}
 .inv-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .inv-field{display:flex;flex-direction:column;gap:5px;}
@@ -4103,8 +4118,14 @@ function pintarNovedadesReales(filas) {
       'style="--cols:' + COLS + ';--fila:' + (urg ? '#b8322f' : col[0]) + '" ' +
       'tabindex="0" role="button" onclick="abrirNovedad(' + i + ')" ' +
       'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();abrirNovedad(' + i + ');}">' +
-      '<div class="tc tc-a">' + esc(n.pedido_id || n.id) +
-        '<div class="tc-id">' + esc(n.fuente || '') + ' · ' + fechaCorta(n.fecha) + '</div></div>' +
+      /**
+       * Primero la clienta, después el código. La bandeja se recorre
+       * buscando a quién llamar, no buscando un número de guía.
+       */
+      '<div class="tc tc-a">' +
+        esc((pedidoDeNovedad(n) || {}).cliente || n.pedido_id || n.id) +
+        '<div class="tc-id">' + esc(n.pedido_id || '') + ' · ' +
+        fechaCorta(n.fecha) + '</div></div>' +
       '<div class="tc" title="' + esc(n.motivo || '') + '">' +
         esc(n.motivo || n.tipo || 'Sin motivo') + '</div>' +
       '<div class="tc">' + esc(n.grupo || '—') + '</div>' +
@@ -4124,6 +4145,36 @@ function pintarNovedadesReales(filas) {
 }
 
 let NOVS_VISTA = [], NOV_SEL_ID = '', NOV_VECES = {};
+
+/**
+ * ── DE QUÉ CLIENTA ES ESTA NOVEDAD ──
+ *
+ * La hoja `Novedades` no guarda nombre, ni teléfono, ni dirección: solo
+ * el `pedido_id`. Así llega de las plataformas. Por eso la bandeja salía
+ * con códigos y motivos y nada con lo que llamar a nadie — y una novedad
+ * sin forma de contactar a la clienta no se puede gestionar, que es lo
+ * único para lo que existe la bandeja.
+ *
+ * Se cruza contra los pedidos ya cargados. El id viene escrito de tres
+ * formas distintas según la plataforma, así que se prueban las tres.
+ */
+function pedidoDeNovedad(n) {
+  const clave = String(n.pedido_id || '').trim();
+  if (!clave) return null;
+  const k = clave.toLowerCase();
+  const lista = PEDS_REALES || [];
+  for (let i = 0; i < lista.length; i++) {
+    const p = lista[i];
+    if (String(p.id || '').toLowerCase() === k) return p;
+    if (String(p.id_externo || '').toLowerCase() === k) return p;
+    if ((String(p.fuente || '') + '-' + String(p.id_externo || '')).toLowerCase() === k) {
+      return p;
+    }
+  }
+  return null;
+}
+
+
 
 function abrirNovedad(i) {
   const n = NOVS_VISTA[i];
@@ -4162,8 +4213,10 @@ function pintarPanelNovedad() {
 
   cont.innerHTML = '<div class="tpanel">' +
     '<div class="tpanel-h">' +
-      '<div><div class="tpanel-t">' + esc(n.pedido_id || n.id) + '</div>' +
-        '<div class="tc-id">' + esc(n.fuente || '') + ' · ' + fechaCorta(n.fecha) +
+      '<div><div class="tpanel-t">' +
+        esc((pedidoDeNovedad(n) || {}).cliente || n.pedido_id || n.id) + '</div>' +
+        '<div class="tc-id">' + esc(n.pedido_id || '') + ' · ' +
+        esc(n.fuente || '') + ' · ' + fechaCorta(n.fecha) +
         ' · ' + veces + '</div></div>' +
       '<span class="tpanel-x" onclick="NOV_SEL_ID=\'\';pintarPanelNovedad();' +
         'document.querySelectorAll(\'#novlist .trow\').forEach(function(r){r.classList.remove(\'on\');});">CERRAR ✕</span>' +
@@ -4172,6 +4225,50 @@ function pintarPanelNovedad() {
       esc(n.estado || 'abierta') + '</span>' +
       (fin ? '&ensp;<span class="tc-id">Terminó ' + esc(fin).toLowerCase() + '</span>' : '') +
     '</div>' +
+
+    /**
+     * ── CON QUÉ LLAMARLA ──
+     * Va arriba de todo, antes del motivo: quien abre una novedad lo
+     * primero que necesita es el teléfono, no la descripción.
+     */
+    (function () {
+      const ped = pedidoDeNovedad(n);
+      if (!ped) {
+        return '<div class="inv-aviso" style="margin:0;">No encontré el pedido ' +
+          esc(n.pedido_id || '') + ' entre los que tengo cargados, así que no ' +
+          'puedo darte el teléfono ni la dirección. Búscalo en Pedidos con ese ' +
+          'código.</div>';
+      }
+      const tel = ped.telefono || ped.telefono_norm || '';
+      const tel2 = ped.telefono_2 || ped.telefono_2_norm || '';
+      const limpio = String(tel).replace(/[^\d+]/g, '');
+      return '<div class="tpanel-g" style="border-top:0;padding-top:0;">' +
+        '<div><div class="dlbl">CLIENTA</div><div class="dtxt">' +
+          esc(ped.cliente || 'Sin nombre') + '</div></div>' +
+        '<div><div class="dlbl">TELÉFONO</div><div class="dtxt">' +
+          (tel
+            ? '<a href="tel:' + esc(limpio) + '">' + esc(tel) + '</a>' +
+              '<br><a href="https://wa.me/' + esc(limpio.replace(/^\+/, '')) +
+              '" target="_blank" rel="noopener" ' +
+              'style="font-size:11.5px;">Escribirle por WhatsApp →</a>'
+            : '—') +
+          (tel2 ? '<br><span style="color:var(--t-mut2);">2º: ' + esc(tel2) + '</span>' : '') +
+          '</div></div>' +
+        '<div style="grid-column:1/-1"><div class="dlbl">DIRECCIÓN</div>' +
+          '<div class="dtxt">' + esc(ped.direccion || '—') +
+          (ped.ciudad ? ' · ' + esc(ped.ciudad) : '') + '</div></div>' +
+        '<div><div class="dlbl">PRODUCTO</div><div class="dtxt">' +
+          esc(ped.producto || '—') + '</div></div>' +
+        '<div><div class="dlbl">VALOR</div><div class="dtxt">' +
+          (STORES[ST] || STORES.ec).sym + ' ' +
+          Math.round(Number(ped.valor) || 0).toLocaleString(LOC()) + '</div></div>' +
+        '<div><div class="dlbl">TRANSPORTADORA</div><div class="dtxt">' +
+          esc(ped.transportadora || '—') + (ped.guia ? '<br>' + esc(ped.guia) : '') +
+          '</div></div>' +
+        '<div><div class="dlbl">ESTADO DEL PEDIDO</div><div class="dtxt">' +
+          esc(fichaEstado(ped)[2]) + '</div></div>' +
+        '</div>';
+    })() +
 
     '<div class="tpanel-g">' +
       '<div style="grid-column:1/-1"><div class="dlbl">QUÉ PASÓ</div><div class="dtxt">' +
@@ -5943,12 +6040,32 @@ function escalon(p, f) {
 function editorFicha(p) {
   const f = p.ficha || {};
   const esNueva = !p.ficha;
-  const campo = function (id, lbl, valor, tipo, ph) {
+  /**
+   * ── UN CAMPO QUE NO SE PUEDE GUARDAR NO SE DEJA ESCRIBIR ──
+   *
+   * Antes: si la hoja no tenía la columna, el campo se pintaba igual,
+   * `leerFicha()` lo descartaba en silencio y el guardado respondía
+   * «Ficha actualizada». Ella escribía la landing, le daba guardar,
+   * leía que se guardó, y no se guardaba. Eso no es un campo que falla:
+   * es un campo que miente.
+   *
+   * Ahora se desactiva, se marca y se dice en el propio campo qué
+   * hacer. Un aviso arriba de todo no sirve: ella está mirando la
+   * casilla, no la cabecera.
+   */
+  const hayCol = function (col) {
+    return !COLS_INV.length || COLS_INV.indexOf(col) !== -1;
+  };
+  const campo = function (id, lbl, valor, tipo, ph, col) {
     const v = (valor === 0 || valor) ? String(valor) : '';
-    return '<div class="inv-field"><div class="inv-lbl">' + lbl + '</div>' +
+    const existe = hayCol(col || id);
+    return '<div class="inv-field' + (existe ? '' : ' sin-col') + '">' +
+      '<div class="inv-lbl">' + lbl + (existe ? '' : ' · no se puede guardar') + '</div>' +
       '<input class="inv-inp" id="fi-' + id + '" type="' + (tipo || 'text') + '" ' +
       (tipo === 'number' ? 'inputmode="decimal" min="0" ' : '') +
-      'value="' + esc(v) + '" placeholder="' + esc(ph || '') + '"></div>';
+      (existe ? '' : 'disabled title="Tu hoja todavía no tiene esta columna" ') +
+      'value="' + esc(v) + '" placeholder="' +
+      esc(existe ? (ph || '') : 'Falta la columna en tu hoja') + '"></div>';
   };
 
   const chips = CATEGORIAS.map(function (c) {
@@ -6001,14 +6118,21 @@ function editorFicha(p) {
           escalon(p, f) + '</div>'
         : '') +
     '</div>' +
-    '<div class="inv-field"><div class="inv-lbl">LANDING · la página desde donde se vende</div>' +
+    '<div class="inv-field' + (hayCol('landing') ? '' : ' sin-col') + '">' +
+      '<div class="inv-lbl">LANDING · la página desde donde se vende' +
+      (hayCol('landing') ? '' : ' · no se puede guardar') + '</div>' +
       '<input class="inv-inp" id="fi-landing" type="url" inputmode="url" ' +
-      'placeholder="https://tutienda.com/producto" value="' + esc(f.landing || '') + '">' +
+      (hayCol('landing') ? '' : 'disabled ') +
+      'placeholder="' + (hayCol('landing') ? 'https://tutienda.com/producto'
+                                           : 'Falta la columna en tu hoja') +
+      '" value="' + esc(f.landing || '') + '">' +
       (f.landing
         ? '<a class="cfg-probar" href="' + esc(f.landing) + '" target="_blank" ' +
           'rel="noopener noreferrer">Abrirla →</a>'
         : '') + '</div>' +
-    '<div><div class="inv-lbl" style="margin-bottom:6px;">QUÉ ES ESTE PRODUCTO</div>' +
+    '<div' + (hayCol('categoria') ? '' : ' class="sin-col"') + '>' +
+      '<div class="inv-lbl" style="margin-bottom:6px;">QUÉ ES ESTE PRODUCTO' +
+      (hayCol('categoria') ? '' : ' · no se puede guardar') + '</div>' +
       '<div class="nstates" id="fi-cats">' + chips + '</div></div>' +
     /**
      * Cada respuesta en su caja, con la pregunta encima.
@@ -6020,9 +6144,14 @@ function editorFicha(p) {
     '<div><div class="inv-lbl" style="margin-bottom:6px;">' +
       'LO QUE SIEMPRE PREGUNTAN</div>' +
       '<div class="preg-grid">' + PREGUNTAS.map(function (q, i) {
-        return '<div class="preg-f"><div class="preg-q">' + esc(q) + '</div>' +
+        const puede = hayCol('resp_' + (i + 1));
+        return '<div class="preg-f' + (puede ? '' : ' sin-col') + '">' +
+          '<div class="preg-q">' + esc(q) +
+          (puede ? '' : ' · no se puede guardar') + '</div>' +
           '<textarea class="narea" id="fi-resp' + (i + 1) + '" ' +
-          'placeholder="La respuesta, como se la dirías a la clienta.">' +
+          (puede ? '' : 'disabled ') +
+          'placeholder="' + (puede ? 'La respuesta, como se la dirías a la clienta.'
+                                   : 'Falta la columna en tu hoja') + '">' +
           esc((f.respuestas || [])[i] || '') + '</textarea></div>';
       }).join('') + '</div></div>' +
     '<div class="inv-field"><div class="inv-lbl">NOTA</div>' +
@@ -6145,11 +6274,35 @@ async function guardarFicha() {
       r = await api('crear', { entidad: 'Inventario', datos: d, tienda: ST });
     }
     if (!r.ok) { errorFicha(r.error || 'No se pudo guardar.'); return; }
+    /**
+     * El mensaje va DESPUÉS de repintar, no antes.
+     *
+     * `cargarProductos()` vuelve a dibujar la ficha entera, y con ella
+     * el `#fi-error` vacío: escribir el aviso antes era escribirlo en un
+     * elemento que se iba a tirar medio segundo después. Quien guardaba
+     * a medias no veía ni rastro de por qué.
+     */
     if (r.rechazados && r.rechazados.length) {
-      // Se guardó lo demás, pero hay que decir qué no entró y por qué
-      errorFicha('Se guardó lo demás, pero esto no: ' + r.rechazados.join(' · '));
       showToast('Guardado a medias');
       await cargarProductos();
+      errorFicha('Se guardó lo demás, pero esto no: ' + r.rechazados.join(' · '));
+      return;
+    }
+    /**
+     * Lo que ella escribió y NO se mandó.
+     *
+     * `leerFicha()` deja fuera los campos cuya columna no existe. Eso
+     * está bien —mandarlos solo produciría un rechazo— pero decir
+     * «Ficha actualizada» después de descartarlos es mentir: ella
+     * escribió una landing y se le respondió que quedó guardada.
+     */
+    const perdidos = camposQueFaltan();
+    if (perdidos.length) {
+      showToast('Guardado, pero faltan columnas');
+      await cargarProductos();
+      errorFicha('Se guardó lo que cabe. Tu hoja todavía no tiene columna para: ' +
+                 perdidos.join(', ') + '. Corre bootstrapTodo() en Apps Script y ' +
+                 'vuelve a escribirlo.');
       return;
     }
     showToast(ficha ? 'Ficha actualizada' : 'Ficha creada');
@@ -7074,7 +7227,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-23 · 40a8';
+const VERSION_PANTALLA = '2026-09-23 · 6ea9';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');

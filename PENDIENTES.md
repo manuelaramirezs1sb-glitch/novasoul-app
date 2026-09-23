@@ -1466,3 +1466,58 @@ sistemas discrepan, lo dice.
 
 **OJO · hay que correr `bootstrapTodo()`** esta vez: son dos columnas
 nuevas (`Transitos.casa_placidus` y `Pensum.casa_alterna`).
+
+### 18 · Lo que ella vio y no cuadraba
+
+**a · Los pedidos se veían planos.** Sus palabras: «no se ven separados
+los pedidos, se ven planos como si fueran todos los mismos». Tenía
+razón: la tabla tenía 2px de aire entre filas y una franja de color de
+3px. Ahora: 7px de aire, franja de 5px, sombra propia y un leve
+levantarse al pasar por encima. Se probó además una franja de color al
+pie de cada fila y **se quitó**: con el texto encima se leía como un
+subrayado, no como el estado.
+
+**b · Novedades había perdido a la clienta.** «Ya no aparecen los
+nombres de los clientes en novedad ni la información para contactarse».
+
+No era un descuido del rediseño: **la hoja `Novedades` nunca ha guardado
+nombre, teléfono ni dirección.** Solo el `pedido_id`. Así llega de las
+plataformas. La bandeja mostraba códigos y motivos, y nada con lo que
+llamar a nadie — que es lo único para lo que existe una bandeja de
+novedades.
+
+Ahora se cruza contra los pedidos cargados: nombre de la clienta,
+teléfono con enlace para llamar y para WhatsApp, dirección, producto,
+valor, transportadora y en qué va el pedido. Y si ese pedido no está
+entre los cargados, **lo dice** en vez de dejar el hueco.
+
+### 19 · El inventario: lo que de verdad pasaba
+
+Ella lleva semanas diciendo «sin poder editar lo del TAG RECEDE, no he
+podido montar la información, ni el link de la landing page».
+
+Se probó todo el camino, servidor y pantalla (`pruebas/inventario.js` y
+`pruebas/inventario-pantalla.js`): **guardar funciona**, incluida la
+landing, los precios de combo y las cuatro respuestas.
+
+Lo que sí estaba roto era otra cosa, y es peor:
+
+**Un campo que se deja escribir, descarta lo escrito y responde que
+guardó.** Si la hoja `Inventario` de la cuenta no tiene todavía la
+columna —`landing`, `precio_2`, `categoria`, `resp_1`…— la pantalla la
+pintaba igual, `leerFicha()` la descartaba en silencio y el guardado
+contestaba «Ficha actualizada». Ella escribía la landing, leía que se
+guardó, y no se guardaba nada.
+
+Ahora ese campo sale **desactivado**, en otro color, y dice en la propia
+casilla «no se puede guardar». Y al guardar no se dice que quedó todo:
+se dice qué columnas faltan y que hay que correr `bootstrapTodo()`.
+
+**Y un detalle del mismo tipo que ya había aparecido en NovaSoul:** el
+mensaje de error se escribía ANTES de repintar la ficha, así que el
+repintado se lo llevaba. Quien guardaba a medias no veía ni rastro de
+por qué. Ahora va después.
+
+**Queda por confirmar con ella** si su hoja tiene las columnas. Si al
+abrir una ficha ve campos apagados, ese es el diagnóstico y la cura está
+escrita ahí mismo.

@@ -203,6 +203,8 @@ const ok = (n, c, d) => { if (c) console.log('  ok     ' + n);
 
     if (ancho === 1200) {
       console.log('\n── Novedades ──');
+      // Se cargan los pedidos primero: la bandeja los necesita para saber
+      // de quién es cada novedad.
       await p.evaluate(() => cargarNovedadesReales());
       await p.waitForTimeout(120);
       await p.evaluate(() => go('novedades', document.querySelector('[data-v=novedades]')));
@@ -223,6 +225,37 @@ const ok = (n, c, d) => { if (c) console.log('  ok     ' + n);
          /Reprogramar con dirección nueva/.test(np), np.slice(0, 300));
       ok('y que terminó en devolución pese a estar resuelta' + A,
          /Terminó devolución/.test(np), np);
+
+      /**
+       * ── CON QUÉ LLAMAR A LA CLIENTA ──
+       *
+       * La hoja `Novedades` no guarda nombre ni teléfono: solo el
+       * `pedido_id`. Por eso la bandeja salía con códigos y motivos y
+       * nada con lo que contactar a nadie. Se cruza con los pedidos.
+       */
+      await p.evaluate(() => {
+        document.querySelectorAll('#novlist .trow')[0].click();
+      });
+      await p.waitForTimeout(80);
+      const conCliente = await p.textContent('#novpanel');
+      ok('sale el nombre de la clienta, no solo el código' + A,
+         /Andrés Poveda/.test(conCliente), conCliente.slice(0, 400));
+      ok('y su teléfono' + A, /0987654321/.test(conCliente));
+      ok('con WhatsApp para escribirle' + A, /WhatsApp/.test(conCliente));
+      ok('la dirección a donde iba' + A, /Cdla\. Kennedy/.test(conCliente));
+      ok('y en qué va el pedido' + A, /ESTADO DEL PEDIDO/.test(conCliente));
+      ok('en la tabla también manda la clienta' + A,
+         /Andrés Poveda/.test(await p.textContent('#novlist')));
+
+      /** Si el pedido no está cargado, se dice — no se deja en blanco. */
+      const sinPedido = await p.textContent('#novpanel');
+      await p.evaluate(() => {
+        document.querySelectorAll('#novlist .trow')[1].click();
+      });
+      await p.waitForTimeout(80);
+      ok('y si el pedido no está cargado, lo dice en vez de callarse' + A,
+         /No encontré el pedido/.test(await p.textContent('#novpanel')),
+         (await p.textContent('#novpanel')).slice(0, 300));
     }
 
     if (ancho === 390) {
