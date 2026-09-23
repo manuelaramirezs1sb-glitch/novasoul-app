@@ -146,7 +146,7 @@ function sembrarHojas() {
     Pendientes: [C_PEND,
       p('p1', 'Entregar la carta de cocteles', { fecha: '2026-09-25', trabajo: 't2', horas: 6, riesgo: 'acordado' }),
       p('p2', 'Parcial de Estadística', { fecha: '2026-09-20', trabajo: 't3', horas: 4, riesgo: 'inamovible', prioridad: 'alta' }),
-      p('p3', 'Encargo confidencial de PHH', { fecha: '2026-09-24', trabajo: 't1', horas: 5 }),
+      p('p3', 'Encargo reservado de PHH', { fecha: '2026-09-24', trabajo: 't1', horas: 5 }),
       p('p4', 'Comprar Omega 3', { fecha: '2026-09-26', horas: 1 }),
       p('p5', 'Llamar a mamá', { fecha: '2026-09-21', estado: 'hecho', hechoEn: '2026-09-21', horas: 0 }),
       p('p6', 'Algo viejo ya hecho', { fecha: '2026-01-02', estado: 'hecho', hechoEn: '2026-01-02' }),
@@ -258,12 +258,13 @@ igual('Central sabe cuántas entregas abiertas tiene PHH', 1, carga.t1.abiertas)
 igual('y cuántas horas suman', 5, carga.t1.horas);
 const texto = JSON.stringify(carga);
 ok('pero NO ve el texto de una sola tarea',
-   texto.indexOf('confidencial') === -1 && texto.indexOf('Parcial') === -1, texto);
+   texto.indexOf('reservado') === -1 && texto.indexOf('Parcial') === -1, texto);
 const mio = F.centralMio(SOCIA, {});
 ok('Central pinta el peso en cada proyecto',
    mio.trabajos.filter(t => t.id === 't1')[0].tareas.horas === 5);
 ok('y el texto tampoco llega por ahí',
-   JSON.stringify(mio).indexOf('confidencial') === -1);
+   JSON.stringify(mio).indexOf('reservado') === -1 &&
+   JSON.stringify(mio).indexOf('Parcial') === -1);
 
 console.log('\n── Crear, mover y borrar ──');
 sembrarHojas();

@@ -607,6 +607,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
         <div id="trab-form"></div>
       </div>
 
+      <!-- ─── UN PROYECTO A FONDO ─── -->
+      <div class="view" id="v-proyecto">
+        <div id="pr-cuerpo"><div class="nc-vacio">Elige un proyecto desde «Mis proyectos».</div></div>
+      </div>
+
       <!-- ─── MI PLATA ─── -->
       <div class="view" id="v-plata">
         <div class="kpi-grid" id="plata-kpis"></div>
@@ -856,7 +861,7 @@ let activeSt = 'gt';
  * La huella sale del contenido del archivo: cambia sola con cada cambio,
  * aunque sean dos versiones el mismo día.
  */
-const VERSION_PANTALLA = '2026-09-23 · c2d7';
+const VERSION_PANTALLA = '2026-09-23 · 6efc';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -1253,6 +1258,7 @@ function pintarMio(error) {
 }
 
 const TIPO_ETIQ = { cliente: 'Cliente', empleo: 'Empleo', propio: 'Propio', estudio: 'U' };
+const ROL_ETIQ = { socia: 'Socia', trabajadora: 'Trabajadora', propio: 'Propio', estudio: 'Estudio' };
 
 function pintarTrabajos() {
   const c = document.getElementById('trab-lista');
@@ -1274,7 +1280,11 @@ function pintarTrabajos() {
             : 'faltan ' + d + ' días';
       clase = d < 0 ? 'bd-r' : d <= 3 ? 'bd-w' : 'bd-g';
     }
+    const cobra = t.modalidad === 'porcentaje' && t.porcentaje
+      ? t.porcentaje + '% de ' + (t.tiendaId || 'una tienda')
+      : t.modalidad === 'sin_cobro' ? 'no se cobra' : null;
     const sub = [TIPO_ETIQ[t.tipo] || t.tipo, t.contraparte,
+                 ROL_ETIQ[t.rol] || null, cobra,
                  t.horasSemana ? t.horasSemana + ' h/semana' : null,
                  plazo].filter(Boolean).join(' · ');
     return '<div class="mio-row">' +
@@ -1291,6 +1301,7 @@ function pintarTrabajos() {
       '<div class="mio-acc">' +
         (t.documento ? '<a class="mio-btn" href="' + escC(t.documento) +
                        '" target="_blank" rel="noopener">Doc</a>' : '') +
+        '<button class="mio-btn" onclick="abrirProyecto(\'' + escC(t.id) + '\')">A fondo</button>' +
         '<button class="mio-btn" onclick="formTrabajo(' + i + ')">Editar</button>' +
       '</div>' +
     '</div>';
@@ -1428,6 +1439,28 @@ function formTrabajo(i) {
         [['cliente','Cliente'],['empleo','Empleo'],['propio','Propio (Nova)'],['estudio','Universidad']]) +
       campo('tr-mo', 'Moneda', t.moneda || 'COP') +
       campo('tr-va', 'Valor acordado', t.valor || '', 'number') +
+      /**
+       * Qué soy yo adentro, y cómo entra la plata. Son dos preguntas
+       * distintas: el tipo dice qué ES el proyecto, el rol dice qué soy
+       * yo, y la modalidad dice de dónde sale el dinero.
+       */
+      selector('tr-rl', 'Qué soy yo aquí', t.rol || '',
+        [['','— sin decir —'],['socia','Socia'],['trabajadora','Trabajadora'],
+         ['propio','Propio'],['estudio','Estudio']]) +
+      selector('tr-md', 'Cómo cobra', t.modalidad || '',
+        [['','— sin decir —'],['fijo','Precio fijo'],['porcentaje','Porcentaje de una tienda'],
+         ['por_hora','Por hora'],['sin_cobro','No se cobra']]) +
+      campo('tr-pc', 'Porcentaje (si aplica)', t.porcentaje || '', 'number') +
+      selector('tr-bs', 'Porcentaje sobre qué', t.base || 'utilidad_neta',
+        [['utilidad_neta','Utilidad neta (− pauta − costos fijos)'],
+         ['utilidad_post_pauta','Utilidad después de pauta'],
+         ['utilidad_antes_pauta','Utilidad antes de pauta'],
+         ['ventas','Ventas']]) +
+      selector('tr-td', 'De qué tienda', t.tiendaId || '',
+        [['','— ninguna —']].concat((TIENDAS_PROY || []).map(function (x) {
+          return [x.id, x.nombre + ' · ' + x.empresa]; }))) +
+      selector('tr-cf', 'El detalle sube a Central', t.confidencial ? 'si' : 'no',
+        [['no','Sí, se puede ver aquí'],['si','No: es confidencial, solo números']]) +
       campo('tr-hs', 'Horas por semana', t.horasSemana || '', 'number') +
       campo('tr-fe', 'Fecha de entrega', t.entrega, 'date') +
       campo('tr-dc', 'Enlace al documento', t.documento) +
@@ -1449,6 +1482,8 @@ function salvarTrabajo(id) {
     moneda: V('tr-mo').toUpperCase(), valor_acordado: V('tr-va'),
     horas_semana: V('tr-hs'), fecha_entrega: V('tr-fe'),
     documento: V('tr-dc'), especificacion: V('tr-es'), estado: 'activo',
+    mi_rol: V('tr-rl'), modalidad: V('tr-md'), porcentaje: V('tr-pc'),
+    base_porcentaje: V('tr-bs'), tienda_id: V('tr-td'), confidencial: V('tr-cf'),
   }, 'trab-form');
 }
 
@@ -1930,7 +1965,7 @@ const TITLES = {
   dashboard:'Hoy', trabajos:'Mis proyectos', plata:'Mis finanzas',
   clientes:'Clientes', equipo:'Equipo',
   pipeline:'Pipeline novAcademy', onboarding:'Onboarding de clientes',
-  meta:'Meta Ads', demo:'Gestión de demo'
+  meta:'Meta Ads', demo:'Gestión de demo', proyecto:'El proyecto a fondo'
 };
 function go(v, el){
   document.querySelectorAll('.view').forEach(x => x.classList.remove('on'));
@@ -1950,6 +1985,370 @@ function abrirMenu(){
 function cerrarMenu(){
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('soblay').classList.remove('open');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UN PROYECTO A FONDO
+   ═══════════════════════════════════════════════════════════
+   Aquí va la información profunda: la especificación, de dónde sale
+   —los enlaces a Excel, PDF, Word, presentaciones o artefactos—, cómo
+   cobra, cuánto ha entrado y qué hay que entregar esta semana.
+   ═══════════════════════════════════════════════════════════ */
+let PR = null, PR_ID = '', PR_LEIDO = null;
+/**
+ * Las tiendas que un proyecto puede tener enlazadas.
+ *
+ * Se llenan al abrir el primer proyecto. Mientras estén vacías el
+ * selector ofrece «ninguna», que es la verdad: sin tienda no se puede
+ * calcular un porcentaje.
+ */
+let TIENDAS_PROY = [];
+
+async function abrirProyecto(id, mes) {
+  PR_ID = id;
+  go('proyecto', null);
+  const c = document.getElementById('pr-cuerpo');
+  c.innerHTML = '<div class="nc-vacio">Abriendo el proyecto…</div>';
+  let r;
+  try { r = await nc('nc_proyecto', { id: id, mes: mes || '' }); }
+  catch (e) {
+    PR = null;
+    c.innerHTML = '<div class="nc-vacio">No pude hablar con la hoja: ' +
+      escC(e && e.message || e) + '</div>';
+    return;
+  }
+  if (!r || !r.ok) {
+    PR = null;
+    c.innerHTML = '<div class="nc-vacio">' + escC(r && r.error || 'Sin datos.') + '</div>';
+    return;
+  }
+  PR = r;
+  if (r.tiendas && r.tiendas.length) TIENDAS_PROY = r.tiendas;
+  // Traer y pintar van en try distintos: un error al dibujar no se
+  // puede disfrazar de falta de conexión.
+  try { pintarProyecto(); }
+  catch (e) {
+    PR = null;
+    c.innerHTML = '<div class="nc-vacio">Traje el proyecto pero no lo pude dibujar: ' +
+      escC(e && e.message || e) + '</div>';
+  }
+}
+
+function pintarProyecto() {
+  const p = PR.proyecto;
+  let h = '';
+
+  // ── Cabecera ──
+  h += '<div class="card"><div style="display:flex;align-items:flex-start;' +
+    'justify-content:space-between;gap:16px;flex-wrap:wrap;">' +
+    '<div><div class="card-ttl" style="margin:0;">' + escC(p.nombre) + '</div>' +
+    '<div class="mio-sub" style="margin-top:6px;">' +
+      [TIPO_ETIQ[p.tipo] || p.tipo, p.contraparte,
+       (PR.roles[p.rol] || {}).nombre + (p.rolDeducido ? ' (deducido)' : ''),
+       (PR.modalidades[p.modalidad] || {}).nombre + (p.modalidadDeducida ? ' (deducido)' : '')]
+        .filter(Boolean).map(escC).join(' · ') + '</div></div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+      (p.documento ? '<a class="mio-btn" href="' + escC(p.documento) +
+                     '" target="_blank" rel="noopener">Contrato</a>' : '') +
+      '<button class="mio-btn" onclick="go(\'trabajos\',null)">← Volver</button>' +
+    '</div></div>' +
+    (p.especificacion
+      ? '<div style="font:400 13px/1.7 \'DM Sans\';color:var(--ink2);margin-top:14px;' +
+        'border-top:1px solid var(--line2);padding-top:14px;">' + escC(p.especificacion) + '</div>'
+      : '<div class="nc-vacio" style="margin-top:12px;">Sin especificación escrita. ' +
+        'Es lo primero que se olvida y lo primero que se discute.</div>') +
+    (p.confidencial
+      ? '<div class="mio-sub" style="margin-top:12px;color:var(--amber);">' +
+        '⚠ Confidencial: de este proyecto Central ve cuántas entregas y cuántas horas, ' +
+        'nunca qué dicen. El detalle vive en NovaSoul.</div>' : '') +
+    '</div>';
+
+  // ── Mi parte: la cuenta entera ──
+  if (PR.parte) h += bloqueParte(PR.parte);
+
+  // ── La plata del proyecto ──
+  h += '<div class="card"><div class="card-ttl">La plata</div>' +
+    '<div class="kpi-grid">' +
+      kpiPR('COBRADO', porMon(PR.plata.cobrado)) +
+      kpiPR('POR COBRAR', porMon(PR.plata.porCobrar)) +
+      kpiPR('ATRASADO', porMon(PR.plata.atrasado),
+            Object.keys(PR.plata.atrasado).length ? 'mal' : '') +
+      kpiPR('FALTA DEL ACUERDO',
+            PR.plata.falta === null ? 'sin valor acordado' : plata(PR.plata.falta, p.moneda)) +
+    '</div>' +
+    (PR.cobros.length
+      ? PR.cobros.map(function (c) {
+          return '<div class="mio-row"><div><div class="mio-nm">' + escC(c.concepto) + '</div>' +
+            '<div class="mio-sub">' +
+              (c.cobrado ? 'cobrado el ' + escC(c.cobrada || c.esperada)
+               : c.dias !== null && c.dias > 0 ? c.dias + ' días tarde'
+               : 'esperado el ' + escC(c.esperada || 'sin fecha')) + '</div></div>' +
+            '<div class="mio-cifra">' + plata(c.monto, c.moneda) + '</div></div>';
+        }).join('')
+      : '<div class="nc-vacio">Sin cobros anotados.</div>') +
+    '</div>';
+
+  // ── Las fuentes ──
+  h += '<div class="card"><div style="display:flex;align-items:center;' +
+    'justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
+    '<div class="card-ttl" style="margin:0;">De dónde sale la información</div>' +
+    '<button class="mio-btn" onclick="formFuente(null)">+ Fuente</button></div>' +
+    '<div style="font:400 12.5px/1.6 \'DM Sans\';color:var(--ink3);margin:8px 0 12px;">' +
+    'Excel, PDF, Word, presentaciones, carpetas de Drive o artefactos de Claude. ' +
+    '<strong>Se guarda el enlace, no el archivo</strong>: lo que hay adentro se queda donde está.</div>' +
+    (PR.fuentes.length
+      ? PR.fuentes.map(function (f) {
+          return '<div class="mio-row"><div><div class="mio-nm">' + escC(f.nombre) + '</div>' +
+            '<div class="mio-sub">' + escC(f.tipoNombre) +
+            (f.lee ? ' · Nova puede leerlo' : ' · se guarda el enlace') +
+            (f.nota ? ' · ' + escC(f.nota) : '') + '</div></div>' +
+            '<div class="mio-acc">' +
+              (f.enlace ? '<a class="mio-btn" href="' + escC(f.enlace) +
+                          '" target="_blank" rel="noopener">Abrir ↗</a>' : '') +
+              '<button class="mio-btn" onclick="borrarFuente(\'' + escC(f.id) + '\')">Quitar</button>' +
+            '</div></div>';
+        }).join('')
+      : '<div class="nc-vacio">Todavía no has enlazado nada.</div>') +
+    '<div id="pr-fuente-form"></div></div>';
+
+  // ── Las entregas de la semana ──
+  h += bloqueEntregas();
+
+  // ── Pegar el alcance ──
+  h += '<div class="card"><div class="card-ttl">Sacar las entregas de un texto</div>' +
+    '<div style="font:400 12.5px/1.6 \'DM Sans\';color:var(--ink3);margin-bottom:10px;">' +
+    'Pega el alcance, el cronograma o el correo donde quedaron las fechas. Busco fechas, ' +
+    'te muestro lo que entendí <strong>y lo que no</strong>, y no guardo nada hasta que lo confirmes. ' +
+    'Entender un PDF solo sigue necesitando el modelo de lenguaje.</div>' +
+    '<textarea id="pr-texto" rows="5" placeholder="Entrega de la carta impresa: 10 de octubre&#10;Recetario 24 de octubre" ' +
+    'style="width:100%;border:1px solid var(--line);background:var(--bg2);border-radius:10px;' +
+    'padding:12px;font:400 13px/1.6 \'DM Sans\';color:var(--ink);outline:none;"></textarea>' +
+    '<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">' +
+    '<button class="btn" id="pr-leer" onclick="leerAlcance()">Leer lo que pegué</button></div>' +
+    '<div id="pr-propuesta"></div></div>';
+
+  document.getElementById('pr-cuerpo').innerHTML = h;
+}
+
+function kpiPR(l, v, cl) {
+  return '<div class="kpi"><div class="kpi-lbl">' + escC(l) + '</div>' +
+    '<div class="kpi-val' + (cl ? ' ' + cl : '') + '" style="font-size:19px;">' +
+    escC(v) + '</div></div>';
+}
+function porMon(o) {
+  const ks = Object.keys(o || {});
+  if (!ks.length) return '—';
+  return ks.map(function (k) { return plata(o[k], k); }).join(' · ');
+}
+
+/**
+ * Mi parte del mes, con la cuenta a la vista.
+ *
+ * Se muestra la resta entera y no solo el resultado. Es el número con
+ * el que ella decide si el mes alcanza: un número sin su cuenta no se
+ * puede discutir, y este hay que poder discutirlo.
+ */
+function bloqueParte(x) {
+  if (!x.hay) {
+    return '<div class="card"><div class="card-ttl">Mi parte</div>' +
+      '<div class="nc-vacio">' + escC(x.porque) + '</div></div>';
+  }
+  const d = x.detalle;
+  const fila = function (l, v, signo) {
+    return '<div class="mio-row" style="padding:9px 0;"><div class="mio-nm" ' +
+      'style="font-weight:400;">' + escC(l) + '</div>' +
+      '<div class="mio-cifra" style="font-size:14px;">' +
+      (signo || '') + plata(Math.abs(v), x.moneda) + '</div></div>';
+  };
+  return '<div class="card"><div style="display:flex;align-items:center;' +
+    'justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
+    '<div class="card-ttl" style="margin:0;">Mi ' + x.porcentaje + '% de ' +
+      escC(x.tiendaNombre) + '</div>' +
+    '<div class="mio-sub">' + escC(x.mes) + ' · sobre ' + escC(x.baseNombre) + '</div></div>' +
+    (!x.hayDatos
+      ? '<div class="nc-vacio" style="margin-top:12px;">Ese mes no tiene pedidos cargados. ' +
+        'No es que la tienda no haya vendido: es que la hoja no se actualizó.</div>'
+      : '<div style="margin-top:12px;">' +
+        fila('Ganancia de lo entregado', d.ganancia, '') +
+        fila('Devoluciones (el flete no vuelve)', d.costoDevoluciones, '− ') +
+        fila('Pauta', d.pauta, '− ') +
+        fila('Costos fijos del mes', d.costosFijos, '− ') +
+        '<div class="mio-row" style="border-top:1px solid var(--line);padding-top:12px;">' +
+          '<div class="mio-nm">' + escC(x.baseNombre) + '</div>' +
+          '<div class="mio-cifra' + (x.valorBase < 0 ? ' mal' : '') + '">' +
+          plata(x.valorBase, x.moneda) + '</div></div>' +
+        '<div class="mio-row" style="background:var(--bg2);border-radius:10px;' +
+          'padding:12px;margin-top:8px;">' +
+          '<div class="mio-nm">Mi ' + x.porcentaje + '%</div>' +
+          '<div class="mio-cifra">' + plata(x.parte, x.moneda) + '</div></div>' +
+        (x.enPerdida
+          ? '<div class="mio-sub" style="margin-top:10px;color:var(--red);">' +
+            'El mes cerró en pérdida, así que tu parte es cero. No se te cobra por un mes malo.</div>'
+          : '') +
+        (x.faltan.length
+          ? '<div class="mio-sub" style="margin-top:10px;color:var(--amber);">⚠ Falta: ' +
+            x.faltan.map(function (f) {
+              return f === 'costos_fijos_mes' ? 'los costos fijos del mes (no se descontaron)'
+                   : f === 'tasa_de_cambio' ? 'una tasa de cambio, así que hay pauta sin convertir'
+                   : f === 'pauta' ? 'la pauta del mes (no se descontó)' : f;
+            }).map(escC).join(' · ') + '</div>'
+          : '') +
+        '</div>') +
+    '</div>';
+}
+
+/** Las entregas del proyecto, con las de esta semana primero. */
+function bloqueEntregas() {
+  const p = PR.proyecto;
+  let h = '<div class="card"><div style="display:flex;align-items:center;' +
+    'justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
+    '<div class="card-ttl" style="margin:0;">Lo que hay que entregar</div>' +
+    '<a class="mio-btn" href="./novasoul.html">Verlas en NovaSoul ↗</a></div>' +
+    '<div class="kpi-grid" style="margin-top:12px;">' +
+      kpiPR('ABIERTAS', String(PR.carga.abiertas)) +
+      kpiPR('HORAS', PR.carga.horas ? PR.carga.horas + ' h' : '—') +
+      kpiPR('VENCIDAS', String(PR.carga.vencidas), PR.carga.vencidas ? 'mal' : '') +
+    '</div>';
+
+  if (p.confidencial) {
+    h += '<div class="nc-vacio" style="margin-top:12px;">Este proyecto es confidencial: ' +
+      'aquí solo suben los números. El detalle está en NovaSoul, que no se abre delante de nadie.</div>';
+  } else if (!PR.tareas.length) {
+    h += '<div class="nc-vacio" style="margin-top:12px;">Sin entregas abiertas. ' +
+      'Puedes sacarlas de un texto ahí abajo.</div>';
+  } else {
+    const semana = PR.tareas.filter(function (t) { return t.estaSemana || t.vencida; });
+    const resto = PR.tareas.filter(function (t) { return !t.estaSemana && !t.vencida; });
+    const pinta = function (lista, titulo) {
+      if (!lista.length) return '';
+      return '<div class="mio-sub" style="margin:14px 0 6px;">' + titulo + '</div>' +
+        lista.map(function (t) {
+          return '<div class="mio-row"><div><div class="mio-nm">' + escC(t.texto) + '</div>' +
+            '<div class="mio-sub">' +
+              (t.vencida ? 'VENCIDA · ' : '') + escC(t.fecha || 'sin fecha') +
+              (t.horas ? ' · ' + t.horas + ' h' : '') +
+              (t.estado === 'haciendo' ? ' · en eso' : '') + '</div></div></div>';
+        }).join('');
+    };
+    h += pinta(semana, 'ESTA SEMANA Y LO VENCIDO') + pinta(resto, 'MÁS ADELANTE');
+  }
+  return h + '</div>';
+}
+
+/* ─── Fuentes ─── */
+function formFuente(f) {
+  const c = document.getElementById('pr-fuente-form');
+  c.innerHTML = '<div class="mio-form" style="margin-top:14px;">' +
+    '<div class="mio-sub" id="pr-f-err" style="display:none;color:var(--red);margin-bottom:10px;"></div>' +
+    '<div class="mio-campos">' +
+      campo('pr-f-nombre', 'Nombre', '') +
+      selector('pr-f-tipo', 'Tipo', 'excel',
+        PR.tiposFuente.map(function (x) { return [x.id, x.nombre]; })) +
+      campo('pr-f-enlace', 'Enlace', '') +
+      campo('pr-f-nota', 'Nota', '') +
+    '</div>' +
+    '<div class="row-btns">' +
+    '<button class="btn" onclick="guardarFuente()">Guardar</button>' +
+    '<button class="btn-ghost" onclick="document.getElementById(\'pr-fuente-form\').innerHTML=\'\'">Cancelar</button>' +
+    '</div></div>';
+}
+async function guardarFuente() {
+  const r = await nc('nc_fuente', { datos: {
+    trabajo_id: PR_ID,
+    nombre: document.getElementById('pr-f-nombre').value,
+    tipo: document.getElementById('pr-f-tipo').value,
+    enlace: document.getElementById('pr-f-enlace').value,
+    nota: document.getElementById('pr-f-nota').value,
+  } });
+  const err = document.getElementById('pr-f-err');
+  if (!r || !r.ok) {
+    err.textContent = (r && r.error) || 'No se pudo guardar.';
+    err.style.display = 'block';
+    return;
+  }
+  abrirProyecto(PR_ID);
+}
+async function borrarFuente(id) {
+  if (!confirm('¿Quitar esta fuente? El archivo no se toca: solo el enlace.')) return;
+  const r = await nc('nc_fuente_borrar', { id: id });
+  if (!r || !r.ok) { alert((r && r.error) || 'No se pudo.'); return; }
+  abrirProyecto(PR_ID);
+}
+
+/* ─── Pegar el alcance ─── */
+async function leerAlcance() {
+  const texto = document.getElementById('pr-texto').value || '';
+  const cont = document.getElementById('pr-propuesta');
+  if (!texto.trim()) { cont.innerHTML = '<div class="nc-vacio">Pega el texto primero.</div>'; return; }
+  const btn = document.getElementById('pr-leer');
+  btn.textContent = 'Leyendo…';
+  try {
+    const r = await nc('nc_proyecto_leer', { texto: texto });
+    if (!r || !r.ok) {
+      cont.innerHTML = '<div class="nc-vacio">' + escC((r && r.error) || 'No pude leerlo.') + '</div>';
+      return;
+    }
+    PR_LEIDO = r;
+    pintarPropuesta();
+  } catch (e) {
+    cont.innerHTML = '<div class="nc-vacio">Falló: ' + escC(e && e.message || e) + '</div>';
+  } finally { btn.textContent = 'Leer lo que pegué'; }
+}
+
+function pintarPropuesta() {
+  const E = PR_LEIDO.encontradas, I = PR_LEIDO.ignoradas;
+  let h = '<div style="border-top:1px solid var(--line2);margin-top:16px;padding-top:14px;">' +
+    '<div class="card-ttl" style="margin-bottom:8px;">Encontré ' + E.length +
+    (E.length === 1 ? ' entrega' : ' entregas') + '</div>';
+  h += E.length ? E.map(function (e, i) {
+    return '<div class="mio-row"><div style="display:flex;align-items:flex-start;gap:10px;flex:1;">' +
+      '<input type="checkbox" id="pr-ck' + i + '" checked style="width:18px;height:18px;margin-top:9px;">' +
+      '<div style="flex:1;"><input id="pr-t' + i + '" value="' + escC(e.titulo) + '" ' +
+        'style="width:100%;border:1px solid var(--line);background:var(--bg2);border-radius:8px;' +
+        'padding:9px;font:400 13px/1 \'DM Sans\';color:var(--ink);outline:none;">' +
+        '<div class="mio-sub" style="margin-top:6px;">' +
+          (e.anioInferido ? 'el año lo puse yo · ' : '') +
+          (e.rango ? 'era un rango, tomé el último día · ' : '') +
+          escC(e.linea) + '</div></div></div>' +
+      '<div><input type="date" id="pr-f' + i + '" value="' + escC(e.fecha) + '" ' +
+        'style="border:1px solid var(--line);background:var(--bg2);border-radius:8px;' +
+        'padding:9px;font:400 12.5px/1 \'DM Sans\';color:var(--ink);outline:none;"></div></div>';
+  }).join('')
+  : '<div class="nc-vacio">No encontré ninguna línea con fecha.</div>';
+
+  /**
+   * Lo ignorado se muestra siempre. Un lector que solo enseña sus
+   * aciertos parece infalible, y lo peligroso no es que una entrega
+   * quede mal escrita: es que no quede.
+   */
+  if (I.length) {
+    h += '<div class="mio-sub" style="margin:14px 0 6px;">ESTAS LAS DEJÉ FUERA</div>' +
+      I.slice(0, 15).map(function (x) {
+        return '<div class="mio-row"><div class="mio-nm" style="font-weight:400;opacity:.8;">' +
+          escC(x.linea) + '</div><div class="mio-sub">' + escC(x.porque) + '</div></div>';
+      }).join('');
+  }
+  if (E.length) {
+    h += '<div style="display:flex;gap:10px;margin-top:14px;">' +
+      '<button class="btn" onclick="guardarAlcance()">Guardar las marcadas</button></div>';
+  }
+  document.getElementById('pr-propuesta').innerHTML = h + '</div>';
+}
+
+async function guardarAlcance() {
+  const items = [];
+  PR_LEIDO.encontradas.forEach(function (e, i) {
+    if (!document.getElementById('pr-ck' + i).checked) return;
+    items.push({ titulo: document.getElementById('pr-t' + i).value,
+                 fecha: document.getElementById('pr-f' + i).value, peso: e.peso });
+  });
+  if (!items.length) { alert('No marcaste ninguna.'); return; }
+  const r = await nc('nc_proyecto_tareas', { trabajo: PR_ID, items: items });
+  if (!r || !r.ok) { alert((r && r.error) || 'No se pudo.'); return; }
+  alert((r.creadas ? 'Guardé ' + r.creadas : 'No guardé ninguna') +
+    (r.repetidas ? ' · ' + r.repetidas + ' ya estaban' : '') +
+    '. Viven en NovaSoul, que es donde va el día a día.');
+  abrirProyecto(PR_ID);
 }
 
 /* ─── DASHBOARD ─── */

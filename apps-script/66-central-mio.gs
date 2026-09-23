@@ -30,7 +30,10 @@
 const MIO_HOJAS = {
   Trabajos: ['id','nombre','contraparte','tipo','estado','moneda',
              'valor_acordado','forma_cobro','fecha_inicio','fecha_entrega',
-             'horas_semana','especificacion','documento','nota'],
+             'horas_semana','especificacion','documento','nota',
+             'mi_rol','modalidad','porcentaje','base_porcentaje',
+             'cliente_id','tienda_id','confidencial'],
+  Fuentes:  ['id','trabajo_id','nombre','tipo','enlace','nota','agregado_en'],
   Cobros:   ['id','trabajo_id','concepto','monto','moneda',
              'fecha_esperada','fecha_cobrada','estado','nota'],
   Finanzas: ['id','fecha','flujo','categoria','concepto','monto','moneda',
@@ -234,6 +237,9 @@ function centralMio(s, p) {
         especificacion: t.especificacion || '',
         documento: t.documento || '',
         nota: t.nota || '',
+        rol: proyRol_(t), modalidad: proyModalidad_(t),
+        porcentaje: num(t.porcentaje), tiendaId: String(t.tienda_id || ''),
+        confidencial: proyConfidencial_(t),
         tareas: carga[t.id] || { abiertas: 0, horas: 0, vencidas: 0, proxima: '' },
       };
     }),

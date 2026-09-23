@@ -128,6 +128,11 @@ function manejarCentral(accion, p) {
     case 'nc_soul_hormiga':        return soulHormigaGuardar(s, p);
     case 'nc_soul_hormiga_borrar': return soulHormigaBorrar(s, p);
     case 'nc_soul_plata':          return soulPlata(s, p);
+    case 'nc_proyecto':            return centralProyecto(s, p);
+    case 'nc_proyecto_leer':       return centralProyectoLeer(s, p);
+    case 'nc_proyecto_tareas':     return centralProyectoGuardarTareas(s, p);
+    case 'nc_fuente':              return centralFuenteGuardar(s, p);
+    case 'nc_fuente_borrar':       return centralFuenteBorrar(s, p);
     case 'nc_salir':
       CacheService.getScriptCache().remove('nc_' + p.token);
       return { ok: true };

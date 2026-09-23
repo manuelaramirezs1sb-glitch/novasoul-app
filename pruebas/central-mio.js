@@ -16,13 +16,16 @@ const MIO = {
     { id: 't1', nombre: 'Son de Sky', contraparte: 'Dueño de Salsabor', tipo: 'cliente',
       estado: 'activo', moneda: 'COP', valor: 2400000, cobrado: 800000, falta: 1600000,
       entrega: '2026-09-30', horasSemana: 8, especificacion: 'Carta, web y precios',
-      documento: 'https://ejemplo.com/contrato', nota: '' },
+      documento: 'https://ejemplo.com/contrato', nota: '',
+      rol: 'trabajadora', modalidad: 'fijo', porcentaje: 0, tiendaId: '', confidencial: false },
     { id: 't2', nombre: 'PHH', contraparte: 'Upwork', tipo: 'empleo', estado: 'activo',
       moneda: 'USD', valor: 0, cobrado: 0, falta: null, entrega: '', horasSemana: 12,
-      especificacion: '', documento: '', nota: '' },
+      especificacion: '', documento: '', nota: '',
+      rol: 'trabajadora', modalidad: 'por_hora', porcentaje: 0, tiendaId: '', confidencial: true },
     { id: 't3', nombre: 'Parcial de Estadística', contraparte: 'Universidad',
       tipo: 'estudio', estado: 'activo', moneda: '', valor: 0, cobrado: 0, falta: null,
-      entrega: '2026-09-20', horasSemana: 6, especificacion: '', documento: '', nota: '' },
+      entrega: '2026-09-20', horasSemana: 6, especificacion: '', documento: '', nota: '',
+      rol: 'estudio', modalidad: 'sin_cobro', porcentaje: 0, tiendaId: '', confidencial: false },
   ],
   atrasados: [
     { id: 'c1', trabajo_id: 't1', trabajo: 'Son de Sky', concepto: 'Segundo pago',
@@ -71,6 +74,7 @@ const MIO = {
     await p.evaluate((x) => {
       window.nc = async (accion) => {
         if (accion === 'nc_mio') return x.datos;
+        if (accion === 'nc_proyecto') return { ok: false, error: 'sin servidor en la prueba' };
         if (accion === 'nc_automatico') return { ok: true, automatico: {
           trabajos: [], todoPrendido: true, enFalta: 0, clientes: [], error: '' } };
         return { ok: true, clientes: [] };
@@ -90,6 +94,11 @@ const MIO = {
     await p.waitForTimeout(250);
 
     const trab = await p.textContent('#trab-lista');
+    ok('cada trabajo dice qué soy yo adentro (@' + ancho + ')',
+       /Trabajadora/.test(trab) && /Estudio/.test(trab), trab.replace(/\s+/g, ' ').slice(0, 160));
+    ok('y se puede abrir a fondo (@' + ancho + ')',
+       (await p.$$eval('#trab-lista .mio-btn', e =>
+         e.filter(x => /A fondo/.test(x.textContent)).length)) === 3);
     ok('lista los tres trabajos (@' + ancho + ')',
        trab.includes('Son de Sky') && trab.includes('PHH') && trab.includes('Estadística'));
     ok('la universidad aparece aunque no facture (@' + ancho + ')',

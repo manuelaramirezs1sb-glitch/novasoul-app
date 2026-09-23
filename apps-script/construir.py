@@ -35,6 +35,7 @@ ORDEN = [
     ('78-soul.gs',         '15 · NOVASOUL · EL DÍA A DÍA'),
     ('79-silabo.gs',       '16 · NOVASOUL · LA UNIVERSIDAD'),
     ('80-rutina.gs',       '17 · NOVASOUL · RUTINA, TURNOS Y PLATA'),
+    ('81-proyecto.gs',     '18 · CENTRAL · UN PROYECTO A FONDO'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

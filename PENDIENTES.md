@@ -816,3 +816,102 @@ deciden compras. Se muestran aparte y la pantalla dice por qué.
 
 **Falta**: que los horarios de clase entren desde el sílabo, junto con
 las fechas de entrega. Hoy la clase se escribe a mano una vez.
+
+---
+
+## 10 · Los proyectos a fondo, y cómo cobra cada uno (23-09-2026)
+
+### Dónde va la información profunda, que era la pregunta
+
+En **Nova Central → Mis proyectos → A fondo**. Cada proyecto tiene:
+
+| Bloque | Qué hay |
+|---|---|
+| Especificación | qué hay que hacer, el contrato |
+| **Mi parte** | la cuenta entera del porcentaje, resta por resta |
+| La plata | cobrado, por cobrar, atrasado, lo que falta del acuerdo |
+| **Fuentes** | Excel, PDF, Word, PPT, Drive o artefactos de Claude |
+| **Lo que hay que entregar** | las tareas de ESTA semana y lo vencido |
+| Pegar un texto | saca las fechas y las vuelve entregas |
+
+**Las fuentes son ENLACES.** El archivo se queda donde está. Es la misma
+regla de las materias y de PHH: Nova sabe dónde están las cosas, no
+guarda una copia de lo que dicen. La pantalla dice cuáles Nova **puede
+leer de verdad** (Excel/CSV, que ya sabe leer) y cuáles solo guarda el
+enlace. Entender un PDF, un Word o una presentación por su cuenta sigue
+necesitando el modelo de lenguaje, y la pantalla lo dice en vez de
+disimularlo.
+
+**Las entregas se crean desde Central y se guardan en NovaSoul.** El día
+a día vive en Soul; si vivieran en las dos, la semana se contaría dos
+veces.
+
+### Cómo cobra cada proyecto
+
+Tres columnas nuevas, porque son tres preguntas distintas:
+
+- **`tipo`** — qué ES el proyecto: cliente, empleo, propio, universidad.
+- **`mi_rol`** — qué soy YO adentro: socia, trabajadora, propio, estudio.
+- **`modalidad`** — de dónde sale la plata: precio fijo, porcentaje,
+  por hora, o no se cobra.
+
+Cuando es porcentaje, `tienda_id` apunta a la tienda de Empresarial y
+`base_porcentaje` dice sobre qué. **Lo deducido se marca como deducido**
+en pantalla: un valor supuesto que parece escrito es el que nadie revisa.
+
+### Su 50% de Nutrea EC y GT
+
+Ella eligió: **utilidad neta del mes**, después de pauta y costos fijos.
+
+```
+  ganancia de lo entregado
+  − devoluciones (el flete se pagó y no vuelve)
+  − pauta
+  − costos fijos del mes
+  = utilidad neta   →   × 50%
+```
+
+La pantalla muestra **la cuenta entera**, no solo el resultado. Es el
+número con el que decide si el mes alcanza, y un número sin su cuenta no
+se puede discutir.
+
+Tres reglas que la hacen fiable:
+
+1. **Un costo fijo vacío NO es cero.** Se avisa que no se descontó. Un
+   vacío tratado como cero sube la utilidad, y sobre esa utilidad se
+   reparte plata de verdad.
+2. **Un mes en pérdida da parte CERO, no negativa.** A ella no le cobran
+   por un mes malo, y un número negativo invita a restarlo de sus
+   ingresos.
+3. **Un mes sin pedidos dice que no hay datos**, que es distinto de un
+   mes malo.
+
+### La frontera, ahora con interruptor
+
+`confidencial` decide si el TEXTO de las tareas sube a Central. **Nace
+encendido para los empleos**, porque lo de PHH lo es y ella lo dejó
+dicho. Vacío no es «no»: para un empleo es «sí». Un olvido no puede ser
+lo único que proteja eso. Para un proyecto confidencial Central ve
+«3 entregas, 14 horas» y nada más.
+
+### Un error que salió al correrlo
+
+`costos_fijos_mes` se leía con `ajustes()`, que **solo devuelve las
+claves que ya conoce** — y esa no es una de ellas. Devolvía vacío
+siempre, así que los costos fijos nunca se descontaban y la utilidad
+salía alta. Es exactamente el error que nadie revisa porque da un número
+que gusta.
+
+### Lo que sigue, en el orden que ella eligió
+
+1. ~~Proyectos a fondo + cómo cobra cada uno~~ — HECHO
+2. **Meta Ads en Nova Central**, igual que en Empresarial, y la misma
+   conexión para novAcademy.
+3. **El lugar para cargar la carta astral.** Ella sube lo que saca de
+   Horus y Nova completa lo que falte para leer los tránsitos de la
+   semana, el mes, el año y su revolución solar. Su marco, que manda
+   sobre el diseño: *los planetas personales afectan lo inmediato y lo
+   propio; los sociales hablan de expansión y estructura; los
+   generacionales marcan época y van más allá del ego.* El planeta tiene
+   que decirle **qué momento es**.
+4. novAcademy: Equipo sale de Central y entra ahí.

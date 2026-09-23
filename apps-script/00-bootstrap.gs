@@ -460,9 +460,42 @@ const ESQUEMA_CENTRAL = {
    * solo mira lo que factura deja fuera justo lo que no se puede
    * incumplir.
    */
+  /**
+   * Un proyecto, visto por el lado del negocio.
+   *
+   * `mi_rol` no es lo mismo que `tipo`. El tipo dice qué es —cliente,
+   * empleo, propio, universidad—; el rol dice qué es ELLA adentro: si
+   * es socia se lleva un porcentaje, si es trabajadora le pagan, y si
+   * es propio no hay a quién cobrarle. Con una sola columna había que
+   * elegir, y las dos preguntas se responden distinto.
+   *
+   * `modalidad` dice CÓMO entra la plata: un precio fijo, un porcentaje
+   * de la utilidad, por hora, o nada. Cuando es porcentaje, `tienda_id`
+   * apunta a la tienda de Nova Empresarial de la que sale ese número, y
+   * `base_porcentaje` dice sobre qué se calcula. Sin esas tres, un 50%
+   * es un número suelto que no se puede verificar contra nada.
+   *
+   * `confidencial` decide si el TEXTO de las tareas sube a esta
+   * pantalla o se queda en NovaSoul. Nace encendido para los empleos,
+   * porque lo de PHH es confidencial y ella lo dejó dicho: Central se
+   * abre delante de una socia o un contador, y un olvido no puede ser
+   * lo único que proteja eso.
+   */
   Trabajos: ['id','nombre','contraparte','tipo','estado','moneda',
              'valor_acordado','forma_cobro','fecha_inicio','fecha_entrega',
-             'horas_semana','especificacion','documento','nota'],
+             'horas_semana','especificacion','documento','nota',
+             'mi_rol','modalidad','porcentaje','base_porcentaje',
+             'cliente_id','tienda_id','confidencial'],
+
+  /**
+   * De dónde sale la información profunda de cada proyecto.
+   *
+   * Solo ENLACES y notas: el Excel, el PDF, el Word, la presentación o
+   * el artefacto de Claude se quedan donde están. Es la misma regla que
+   * con las materias y con PHH — Nova sabe dónde están las cosas, no
+   * guarda una copia de lo que dicen.
+   */
+  Fuentes: ['id','trabajo_id','nombre','tipo','enlace','nota','agregado_en'],
 
   /**
    * Lo que debe entrar, con su fecha ESPERADA aparte de la real.
