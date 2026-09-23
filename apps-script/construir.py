@@ -38,6 +38,7 @@ ORDEN = [
     ('81-proyecto.gs',     '18 · CENTRAL · UN PROYECTO A FONDO'),
     ('82-cielo.gs',        '19 · NOVASOUL · EL CIELO'),
     ('83-automatico-mio.gs', '20 · LO AUTOMÁTICO DE CENTRAL Y SOUL'),
+    ('84-central-meta.gs',  '21 · CENTRAL · META, DESDE LA CONSOLA'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

@@ -695,37 +695,35 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
       </div>
 
       <!-- ─── META ADS ─── -->
+      <!--
+        META, DESDE LA CONSOLA.
+
+        Aquí había un cuadro para subir un CSV y cuatro cifras de
+        alcance, CPA, ROAS e inversión escritas a mano en el HTML, que
+        no salían de ningún lado y no cambiaban nunca. Una pantalla
+        vacía se nota; un número inventado se cree.
+
+        Las cifras no se repiten aquí a propósito: pruebas/central-meta.js
+        busca cada una en este archivo, y un comentario que las nombre
+        deja ese guardia sin filo.
+
+        Lo que Central puede decir de verdad sobre Meta es QUIÉN ESTÁ
+        CONECTADO. El gasto y el CPA de cada tienda se miran adentro de
+        esa cuenta, en Nova Empresarial, que es donde está el dato.
+      -->
       <div class="view" id="v-meta">
         <div class="card">
-          <div class="card-ttl">Subir reporte Meta Ads</div>
-          <div style="display:flex;flex-direction:column;gap:13px">
-            <select class="f-inp" id="meta-tienda" style="max-width:240px">
-              <option value="gt">Nutrea GT</option>
-              <option value="ec">Nutrea EC</option>
-            </select>
-            <div class="meta-up" onclick="document.getElementById('meta-file-inp').click()">
-              <div class="meta-fb-ico">
-                <svg width="22" height="22" viewBox="0 0 24 24">
-                  <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.93 7.44-1.73 8.15c-.13.58-.47.72-.95.45l-2.62-1.93-1.27 1.22c-.14.14-.26.26-.53.26l.19-2.67 4.87-4.4c.21-.19-.05-.29-.32-.1L7.28 15.37l-2.56-.8c-.56-.17-.57-.56.12-.83l10-3.86c.47-.17.88.11.73.82z"/>
-                </svg>
-              </div>
-              <div>
-                <div style="font:600 13.5px/1 'DM Sans';color:var(--ink)">Exportar CSV de Meta Ads Manager</div>
-                <div style="font:400 11px/1.5 'DM Sans';color:var(--ink3);margin-top:4px">Sube el reporte de campañas del período activo</div>
-              </div>
-              <div class="meta-lbl" id="meta-lbl-c">Subir ↑</div>
-            </div>
-            <input type="file" id="meta-file-inp" accept=".csv,.xlsx" style="display:none" onchange="onMetaFileC(this)">
-          </div>
-        </div>
-        <div class="card" id="meta-summary" style="display:none">
-          <div class="card-ttl">Resumen importado</div>
-          <div class="kpi-grid">
-            <div class="kpi"><div class="kpi-lbl">Inversión total</div><div class="kpi-val gold" id="meta-inv">—</div><div class="kpi-sub">Meta Ads</div></div>
-            <div class="kpi"><div class="kpi-lbl">Alcance</div><div class="kpi-val">184K</div><div class="kpi-sub">impresiones</div></div>
-            <div class="kpi"><div class="kpi-lbl">CPA promedio</div><div class="kpi-val">$ 9.80</div><div class="kpi-sub">por pedido</div></div>
-            <div class="kpi"><div class="kpi-lbl">ROAS</div><div class="kpi-val">3.2×</div><div class="kpi-sub">retorno</div></div>
-          </div>
+          <div class="card-h"><span class="ct">Conexión con Meta</span>
+            <span style="font:500 11px/1 'DM Sans';color:var(--ink3)" id="meta-lbl"></span></div>
+          <p style="font:500 12.5px/1.6 'DM Sans';color:var(--ink3);margin:0;max-width:74ch;">
+            Con esto Nova trae sola el gasto de anuncios de cada tienda y la
+            dueña deja de bajar el Excel de Meta. Es una llave
+            <strong>de lectura</strong>: no puede crear anuncios, pausarlos ni
+            mover un presupuesto.
+            <a href="guia-meta.html" target="_blank" rel="noopener"
+               style="color:var(--acc-d);font-weight:600;">Cómo se consigue →</a>
+          </p>
+          <div id="meta-cuerpo"></div>
         </div>
       </div>
 
@@ -828,7 +826,7 @@ let activeSt = 'gt';
  * La huella sale del contenido del archivo: cambia sola con cada cambio,
  * aunque sean dos versiones el mismo día.
  */
-const VERSION_PANTALLA = '2026-09-23 · f03f';
+const VERSION_PANTALLA = '2026-09-23 · 7317';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -966,6 +964,7 @@ function entrarCentral() {
   pintarOnboarding();
   cargarClientes();
   cargarAutomatico();
+  cargarMetaC();
   if (NC_SESION && (NC_SESION.permisos || []).indexOf('facturacion') !== -1) cargarMio();
   else document.querySelectorAll('.socia-solo').forEach(function (e) { e.style.display = 'none'; });
   sellarEjemploCentral();
@@ -1911,7 +1910,7 @@ async function crearClienteReal() {
  * permite creerle a lo que no lo está. Se saca de aquí al conectarlo.
  */
 const EJEMPLO_CENTRAL = ['dash-kpis', 'dash-bottom',
-                         'pipe-grads', 'pipe-pos', 'meta-summary'];
+                         'pipe-grads', 'pipe-pos'];
 
 function sellarEjemploCentral() {
   EJEMPLO_CENTRAL.forEach(function (id) {
@@ -2414,17 +2413,147 @@ function resetUpload(){
   document.getElementById('biz-file').value = '';
 }
 
-/* ─── META ─── */
-function onMetaFileC(inp){
-  if(!inp.files.length) return;
-  const st = TIENDAS.find(t => t.id === document.getElementById('meta-tienda').value);
-  setTimeout(()=>{
-    document.getElementById('meta-lbl-c').textContent = '✓ Cargado';
-    const sumEl = document.getElementById('meta-summary');
-    sumEl.style.display = 'block';
-    document.getElementById('meta-inv').textContent = st.id==='gt' ? 'Q 21,180' : '$ 4,280';
-    showToast('Reporte Meta cargado para ' + st.nm + ' ✓');
-  }, 1100);
+/* ─── META, DESDE LA CONSOLA ───
+ *
+ * Central no guarda ninguna llave: la llave de Meta es de cada cliente
+ * y la escribe su dueña en SU Nova Empresarial. Aquí solo se LEE si
+ * existe. El servidor nunca devuelve la llave, ni recortada.
+ *
+ * Y se distinguen TRES estados, no dos: «conectado» de verdad es llave
+ * más número de cuenta en todas las tiendas. Con llave y sin cuenta el
+ * gasto no entra — decir que está conectado sería mentir despacio.
+ */
+let META_DATA = null;
+
+async function cargarMetaC() {
+  const cont = document.getElementById('meta-cuerpo');
+  if (!cont) return;
+  cont.innerHTML = '<div style="font:400 12px/1.6 \'DM Sans\';color:var(--ink3);' +
+                   'margin-top:12px">Mirando quién está conectado…</div>';
+  let r;
+  try { r = await nc('nc_meta'); }
+  catch (e) { metaCajaC('No pude preguntar por las conexiones: ' + (e.message || e)); return; }
+  if (!r || !r.ok) {
+    const err = (r && r.error) || 'el servidor no contestó';
+    metaCajaC(/desconocida/i.test(err)
+      ? 'Esta parte todavía no está en tu Apps Script.\n\nPega la última versión ' +
+        'de NOVA-COMPLETO.gs, guarda la implementación y vuelve a entrar.'
+      : 'No pude leer las conexiones: ' + err);
+    return;
+  }
+  META_DATA = r;
+  pintarMetaC();
+}
+
+/** Un mensaje dentro de la tarjeta. Nunca se deja en blanco. */
+function metaCajaC(texto) {
+  const cont = document.getElementById('meta-cuerpo');
+  const lbl = document.getElementById('meta-lbl');
+  if (lbl) lbl.textContent = 'no se pudo leer';
+  if (cont) cont.innerHTML = '<div class="nc-prob" style="margin-top:12px;' +
+    'white-space:pre-line">' + escC(texto) + '</div>';
+}
+
+function pintarMetaC() {
+  const cont = document.getElementById('meta-cuerpo');
+  const lbl = document.getElementById('meta-lbl');
+  const d = META_DATA;
+  if (!cont || !d) return;
+
+  const R = d.resumen;
+  if (lbl) {
+    lbl.textContent = R.conPlanDePauta
+      ? R.listos + ' de ' + R.conPlanDePauta + ' conectadas'
+      : 'ningún cliente con plan de pauta';
+  }
+
+  let h = '';
+
+  if (d.error) {
+    h += '<div class="nc-prob" style="margin-top:12px">No pude leer la lista de ' +
+         'clientes: ' + escC(d.error) + '</div>';
+  }
+
+  const conPauta = d.clientes.filter(function (c) { return c.tienePauta; });
+  const sinPauta = d.clientes.filter(function (c) { return !c.tienePauta; });
+
+  if (!conPauta.length) {
+    h += '<div style="font:400 12.5px/1.7 \'DM Sans\';color:var(--ink3);margin-top:14px">' +
+      'Todavía ningún cliente tiene el módulo de pauta en su plan. ' +
+      'Cuando alguno lo tenga, aparece aquí con su estado de conexión.</div>';
+  } else {
+    h += '<div style="font:600 11.5px/1 \'DM Sans\';color:var(--ink3);letter-spacing:.06em;' +
+         'text-transform:uppercase;margin:18px 0 6px">Clientes con plan de pauta</div>';
+    h += conPauta.map(function (c) {
+      /**
+       * Tres estados y tres colores. El de en medio —llave guardada,
+       * cuenta sin poner— es el que se pierde si solo hay sí y no, y es
+       * justo el que deja a alguien creyendo que el gasto está entrando.
+       */
+      const est = c.listo ? { t: 'Conectada', k: 'bd-g' }
+                : c.hayLlave ? { t: 'Falta la cuenta', k: 'bd-a' }
+                : { t: 'Sin conectar', k: 'bd-r' };
+      const tiendas = c.tiendas.length
+        ? c.tiendas.map(function (t) {
+            return escC(t.nombre) + (t.cuenta ? ' · act_' + escC(t.cuenta)
+                                              : ' · <strong>sin cuenta</strong>') +
+                   (t.moneda ? ' (' + escC(t.moneda) + ')' : '');
+          }).join('  ·  ')
+        : 'No pude abrir su hoja para ver las tiendas.';
+      const prueba = c.ultimaPrueba && c.ultimaPrueba.cuando
+        ? 'Última prueba buena: ' + escC(c.ultimaPrueba.cuando) +
+          (c.ultimaPrueba.nombre ? ' · ' + escC(c.ultimaPrueba.nombre) : '')
+        : (c.hayLlave ? 'La llave nunca se ha probado.' : '');
+      return '<div class="row-item">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div class="row-nm">' + escC(c.empresa) + '</div>' +
+          '<div class="' + (c.listo ? 'row-sub' : 'nc-prob') + '">' + tiendas + '</div>' +
+          (prueba ? '<div class="row-sub">' + prueba + '</div>' : '') +
+        '</div>' +
+        '<span class="bd ' + est.k + '">' + est.t + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  if (sinPauta.length) {
+    h += '<div style="font:600 11.5px/1 \'DM Sans\';color:var(--ink3);letter-spacing:.06em;' +
+         'text-transform:uppercase;margin:18px 0 6px">Sin pauta en el plan</div>' +
+      '<div style="font:400 12px/1.6 \'DM Sans\';color:var(--ink3)">' +
+      sinPauta.map(function (c) { return escC(c.empresa); }).join('  ·  ') +
+      '</div>';
+  }
+
+  /**
+   * Dónde se conecta, dicho una sola vez y claro. Central no tiene un
+   * campo para escribir la llave a propósito: sería una pantalla desde
+   * la que se conectan cuentas ajenas, y el día que alguien más opere
+   * la consola, esa es la pantalla que hay que no haber construido.
+   */
+  h += '<div style="border-top:1px solid var(--line);margin-top:18px;padding-top:14px;' +
+    'font:400 12.5px/1.7 \'DM Sans\';color:var(--ink3);max-width:74ch">' +
+    '<strong style="color:var(--ink)">Dónde se conecta.</strong> La llave se escribe en ' +
+    'la Nova Empresarial de cada cliente, no aquí. Es de esa cuenta y vive guardada ' +
+    'aparte, con el nombre de su hoja: desde esta consola se ve si está y si sirve, ' +
+    'nunca cuál es.</div>';
+
+  // ── Lo de ella ──
+  h += '<div style="font:600 11.5px/1 \'DM Sans\';color:var(--ink3);letter-spacing:.06em;' +
+       'text-transform:uppercase;margin:20px 0 6px">Nova y novAcademy</div>' +
+    (d.propias || []).map(function (x) {
+      return '<div class="row-item">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div class="row-nm">' + escC(x.nombre) + '</div>' +
+          '<div class="row-sub">' + escC(x.que) + '</div>' +
+        '</div>' +
+        '<span class="bd">Todavía no pauta</span>' +
+      '</div>';
+    }).join('') +
+    '<div style="font:400 12.5px/1.7 \'DM Sans\';color:var(--ink3);margin-top:8px;max-width:74ch">' +
+    'Cuando empieces a pautar, esto se conecta igual que un cliente. ' +
+    'Mientras tanto dice que no hay pauta, en vez de dibujar un panel de campañas ' +
+    'en cero que se lee como una mala semana.</div>';
+
+  cont.innerHTML = h;
 }
 
 /* ─── DEMO ─── */

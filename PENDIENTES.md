@@ -1173,3 +1173,55 @@ que corra después de los **tres que lo alimentan** (tasas → Meta →
 alarmas), para juzgar con el gasto ya adentro y convertido.
 `centralDiario`, que lee el libro de ella y no toca la tienda, la
 rompía sin que hubiera nada roto. Ahora los tres se nombran uno por uno.
+
+### 13 · Meta Ads en Nova Central: la maqueta fuera
+
+Ella dijo: *«solo necesito las pantallas, no la integración completa
+porque aún no pauto»*. Y antes: *«el meta de nova central sigue igual,
+no está igual a la de empresarial»*.
+
+**Lo que había** era una maqueta: un cuadro para subir un CSV y cuatro
+cifras —alcance, CPA, ROAS, inversión— **escritas a mano en el HTML**,
+que no salían de ningún lado y no cambiaban nunca. Eso es peor que una
+pantalla vacía: una pantalla vacía se nota, un número inventado se cree.
+
+**Lo que va en su lugar** es lo único que Central puede decir de verdad
+sobre Meta: **quién está conectado y quién no**. El gasto y el CPA de
+cada tienda se miran adentro de esa cuenta, en Nova Empresarial, que es
+donde está el dato.
+
+**Tres estados, no dos.** «Conectada» de verdad es llave + número de
+cuenta en todas las tiendas. El de en medio —llave guardada, cuenta sin
+poner— es el que se pierde si solo hay sí y no, y es justo el que deja a
+alguien creyendo que el gasto está entrando.
+
+**Central no tiene dónde escribir una llave, y es a propósito.** La
+llave es de cada cliente y la escribe su dueña en SU Nova Empresarial.
+Un campo aquí sería una pantalla desde la que se conectan cuentas
+ajenas — y el día que alguien más opere la consola, esa es la pantalla
+que hay que no haber construido. `pruebas/central-meta.js` cuenta los
+`input` de la vista y exige **cero**.
+
+**Nova y novAcademy** dicen «todavía no pauta», en vez de dibujar un
+panel de campañas en cero que se lee como una mala semana.
+
+**Un detalle del guardia.** La prueba busca cada cifra inventada en el
+archivo, no en la pantalla — un número escondido en un div oculto
+también pasaría una revisión visual. Al escribir el comentario que
+explica esto, repetí las cifras, y la prueba se cayó con razón: un
+comentario que las nombra deja el guardia sin filo. El comentario ahora
+las describe sin escribirlas.
+
+**Pendiente:** novAcademy sigue sin su pantalla de Meta y sin la de
+profesorado/estudiantes.
+
+### 14 · El token de Meta, cerrado
+
+Ella dijo que creó como cinco tokens después de ese, porque la
+integración no cargaba bien. El que pasó por el chat quedó enterrado
+entre los que vinieron después y además **no hay integración conectada
+todavía** — no pauta. Se deja de insistir con eso.
+
+Lo que sigue en pie, para cuando conecte: `ads_read` únicamente, permiso
+de activo «ver rendimiento», nunca «Administrar cuentas publicitarias»,
+y el token va a Script Properties por `sheetId`, nunca a una celda.

@@ -92,6 +92,7 @@ function manejarCentral(accion, p) {
     case 'nc_crear':    return centralCrearCliente(s, p);
     case 'nc_automatico':        return centralAutomatico(s, p);
     case 'nc_automatico_prender':return centralPrenderAutomatico(s, p);
+    case 'nc_meta':         return centralMeta(s, p);
     case 'nc_mio':          return centralMio(s, p);
     case 'nc_mio_guardar':  return centralMioGuardar(s, p);
     case 'nc_mio_borrar':   return centralMioBorrar(s, p);
