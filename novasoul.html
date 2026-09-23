@@ -681,8 +681,9 @@ textarea,input,select,button{font-family:inherit;}
     <div class="card-h" style="margin:0;"><span class="card-h3">Mi carta natal</span><span class="link" onclick="cerrarModal('m-carta')">CERRAR ✕</span></div>
     <div class="aviso mal" id="mc-err"></div>
     <div id="mc-paso1">
-      <p class="card-p" style="margin-bottom:12px;">Ábrela en <strong>Horus</strong>, copia el listado de
-        planetas y pégalo aquí tal cual. Busco planeta, signo, grado y casa; te muestro lo que entendí
+      <p class="card-p" style="margin-bottom:12px;">Ábrela en <strong>Horus</strong> en modo Completo,
+        copia el listado de planetas y pégalo aquí tal cual — entiendo cómo lo escribe Horus
+        («Vir 27 · Casa 9 · Rx»). Busco planeta, signo, grado y casa; te muestro lo que entendí
         <strong>y lo que no</strong>, y no guardo nada hasta que lo confirmes. No calculo tu carta:
         Horus ya lo hace bien y rehacerlo mal aquí no te sirve de nada.</p>
       <div class="f-row">
@@ -762,8 +763,14 @@ textarea,input,select,button{font-family:inherit;}
       <div class="f"><label>ASCENDENTE DEL AÑO</label><select id="mrv-asc"></select></div>
       <div class="f"><label>EN QUÉ CASA CAE TU SOL</label><input type="number" id="mrv-casa" min="1" max="12"></div>
     </div>
-    <div class="f"><label>EL TEMA DEL AÑO</label><input id="mrv-tema" placeholder="Una frase"></div>
-    <div class="f"><label>LO QUE DICE</label><textarea id="mrv-texto" rows="5" placeholder="Pega aquí la lectura de Horus"></textarea></div>
+    <div class="f"><label>EN QUÉ CASA CAE CADA PLANETA</label><div id="mrv-planetas" style="display:flex;flex-direction:column;gap:8px;"></div><small>Opcional, pero es lo que más dice. Déjalo vacío si no lo tienes.</small></div>
+    <div class="f"><label>EL TEMA DEL AÑO, EN TUS PALABRAS</label><input id="mrv-tema" placeholder="Opcional"></div>
+    <div class="f"><label>NOTA TUYA</label><textarea id="mrv-texto" rows="3" placeholder="Opcional. Lo que tú quieras agregarle."></textarea></div>
+    <div class="aviso bien on" style="background:var(--lila);border-color:var(--lila-line);color:var(--mut);">
+      <strong>La lectura te la doy yo</strong>, compuesta de estos datos. No puedo leer una captura
+      de Horus: entender una imagen necesita un modelo con visión y Apps Script no tiene ninguno.
+      Prefiero decírtelo a dejarte un botón que no hace nada.
+    </div>
     <div class="f-btns"><button class="card-cta" onclick="guardarRevolucion()">Guardar</button><button class="card-ghost" onclick="cerrarModal('m-revolucion')">Cancelar</button></div>
   </div>
 </div>
@@ -880,7 +887,7 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-23 · fa7c';
+const VERSION_PANTALLA = '2026-09-23 · 4ce3';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
@@ -2022,7 +2029,7 @@ function pintarCielo() {
           (CI.nacimiento.hora ? ' · ' + esc(CI.nacimiento.hora) : '') +
           (CI.nacimiento.lugar ? ' · ' + esc(CI.nacimiento.lugar) : '') + '</div>'
         : '') +
-      ['personal', 'social', 'generacional', 'angulo'].map(function (g) {
+      ['personal', 'social', 'generacional', 'angulo', 'punto'].map(function (g) {
         const lista = CI.cartaPorGrupo[g] || [];
         if (!lista.length) return '';
         const info = CI.grupos[g];
@@ -2075,18 +2082,7 @@ function pintarCielo() {
         esc(fcorta(rv.hasta)) + ' · quedan ' + rv.diasRestantes + ' días</div>' +
       '<div class="prog-track"><div class="prog-fill" style="width:' +
         Math.max(0, Math.min(100, rv.transcurrido)) + '%;"></div></div>' +
-      (rv.carta
-        ? '<div style="margin-top:13px;">' +
-          (rv.carta.ascendente ? '<div class="fila"><span class="fila-t">Ascendente del año</span>' +
-            '<span class="chip proy">' + esc(nombreSigno(rv.carta.ascendente)) + '</span></div>' : '') +
-          (rv.carta.casaSol ? '<div class="fila"><span class="fila-t">Tu Sol cae en</span>' +
-            '<span class="chip proy">casa ' + rv.carta.casaSol + '</span></div>' : '') +
-          (rv.carta.tema ? '<p class="card-p" style="margin-top:10px;"><strong>' +
-            esc(rv.carta.tema) + '</strong></p>' : '') +
-          (rv.carta.texto ? '<p class="card-p" style="margin-top:8px;">' +
-            esc(rv.carta.texto) + '</p>' : '') + '</div>'
-        : '<p class="card-p" style="margin-top:12px;">La ventana la calculo yo —es tu cumpleaños—. ' +
-          'La carta de este año la traes de Horus.</p>')
+      bloqueLectura(rv)
     : '<div class="card-lbl-lila">TU AÑO</div>' +
       '<p class="card-p" style="margin-top:9px;">Necesito tu fecha de nacimiento para saber dónde ' +
       'empieza y termina tu año solar.</p>' +
@@ -2227,6 +2223,64 @@ async function guardarCarta() {
 }
 
 /* ─── Pensum ─── */
+/**
+ * La lectura del año, compuesta por Nova.
+ *
+ * Sale de una tabla, no de una interpretación nueva cada vez: con los
+ * mismos datos dice siempre lo mismo, y eso es lo que permite que ella
+ * la discuta y la corrija. Y cuando falta algo para decir más, lo dice.
+ */
+function bloqueLectura(rv) {
+  const L = rv.lectura;
+  if (!L || !L.hay) {
+    return '<p class="card-p" style="margin-top:12px;">' +
+      esc((L && L.porque) || 'La ventana la calculo yo —es tu cumpleaños—.') + '</p>' +
+      '<div class="row-btns" style="margin-top:12px;">' +
+      '<button class="card-cta" onclick="abrirRevolucion()">Darle los dos datos</button></div>';
+  }
+  let h = '<div style="margin-top:14px;">';
+  if (L.momentoNombre) {
+    h += '<div class="card-lbl-amber" style="margin-bottom:6px;">EL AÑO PIDE</div>' +
+      '<div style="font:600 25px/1.15 \'Fraunces\',serif;color:' +
+      (MOM_COLOR[L.momento] || 'var(--ink)') + ';margin-bottom:14px;">' +
+      esc(L.momentoNombre) + '</div>';
+  }
+  h += L.partes.map(function (x) {
+    return '<div style="border-top:1px solid var(--lila-line);padding-top:11px;margin-top:11px;">' +
+      '<div class="card-lbl">' + esc(x.titulo.toUpperCase()) + '</div>' +
+      '<div style="font:600 15px/1.3 \'DM Sans\';color:var(--ink);margin:6px 0;">' +
+        esc(x.valor) + '</div>' +
+      '<p class="card-p">' + esc(x.texto) + '</p></div>';
+  }).join('');
+
+  h += (L.grupos || []).map(function (g) {
+    return '<div style="border-top:1px solid var(--lila-line);padding-top:11px;margin-top:11px;">' +
+      '<div class="card-lbl">' + esc(g.nombre.toUpperCase()) + '</div>' +
+      '<div class="kpi-s" style="margin:4px 0 8px;">' + esc(g.que) + '</div>' +
+      g.cuerpos.map(function (c) {
+        return '<div class="fila" style="padding:7px 0;">' +
+          '<span class="fila-t"><strong>' + esc(c.nombre) + '</strong> en casa ' + c.casa +
+          '<br><span style="color:var(--mut3);font-size:11.5px;">' + esc(c.que) + '</span></span>' +
+          '<span class="chip">' + esc(c.area) + '</span></div>';
+      }).join('') + '</div>';
+  }).join('');
+
+  if (rv.carta && rv.carta.tema) {
+    h += '<p class="card-p" style="border-top:1px solid var(--lila-line);padding-top:11px;' +
+      'margin-top:11px;"><strong>Tú dijiste:</strong> ' + esc(rv.carta.tema) + '</p>';
+  }
+  if (rv.carta && rv.carta.texto) {
+    h += '<p class="card-p" style="margin-top:6px;">' + esc(rv.carta.texto) + '</p>';
+  }
+  if (L.faltan.length) {
+    h += '<p class="card-p" style="margin-top:12px;color:var(--mut3);">' +
+      'Podría decirte más si me das: ' + esc(L.faltan.join(' · ')) + '.</p>';
+  }
+  h += '<div class="row-btns" style="margin-top:13px;">' +
+    '<button class="card-ghost" onclick="abrirRevolucion()">Cambiar los datos</button></div>';
+  return h + '</div>';
+}
+
 /** El signo se guarda en minúscula; en pantalla va con su nombre. */
 function nombreSigno(id) {
   const s = (CI && CI.signos || []).filter(function (x) { return x.id === id; })[0];
@@ -2343,6 +2397,21 @@ function abrirRevolucion() {
   document.getElementById('mrv-casa').value = rv.carta && rv.carta.casaSol ? rv.carta.casaSol : '';
   document.getElementById('mrv-tema').value = rv.carta ? rv.carta.tema : '';
   document.getElementById('mrv-texto').value = rv.carta ? rv.carta.texto : '';
+  const puestas = {};
+  ((rv.carta && rv.carta.planetas) || []).forEach(function (x) { puestas[x.cuerpo] = x.casa; });
+  document.getElementById('mrv-planetas').innerHTML =
+    Object.keys(CI.cuerpos).filter(function (k) {
+      return CI.cuerpos[k].grupo !== 'angulo' && k !== 'sol';
+    }).map(function (k) {
+      return '<div style="display:flex;align-items:center;gap:10px;">' +
+        '<span style="flex:1;font:500 12.5px/1 \'DM Sans\';color:var(--ink);">' +
+          esc(CI.cuerpos[k].nombre) + '</span>' +
+        '<span class="chip">' + esc((CI.grupos[CI.cuerpos[k].grupo] || {}).nombre || '') + '</span>' +
+        '<input type="number" min="1" max="12" id="mrv-p-' + k + '" ' +
+        'value="' + (puestas[k] || '') + '" placeholder="casa" ' +
+        'style="width:82px;border:1px solid var(--line4);background:var(--bg);border-radius:9px;' +
+        'padding:9px 10px;font:500 13px/1 \'DM Sans\';color:var(--ink);outline:none;"></div>';
+    }).join('');
   errModal('mrv-err', '');
   document.getElementById('m-revolucion').classList.add('on');
 }
@@ -2354,6 +2423,11 @@ async function guardarRevolucion() {
     casaSol: document.getElementById('mrv-casa').value || 0,
     tema: document.getElementById('mrv-tema').value,
     texto: document.getElementById('mrv-texto').value,
+    planetas: Object.keys(CI.cuerpos).filter(function (k) {
+      return CI.cuerpos[k].grupo !== 'angulo' && k !== 'sol';
+    }).map(function (k) {
+      return { cuerpo: k, casa: document.getElementById('mrv-p-' + k).value || 0 };
+    }).filter(function (x) { return Number(x.casa) >= 1 && Number(x.casa) <= 12; }),
   });
   if (!r || !r.ok) { errModal('mrv-err', traducirError(r && r.error) || 'No se pudo.'); return; }
   cerrarModal('m-revolucion');

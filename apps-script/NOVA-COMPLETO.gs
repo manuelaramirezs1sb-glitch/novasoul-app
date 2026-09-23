@@ -7944,6 +7944,7 @@ function manejarCentral(accion, p) {
     case 'nc_soul_pensum':         return soulPensumGuardar(s, p);
     case 'nc_soul_pensum_borrar':  return soulPensumBorrar(s, p);
     case 'nc_soul_revolucion':     return soulRevolucionGuardar(s, p);
+    case 'nc_soul_pensum_auto':    return soulPensumDesdeTransitos(s, p);
     case 'nc_salir':
       CacheService.getScriptCache().remove('nc_' + p.token);
       return { ok: true };
@@ -14112,21 +14113,40 @@ function centralProyectoGuardarTareas(s, p) {
  * marca cada uno, con la división que ella misma hizo.
  */
 const CIELO_CUERPOS = {
-  sol:        { nombre: 'Sol',        grupo: 'personal' },
-  luna:       { nombre: 'Luna',       grupo: 'personal' },
-  mercurio:   { nombre: 'Mercurio',   grupo: 'personal' },
-  venus:      { nombre: 'Venus',      grupo: 'personal' },
-  marte:      { nombre: 'Marte',      grupo: 'personal' },
-  jupiter:    { nombre: 'Júpiter',    grupo: 'social' },
-  saturno:    { nombre: 'Saturno',    grupo: 'social' },
-  urano:      { nombre: 'Urano',      grupo: 'generacional' },
-  neptuno:    { nombre: 'Neptuno',    grupo: 'generacional' },
-  pluton:     { nombre: 'Plutón',     grupo: 'generacional' },
-  quiron:     { nombre: 'Quirón',     grupo: 'generacional' },
-  lilith:     { nombre: 'Lilith',     grupo: 'generacional' },
-  nodo_norte: { nombre: 'Nodo Norte', grupo: 'generacional' },
-  ascendente: { nombre: 'Ascendente', grupo: 'angulo' },
-  medio_cielo:{ nombre: 'Medio Cielo',grupo: 'angulo' },
+  sol:         { nombre: 'Sol',         grupo: 'personal' },
+  luna:        { nombre: 'Luna',        grupo: 'personal' },
+  mercurio:    { nombre: 'Mercurio',    grupo: 'personal' },
+  venus:       { nombre: 'Venus',       grupo: 'personal' },
+  marte:       { nombre: 'Marte',       grupo: 'personal' },
+  jupiter:     { nombre: 'Júpiter',     grupo: 'social' },
+  saturno:     { nombre: 'Saturno',     grupo: 'social' },
+  urano:       { nombre: 'Urano',       grupo: 'generacional' },
+  neptuno:     { nombre: 'Neptuno',     grupo: 'generacional' },
+  pluton:      { nombre: 'Plutón',      grupo: 'generacional' },
+  ascendente:  { nombre: 'Ascendente',  grupo: 'angulo' },
+  medio_cielo: { nombre: 'Mediocielo',  grupo: 'angulo' },
+  descendente: { nombre: 'Descendente', grupo: 'angulo' },
+  fondo_cielo: { nombre: 'Fondo del cielo', grupo: 'angulo' },
+  /**
+   * Los puntos y asteroides van APARTE de sus tres grupos.
+   *
+   * Ella fue explícita: personales son Sol a Marte, sociales Júpiter y
+   * Saturno, generacionales Urano, Neptuno y Plutón. Meter a Quirón o a
+   * Ceres entre los generacionales diluiría su marco, y el marco es
+   * suyo. Aquí están porque Horus se los da y no se van a perder, pero
+   * en su propio cajón.
+   */
+  nodo_norte:  { nombre: 'Nodo Norte',  grupo: 'punto' },
+  nodo_sur:    { nombre: 'Nodo Sur',    grupo: 'punto' },
+  lilith:      { nombre: 'Lilith',      grupo: 'punto' },
+  quiron:      { nombre: 'Quirón',      grupo: 'punto' },
+  folo:        { nombre: 'Folo',        grupo: 'punto' },
+  ceres:       { nombre: 'Ceres',       grupo: 'punto' },
+  pallas:      { nombre: 'Pallas',      grupo: 'punto' },
+  juno:        { nombre: 'Juno',        grupo: 'punto' },
+  vesta:       { nombre: 'Vesta',       grupo: 'punto' },
+  fortuna:     { nombre: 'Parte de la Fortuna', grupo: 'punto' },
+  vertex:      { nombre: 'Vertex',      grupo: 'punto' },
 };
 
 /** Qué mira cada grupo. Son sus palabras, no las mías. */
@@ -14146,7 +14166,11 @@ const CIELO_GRUPOS = {
   angulo: {
     nombre: 'Ángulos',
     que: 'Por dónde entras y hacia dónde apuntas.',
-    cuerpos: 'Ascendente y Medio Cielo' },
+    cuerpos: 'Ascendente, Mediocielo, Descendente y Fondo del cielo' },
+  punto: {
+    nombre: 'Puntos y asteroides',
+    que: 'Matices. No son el marco, lo afinan.',
+    cuerpos: 'Nodos, Lilith, Quirón y los asteroides' },
 };
 
 /** Los tres momentos que ella nombró. */
@@ -14254,24 +14278,85 @@ function revolucionVentana_(nacimientoISO, hoyISO) {
 function cuerpoDeTexto_(s) {
   const t = norm(s);
   if (!t) return '';
+  /**
+   * Los nombres tal como los escribe Horus, que es de donde vienen.
+   *
+   * «Nodo Sur» y «Nodo Norte» son dos palabras y empiezan igual: el
+   * orden importa, porque buscar «nodo» primero convertiría el Nodo Sur
+   * en Nodo Norte sin que nadie lo notara.
+   */
   const alias = {
     'sol': 'sol', 'luna': 'luna', 'mercurio': 'mercurio', 'venus': 'venus',
     'marte': 'marte', 'jupiter': 'jupiter', 'saturno': 'saturno',
     'urano': 'urano', 'neptuno': 'neptuno', 'pluton': 'pluton',
-    'quiron': 'quiron', 'lilith': 'lilith', 'luna negra': 'lilith',
-    'nodo norte': 'nodo_norte', 'nodo': 'nodo_norte', 'nodo lunar': 'nodo_norte',
-    'ascendente': 'ascendente', 'asc': 'ascendente',
-    'medio cielo': 'medio_cielo', 'mc': 'medio_cielo', 'mediocielo': 'medio_cielo',
+    'quiron': 'quiron', 'chiron': 'quiron',
+    'lilith': 'lilith', 'luna negra': 'lilith',
+    'nodo norte': 'nodo_norte', 'nodo lunar': 'nodo_norte', 'nodo n': 'nodo_norte',
+    'nodo sur': 'nodo_sur', 'nodo s': 'nodo_sur',
+    'nodo': 'nodo_norte',
+    'folo': 'folo', 'pholus': 'folo',
+    'ceres': 'ceres', 'pallas': 'pallas', 'palas': 'pallas',
+    'juno': 'juno', 'vesta': 'vesta', 'vertex': 'vertex',
+    'parte de la fortuna': 'fortuna', 'fortuna': 'fortuna', 'rueda de la fortuna': 'fortuna',
+    'ascendente': 'ascendente', 'asc': 'ascendente', 'as': 'ascendente',
+    'medio cielo': 'medio_cielo', 'mediocielo': 'medio_cielo', 'mc': 'medio_cielo',
+    'descendente': 'descendente', 'ds': 'descendente', 'dsc': 'descendente',
+    'fondo del cielo': 'fondo_cielo', 'fondo de cielo': 'fondo_cielo',
+    'ic': 'fondo_cielo', 'imum coeli': 'fondo_cielo',
   };
   return alias[t] || '';
 }
 
+/**
+ * El signo, incluyendo como lo abrevia Horus: Vir, Lib, Esc, Cán…
+ *
+ * Sin las abreviaturas, pegar la pantalla de Horus tal cual no
+ * encontraba NI UN signo, que es justo lo que ella iba a hacer.
+ */
+const CIELO_SIGNOS_ALIAS = {
+  ari: 'aries', tau: 'tauro', gem: 'geminis', can: 'cancer', leo: 'leo',
+  vir: 'virgo', lib: 'libra', esc: 'escorpio', sco: 'escorpio',
+  sag: 'sagitario', cap: 'capricornio', acu: 'acuario', pis: 'piscis',
+  escorpion: 'escorpio', geminis: 'geminis',
+};
+
 function signoDeTexto_(s) {
   const t = norm(s);
   if (!t) return '';
-  if (t === 'escorpion' || t === 'escorpio') return 'escorpio';
-  if (t === 'geminis') return 'geminis';
-  return CIELO_SIGNOS.indexOf(t) !== -1 ? t : '';
+  if (CIELO_SIGNOS.indexOf(t) !== -1) return t;
+  return CIELO_SIGNOS_ALIAS[t] || '';
+}
+
+/**
+ * Busca un cuerpo dentro de un texto, DE LO LARGO A LO CORTO.
+ *
+ * El orden no es un detalle: «Nodo Sur Rx» empieza por «Nodo», y
+ * buscando palabra por palabra el Nodo Sur se convertía en Nodo Norte
+ * sin que nadie lo notara — y después se descartaba por repetido, así
+ * que el Nodo Sur simplemente desaparecía de la carta. Probar primero
+ * los grupos largos de palabras es lo que lo arregla, y sirve igual
+ * para «Parte de la Fortuna» y «Fondo del cielo».
+ */
+function cuerpoEnTexto_(s) {
+  const palabras = String(s || '').replace(/[^a-záéíóúñ ]/gi, ' ')
+    .split(/\s+/).filter(function (w) { return w; });
+  for (let largo = Math.min(4, palabras.length); largo >= 1; largo--) {
+    for (let i = 0; i + largo <= palabras.length; i++) {
+      const c = cuerpoDeTexto_(palabras.slice(i, i + largo).join(' '));
+      if (c) return c;
+    }
+  }
+  return '';
+}
+
+function signoEnTexto_(s) {
+  const palabras = String(s || '').replace(/[^a-záéíóúñ ]/gi, ' ')
+    .split(/\s+/).filter(function (w) { return w; });
+  for (let i = 0; i < palabras.length; i++) {
+    const g = signoDeTexto_(palabras[i]);
+    if (g) return g;
+  }
+  return '';
 }
 
 /**
@@ -14297,23 +14382,12 @@ function cartaLeer_(texto) {
     const piezas = linea.split(/[|;,\t·]+|\ben\b/i).map(function (x) { return x.trim(); });
     let cuerpo = '', signo = '';
     piezas.forEach(function (x) {
-      if (!cuerpo) cuerpo = cuerpoDeTexto_(x.replace(/[^a-záéíóúñ ]/gi, '').trim());
-      if (!signo) signo = signoDeTexto_(x.replace(/[^a-záéíóúñ ]/gi, '').trim());
+      if (!cuerpo) cuerpo = cuerpoEnTexto_(x);
+      if (!signo) signo = signoEnTexto_(x);
     });
     // Y si venían pegados en la misma pieza: «Sol Virgo 21°»
-    if (!cuerpo || !signo) {
-      const palabras = linea.split(/\s+/);
-      palabras.forEach(function (w) {
-        const limpio = w.replace(/[^a-záéíóúñ]/gi, '');
-        if (!cuerpo) cuerpo = cuerpoDeTexto_(limpio);
-        if (!signo) signo = signoDeTexto_(limpio);
-      });
-      // «Nodo Norte» y «Medio Cielo» son dos palabras
-      for (let i = 0; i < palabras.length - 1 && !cuerpo; i++) {
-        cuerpo = cuerpoDeTexto_((palabras[i] + ' ' + palabras[i + 1])
-          .replace(/[^a-záéíóúñ ]/gi, ''));
-      }
-    }
+    if (!cuerpo) cuerpo = cuerpoEnTexto_(linea);
+    if (!signo) signo = signoEnTexto_(linea);
 
     if (!cuerpo || !signo) {
       ignoradas.push({ linea: linea,
@@ -14329,7 +14403,18 @@ function cartaLeer_(texto) {
     }
     vistos[cuerpo] = 1;
 
-    const gr = linea.match(/(\d{1,2})\s*[°º]\s*(\d{1,2})?/);
+    /**
+     * Horus escribe «Vir 27», sin el símbolo de grado. Así que si no
+     * hay «°», se toma el primer número que NO sea el de la casa —
+     * porque «Casa 9» también es un número y confundirlos pondría el
+     * Sol a 9 grados en vez de a 27.
+     */
+    let gr = linea.match(/(\d{1,2})\s*[°º]\s*(\d{1,2})?/);
+    if (!gr) {
+      const sinCasa = linea.replace(/casa\s*\d{1,2}/ig, ' ');
+      gr = sinCasa.match(/(?:^|[^\d])(\d{1,2})(?![\d])/);
+      if (gr) gr = [gr[0], gr[1], null];
+    }
     // La casa solo cuenta si la palabra «casa» está: un número suelto
     // puede ser el grado, y una casa inventada mueve el tema entero.
     const casa = linea.match(/casa\s*(\d{1,2})/i);
@@ -14339,7 +14424,7 @@ function cartaLeer_(texto) {
       signo: signo, signoNombre: CIELO_SIGNOS_NOMBRE[CIELO_SIGNOS.indexOf(signo)],
       grado: gr ? Number(gr[1]) + (gr[2] ? Number(gr[2]) / 60 : 0) : null,
       casa: casa ? Number(casa[1]) : null,
-      retrogrado: /\bR\b|retr[oó]grad/i.test(linea),
+      retrogrado: /\bR\b|\bRx\b|retr[oó]grad/i.test(linea),
       linea: linea,
     });
   });
@@ -14350,9 +14435,14 @@ function cartaLeer_(texto) {
     return orden.indexOf(a.cuerpo) - orden.indexOf(b.cuerpo);
   });
 
-  const faltan = orden.filter(function (c) {
-    return !vistos[c] && CIELO_CUERPOS[c].grupo !== 'generacional';
-  }).filter(function (c) { return ['quiron', 'lilith', 'nodo_norte'].indexOf(c) === -1; });
+  /**
+   * Qué se esperaba y no llegó. Solo los diez planetas y el Ascendente:
+   * los asteroides son opcionales y avisar de que falta Vesta sería
+   * ruido que tapa el aviso de que falta Saturno.
+   */
+  const ESPERADOS = ['sol','luna','mercurio','venus','marte','jupiter','saturno',
+                     'urano','neptuno','pluton','ascendente'];
+  const faltan = ESPERADOS.filter(function (c) { return !vistos[c]; });
 
   return { encontradas: encontradas, ignoradas: ignoradas, faltan: faltan };
 }
@@ -14632,7 +14722,11 @@ function soulRevolucionGuardar(s, p) {
                 hasta: String(p.hasta || ''), ascendente: norm(p.ascendente),
                 casa_sol: p.casaSol ? num(p.casaSol) : '',
                 tema: String(p.tema || ''), texto: String(p.texto || ''),
-                nota: String(p.nota || '') };
+                nota: (p.planetas || []).filter(function (x) {
+                  return CIELO_CUERPOS[norm(x.cuerpo)] && num(x.casa) >= 1 && num(x.casa) <= 12;
+                }).map(function (x) {
+                  return norm(x.cuerpo) + ':' + num(x.casa);
+                }).join(',') || String(p.nota || '') };
     const fila = enc.map(function (c) { return v[c] !== undefined ? v[c] : ''; });
     let en = -1;
     for (let i = 1; i < d.length; i++) {
@@ -14645,6 +14739,239 @@ function soulRevolucionGuardar(s, p) {
   } catch (e) {
     return { ok: false, error: e.message };
   } finally { lock.releaseLock(); }
+}
+
+// ─── LA LECTURA DE LA REVOLUCIÓN ─────────────────────────────
+
+/**
+ * ┌─ POR QUÉ ESTO SE PUEDE ESCRIBIR Y LA IMAGEN NO ────────────┐
+ * │                                                            │
+ * │ Nova NO puede leer una captura de Horus. Sacar texto de    │
+ * │ una imagen y entenderlo necesita un modelo con visión, y   │
+ * │ Apps Script no tiene ninguno. Pegar la foto no va a        │
+ * │ funcionar, y prefiero decirlo antes que dejar un botón     │
+ * │ que no hace nada.                                          │
+ * │                                                            │
+ * │ Lo que SÍ se puede: ella teclea DOS datos —el ascendente   │
+ * │ del año y en qué casa cae su Sol— y Nova compone la        │
+ * │ lectura desde una tabla. No es una interpretación          │
+ * │ inventada por encargo: es la regla escrita, la misma       │
+ * │ siempre, y ella la puede leer, discutir y corregir.        │
+ * │                                                            │
+ * │ Una lectura generada de nuevo cada vez diría algo distinto │
+ * │ el martes que el jueves con los mismos datos. Esta no.     │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+
+/**
+ * Las doce casas, y qué momento marca cada una.
+ *
+ * El momento sale de la división tradicional, que encaja con la suya:
+ *
+ *   ANGULARES   (1, 4, 7, 10)  se actúa y se mueve  → CAMBIAR
+ *   SUCEDENTES  (2, 5, 8, 11)  se sostiene y cuaja  → DESCANSAR
+ *   CADENTES    (3, 6, 9, 12)  se ajusta y se sabe  → APRENDER
+ *
+ * No es una regla que me inventé para que cuadrara: es como se leen las
+ * casas desde hace siglos, y da la casualidad de que sus tres momentos
+ * son exactamente esas tres clases.
+ */
+const CIELO_CASAS = [
+  { n: 1,  clase: 'angular',   momento: 'cambiar',
+    area: 'Tú',              que: 'Cómo te presentas y qué cuerpo le pones al año.' },
+  { n: 2,  clase: 'sucedente', momento: 'descansar',
+    area: 'Lo que tienes',   que: 'Plata propia, recursos, lo que sostiene.' },
+  { n: 3,  clase: 'cadente',   momento: 'aprender',
+    area: 'Lo que aprendes', que: 'Estudio, escritura, lo cercano, los hermanos.' },
+  { n: 4,  clase: 'angular',   momento: 'cambiar',
+    area: 'La casa',         que: 'Familia, raíz, dónde vives y de dónde vienes.' },
+  { n: 5,  clase: 'sucedente', momento: 'descansar',
+    area: 'Lo que creas',    que: 'Creación, juego, lo que sale de ti y te gusta.' },
+  { n: 6,  clase: 'cadente',   momento: 'aprender',
+    area: 'El trabajo diario', que: 'Rutina, salud, el oficio de todos los días.' },
+  { n: 7,  clase: 'angular',   momento: 'cambiar',
+    area: 'Los otros',       que: 'Sociedades, contratos, el uno a uno.' },
+  { n: 8,  clase: 'sucedente', momento: 'descansar',
+    area: 'Lo compartido',   que: 'Plata de otros, deudas, lo que se transforma.' },
+  { n: 9,  clase: 'cadente',   momento: 'aprender',
+    area: 'Lo que amplía',   que: 'Estudio mayor, viajes, publicar, lo que abre mundo.' },
+  { n: 10, clase: 'angular',   momento: 'cambiar',
+    area: 'Lo público',      que: 'Carrera, visibilidad, lo que te reconocen.' },
+  { n: 11, clase: 'sucedente', momento: 'descansar',
+    area: 'La gente',        que: 'Red, comunidad, proyectos con otros, lo que viene.' },
+  { n: 12, clase: 'cadente',   momento: 'aprender',
+    area: 'Lo de adentro',   que: 'Retiro, cierre de ciclo, lo que se trabaja a solas.' },
+];
+
+/** El ascendente del año dice CÓMO se entra, no qué pasa. */
+const REV_ASCENDENTE = {
+  aries:       'Se entra empujando. El año premia arrancar, no preparar.',
+  tauro:       'Se entra despacio y con cuerpo. Pide construir algo que dure, sin apuro.',
+  geminis:     'Se entra preguntando. Año de moverse, escribir, hablar con mucha gente.',
+  cancer:      'Se entra hacia adentro. Casa, gente cercana, lo que te sostiene.',
+  leo:         'Se entra mostrándose. Lo que hagas este año se va a ver.',
+  virgo:       'Se entra ordenando. Año de afinar el método, no de inventar de cero.',
+  libra:       'Se entra de a dos. Lo que pase, pasa con alguien más.',
+  escorpio:    'Se entra removiendo. Año de cerrar en serio lo que estaba a medias.',
+  sagitario:   'Se entra abriendo. Pide más mundo: estudiar, viajar, publicar.',
+  capricornio: 'Se entra con estructura. Año de responsabilidad y de resultados medibles.',
+  acuario:     'Se entra rompiendo. Lo que cambies este año no se devuelve.',
+  piscis:      'Se entra soltando. Año de cerrar ciclo antes de empezar otro.',
+};
+
+/**
+ * La lectura, compuesta.
+ *
+ * Devuelve las partes por separado —el cómo, el dónde, los grupos— para
+ * que la pantalla las muestre como bloques y no como un párrafo. Y
+ * devuelve SIEMPRE qué le faltó para poder decir más.
+ */
+function revolucionLectura_(asc, casaSol, planetas) {
+  const partes = [], faltan = [];
+  const a = norm(asc);
+  const casa = CIELO_CASAS.filter(function (c) { return c.n === num(casaSol); })[0] || null;
+
+  if (a && REV_ASCENDENTE[a]) {
+    partes.push({ clave: 'ascendente', titulo: 'Cómo entras al año',
+      valor: CIELO_SIGNOS_NOMBRE[CIELO_SIGNOS.indexOf(a)],
+      texto: REV_ASCENDENTE[a] });
+  } else {
+    faltan.push('el ascendente del año');
+  }
+
+  if (casa) {
+    partes.push({ clave: 'sol', titulo: 'Dónde va tu atención',
+      valor: 'Casa ' + casa.n + ' · ' + casa.area,
+      texto: casa.que + ' Es una casa ' + casa.clase + ', así que el año pide ' +
+        (CIELO_MOMENTOS[casa.momento] || {}).nombre.toLowerCase() + '.' });
+  } else {
+    faltan.push('en qué casa cae tu Sol');
+  }
+
+  /**
+   * Los planetas por casa, agrupados con SU división. Cada grupo dice
+   * qué mira, que es lo que ella pidió: los personales lo inmediato,
+   * los sociales la expansión y la estructura, los generacionales la
+   * época.
+   */
+  const grupos = [];
+  ['personal', 'social', 'generacional'].forEach(function (g) {
+    const suyos = (planetas || []).filter(function (x) {
+      const def = CIELO_CUERPOS[norm(x.cuerpo)];
+      return def && def.grupo === g && num(x.casa) >= 1 && num(x.casa) <= 12;
+    });
+    if (!suyos.length) return;
+    grupos.push({
+      grupo: g, nombre: CIELO_GRUPOS[g].nombre, que: CIELO_GRUPOS[g].que,
+      cuerpos: suyos.map(function (x) {
+        const c = CIELO_CASAS.filter(function (k) { return k.n === num(x.casa); })[0];
+        return { cuerpo: norm(x.cuerpo), nombre: CIELO_CUERPOS[norm(x.cuerpo)].nombre,
+                 casa: num(x.casa), area: c ? c.area : '', que: c ? c.que : '',
+                 momento: c ? c.momento : '' };
+      }),
+    });
+  });
+  if (!grupos.length) faltan.push('en qué casa cae cada planeta (opcional, pero es lo que más dice)');
+
+  /**
+   * El momento del año: el que más se repite entre el Sol y los
+   * planetas que tengan casa. Si hay empate, manda el del Sol — es su
+   * año, y el Sol es de quien es el año.
+   */
+  const votos = {};
+  if (casa) votos[casa.momento] = 2;
+  grupos.forEach(function (g) {
+    g.cuerpos.forEach(function (c) {
+      if (c.momento) votos[c.momento] = (votos[c.momento] || 0) + 1;
+    });
+  });
+  let momento = '';
+  Object.keys(votos).forEach(function (k) {
+    if (!momento || votos[k] > votos[momento]) momento = k;
+  });
+
+  return {
+    partes: partes, grupos: grupos, momento: momento,
+    momentoNombre: (CIELO_MOMENTOS[momento] || {}).nombre || '',
+    faltan: faltan,
+    // Sin los dos datos base no hay lectura. Se dice, no se rellena.
+    hay: partes.length > 0,
+    porque: partes.length ? '' :
+      'Para darte la lectura necesito dos datos de Horus: el ascendente del año y en qué ' +
+      'casa cae tu Sol. Con eso compongo el resto.',
+  };
+}
+
+/**
+ * Propone temporadas de pensum desde los tránsitos que ella ya cargó.
+ *
+ * No inventa fechas: usa las que trajo de Horus. Lo que agrega es el
+ * momento, sacado de la casa por la que pasa. Y propone — ella confirma,
+ * como en todo lo demás.
+ */
+function pensumProponer_(uid) {
+  const transitos = transitosDe_(uid);
+  const yaEstan = {};
+  pensumDe_(uid).forEach(function (x) {
+    yaEstan[norm(x.titulo) + '|' + x.desde] = 1;
+  });
+
+  return transitos.filter(function (t) {
+    /**
+     * Solo los que duran. Un tránsito de la Luna dura dos días y medio
+     * y no es una temporada: meterlo en el pensum llenaría la lista de
+     * ruido y taparía a Saturno, que es el que de verdad marca meses.
+     */
+    const dias = Math.round((new Date(t.hasta + 'T00:00:00Z') -
+                             new Date(t.desde + 'T00:00:00Z')) / 86400000) + 1;
+    return dias >= 14;
+  }).map(function (t) {
+    const c = CIELO_CASAS.filter(function (k) { return k.n === num(t.casa); })[0];
+    const titulo = t.nombre + (t.casa ? ' por casa ' + t.casa : '') +
+                   (t.aNatal ? ' a ' + t.aNatal : '');
+    return {
+      titulo: titulo, desde: t.desde, hasta: t.hasta,
+      cuerpo: t.cuerpo, casa: t.casa,
+      momento: c ? c.momento : '',
+      quePide: t.tema || (c ? c.que : ''),
+      grupo: t.grupo,
+      dias: Math.round((new Date(t.hasta + 'T00:00:00Z') -
+                        new Date(t.desde + 'T00:00:00Z')) / 86400000) + 1,
+      yaEsta: !!yaEstan[norm(titulo) + '|' + t.desde],
+    };
+  }).sort(function (a, b) { return a.desde < b.desde ? -1 : 1; });
+}
+
+/** Guarda las temporadas que ella confirmó de la propuesta. */
+function soulPensumDesdeTransitos(s, p) {
+  if (!soulPuede_(s)) return { ok: false, error: 'NovaSoul es de Manuela.' };
+  const uid = soulUsuario_(s);
+  const items = p.items || [];
+  if (!items.length) return { ok: false, error: 'No marcaste ninguna temporada.' };
+
+  const yaEstan = {};
+  pensumDe_(uid).forEach(function (x) { yaEstan[norm(x.titulo) + '|' + x.desde] = 1; });
+
+  let creadas = 0, repetidas = 0;
+  items.forEach(function (it) {
+    const titulo = String(it.titulo || '').trim();
+    const desde = String(it.desde || '').trim();
+    if (!titulo || !/^\d{4}-\d{2}-\d{2}$/.test(desde)) return;
+    if (yaEstan[norm(titulo) + '|' + desde]) { repetidas++; return; }
+    try {
+      soulGuardar_('Pensum', {
+        titulo: titulo, desde: desde, hasta: String(it.hasta || ''),
+        cuerpo: norm(it.cuerpo), casa: it.casa ? num(it.casa) : '',
+        momento: CIELO_MOMENTOS[norm(it.momento)] ? norm(it.momento) : '',
+        que_pide: String(it.quePide || ''),
+        nota: 'Propuesta desde un tránsito',
+      }, uid);
+      yaEstan[norm(titulo) + '|' + desde] = 1;
+      creadas++;
+    } catch (e) { /* una fila mala no tumba las demás */ }
+  });
+  return { ok: true, creadas: creadas, repetidas: repetidas };
 }
 
 // ─── SI LE FUNCIONÓ A ELLA ───────────────────────────────────
@@ -14779,10 +15106,24 @@ function soulCielo(s, p) {
     revGuardada = soulLeerSuave_('Revolucion', uid, [])
       .filter(function (f) { return rev && num(f.anio) === rev.anio; })
       .map(function (f) {
+        /**
+         * Las casas de los planetas viajan en `nota` como «marte:7,venus:3».
+         * Van ahí y no en columnas nuevas porque son hasta trece valores
+         * y una hoja con trece columnas más se vuelve ilegible a mano —
+         * y esta hoja ella la va a abrir a mano.
+         */
+        const casas = [];
+        String(f.nota || '').split(',').forEach(function (par) {
+          const x = par.split(':');
+          const c = norm(x[0]);
+          if (CIELO_CUERPOS[c] && num(x[1]) >= 1 && num(x[1]) <= 12) {
+            casas.push({ cuerpo: c, casa: num(x[1]) });
+          }
+        });
         return { anio: num(f.anio), ascendente: String(f.ascendente || ''),
                  casaSol: f.casa_sol === '' ? null : num(f.casa_sol),
                  tema: String(f.tema || ''), texto: String(f.texto || ''),
-                 nota: String(f.nota || '') };
+                 nota: String(f.nota || ''), planetas: casas };
       })[0] || null;
   } catch (e) { /* la hoja puede no estar */ }
 
@@ -14807,7 +15148,16 @@ function soulCielo(s, p) {
     pensumAbierto: pensum.filter(function (x) { return vigente(x, hoy); }),
     transitos: transitos.sort(function (a, b) { return a.desde < b.desde ? -1 : 1; }),
     transitosHoy: transitos.filter(function (x) { return vigente(x, hoy); }),
-    revolucion: rev ? Object.assign({}, rev, { carta: revGuardada }) : null,
+    revolucion: rev ? Object.assign({}, rev, {
+      carta: revGuardada,
+      lectura: revolucionLectura_(
+        revGuardada ? revGuardada.ascendente : '',
+        revGuardada ? revGuardada.casaSol : 0,
+        revGuardada && revGuardada.planetas ? revGuardada.planetas : []),
+    }) : null,
+    casas: CIELO_CASAS,
+    // Las temporadas que se podrían armar solas desde sus tránsitos.
+    pensumPropuesto: pensumProponer_(uid),
     medicion: cieloMedir_(uid, hoy),
   };
 }

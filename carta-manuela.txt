@@ -1,0 +1,25 @@
+Sol	Vir 27	Casa 9
+Luna	Leo 10	Casa 7
+Mercurio	Lib 20	Casa 10
+Venus	Lib 5	Casa 9
+Marte	Esc 9	Casa 10
+Júpiter	Sag 8	Casa 11
+Saturno Rx	Pis 20	Casa 3
+Urano Rx	Cap 26	Casa 1
+Neptuno Rx	Cap 22	Casa 1
+Plutón	Esc 28	Casa 11
+Nodo Norte Rx	Lib 27	Casa 10
+Nodo Sur Rx	Ari 27	Casa 4
+Lilith	Gém 29	Casa 6
+Quirón	Lib 1	Casa 9
+Folo	Vir 22	Casa 9
+Ceres	Lib 7	Casa 9
+Pallas	Vir 14	Casa 8
+Juno	Sag 22	Casa 12
+Vesta	Vir 14	Casa 8
+Parte de la Fortuna	Esc 28	Casa 11
+Vertex	Vir 21	Casa 9
+Ascendente	Cap 15
+Fondo del cielo	Ari 19
+Descendente	Cán 15
+Mediocielo	Lib 19

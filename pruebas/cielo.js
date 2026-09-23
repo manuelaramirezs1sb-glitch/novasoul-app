@@ -68,7 +68,8 @@ global.Date = class extends RealDate {
   static UTC(...a) { return RealDate.UTC(...a); }
 };
 
-(0, eval)(src + '\n;globalThis.__F = { faseLunar_, revolucionVentana_, cartaLeer_,' +
+(0, eval)(src + '\n;globalThis.__F = { faseLunar_, revolucionVentana_, cartaLeer_,'
+  + ' revolucionLectura_, pensumProponer_, soulPensumDesdeTransitos, CIELO_CASAS,' +
   ' soulCielo, soulCartaLeer, soulCartaGuardar, soulNacimientoGuardar,' +
   ' soulPensumGuardar, soulTransitoGuardar, soulRevolucionGuardar, cieloMedir_,' +
   ' CIELO_CUERPOS, CIELO_MINIMO, LUNA_FASES };');
@@ -194,6 +195,91 @@ ok('y «Generado por Horus» queda fuera',
 c = F.soulCartaLeer(SOCIA, { texto: 'Sol en Virgo\nLuna en Cáncer' });
 igual('avisa qué cuerpos faltan', true, c.faltan.length > 0 && c.faltan.indexOf('Saturno') !== -1);
 
+/**
+ * ── SU CARTA DE VERDAD, COMO LA ESCRIBE HORUS ──
+ *
+ * Copiada de las capturas que mandó. Si el lector deja de entender
+ * ESTA, da igual que entienda una inventada: esta es la que va a pegar.
+ */
+const HORUS = `Manuela Ramirez Sepúlveda
+Sol	Vir 27	Casa 9
+Luna	Leo 10	Casa 7
+Mercurio	Lib 20	Casa 10
+Venus	Lib 5	Casa 9
+Marte	Esc 9	Casa 10
+Júpiter	Sag 8	Casa 11
+Saturno Rx	Pis 20	Casa 3
+Urano Rx	Cap 26	Casa 1
+Neptuno Rx	Cap 22	Casa 1
+Plutón	Esc 28	Casa 11
+Nodo Norte Rx	Lib 27	Casa 10
+Nodo Sur Rx	Ari 27	Casa 4
+Lilith	Gém 29	Casa 6
+Quirón	Lib 1	Casa 9
+Folo	Vir 22	Casa 9
+Ceres	Lib 7	Casa 9
+Pallas	Vir 14	Casa 8
+Juno	Sag 22	Casa 12
+Vesta	Vir 14	Casa 8
+Parte de la Fortuna	Esc 28	Casa 11
+Vertex	Vir 21	Casa 9
+Ascendente	Cap 15
+Fondo del cielo	Ari 19
+Descendente	Cán 15
+Mediocielo	Lib 19`;
+
+console.log('\n── La carta REAL de Manuela, de Horus ──');
+sembrarHojas();
+let H = F.soulCartaLeer(SOCIA, { texto: HORUS });
+const hp = {};
+H.encontradas.forEach(x => { hp[x.cuerpo] = x; });
+igual('los veinticinco cuerpos', 25, H.encontradas.length);
+igual('Sol en Virgo 27, casa 9', ['virgo', 27, 9],
+      [hp.sol.signo, hp.sol.grado, hp.sol.casa]);
+igual('Luna en Leo 10, casa 7', ['leo', 10, 7],
+      [hp.luna.signo, hp.luna.grado, hp.luna.casa]);
+igual('Ascendente en Capricornio 15', ['capricornio', 15],
+      [hp.ascendente.signo, hp.ascendente.grado]);
+/**
+ * «Vir 27 Casa 9» tiene dos números. El grado es 27, no 9. Confundirlos
+ * pondría su Sol a 9 grados y movería medio análisis.
+ */
+ok('el grado NO se confunde con la casa', hp.sol.grado === 27 && hp.sol.casa === 9,
+   JSON.stringify(hp.sol));
+ok('los tres Rx de Horus se marcan',
+   hp.saturno.retrogrado && hp.urano.retrogrado && hp.neptuno.retrogrado);
+ok('y el Sol no', hp.sol.retrogrado === false);
+igual('Nodo Sur NO se confunde con Nodo Norte',
+      ['aries', 'libra'], [hp.nodo_sur.signo, hp.nodo_norte.signo]);
+igual('Mediocielo en Libra 19', ['libra', 19],
+      [hp.medio_cielo.signo, hp.medio_cielo.grado]);
+igual('Fondo del cielo en Aries', 'aries', hp.fondo_cielo.signo);
+igual('Descendente en Cáncer', 'cancer', hp.descendente.signo);
+ok('los asteroides entran: Ceres, Pallas, Juno, Vesta, Folo, Vertex',
+   !!(hp.ceres && hp.pallas && hp.juno && hp.vesta && hp.folo && hp.vertex));
+igual('la Parte de la Fortuna también', 'escorpio', hp.fortuna.signo);
+
+/** Su marco se respeta: los asteroides NO se cuelan entre los suyos. */
+igual('los personales son sus cinco', 5,
+      H.encontradas.filter(x => x.grupo === 'personal').length);
+igual('los sociales, Júpiter y Saturno', 2,
+      H.encontradas.filter(x => x.grupo === 'social').length);
+igual('los generacionales, los tres de siempre', 3,
+      H.encontradas.filter(x => x.grupo === 'generacional').length);
+ok('Quirón NO se cuela entre los generacionales', hp.quiron.grupo === 'punto');
+igual('no falta ningún planeta', 0, H.faltan.length);
+ok('y la línea del nombre queda fuera',
+   H.ignoradas.filter(x => /Manuela/.test(x.linea)).length === 1,
+   JSON.stringify(H.ignoradas.map(x => x.linea)));
+
+const gH = F.soulCartaGuardar(SOCIA, { filas: H.encontradas });
+igual('se guardan los veinticinco', 25, gH.guardadas);
+const cl0 = F.soulCielo(SOCIA, {});
+igual('y Nova los agrupa como ella los piensa',
+      [5, 2, 3, 4, 11],
+      ['personal','social','generacional','angulo','punto']
+        .map(gp => (cl0.cartaPorGrupo[gp] || []).length));
+
 console.log('\n── Guardar la carta ──');
 sembrarHojas();
 let g = F.soulCartaGuardar(SOCIA, { filas: F.cartaLeer_(CARTA).encontradas });
@@ -307,6 +393,81 @@ ok('una entrega del FUTURO no cuenta como incumplida',
      LIBROS.s.Pendientes.push(tarea('fut', '2027-01-15', false));
      return F.soulCielo(SOCIA, {}).medicion.conFecha === antes;
    })());
+
+console.log('\n── La lectura de la revolución, compuesta por Nova ──');
+sembrarHojas();
+F.soulNacimientoGuardar(SOCIA, { fecha: '1998-09-14' });
+let cl = F.soulCielo(SOCIA, {});
+ok('sin los dos datos no hay lectura, y se dice',
+   cl.revolucion.lectura.hay === false && /dos datos de Horus/.test(cl.revolucion.lectura.porque));
+
+F.soulRevolucionGuardar(SOCIA, { anio: 2026, desde: '2026-09-14', hasta: '2027-09-13',
+  ascendente: 'capricornio', casaSol: 10,
+  planetas: [{ cuerpo: 'marte', casa: 1 }, { cuerpo: 'saturno', casa: 6 },
+             { cuerpo: 'pluton', casa: 12 }, { cuerpo: 'inventado', casa: 3 },
+             { cuerpo: 'venus', casa: 99 }] });
+cl = F.soulCielo(SOCIA, {});
+const L = cl.revolucion.lectura;
+ok('ahora sí hay lectura', L.hay === true);
+igual('dos partes: cómo entras y dónde va la atención', 2, L.partes.length);
+ok('el ascendente del año dice CÓMO se entra',
+   /estructura/.test(L.partes[0].texto), L.partes[0].texto);
+ok('y la casa del Sol dice DÓNDE va',
+   /Carrera, visibilidad/.test(L.partes[1].texto), L.partes[1].texto);
+/**
+ * Casa 10 es angular, y angular es acción: el año pide cambiar. No es
+ * una regla inventada para que cuadrara — angulares, sucedentes y
+ * cadentes son sus tres momentos desde hace siglos.
+ */
+igual('la casa 10 es angular, así que el año pide cambiar', 'cambiar', L.momento);
+igual('los planetas van por SUS tres grupos',
+      ['personal', 'social', 'generacional'], L.grupos.map(g => g.grupo));
+igual('cada grupo dice qué mira',
+      'Lo inmediato, lo mío, lo propio.', L.grupos[0].que);
+ok('Marte en casa 1 sale con su área',
+   L.grupos[0].cuerpos[0].area === 'Tú', JSON.stringify(L.grupos[0].cuerpos[0]));
+ok('Saturno en casa 6 es el social',
+   L.grupos[1].cuerpos[0].casa === 6 && L.grupos[1].cuerpos[0].nombre === 'Saturno');
+ok('un planeta inventado se descarta en silencio',
+   !JSON.stringify(L.grupos).match(/inventado/));
+ok('y una casa 99 también', !JSON.stringify(L.grupos).match(/"casa":99/));
+igual('no falta nada por decir', 0, L.faltan.length);
+
+F.soulRevolucionGuardar(SOCIA, { anio: 2026, ascendente: 'capricornio', casaSol: 0, planetas: [] });
+cl = F.soulCielo(SOCIA, {});
+ok('sin la casa del Sol lo dice, y da la mitad que sí puede',
+   cl.revolucion.lectura.partes.length === 1 &&
+   /casa cae tu Sol/.test(cl.revolucion.lectura.faltan.join(' ')),
+   JSON.stringify(cl.revolucion.lectura.faltan));
+
+console.log('\n── Temporadas propuestas desde los tránsitos ──');
+sembrarHojas();
+F.soulNacimientoGuardar(SOCIA, { fecha: '1998-09-14' });
+F.soulTransitoGuardar(SOCIA, { datos: { cuerpo: 'saturno', desde: '2026-09-01',
+  hasta: '2026-11-30', casa: 10, tema: 'Estructura en lo público' } });
+F.soulTransitoGuardar(SOCIA, { datos: { cuerpo: 'luna', desde: '2026-09-22',
+  hasta: '2026-09-24', casa: 4, tema: 'Luna por casa 4' } });
+cl = F.soulCielo(SOCIA, {});
+igual('propone solo el que dura: la Luna de dos días no es una temporada',
+      1, cl.pensumPropuesto.length);
+igual('con su título armado', 'Saturno por casa 10', cl.pensumPropuesto[0].titulo);
+igual('y el momento sacado de la casa', 'cambiar', cl.pensumPropuesto[0].momento);
+igual('sin fechas inventadas: las de Horus',
+      ['2026-09-01', '2026-11-30'],
+      [cl.pensumPropuesto[0].desde, cl.pensumPropuesto[0].hasta]);
+ok('proponer NO guardó nada', LIBROS.s.Pensum.length === 1);
+
+g = F.soulPensumDesdeTransitos(SOCIA, { items: cl.pensumPropuesto });
+igual('al confirmar, se guarda', 1, g.creadas);
+igual('y ya está abierta', 1, F.soulCielo(SOCIA, {}).pensumAbierto.length);
+igual('confirmarla otra vez no duplica', 0,
+      F.soulPensumDesdeTransitos(SOCIA, { items: cl.pensumPropuesto }).creadas);
+ok('y la propuesta ya la marca como puesta',
+   F.soulCielo(SOCIA, {}).pensumPropuesto[0].yaEsta === true);
+ok('sin marcar nada, lo dice',
+   /No marcaste/.test(F.soulPensumDesdeTransitos(SOCIA, { items: [] }).error));
+ok('una operadora no propone ni guarda',
+   F.soulPensumDesdeTransitos(OPERADORA, { items: [{ titulo: 'x', desde: '2026-01-01' }] }).ok === false);
 
 console.log('\n── Si todavía no hay carta ──');
 sembrarHojas();

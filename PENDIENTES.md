@@ -993,3 +993,83 @@ porque una casa inventada mueve el tema entero.
    inventados que duplica lo que Empresarial ya hace de verdad.
 3. Que los tránsitos entren pegando el texto de Horus de una vez, como
    el sílabo, en vez de uno por uno.
+
+### 11b · La carta de Manuela, y dónde está de verdad la frontera (23-09-2026)
+
+Ella mandó las capturas de Horus y preguntó si Nova podía leerlas. La
+respuesta separa dos cosas que se venían confundiendo:
+
+- **Claude (este chat) SÍ lee imágenes.** Le mandó cuatro capturas y de
+  ahí salió su carta completa, transcrita.
+- **Nova (el Apps Script) NO.** Corre en los servidores de Google y no
+  tiene modelo de visión. Ahí la frontera no se mueve.
+
+Así que el camino que funciona es: ella manda la captura por el chat, se
+transcribe, y el texto se pega en NovaSoul. El archivo
+`carta-manuela.txt` tiene su carta lista para pegar.
+
+**Su carta, para que quede escrita:** Sol en Virgo 27 (casa 9), Luna en
+Leo 10 (casa 7), Ascendente en Capricornio 15, Mediocielo en Libra 19.
+Saturno, Urano, Neptuno y los dos Nodos, retrógrados.
+
+*(La maqueta decía «Asc Leo, Luna Capricornio». Eso me lo inventé yo
+cuando no había datos. Era al revés.)*
+
+**Tres cosas que el lector aprendió con la carta de verdad:**
+
+1. **Horus abrevia los signos** — «Vir», «Lib», «Esc», «Cán». Sin esas
+   abreviaturas, pegar su pantalla tal cual no encontraba NI UN signo,
+   que es exactamente lo que ella iba a hacer.
+2. **«Vir 27 Casa 9» tiene dos números.** El grado es 27, no 9.
+   Confundirlos le ponía el Sol a 9 grados y movía medio análisis.
+3. **«Nodo Sur» empieza por «Nodo».** Buscando palabra por palabra, el
+   Nodo Sur se volvía Nodo Norte y después se descartaba por repetido:
+   desaparecía de la carta sin decir nada. Ahora se buscan los grupos
+   largos de palabras primero.
+
+**Los asteroides van en su propio cajón.** Ella fue explícita con sus
+tres grupos —personales de Sol a Marte, sociales Júpiter y Saturno,
+generacionales Urano, Neptuno y Plutón—. Meter a Quirón o a Ceres entre
+los generacionales diluiría su marco, y el marco es suyo. Hay un quinto
+grupo, «Puntos y asteroides: matices, no el marco».
+
+### La lectura de la revolución la compone Nova
+
+De una tabla, no de una interpretación nueva cada vez. Ella teclea dos
+datos —el ascendente del año y en qué casa cae su Sol— y Nova arma:
+
+- **Cómo entra al año** (el ascendente).
+- **Dónde va su atención** (la casa del Sol).
+- **Qué momento pide el año**, de la división tradicional de las casas,
+  que resulta ser exactamente sus tres momentos:
+
+| Casas | Clase | Momento |
+|---|---|---|
+| 1, 4, 7, 10 | angulares | **cambiar** |
+| 2, 5, 8, 11 | sucedentes | **descansar** |
+| 3, 6, 9, 12 | cadentes | **aprender** |
+
+No es una regla inventada para que cuadrara: así se leen las casas desde
+hace siglos, y da la casualidad de que sus tres momentos son esas tres
+clases.
+
+Con los mismos datos dice siempre lo mismo — y eso es justo lo que
+permite que ella la discuta y la corrija. Una lectura generada de nuevo
+cada vez diría algo distinto el martes que el jueves.
+
+**Y propone temporadas de pensum** desde los tránsitos que ella cargó:
+usa las fechas de Horus, agrega el momento según la casa, y **propone**
+— ella confirma. Solo los que duran catorce días o más: un tránsito de
+la Luna dura dos días y medio y llenaría la lista de ruido tapando a
+Saturno, que es el que marca meses.
+
+### Equipo salió de Nova Central
+
+Era una maqueta con nombres inventados que duplicaba lo que Empresarial
+ya hace de verdad. Fuera: el menú, la vista, `buildEquipo` e
+`inviteUser`.
+
+**Lo que ella decidió:** el equipo de Nutrea se ve en **Nova
+Empresarial**, que es donde vive. Y en **novAcademy** NO va esa pantalla
+tal cual — hay que rehacerla en torno a **profesorado y estudiantes**,
+que es otra cosa.

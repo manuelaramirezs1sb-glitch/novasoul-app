@@ -244,7 +244,21 @@ const CIELO = {
   revolucion: { anio: 2026, desde: '2026-09-14', hasta: '2027-09-13', edad: 28,
                 diasRestantes: 355, transcurrido: 3,
                 carta: { anio: 2026, ascendente: 'leo', casaSol: 11,
-                         tema: 'El año de mostrar', texto: 'Lectura de Horus.', nota: '' } },
+                         tema: 'El año de mostrar', texto: '', nota: '',
+                         planetas: [{ cuerpo: 'marte', casa: 1 }] },
+                lectura: { hay: true, momento: 'descansar', momentoNombre: 'Descansar',
+                  partes: [
+                    { clave: 'ascendente', titulo: 'Cómo entras al año', valor: 'Leo',
+                      texto: 'Se entra mostrándose. Lo que hagas este año se va a ver.' },
+                    { clave: 'sol', titulo: 'Dónde va tu atención', valor: 'Casa 11 · La gente',
+                      texto: 'Red, comunidad, proyectos con otros. Es una casa sucedente, así que el año pide descansar.' }],
+                  grupos: [{ grupo: 'personal', nombre: 'Personales',
+                    que: 'Lo inmediato, lo mío, lo propio.',
+                    cuerpos: [{ cuerpo: 'marte', nombre: 'Marte', casa: 1, area: 'Tú',
+                                que: 'Cómo te presentas y qué cuerpo le pones al año.',
+                                momento: 'cambiar' }] }],
+                  faltan: [], porque: '' } },
+  casas: [], pensumPropuesto: [],
   medicion: { minimo: 8, conFecha: 30, promedio: 62,
     fases: [{ id: 'llena', nombre: 'Luna llena', momento: 'cambiar', n: 12, hechas: 5, pct: 42, faltan: 0 },
             { id: 'cuarto_menguante', nombre: 'Cuarto menguante', momento: 'cambiar', n: 10, hechas: 8, pct: 80, faltan: 0 },
@@ -669,7 +683,27 @@ const FAMILY = {
        (ci.match(/\d+ días?/g) || []).join(','));
     ok('la revolución solar sale con su ventana' + A,
        /28 años/.test(ci) && /14 sep/.test(ci) && /quedan 355 días/.test(ci));
-    ok('y con lo que ella cargó de Horus' + A, /El año de mostrar/.test(ci));
+    /**
+     * La LECTURA la compone Nova, que es lo que ella pidió. No es el
+     * texto que pegó: es la tabla aplicada a sus dos datos.
+     */
+    ok('Nova compone la lectura del año' + A,
+       /EL AÑO PIDE/.test(ci) && /Descansar/.test(ci));
+    ok('dice cómo entra al año' + A,
+       /CÓMO ENTRAS AL AÑO/.test(ci) && /Se entra mostrándose/.test(ci));
+    ok('y dónde va su atención' + A,
+       /DÓNDE VA TU ATENCIÓN/.test(ci) && /Casa 11 · La gente/.test(ci));
+    ok('los planetas del año van por sus grupos' + A,
+       /Marte/.test(ci) && /Cómo te presentas/.test(ci));
+    ok('y lo que ella escribió va aparte, marcado como suyo' + A,
+       /Tú dijiste:/.test(ci) && /El año de mostrar/.test(ci));
+    await p.evaluate(() => abrirRevolucion());
+    ok('el formulario dice que no puede leer una captura' + A,
+       /no hace nada/.test(await p.textContent('#m-revolucion')) &&
+       /modelo con visión/.test(await p.textContent('#m-revolucion')));
+    ok('y pide la casa de cada planeta' + A,
+       (await p.$$eval('#mrv-planetas input', e => e.length)) >= 9);
+    await p.evaluate(() => cerrarModal('m-revolucion'));
     /** Lo que ninguna app hace: medir si le funcionó A ELLA. */
     ok('mide si le funcionó a ella' + A,
        /SI TE FUNCIONÓ A TI/.test(ci) && /cuarto menguante las terminaste el 80%/.test(ci));

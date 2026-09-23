@@ -500,9 +500,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
       <div class="ni" data-v="onboarding" onclick="go('onboarding',this)">
         <span class="ni-ico">＋</span> Nuevo cliente
       </div>
-      <div class="ni" data-v="equipo" onclick="go('equipo',this)">
-        <span class="ni-ico">◍</span> Equipo
-      </div>
       <div class="ni" data-v="pipeline" onclick="go('pipeline',this)">
         <span class="ni-ico">◎</span> Pipeline novAcademy
       </div>
@@ -671,36 +668,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
       </div>
 
       <!-- ─── EQUIPO ─── -->
-      <div class="view" id="v-equipo">
-        <div class="card-row">
-          <div class="card">
-            <div class="card-ttl">Nutrea GT — Equipo</div>
-            <div id="team-gt"></div>
-          </div>
-          <div class="card">
-            <div class="card-ttl">Nutrea EC — Equipo</div>
-            <div id="team-ec"></div>
-          </div>
-        </div>
-        <div class="card" style="max-width:480px">
-          <div class="card-ttl">Invitar usuario</div>
-          <div style="display:flex;flex-direction:column;gap:11px">
-            <input class="f-inp" id="inv-email" placeholder="correo@ejemplo.com">
-            <select class="f-inp" id="inv-rol">
-              <option value="">Rol…</option>
-              <option value="admin">Administradora</option>
-              <option value="gestora">Gestora</option>
-            </select>
-            <select class="f-inp" id="inv-tienda">
-              <option value="">Tienda…</option>
-              <option value="gt">Nutrea GT</option>
-              <option value="ec">Nutrea EC</option>
-            </select>
-            <button class="btn" onclick="inviteUser()">Enviar invitación</button>
-          </div>
-        </div>
-      </div>
-
       <!-- ─── PIPELINE novAcademy ─── -->
       <div class="view" id="v-pipeline">
         <div class="card">
@@ -861,7 +828,7 @@ let activeSt = 'gt';
  * La huella sale del contenido del archivo: cambia sola con cada cambio,
  * aunque sean dos versiones el mismo día.
  */
-const VERSION_PANTALLA = '2026-09-23 · 6efc';
+const VERSION_PANTALLA = '2026-09-23 · f03f';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -994,7 +961,6 @@ function entrarCentral() {
   if (rl) rl.textContent = NC_SESION.rol === 'socia' ? 'Socia' : 'Operadora';
 
   buildDashboard();
-  buildEquipo();
   buildPipeline();
   renderDemoAccess();
   pintarOnboarding();
@@ -1944,7 +1910,7 @@ async function crearClienteReal() {
  * Mismo criterio que en Empresarial: marcar lo inventado es lo único que
  * permite creerle a lo que no lo está. Se saca de aquí al conectarlo.
  */
-const EJEMPLO_CENTRAL = ['dash-kpis', 'dash-bottom', 'team-gt', 'team-ec',
+const EJEMPLO_CENTRAL = ['dash-kpis', 'dash-bottom',
                          'pipe-grads', 'pipe-pos', 'meta-summary'];
 
 function sellarEjemploCentral() {
@@ -1963,7 +1929,7 @@ function sellarEjemploCentral() {
 /* ─── NAV ─── */
 const TITLES = {
   dashboard:'Hoy', trabajos:'Mis proyectos', plata:'Mis finanzas',
-  clientes:'Clientes', equipo:'Equipo',
+  clientes:'Clientes',
   pipeline:'Pipeline novAcademy', onboarding:'Onboarding de clientes',
   meta:'Meta Ads', demo:'Gestión de demo', proyecto:'El proyecto a fondo'
 };
@@ -2396,27 +2362,6 @@ function switchStore(id){
 /* ─── TIENDAS ─── */
 
 /* ─── EQUIPO ─── */
-function buildEquipo(){
-  TIENDAS.forEach(t => {
-    document.getElementById('team-'+t.id).innerHTML = t.team.map(u => `
-      <div class="row-item">
-        <div class="ava ava-muted" style="width:34px;height:34px">${u.ini}</div>
-        <div style="flex:1"><div class="row-nm">${u.nm}</div><div class="row-sub">${u.email}</div></div>
-        <span class="bd ${u.rol==='admin'?'bd-b':'bd-a'}">${u.rol==='admin'?'Admin':'Gestora'}</span>
-      </div>`).join('');
-  });
-}
-function inviteUser(){
-  const email  = document.getElementById('inv-email').value.trim();
-  const rol    = document.getElementById('inv-rol').value;
-  const tienda = document.getElementById('inv-tienda').value;
-  if(!email || !rol || !tienda){ showToast('Completa todos los campos'); return; }
-  const tnm = tienda === 'gt' ? 'Nutrea GT' : 'Nutrea EC';
-  const rnm = rol === 'admin' ? 'administradora' : 'gestora';
-  showToast(`Invitación enviada a ${email} como ${rnm} en ${tnm}`);
-  document.getElementById('inv-email').value = '';
-}
-
 /* ─── PIPELINE ─── */
 function buildPipeline(){
   document.getElementById('pipe-grads').innerHTML = GRADS.map((g,i) => `
