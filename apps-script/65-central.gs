@@ -143,6 +143,7 @@ function manejarCentral(accion, p) {
     case 'nc_soul_pensum_borrar':  return soulPensumBorrar(s, p);
     case 'nc_soul_revolucion':     return soulRevolucionGuardar(s, p);
     case 'nc_soul_pensum_auto':    return soulPensumDesdeTransitos(s, p);
+    case 'nc_soul_pensum_casa':    return soulPensumOtraCasa(s, p);
     case 'nc_salir':
       CacheService.getScriptCache().remove('nc_' + p.token);
       return { ok: true };

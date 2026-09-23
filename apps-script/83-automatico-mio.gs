@@ -80,7 +80,7 @@ function autoMonedas_(m) {
  * no se puede usar, y saber el domingo que la semana no cabe es una
  * mala noche sin nada a cambio.
  */
-function soulLunesTexto(h, cielo) {
+function soulLunesTexto(h, cielo, nuevasTemporadas) {
   const L = [];
   const r = h.riesgo || {};
   L.push('TU SEMANA · ' + autoFecha_(h.semana.lunes) + ' a ' + autoFecha_(h.semana.domingo));
@@ -178,6 +178,30 @@ function soulLunesTexto(h, cielo) {
     }
   }
 
+  // ── Lo que Nova puso sola en el pensum ──
+  if (nuevasTemporadas && nuevasTemporadas.length) {
+    L.push('');
+    L.push('TEMPORADAS NUEVAS EN TU PENSUM (' + nuevasTemporadas.length + ')');
+    L.push('Las puso Nova desde tus tránsitos. Bórralas o cámbialas cuando quieras.');
+    nuevasTemporadas.slice(0, 6).forEach(function (x) {
+      L.push('  · ' + x.titulo + '  (' + autoFecha_(x.desde) +
+             (x.hasta ? ' a ' + autoFecha_(x.hasta) : '') + ')');
+      /**
+       * Si los dos sistemas de casas no coinciden, se dice. La casa
+       * decide el momento, así que esa discrepancia cambia lo que Nova
+       * le recomienda hacer con la semana: callarla sería decidir por
+       * ella sin avisarle.
+       */
+      if (x.casas && x.casas.difieren) {
+        L.push('      casa ' + x.casas.placidus + ' en Horus, ' +
+               x.casas.entera + ' en casas enteras — no coinciden, míralo.');
+      }
+    });
+    if (nuevasTemporadas.length > 6) {
+      L.push('  … y ' + (nuevasTemporadas.length - 6) + ' más, en El cielo.');
+    }
+  }
+
   // ── Lo que Nova no pudo leer ──
   if (h.faltanHojas && h.faltanHojas.length) {
     L.push('');
@@ -214,13 +238,27 @@ function soulLunes() {
         log.push(s.correo + ': semana limpia, no se manda nada.');
         return;
       }
+      /**
+       * Antes del correo, el pensum del lunes.
+       *
+       * Ella pidió que Nova cree el pensum sola. El lunes es el día:
+       * las temporadas que abren esta semana quedan puestas antes de
+       * que el correo le diga qué momento es, y no al revés.
+       *
+       * Si falla, el correo sale igual — una temporada que no se pudo
+       * crear no puede dejarla sin saber si la semana cabe.
+       */
+      let nuevasTemporadas = [];
+      try { nuevasTemporadas = pensumAuto_(soulUsuario_(s), h.hoy); }
+      catch (e) { nuevasTemporadas = []; }
+
       // El cielo es de adorno aquí: si falla, el correo sale igual.
       let cielo = null;
       try { cielo = soulCielo(s, {}); } catch (e) { cielo = null; }
       MailApp.sendEmail({
         to: s.correo,
         subject: 'Tu semana · ' + h.semana.lunes,
-        body: soulLunesTexto(h, cielo),
+        body: soulLunesTexto(h, cielo, nuevasTemporadas),
       });
       log.push(s.correo + ' → enviado.');
     } catch (e) {

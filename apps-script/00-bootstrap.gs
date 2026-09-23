@@ -644,8 +644,21 @@ const ESQUEMA_SOUL = {
    * Saturno meses, y un consejo que no distingue eso es ruido. Un
    * tránsito sin fechas no se puede cruzar con una semana.
    */
-  Transitos: ['usuario_id','fecha','casa','tema','intensidad_pct','texto_transito',
-              'por_que','como_trabajarlo','el_otro_lado',
+  /**
+   * Los tránsitos, con SUS DOS CASAS.
+   *
+   * `casa` es de casas enteras —un signo, una casa— que es como se
+   * hacen las profecciones y lo que el resto del código usa.
+   * `casa_placidus` es el sistema que usa Horus.
+   *
+   * Van las dos porque NO dan lo mismo: contra las diez casas de su
+   * carta de Horus, Placidus acierta 10 de 10 y casas enteras 6 de 10.
+   * Y en cinco años de sus tránsitos difieren en 65 de 135. Elegir uno
+   * en silencio la habría dejado viendo un número que no cuadra con su
+   * app, sin saber por qué. Ella dijo: «muéstrame las dos y yo decido».
+   */
+  Transitos: ['usuario_id','fecha','casa','casa_placidus','tema','intensidad_pct',
+              'texto_transito','por_que','como_trabajarlo','el_otro_lado',
               'cuerpo','aspecto','a_natal','desde','hasta','fuente'],
 
   /**
@@ -655,8 +668,15 @@ const ESQUEMA_SOUL = {
    * dice qué ventana está abierta hoy, según lo que ella escribió, y la
    * cruza con lo que tiene que entregar.
    */
-  Pensum: ['id','usuario_id','desde','hasta','titulo','cuerpo','casa','momento',
-           'que_pide','que_evitar','nota'],
+  /**
+   * `casa_alterna` guarda la casa del OTRO sistema cuando los dos no
+   * coinciden. No es un adorno: la casa decide el momento —angular
+   * cambiar, sucedente descansar, cadente aprender—, así que con dos
+   * casas hay dos consejos distintos para el mismo tránsito. Guardar
+   * solo uno sería decidir por ella y que no se entere.
+   */
+  Pensum: ['id','usuario_id','desde','hasta','titulo','cuerpo','casa','casa_alterna',
+           'momento','que_pide','que_evitar','nota'],
 
   /**
    * La revolución solar: su año, de cumpleaños a cumpleaños.

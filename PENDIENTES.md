@@ -1429,3 +1429,40 @@ creer, con razón, que Nova está mal.
 (porque es la técnica) y Placidus para dónde cae un tránsito (porque es
 lo que coincide con su carta), diciéndolo en pantalla para que los dos
 números nunca parezcan una contradicción.
+
+### 17 · Los tránsitos se calculan, y el pensum se crea solo
+
+Sus decisiones: **tabla ahora con la puerta abierta a una API después**,
+y **las dos casas a la vista, ella decide cada vez**.
+
+**El generador.** `efemerides/generar-transitos.py`, con Swiss Ephemeris.
+Lee un JSON con los datos de nacimiento y saca un TSV con las columnas
+exactas de la hoja `Transitos`. Para ella, cinco años = **135
+temporadas**. No hay llave que cuidar, no hay factura, y su pantalla no
+depende de que un servicio ajeno siga vivo. El costo honesto: hay que
+volver a correrlo cuando se acabe el horizonte.
+
+Su tabla ya está generada en `efemerides/manuela-transitos.tsv`.
+
+**Las dos casas, en todas partes.** `Transitos` gana `casa_placidus` y
+`Pensum` gana `casa_alterna`. La propuesta trae las dos lecturas con su
+momento —no los dos números, los dos CONSEJOS, que es lo que de verdad
+cambia— y en pantalla hay un botón para cambiar de sistema. El mismo
+botón deshace: si cambiar fuera de ida, no lo probaría.
+
+**El pensum automático.** `pensumAuto_()` corre los lunes, dentro de
+`soulLunes()`, antes del correo. Tres cuidados:
+
+1. **No crea todo.** Solo lo abierto hoy o lo que empieza en 120 días.
+   Volcar cinco años de una sentaría a Saturno de 2031 al lado de lo de
+   esta semana, y el pensum dejaría de decir qué momento es.
+2. **Lo que ella escribió no se toca.** Se compara por título y fecha.
+3. **Queda dicho quién la hizo.** Chip «la puso Nova» en pantalla. Sin
+   eso no podría distinguir lo que escribió de lo que le apareció, y lo
+   segundo pesa menos.
+
+El correo del lunes trae las temporadas nuevas y, cuando los dos
+sistemas discrepan, lo dice.
+
+**OJO · hay que correr `bootstrapTodo()`** esta vez: son dos columnas
+nuevas (`Transitos.casa_placidus` y `Pensum.casa_alterna`).

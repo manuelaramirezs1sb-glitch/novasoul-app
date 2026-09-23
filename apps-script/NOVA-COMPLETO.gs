@@ -648,8 +648,21 @@ const ESQUEMA_SOUL = {
    * Saturno meses, y un consejo que no distingue eso es ruido. Un
    * tránsito sin fechas no se puede cruzar con una semana.
    */
-  Transitos: ['usuario_id','fecha','casa','tema','intensidad_pct','texto_transito',
-              'por_que','como_trabajarlo','el_otro_lado',
+  /**
+   * Los tránsitos, con SUS DOS CASAS.
+   *
+   * `casa` es de casas enteras —un signo, una casa— que es como se
+   * hacen las profecciones y lo que el resto del código usa.
+   * `casa_placidus` es el sistema que usa Horus.
+   *
+   * Van las dos porque NO dan lo mismo: contra las diez casas de su
+   * carta de Horus, Placidus acierta 10 de 10 y casas enteras 6 de 10.
+   * Y en cinco años de sus tránsitos difieren en 65 de 135. Elegir uno
+   * en silencio la habría dejado viendo un número que no cuadra con su
+   * app, sin saber por qué. Ella dijo: «muéstrame las dos y yo decido».
+   */
+  Transitos: ['usuario_id','fecha','casa','casa_placidus','tema','intensidad_pct',
+              'texto_transito','por_que','como_trabajarlo','el_otro_lado',
               'cuerpo','aspecto','a_natal','desde','hasta','fuente'],
 
   /**
@@ -659,8 +672,15 @@ const ESQUEMA_SOUL = {
    * dice qué ventana está abierta hoy, según lo que ella escribió, y la
    * cruza con lo que tiene que entregar.
    */
-  Pensum: ['id','usuario_id','desde','hasta','titulo','cuerpo','casa','momento',
-           'que_pide','que_evitar','nota'],
+  /**
+   * `casa_alterna` guarda la casa del OTRO sistema cuando los dos no
+   * coinciden. No es un adorno: la casa decide el momento —angular
+   * cambiar, sucedente descansar, cadente aprender—, así que con dos
+   * casas hay dos consejos distintos para el mismo tránsito. Guardar
+   * solo uno sería decidir por ella y que no se entere.
+   */
+  Pensum: ['id','usuario_id','desde','hasta','titulo','cuerpo','casa','casa_alterna',
+           'momento','que_pide','que_evitar','nota'],
 
   /**
    * La revolución solar: su año, de cumpleaños a cumpleaños.
@@ -8004,6 +8024,7 @@ function manejarCentral(accion, p) {
     case 'nc_soul_pensum_borrar':  return soulPensumBorrar(s, p);
     case 'nc_soul_revolucion':     return soulRevolucionGuardar(s, p);
     case 'nc_soul_pensum_auto':    return soulPensumDesdeTransitos(s, p);
+    case 'nc_soul_pensum_casa':    return soulPensumOtraCasa(s, p);
     case 'nc_salir':
       CacheService.getScriptCache().remove('nc_' + p.token);
       return { ok: true };
@@ -14677,7 +14698,16 @@ function transitosDe_(uid) {
     return {
       cuerpo: c, nombre: def.nombre, grupo: def.grupo,
       aspecto: String(f.aspecto || ''), aNatal: String(f.a_natal || ''),
+      /**
+       * Las dos casas, y si discrepan.
+       *
+       * `casa` es de casas enteras; `casaPlacidus` es la de Horus. En
+       * cinco años de sus tránsitos difieren en casi la mitad, así que
+       * la pantalla tiene que poder decirlo en vez de elegir por ella.
+       */
       casa: f.casa === '' ? null : num(f.casa),
+      casaPlacidus: f.casa_placidus === '' || f.casa_placidus === undefined
+        ? null : num(f.casa_placidus),
       tema: String(f.tema || ''),
       intensidad: f.intensidad_pct === '' ? null : num(f.intensidad_pct),
       desde: desde, hasta: aISO(f.hasta, 'UTC') || desde,
@@ -14687,7 +14717,12 @@ function transitosDe_(uid) {
       elOtroLado: String(f.el_otro_lado || ''),
       fuente: String(f.fuente || ''),
     };
-  }).filter(function (t) { return t.desde; });
+  }).filter(function (t) { return t.desde; })
+    .map(function (t) {
+      t.casasDifieren = t.casa !== null && t.casaPlacidus !== null &&
+                        t.casa !== t.casaPlacidus;
+      return t;
+    });
 }
 
 function soulTransitoGuardar(s, p) {
@@ -14710,7 +14745,9 @@ function soulTransitoGuardar(s, p) {
     const v = { usuario_id: soulUsuario_(s), fecha: desde, desde: desde, hasta: hasta,
                 cuerpo: cuerpo, aspecto: String(d.aspecto || ''),
                 a_natal: String(d.a_natal || ''),
-                casa: d.casa ? num(d.casa) : '', tema: String(d.tema || ''),
+                casa: d.casa ? num(d.casa) : '',
+                casa_placidus: d.casaPlacidus ? num(d.casaPlacidus) : '',
+                tema: String(d.tema || ''),
                 intensidad_pct: d.intensidad ? num(d.intensidad) : '',
                 texto_transito: String(d.texto || ''), por_que: String(d.porQue || ''),
                 como_trabajarlo: String(d.como || ''),
@@ -14737,6 +14774,23 @@ function pensumDe_(uid) {
         momento: CIELO_MOMENTOS[m] ? m : '',
         quePide: String(f.que_pide || ''), queEvitar: String(f.que_evitar || ''),
         nota: String(f.nota || ''),
+        /**
+         * Quién puso esta temporada. Lo que ella escribió pesa distinto
+         * a lo que le apareció, y sin la marca no habría cómo saberlo.
+         */
+        laPusoNova: String(f.nota || '').indexOf(PENSUM_MARCA) === 0,
+        /**
+         * La otra casa, cuando los dos sistemas no coinciden. Viene con
+         * su momento ya calculado para que la pantalla pueda enseñar
+         * los dos consejos, no solo los dos números.
+         */
+        alterna: (function () {
+          const a = f.casa_alterna === '' || f.casa_alterna === undefined
+            ? null : num(f.casa_alterna);
+          if (!a) return null;
+          const c = CIELO_CASAS.filter(function (k) { return k.n === a; })[0];
+          return c ? { casa: a, momento: c.momento, area: c.area, que: c.que } : null;
+        })(),
       };
     })
     .sort(function (a, b) { return (a.desde || '9') < (b.desde || '9') ? -1 : 1; });
@@ -14765,6 +14819,7 @@ function soulPensumGuardar(s, p) {
       titulo: d.titulo !== undefined ? String(d.titulo).trim() : undefined,
       cuerpo: d.cuerpo !== undefined ? norm(d.cuerpo) : undefined,
       casa: d.casa !== undefined ? num(d.casa) : undefined,
+      casa_alterna: d.casaAlterna !== undefined ? num(d.casaAlterna) : undefined,
       momento: m || undefined,
       que_pide: d.quePide !== undefined ? String(d.quePide) : undefined,
       que_evitar: d.queEvitar !== undefined ? String(d.queEvitar) : undefined,
@@ -15007,21 +15062,143 @@ function pensumProponer_(uid) {
                              new Date(t.desde + 'T00:00:00Z')) / 86400000) + 1;
     return dias >= 14;
   }).map(function (t) {
-    const c = CIELO_CASAS.filter(function (k) { return k.n === num(t.casa); })[0];
-    const titulo = t.nombre + (t.casa ? ' por casa ' + t.casa : '') +
+    /**
+     * ── LAS DOS CASAS, Y POR QUÉ NO SE ELIGE POR ELLA ──
+     *
+     * La casa decide el MOMENTO: angular es cambiar, sucedente
+     * descansar, cadente aprender. Y en sus tránsitos las casas enteras
+     * y Placidus difieren en casi la mitad de los casos — o sea que
+     * elegir un sistema en silencio cambiaría lo que Nova le dice que
+     * haga con su semana, sin que ella se entere de que hubo una
+     * elección.
+     *
+     * Así que se calculan las dos lecturas y se manda la comparación.
+     * Ella elige cuál guardar. Por defecto se propone la de Horus,
+     * porque es la que coincide con la carta que ella mira.
+     */
+    const cE = CIELO_CASAS.filter(function (k) { return k.n === num(t.casa); })[0];
+    const cP = CIELO_CASAS.filter(function (k) { return k.n === num(t.casaPlacidus); })[0];
+    const usada = t.casaPlacidus !== null ? t.casaPlacidus : t.casa;
+    const c = t.casaPlacidus !== null ? cP : cE;
+    const titulo = t.nombre + (usada ? ' por casa ' + usada : '') +
                    (t.aNatal ? ' a ' + t.aNatal : '');
     return {
       titulo: titulo, desde: t.desde, hasta: t.hasta,
-      cuerpo: t.cuerpo, casa: t.casa,
+      cuerpo: t.cuerpo, casa: usada,
       momento: c ? c.momento : '',
       quePide: t.tema || (c ? c.que : ''),
       grupo: t.grupo,
+      // La otra lectura, para que pueda cambiar de sistema con un toque.
+      casas: {
+        difieren: !!t.casasDifieren,
+        entera: t.casa,
+        enteraMomento: cE ? cE.momento : '',
+        enteraArea: cE ? cE.area : '',
+        placidus: t.casaPlacidus,
+        placidusMomento: cP ? cP.momento : '',
+        placidusArea: cP ? cP.area : '',
+        usando: t.casaPlacidus !== null ? 'placidus' : 'entera',
+      },
       dias: Math.round((new Date(t.hasta + 'T00:00:00Z') -
                         new Date(t.desde + 'T00:00:00Z')) / 86400000) + 1,
       yaEsta: !!yaEstan[norm(titulo) + '|' + t.desde],
     };
   }).sort(function (a, b) { return a.desde < b.desde ? -1 : 1; });
 }
+
+/**
+ * ── QUE NOVA LO CREE SOLA ──
+ *
+ * Ella lo pidió así: «el pensum kármico debe crearlo Nova
+ * automáticamente». Hasta ahora Nova proponía y ella confirmaba una por
+ * una, que con cinco años de tránsitos cargados son ciento treinta y
+ * cinco confirmaciones. Eso no es un pensum, es una tarea.
+ *
+ * Tres cuidados, porque crear cosas solo es fácil y desordenar la
+ * pantalla de alguien también:
+ *
+ * 1· NO SE CREA TODO. Solo lo que está abierto hoy o empieza en los
+ *    próximos meses. Volcar cinco años de una sentaría a Saturno de
+ *    2031 al lado de lo de esta semana, y el pensum dejaría de decir
+ *    qué momento es.
+ *
+ * 2· LO QUE ELLA ESCRIBIÓ NO SE TOCA JAMÁS. Se compara por título y
+ *    fecha, igual que la confirmación manual.
+ *
+ * 3· QUEDA DICHO QUIÉN LA HIZO. Una temporada que Nova creó lleva su
+ *    marca en la nota. Sin eso, ella no podría distinguir lo que
+ *    escribió de lo que le apareció, y lo segundo pesa menos.
+ */
+const PENSUM_VENTANA_DIAS = 120;
+
+function pensumAuto_(uid, hoyISO) {
+  const hasta = masDias_(hoyISO, PENSUM_VENTANA_DIAS);
+  const propuestas = pensumProponer_(uid).filter(function (x) {
+    if (x.yaEsta) return false;
+    // Abierta hoy, o que empieza dentro de la ventana.
+    const abierta = x.desde <= hoyISO && (!x.hasta || x.hasta >= hoyISO);
+    return abierta || (x.desde > hoyISO && x.desde <= hasta);
+  });
+
+  const creadas = [];
+  propuestas.forEach(function (x) {
+    try {
+      soulGuardar_('Pensum', {
+        titulo: x.titulo, desde: x.desde, hasta: String(x.hasta || ''),
+        cuerpo: norm(x.cuerpo), casa: x.casa ? num(x.casa) : '',
+        casa_alterna: x.casas && x.casas.difieren ? num(x.casas.entera) : '',
+        momento: CIELO_MOMENTOS[norm(x.momento)] ? norm(x.momento) : '',
+        que_pide: String(x.quePide || ''),
+        nota: PENSUM_MARCA + (x.casas && x.casas.difieren
+          ? ' · casa ' + x.casas.placidus + ' en Horus, ' + x.casas.entera +
+            ' en casas enteras'
+          : ''),
+      }, uid);
+      creadas.push(x);
+    } catch (e) { /* una fila mala no tumba las demás */ }
+  });
+  return creadas;
+}
+
+/**
+ * Cambiar una temporada al otro sistema de casas.
+ *
+ * Intercambia la casa con su alterna y recalcula el momento. Es una
+ * sola acción y no un formulario porque la decisión es binaria: o la
+ * casa que dice Horus, o la de casas enteras. Poder volver atrás con
+ * el mismo botón es parte del trato — si cambiar fuera de ida, no lo
+ * probaría.
+ */
+function soulPensumOtraCasa(s, p) {
+  if (!soulPuede_(s)) return { ok: false, error: 'NovaSoul es de Manuela.' };
+  const uid = soulUsuario_(s);
+  const id = String((p.datos || {}).id || p.id || '').trim();
+  if (!id) return { ok: false, error: 'No sé qué temporada cambiar.' };
+
+  const x = pensumDe_(uid).filter(function (k) { return k.id === id; })[0];
+  if (!x) return { ok: false, error: 'No encuentro esa temporada.' };
+  if (!x.alterna) {
+    return { ok: false, error: 'Esta temporada no tiene otra lectura: ' +
+                               'los dos sistemas dicen la misma casa.' };
+  }
+
+  const c = CIELO_CASAS.filter(function (k) { return k.n === x.alterna.casa; })[0];
+  const titulo = x.casa
+    ? x.titulo.replace('casa ' + x.casa, 'casa ' + x.alterna.casa)
+    : x.titulo;
+
+  const g = soulPensumGuardar(s, { datos: {
+    id: id, titulo: titulo,
+    casa: x.alterna.casa, casaAlterna: x.casa,
+    momento: c ? c.momento : '',
+  } });
+  if (!g.ok) return g;
+  return { ok: true, casa: x.alterna.casa, momento: c ? c.momento : '',
+           momentoNombre: c ? (CIELO_MOMENTOS[c.momento] || {}).nombre : '' };
+}
+
+/** La marca que distingue lo que hizo Nova de lo que escribió ella. */
+const PENSUM_MARCA = 'La creó Nova desde un tránsito';
 
 /** Guarda las temporadas que ella confirmó de la propuesta. */
 function soulPensumDesdeTransitos(s, p) {
@@ -15482,7 +15659,7 @@ function autoMonedas_(m) {
  * no se puede usar, y saber el domingo que la semana no cabe es una
  * mala noche sin nada a cambio.
  */
-function soulLunesTexto(h, cielo) {
+function soulLunesTexto(h, cielo, nuevasTemporadas) {
   const L = [];
   const r = h.riesgo || {};
   L.push('TU SEMANA · ' + autoFecha_(h.semana.lunes) + ' a ' + autoFecha_(h.semana.domingo));
@@ -15580,6 +15757,30 @@ function soulLunesTexto(h, cielo) {
     }
   }
 
+  // ── Lo que Nova puso sola en el pensum ──
+  if (nuevasTemporadas && nuevasTemporadas.length) {
+    L.push('');
+    L.push('TEMPORADAS NUEVAS EN TU PENSUM (' + nuevasTemporadas.length + ')');
+    L.push('Las puso Nova desde tus tránsitos. Bórralas o cámbialas cuando quieras.');
+    nuevasTemporadas.slice(0, 6).forEach(function (x) {
+      L.push('  · ' + x.titulo + '  (' + autoFecha_(x.desde) +
+             (x.hasta ? ' a ' + autoFecha_(x.hasta) : '') + ')');
+      /**
+       * Si los dos sistemas de casas no coinciden, se dice. La casa
+       * decide el momento, así que esa discrepancia cambia lo que Nova
+       * le recomienda hacer con la semana: callarla sería decidir por
+       * ella sin avisarle.
+       */
+      if (x.casas && x.casas.difieren) {
+        L.push('      casa ' + x.casas.placidus + ' en Horus, ' +
+               x.casas.entera + ' en casas enteras — no coinciden, míralo.');
+      }
+    });
+    if (nuevasTemporadas.length > 6) {
+      L.push('  … y ' + (nuevasTemporadas.length - 6) + ' más, en El cielo.');
+    }
+  }
+
   // ── Lo que Nova no pudo leer ──
   if (h.faltanHojas && h.faltanHojas.length) {
     L.push('');
@@ -15616,13 +15817,27 @@ function soulLunes() {
         log.push(s.correo + ': semana limpia, no se manda nada.');
         return;
       }
+      /**
+       * Antes del correo, el pensum del lunes.
+       *
+       * Ella pidió que Nova cree el pensum sola. El lunes es el día:
+       * las temporadas que abren esta semana quedan puestas antes de
+       * que el correo le diga qué momento es, y no al revés.
+       *
+       * Si falla, el correo sale igual — una temporada que no se pudo
+       * crear no puede dejarla sin saber si la semana cabe.
+       */
+      let nuevasTemporadas = [];
+      try { nuevasTemporadas = pensumAuto_(soulUsuario_(s), h.hoy); }
+      catch (e) { nuevasTemporadas = []; }
+
       // El cielo es de adorno aquí: si falla, el correo sale igual.
       let cielo = null;
       try { cielo = soulCielo(s, {}); } catch (e) { cielo = null; }
       MailApp.sendEmail({
         to: s.correo,
         subject: 'Tu semana · ' + h.semana.lunes,
-        body: soulLunesTexto(h, cielo),
+        body: soulLunesTexto(h, cielo, nuevasTemporadas),
       });
       log.push(s.correo + ' → enviado.');
     } catch (e) {

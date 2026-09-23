@@ -227,9 +227,25 @@ const CIELO = {
              porque: i === 3 ? 'Saturno por casa 10' : 'Luna llena',
              pensum: [], transitos: 1 };
   }) },
-  pensum: [{ id: 'pn1', desde: '2026-09-01', hasta: '2026-12-31', titulo: 'Saturno por casa 10',
-             cuerpo: 'saturno', cuerpoNombre: 'Saturno', grupo: 'social', casa: 10,
-             momento: 'cambiar', quePide: 'Cerrar lo que ya no sostiene.', queEvitar: '', nota: '' }],
+  pensum: [
+    { id: 'pn1', desde: '2026-09-01', hasta: '2026-12-31', titulo: 'Saturno por casa 10',
+      cuerpo: 'saturno', cuerpoNombre: 'Saturno', grupo: 'social', casa: 10,
+      momento: 'cambiar', quePide: 'Cerrar lo que ya no sostiene.', queEvitar: '',
+      nota: '', laPusoNova: false, alterna: null },
+    /**
+     * La que Nova puso sola Y en la que los dos sistemas discrepan.
+     * Casa 3 es cadente (aprender), casa 4 es angular (cambiar): el
+     * mismo tránsito, dos consejos opuestos. Es el caso que no se puede
+     * resolver en silencio.
+     */
+    { id: 'pn2', desde: '2026-09-23', hasta: '2027-03-03',
+      titulo: 'Neptuno por casa 3 a Sol', cuerpo: 'neptuno',
+      cuerpoNombre: 'Neptuno', grupo: 'generacional', casa: 3,
+      momento: 'aprender', quePide: 'Estudio, escritura, lo cercano.',
+      queEvitar: '', nota: 'La creó Nova desde un tránsito',
+      laPusoNova: true,
+      alterna: { casa: 4, momento: 'cambiar', area: 'La casa',
+                 que: 'Familia, raíz, dónde vives y de dónde vienes.' } }],
   pensumAbierto: [{ id: 'pn1', titulo: 'Saturno por casa 10', momento: 'cambiar' }],
   transitos: [
     { cuerpo: 'saturno', nombre: 'Saturno', grupo: 'social', aspecto: 'cuadratura',
@@ -719,6 +735,26 @@ const FAMILY = {
     ok('se dice que es cuenta, no lectura' + A,
        /no es una lectura, es una cuenta/.test(ci) &&
        /Ascendente en Leo/.test(ci));
+
+    /**
+     * ── LAS DOS CASAS EN PANTALLA ──
+     * Horus usa Placidus y las profecciones usan casas enteras; en sus
+     * tránsitos difieren casi la mitad de las veces. La pantalla tiene
+     * que enseñar el otro CONSEJO, no solo el otro número.
+     */
+    console.log('');
+    ok('dice cuántas temporadas puso Nova sola' + A,
+       /Nova puso 1 temporada sola/.test(ci), ci);
+    ok('y marca cuál es' + A, /la puso Nova/.test(ci));
+    ok('avisa cuando los dos sistemas de casas no coinciden' + A,
+       /los dos sistemas de casas no coinciden/.test(ci) &&
+       /Horus usa Placidus/.test(ci), ci);
+    ok('enseña el consejo de cada sistema, no solo el número' + A,
+       /casa 3 · Aprender/.test(ci) && /casa 4 · Cambiar/.test(ci), ci);
+    ok('y deja cambiar con un toque' + A,
+       /Usar casa 4/.test(ci), ci);
+    ok('la temporada que NO discrepa no ofrece cambio' + A,
+       (ci.match(/Usar casa/g) || []).length === 1, ci);
 
     ok('la revolución solar sale con su ventana' + A,
        /28 años/.test(ci) && /14 sep/.test(ci) && /quedan 355 días/.test(ci));

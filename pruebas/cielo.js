@@ -72,7 +72,8 @@ global.Date = class extends RealDate {
   + ' revolucionLectura_, pensumProponer_, soulPensumDesdeTransitos, CIELO_CASAS,' +
   ' soulCielo, soulCartaLeer, soulCartaGuardar, soulNacimientoGuardar,' +
   ' soulPensumGuardar, soulTransitoGuardar, soulRevolucionGuardar, cieloMedir_,' +
-  ' profecciones_, signoDeCasa_, CIELO_REGENTES,' +
+  ' profecciones_, signoDeCasa_, CIELO_REGENTES, pensumAuto_, PENSUM_MARCA,' +
+  ' soulPensumOtraCasa, pensumDe_,' +
   ' CIELO_CUERPOS, CIELO_MINIMO, LUNA_FASES };');
 const F = globalThis.__F;
 
@@ -86,10 +87,11 @@ const C_PEND = ['id','usuario_id','texto','tipo','origen','fecha','hecho','hecho
   'plataforma_id','trabajo_id','estado','prioridad','horas_estimadas','horas_reales',
   'riesgo','nota','materia_id'];
 const C_CAR = ['usuario_id','cuerpo','signo','grado','casa','retrogrado','nota'];
-const C_TRA = ['usuario_id','fecha','casa','tema','intensidad_pct','texto_transito',
-  'por_que','como_trabajarlo','el_otro_lado','cuerpo','aspecto','a_natal','desde','hasta','fuente'];
-const C_PEN = ['id','usuario_id','desde','hasta','titulo','cuerpo','casa','momento',
-  'que_pide','que_evitar','nota'];
+const C_TRA = ['usuario_id','fecha','casa','casa_placidus','tema','intensidad_pct',
+  'texto_transito','por_que','como_trabajarlo','el_otro_lado','cuerpo','aspecto',
+  'a_natal','desde','hasta','fuente'];
+const C_PEN = ['id','usuario_id','desde','hasta','titulo','cuerpo','casa','casa_alterna',
+  'momento','que_pide','que_evitar','nota'];
 const C_REV = ['usuario_id','anio','desde','hasta','ascendente','casa_sol','tema','texto','nota'];
 const C_USU = ['id','nombre','correo','fecha_nacimiento','hora_nacimiento',
   'lugar_nacimiento','zona_horaria','acento','modo','idioma'];
@@ -544,6 +546,128 @@ ok('sin marcar nada, lo dice',
    /No marcaste/.test(F.soulPensumDesdeTransitos(SOCIA, { items: [] }).error));
 ok('una operadora no propone ni guarda',
    F.soulPensumDesdeTransitos(OPERADORA, { items: [{ titulo: 'x', desde: '2026-01-01' }] }).ok === false);
+
+
+/**
+ * ── LAS DOS CASAS, Y EL PENSUM QUE SE CREA SOLO ──
+ *
+ * Se descubrió comprobando el motor de efemérides contra su carta real:
+ * Horus usa PLACIDUS y Nova usaba casas enteras. Contra las diez casas
+ * de su captura, Placidus acierta 10 de 10 y casas enteras 6 de 10; y
+ * en cinco años de sus tránsitos los dos números difieren en 65 de 135.
+ *
+ * La casa decide el MOMENTO —angular cambiar, sucedente descansar,
+ * cadente aprender—, así que elegir un sistema en silencio cambiaría lo
+ * que Nova le dice que haga con su semana. Ella pidió ver los dos.
+ */
+console.log('\n── Un tránsito con sus dos casas ──');
+sembrarHojas();
+F.soulNacimientoGuardar(SOCIA, { fecha: '1995-09-20' });
+F.soulCartaGuardar(SOCIA, { filas: F.soulCartaLeer(SOCIA, { texto: HORUS }).encontradas });
+F.soulTransitoGuardar(SOCIA, { datos: {
+  cuerpo: 'neptuno', desde: '2026-09-23', hasta: '2027-03-03',
+  casa: 4, casaPlacidus: 3, aspecto: 'oposición', a_natal: 'Sol',
+  tema: 'Neptuno oposición a mi Sol', fuente: 'Swiss Ephemeris' } });
+F.soulTransitoGuardar(SOCIA, { datos: {
+  cuerpo: 'jupiter', desde: '2026-09-23', hasta: '2026-10-24',
+  casa: 8, casaPlacidus: 8, aspecto: 'sextil', a_natal: 'Mediocielo',
+  tema: 'Júpiter sextil a mi Mediocielo', fuente: 'Swiss Ephemeris' } });
+
+let ci = F.soulCielo(SOCIA, {});
+const tNep = ci.transitos.filter(x => x.cuerpo === 'neptuno')[0];
+const tJup = ci.transitos.filter(x => x.cuerpo === 'jupiter')[0];
+igual('se guardan las dos casas', [4, 3], [tNep.casa, tNep.casaPlacidus]);
+ok('y se marca que NO coinciden', tNep.casasDifieren === true);
+ok('cuando sí coinciden, no se marca', tJup.casasDifieren === false,
+   JSON.stringify([tJup.casa, tJup.casaPlacidus]));
+
+const prop = ci.pensumPropuesto;
+const pNep = prop.filter(x => /Neptuno/.test(x.titulo))[0];
+igual('la propuesta usa la de Horus, que es la que ella ve', 3, pNep.casa);
+igual('y dice cuál usó', 'placidus', pNep.casas.usando);
+/**
+ * Casa 3 es cadente (aprender); casa 4 es angular (cambiar). El mismo
+ * tránsito, dos consejos opuestos. Por eso van los dos a la pantalla.
+ */
+igual('con las DOS lecturas, que aquí dan consejos distintos',
+      ['aprender', 'cambiar'],
+      [pNep.casas.placidusMomento, pNep.casas.enteraMomento]);
+ok('y el título lleva la casa que se usó', /casa 3/.test(pNep.titulo), pNep.titulo);
+
+console.log('\n── Nova crea el pensum sola ──');
+sembrarHojas();
+F.soulNacimientoGuardar(SOCIA, { fecha: '1995-09-20' });
+F.soulCartaGuardar(SOCIA, { filas: F.soulCartaLeer(SOCIA, { texto: HORUS }).encontradas });
+// Una abierta hoy, una que empieza dentro de la ventana, y una lejana.
+F.soulTransitoGuardar(SOCIA, { datos: { cuerpo: 'saturno', desde: '2026-09-01',
+  hasta: '2026-11-30', casa: 4, casaPlacidus: 3, tema: 'Saturno abierto hoy' } });
+F.soulTransitoGuardar(SOCIA, { datos: { cuerpo: 'jupiter', desde: '2026-11-01',
+  hasta: '2027-01-15', casa: 8, casaPlacidus: 8, tema: 'Júpiter pronto' } });
+F.soulTransitoGuardar(SOCIA, { datos: { cuerpo: 'pluton', desde: '2030-01-01',
+  hasta: '2030-12-31', casa: 2, casaPlacidus: 1, tema: 'Plutón en 2030' } });
+
+let creadas = F.pensumAuto_(YO, '2026-09-23');
+igual('crea la abierta y la que viene, no la de 2030', 2, creadas.length);
+ok('la de 2030 se queda fuera',
+   !creadas.filter(x => /Plutón/.test(x.titulo)).length,
+   creadas.map(x => x.titulo).join(', '));
+igual('y quedan en la hoja', 2, LIBROS.s.Pensum.length - 1);
+ok('marcadas como hechas por Nova, no por ella',
+   LIBROS.s.Pensum.slice(1).every(f => String(f[11]).indexOf(F.PENSUM_MARCA) === 0),
+   JSON.stringify(LIBROS.s.Pensum.slice(1).map(f => f[11])));
+ok('y la que discrepa lo dice en su nota',
+   LIBROS.s.Pensum.slice(1).some(f => /casa 3 en Horus, 4 en casas enteras/.test(f[11])),
+   JSON.stringify(LIBROS.s.Pensum.slice(1).map(f => f[11])));
+
+igual('correrlo otra vez NO duplica', 0, F.pensumAuto_(YO, '2026-09-23').length);
+igual('y siguen siendo dos', 2, LIBROS.s.Pensum.length - 1);
+
+/** Lo que ella escribió a mano no se toca ni se repite. */
+F.soulPensumGuardar(SOCIA, { datos: { titulo: 'Lo mío, escrito por mí',
+  desde: '2026-09-25', hasta: '2026-10-30', momento: 'descansar' } });
+F.pensumAuto_(YO, '2026-09-23');
+ok('lo suyo sigue ahí, intacto',
+   LIBROS.s.Pensum.slice(1).some(f => f[4] === 'Lo mío, escrito por mí' &&
+                                      String(f[11]).indexOf(F.PENSUM_MARCA) !== 0));
+
+
+console.log('\n── Cambiarle el sistema de casas a una temporada ──');
+sembrarHojas();
+F.soulNacimientoGuardar(SOCIA, { fecha: '1995-09-20' });
+F.soulCartaGuardar(SOCIA, { filas: F.soulCartaLeer(SOCIA, { texto: HORUS }).encontradas });
+F.soulTransitoGuardar(SOCIA, { datos: { cuerpo: 'neptuno', desde: '2026-09-23',
+  hasta: '2027-03-03', casa: 4, casaPlacidus: 3, aspecto: 'oposición',
+  a_natal: 'Sol', tema: 'Neptuno oposición a mi Sol' } });
+F.pensumAuto_(YO, '2026-09-23');
+let pen = F.pensumDe_(YO)[0];
+igual('nace con la casa de Horus', 3, pen.casa);
+igual('y su momento', 'aprender', pen.momento);
+ok('sabe que la puso Nova', pen.laPusoNova === true);
+igual('y guarda la otra lectura a mano', [4, 'cambiar'],
+      [pen.alterna.casa, pen.alterna.momento]);
+
+let cam = F.soulPensumOtraCasa(SOCIA, { id: pen.id });
+ok('se puede cambiar de un toque', cam.ok === true, JSON.stringify(cam));
+pen = F.pensumDe_(YO)[0];
+igual('ahora usa casas enteras', [4, 'cambiar'], [pen.casa, pen.momento]);
+igual('y la alterna es la de antes', 3, pen.alterna.casa);
+ok('el título también cambió', /casa 4/.test(pen.titulo), pen.titulo);
+
+F.soulPensumOtraCasa(SOCIA, { id: pen.id });
+pen = F.pensumDe_(YO)[0];
+igual('y se puede volver: el mismo botón deshace', [3, 'aprender'],
+      [pen.casa, pen.momento]);
+
+/** Si los dos sistemas dicen lo mismo, no hay nada que cambiar. */
+sembrarHojas();
+F.soulPensumGuardar(SOCIA, { datos: { titulo: 'Sin discrepancia',
+  desde: '2026-09-25', casa: 8, momento: 'descansar' } });
+const sinAlt = F.pensumDe_(YO)[0];
+ok('una temporada sin otra lectura no tiene alterna', sinAlt.alterna === null);
+ok('y cambiarla dice por qué no se puede',
+   /misma casa/.test(F.soulPensumOtraCasa(SOCIA, { id: sinAlt.id }).error));
+ok('una operadora no cambia nada',
+   F.soulPensumOtraCasa(OPERADORA, { id: sinAlt.id }).ok === false);
 
 console.log('\n── Si todavía no hay carta ──');
 sembrarHojas();

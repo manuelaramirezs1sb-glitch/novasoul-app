@@ -901,7 +901,7 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-23 · 595f';
+const VERSION_PANTALLA = '2026-09-23 · 327f';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
@@ -2107,21 +2107,58 @@ function pintarCielo() {
       '<button class="card-cta" onclick="abrirCarta()">Ponerla</button></div>';
 
   // ── Pensum ──
+  const conNova = CI.pensum.filter(function (x) { return x.laPusoNova; }).length;
+  const conDuda = CI.pensum.filter(function (x) { return x.alterna; }).length;
   document.getElementById('ci-pensum').innerHTML =
     '<div class="card-h"><span class="card-lbl">PENSUM KÁRMICO</span>' +
     '<button class="link" onclick="abrirPensum()">+ TEMPORADA</button></div>' +
+    (conNova
+      ? '<p class="card-p" style="margin-bottom:10px;">Nova puso ' + conNova +
+        (conNova === 1 ? ' temporada' : ' temporadas') + ' sola, desde tus tránsitos. ' +
+        'Bórralas o cámbialas cuando quieras: lo que escribas tú manda.</p>'
+      : '') +
+    (conDuda
+      ? '<div class="aviso mal on" style="margin-bottom:10px;">En ' + conDuda +
+        (conDuda === 1 ? ' temporada los dos sistemas de casas no coinciden'
+                       : ' temporadas los dos sistemas de casas no coinciden') +
+        '. Horus usa Placidus; las profecciones usan casas enteras. Te muestro las ' +
+        'dos y tú eliges con un toque.</div>'
+      : '') +
     (CI.pensum.length
       ? CI.pensum.map(function (x) {
           const abierta = x.desde <= CI.hoy && (!x.hasta || x.hasta >= CI.hoy);
           const m = CI.momentos[x.momento] || {};
-          return '<div class="fila" onclick="editarPensum(\'' + x.id + '\')" style="cursor:pointer;">' +
-            '<span class="fila-t"><strong>' + esc(x.titulo) + '</strong>' +
-            (x.quePide ? '<br><span style="color:var(--mut3);font-size:12px;">' +
-              esc(x.quePide) + '</span>' : '') + '</span>' +
-            (x.momento ? '<span class="chip" style="color:' + MOM_COLOR[x.momento] + ';">' +
-              esc(m.nombre) + '</span>' : '') +
-            '<span class="chip' + (abierta ? ' hoy' : '') + '">' + esc(fcorta(x.desde)) +
-              (x.hasta ? '–' + esc(fcorta(x.hasta)) : '') + '</span></div>';
+          const ma = x.alterna ? (CI.momentos[x.alterna.momento] || {}) : null;
+          return '<div style="border-bottom:1px solid var(--soft2);padding:10px 0;">' +
+            '<div class="fila" style="border:0;padding:0;cursor:pointer;" ' +
+              'onclick="editarPensum(\'' + x.id + '\')">' +
+              '<span class="fila-t"><strong>' + esc(x.titulo) + '</strong>' +
+              (x.quePide ? '<br><span style="color:var(--mut3);font-size:12px;">' +
+                esc(x.quePide) + '</span>' : '') + '</span>' +
+              (x.momento ? '<span class="chip" style="color:' + MOM_COLOR[x.momento] + ';">' +
+                esc(m.nombre) + '</span>' : '') +
+              '<span class="chip' + (abierta ? ' hoy' : '') + '">' + esc(fcorta(x.desde)) +
+                (x.hasta ? '–' + esc(fcorta(x.hasta)) : '') + '</span>' +
+              (x.laPusoNova ? '<span class="chip">la puso Nova</span>' : '') +
+            '</div>' +
+            /**
+             * Las dos lecturas, cuando no coinciden. No se enseña solo
+             * el otro número: se enseña el otro CONSEJO, que es lo que
+             * de verdad cambia. «Casa 3» no dice nada; «aprender en vez
+             * de cambiar» sí.
+             */
+            (x.alterna
+              ? '<div style="margin-top:7px;display:flex;align-items:center;gap:10px;' +
+                'flex-wrap:wrap;font:500 12px/1.5 \'DM Sans\';color:var(--mut3);">' +
+                '<span>Usando <strong style="color:' + (MOM_COLOR[x.momento] || 'var(--ink)') +
+                  '">casa ' + x.casa + ' · ' + esc(m.nombre || '—') + '</strong>' +
+                  ' · el otro sistema dice <strong>casa ' + x.alterna.casa + ' · ' +
+                  esc(ma.nombre || '—') + '</strong></span>' +
+                '<button class="card-ghost" style="padding:4px 10px;font-size:11px;" ' +
+                  'onclick="otraCasa(\'' + x.id + '\')">Usar casa ' + x.alterna.casa +
+                  '</button></div>'
+              : '') +
+            '</div>';
         }).join('')
       : '<div class="vacio">Tu pensum de los próximos meses: qué pide cada temporada. ' +
         'Lo que escribas aquí manda sobre la luna.</div>');
@@ -2465,6 +2502,26 @@ async function borrarPensum() {
   const r = await nc('nc_soul_pensum_borrar', { id: PENSUM_ID });
   if (!r || !r.ok) { errModal('mp-err', traducirError(r && r.error) || 'No se pudo.'); return; }
   cerrarModal('m-pensum');
+  CI = null;
+  await cargarCielo();
+}
+
+/**
+ * Cambiarle el sistema de casas a una temporada.
+ *
+ * El mismo botón deshace: si cambiar fuera de ida, no lo probaría. Y el
+ * aviso dice el MOMENTO nuevo, no la casa nueva — «ahora pide aprender»
+ * es lo que cambia su semana; «ahora es casa 3» no le dice nada.
+ */
+async function otraCasa(id) {
+  const r = await nc('nc_soul_pensum_casa', { id: id });
+  if (!r || !r.ok) {
+    avisoGlobal(traducirError(r && r.error) || 'No se pudo cambiar.');
+    return;
+  }
+  avisoGlobal('Listo · esa temporada ahora pide ' +
+              String(r.momentoNombre || '').toLowerCase() +
+              ' (casa ' + r.casa + ')', true);
   CI = null;
   await cargarCielo();
 }

@@ -1,0 +1,8 @@
+{
+  "nombre": "Manuela Ramírez Sepúlveda",
+  "usuario_id": "manuela@nova.com",
+  "anio": 1995, "mes": 9, "dia": 20,
+  "hora_utc": [18, 20],
+  "lat": 3.5394, "lon": -76.3036,
+  "_nota": "20/09/1995 13:20 en Palmira, Valle del Cauca. Colombia es UTC-5 todo el año, así que 13:20 local = 18:20 UTC. lon negativa = oeste."
+}
