@@ -133,6 +133,7 @@ function manejar(e, metodo) {
       case 'parametros':return json(apiParametros(s, p));
       case 'auditoria': return json(apiAuditoria(s, p));
       case 'estados':   return json(apiEstados(s, p));
+      case 'meta_panel':  return json(apiMetaPanel(s, p));
       case 'meta_estado':  return json(apiMetaEstado(s, p));
       case 'meta_guardar': return json(apiMetaGuardar(s, p));
       case 'meta_probar':  return json(apiMetaProbar(s, p));

@@ -1521,3 +1521,49 @@ por qué. Ahora va después.
 **Queda por confirmar con ella** si su hoja tiene las columnas. Si al
 abrir una ficha ve campos apagados, ese es el diagnóstico y la cura está
 escrita ahí mismo.
+
+### 20 · META, una sola pantalla · EL SERVIDOR (hecho)
+
+Sus palabras: *«no entiendo lo que hiciste en la parte de pauta, no veo
+dónde se ven los datos que lee Nova de Meta […] todo está regado […] que
+cargue la información en la misma pantalla, no que me toque ir a
+configuración para poder cargar o pedir la info a Meta, nooo eso no me
+gusta es desorden»*.
+
+**Sus decisiones:** una sola pantalla llamada META (Configuración deja de
+tener lo de Meta); los cuatro grupos de números (gasto/CPA/pedidos,
+ROAS/utilidad, alcance/impresiones/clics, por campaña y por anuncio);
+**todos** los periodos; y además —esto lo agregó ella—:
+
+> *«del día de hoy, cuánto lleva gastado en el día, qué hacer con las
+> ventas y sacar un semáforo diario, son 3 revisiones por día al
+> mediodía, a las 5pm y a las 11:30pm»*.
+
+`apis-script/85-meta-panel.gs` → acción `meta_panel`. Una sola llamada
+devuelve todo: conexión, periodos, revisiones, qué hacer y desglose.
+
+**Las tres revisiones no dicen lo mismo, y ese es el punto.** No son tres
+horas cualesquiera: son los tres momentos en que todavía se puede hacer
+algo distinto. Al mediodía se corrige, a las 5 es la última hora útil
+para mover presupuesto, y a las 11:30 ya no se corrige nada. **La de la
+noche no propone mover presupuesto**, porque sería un consejo que no se
+puede seguir.
+
+Tres cuidados más, todos probados:
+
+- **El presupuesto se juzga contra la PARTE del día que va.** A mediodía
+  tocan 50 de los 100, no los 100. Compararlo con el día entero sería
+  felicitarla por no haber llegado todavía.
+- **Gasto sin pedidos NO es rojo.** Es «sin datos», con su explicación.
+  Un rojo a las doce por un día que termina bien enseña a no mirar el
+  semáforo.
+- **La pauta sin convertir va aparte y se dice primero.** Si Meta cobró
+  en otra moneda y falta la tasa, ese gasto no está dentro del CPA — y
+  el CPA es justo el número que decide si escalar o frenar.
+
+**Falta la pantalla.** Cuando se haga:
+- renombrar «Pauta y gastos» → META, mover ahí la llave y «Traer ahora»,
+  y quitar esa parte de Configuración;
+- la tarjeta «Que el gasto entre solo» **debe desaparecer cuando Meta ya
+  está activo** — ella lo señaló: *«que el gasto entre solo sigue
+  apareciendo pero Meta ya está activo»*.
