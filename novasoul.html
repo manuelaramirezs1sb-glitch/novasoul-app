@@ -759,9 +759,22 @@ textarea,input,select,button{font-family:inherit;}
     <div class="card-h" style="margin:0;"><span class="card-h3" id="mrv-titulo">Mi revolución solar</span><span class="link" onclick="cerrarModal('m-revolucion')">CERRAR ✕</span></div>
     <div class="aviso mal" id="mrv-err"></div>
     <p class="card-p" id="mrv-sub"></p>
+    <div class="aviso mal on" style="background:var(--amber);border-color:var(--amber-line);color:var(--ink2);">
+      <strong>Esto NO sale de tu carta natal.</strong> La revolución solar es una carta
+      <em>aparte</em>, levantada para el momento en que el Sol vuelve a su grado de nacimiento.
+      Tiene su propio ascendente y sus propias casas, distintos de los tuyos de siempre.
+      En tu natal el Sol está en casa 9 — en tu revolución casi seguro cae en otra.
+    </div>
     <div class="f-row">
-      <div class="f"><label>ASCENDENTE DEL AÑO</label><select id="mrv-asc"></select></div>
-      <div class="f"><label>EN QUÉ CASA CAE TU SOL</label><input type="number" id="mrv-casa" min="1" max="12"></div>
+      <div class="f"><label>ASCENDENTE DEL AÑO</label><select id="mrv-asc"></select><small>El de la revolución, no tu Capricornio de siempre.</small></div>
+      <div class="f"><label>EN QUÉ CASA CAE TU SOL</label><input type="number" id="mrv-casa" min="1" max="12"><small>El de la revolución. Búscalo en la fila del Sol de esa carta.</small></div>
+    </div>
+    <div class="card-p" style="background:var(--soft);border-radius:12px;padding:13px;">
+      <strong>Dónde sacarlo en Horus:</strong> abajo, en <em>Cartas</em> → creas una carta nueva
+      de tipo <em>Revolución Solar</em> para este año. En modo Completo te da el listado igual
+      que tu natal: ahí está el Ascendente y la casa del Sol.<br><br>
+      Si no lo encuentras, <strong>mándame la captura por el chat y yo te la leo</strong> — yo sí
+      veo imágenes, Nova no.
     </div>
     <div class="f"><label>EN QUÉ CASA CAE CADA PLANETA</label><div id="mrv-planetas" style="display:flex;flex-direction:column;gap:8px;"></div><small>Opcional, pero es lo que más dice. Déjalo vacío si no lo tienes.</small></div>
     <div class="f"><label>EL TEMA DEL AÑO, EN TUS PALABRAS</label><input id="mrv-tema" placeholder="Opcional"></div>
@@ -887,7 +900,7 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-23 · 4ce3';
+const VERSION_PANTALLA = '2026-09-23 · b611';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es

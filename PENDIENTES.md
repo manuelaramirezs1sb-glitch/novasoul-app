@@ -1073,3 +1073,25 @@ ya hace de verdad. Fuera: el menú, la vista, `buildEquipo` e
 Empresarial**, que es donde vive. Y en **novAcademy** NO va esa pantalla
 tal cual — hay que rehacerla en torno a **profesorado y estudiantes**,
 que es otra cosa.
+
+### 11c · Su fecha de nacimiento, y un dato que casi se carga mal
+
+**Nació el 20 de septiembre de 1995.** Su año solar vigente va del
+**20-09-2026 al 19-09-2027** — arrancó tres días antes de esta
+conversación. Cumplió 31.
+
+*(La maqueta decía 14 sep 1998. Eso me lo inventé yo. El Sol a 27° de
+Virgo encaja con el 20 de septiembre, así que la carta y la fecha se
+confirman entre sí.)*
+
+**El error que estuvo a punto de pasar.** Ella dijo: «en qué casa cae mi
+sol ya lo tienes». Y sí, en su carta NATAL el Sol está en casa 9 — pero
+la revolución solar es una carta **distinta**, levantada para el momento
+en que el Sol vuelve a su grado. Tiene su propio ascendente y sus
+propias casas. Cargar el 9 de la natal habría dado una lectura del año
+entera sobre un dato falso, y nada en pantalla lo habría delatado.
+
+El formulario ahora lo dice antes de que escriba: que es otra carta, que
+en su natal es casa 9 y que en la revolución casi seguro es otra, y
+dónde sacarlo en Horus. Un formulario que pide un número sin decir de
+dónde sale invita a poner el que uno tenga a mano.
