@@ -1148,34 +1148,23 @@ function deducirTransito(k) {
 }
 
 /**
- * Traduce el estado de una plataforma al canónico de Nova.
+ * ── POR QUÉ AQUÍ NO HAY UN `estadoCanonico()` ──
  *
- * `aprendidos` es lo que ya está clasificado en la hoja Estados, con la
- * forma { 'dropi|rechazado': 'devolucion' }. Va primero porque una
- * decisión de la dueña gana sobre cualquier tabla de aquí: si ella dice
- * que en SU operación ese estado significa otra cosa, tiene razón.
+ * Había uno, y no lo llamaba nadie. Existía para respaldar una frase
+ * que era falsa: que las pantallas «vuelven a traducir el estado al
+ * leer». No lo hacían. La traducción se escribe UNA vez, al importar
+ * (`estadoConOrigen`, abajo), y queda en la columna `estado_canonico`
+ * del pedido.
+ *
+ * Esa función muerta fue la coartada de un fallo real: la dueña
+ * clasificaba un estado, la pantalla decía «las cifras se están
+ * rehaciendo», y los pedidos ya importados no se movían. Quien leyera
+ * el código encontraba una función que parecía hacerlo.
+ *
+ * Ahora, cuando ella clasifica, `reaplicarEstado_()` reescribe los
+ * pedidos que ya estaban y devuelve cuántos movió. Se borró la función
+ * muerta para que nadie vuelva a creerle.
  */
-function estadoCanonico(fuente, texto, aprendidos) {
-  if (!texto) return '';
-  const k = norm(texto);
-
-  if (aprendidos && aprendidos[fuente + '|' + k]) return aprendidos[fuente + '|' + k];
-
-  const mapa = MAPA_ESTADOS[fuente] || MAPA_ESTADOS[fuente === 'effi' ? 'mastershop' : ''] || {};
-  if (mapa[k]) return mapa[k];
-
-  // Coincidencia por prefijo: los couriers agregan sufijos
-  // ("ENTREGADA DIGITALIZADA", "PARA RETIRO EN AGENCIA SERVIENTREGA")
-  const claves = Object.keys(mapa);
-  for (let i = 0; i < claves.length; i++) {
-    if (k.indexOf(claves[i]) === 0) return mapa[claves[i]];
-  }
-
-  const deducido = deducirTransito(k);
-  if (deducido) return deducido;
-
-  return ESTADOS.SIN_CLASIFICAR;
-}
 
 /**
  * Igual que la anterior, pero además dice CÓMO lo resolvió.
@@ -5892,47 +5881,116 @@ function apiEstadoClasificar(s, p) {
     registrarMovimiento(s, 'Estados', fuente + ' · ' + texto,
                         'estado_nova', antes, estado);
 
+    /**
+     * Y AHORA SÍ, LOS PEDIDOS QUE YA ESTABAN.
+     *
+     * Antes esto no se hacía, y la pantalla decía «las cifras se están
+     * rehaciendo» sin que se rehiciera nada: la traducción entraba al
+     * diccionario y los pedidos importados seguían con el
+     * `estado_canonico` del día que entraron. Volvían a contarse bien
+     * solo si ella reimportaba el archivo entero.
+     */
+    const movidos = reaplicarEstado_(ss, fuente, texto, estado);
+
     return { ok: true, fuente: fuente, texto: texto, estado: estado,
-             cerradosAfectados: cierresConEseEstado(ss, texto) };
+             pedidosActualizados: movidos.pedidos,
+             // El aviso sale de lo que DE VERDAD cambió, no de una
+             // segunda cuenta aparte que podría no coincidir.
+             cerradosAfectados: cierresAfectados_(ss, movidos.porMes) };
   }
   return { ok: false, error: 'No encuentro ese estado en la hoja.' };
 }
 
 /**
- * Qué meses ya cerrados contienen pedidos con ese estado.
+ * Aplica el diccionario a los pedidos que ya están en la hoja.
+ *
+ * Se reescribe `estado_canonico`, que es «lo que el diccionario dice de
+ * este pedido». NUNCA `estado_nova`, que es «lo que ella dijo de ESTE
+ * pedido en concreto»: una regla general no pisa una decisión puntual,
+ * y por eso las pantallas leen primero `estado_nova` y solo después
+ * caen en `estado_canonico`.
+ *
+ * Se cuentan aparte los pedidos que de verdad CAMBIAN de cuenta. Un
+ * pedido con corrección manual se reescribe igual —para que el día que
+ * ella borre la corrección, la casilla de abajo diga lo correcto— pero
+ * no se cuenta, porque hoy no mueve ninguna cifra.
+ */
+function reaplicarEstado_(ss, fuente, texto, estado) {
+  const vacio = { pedidos: 0, porMes: {} };
+  const sh = ss.getSheetByName('Pedidos');
+  if (!sh || sh.getLastRow() < 2) return vacio;
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const cF = e.indexOf('fuente'), cE = e.indexOf('estado'),
+        cC = e.indexOf('estado_canonico'), cN = e.indexOf('estado_nova'),
+        cT = e.indexOf('tienda'), cFe = e.indexOf('fecha');
+  if (cF === -1 || cE === -1 || cC === -1) return vacio;
+
+  const nuevo = estado || ESTADOS.SIN_CLASIFICAR;
+  const columna = [];
+  let cambiadas = 0, pedidos = 0;
+  const porMes = {};
+
+  for (let i = 1; i < d.length; i++) {
+    let valor = d[i][cC];
+    /**
+     * La fuente se compara además del texto: «RECHAZADO» en Dropi y
+     * «RECHAZADO» en Effi pueden significar cosas distintas, y el
+     * diccionario las guarda por separado justamente por eso.
+     */
+    if (norm(d[i][cF]) === fuente && norm(d[i][cE]) === texto) {
+      if (norm(valor) !== nuevo) cambiadas++;
+      valor = nuevo;
+
+      // ¿Cambia de verdad lo que las pantallas leen?
+      const tieneOverride = cN !== -1 && String(d[i][cN] || '').trim();
+      if (!tieneOverride) {
+        pedidos++;
+        const f = cFe !== -1 ? aISO(d[i][cFe], 'UTC') : '';
+        if (f) {
+          const k = String(d[i][cT !== -1 ? cT : 0]).trim() + '|' + f.slice(0, 7);
+          porMes[k] = (porMes[k] || 0) + 1;
+        }
+      }
+    }
+    columna.push([valor]);
+  }
+
+  // Una sola escritura. Fila por fila, con miles de pedidos, se agota
+  // el tiempo que Apps Script le da a una llamada.
+  if (cambiadas) sh.getRange(2, cC + 1, columna.length, 1).setValues(columna);
+  return { pedidos: pedidos, porMes: porMes };
+}
+
+/**
+ * De los meses que cambiaron, cuáles ya estaban cerrados.
  *
  * Un cierre congelado no se rehace solo: las cifras que ya se reportaron
  * no pueden cambiar a espaldas de nadie. Pero sí hay que decir cuáles
  * quedaron hechos antes de saber esto, para que la dueña decida.
  */
-function cierresConEseEstado(ss, texto) {
-  const shC = ss.getSheetByName('Cierres');
-  const shP = ss.getSheetByName('Pedidos');
-  if (!shC || shC.getLastRow() < 2 || !shP || shP.getLastRow() < 2) return [];
+function cierresAfectados_(ss, porMes) {
+  const claves = Object.keys(porMes || {});
+  if (!claves.length) return [];
 
-  const cerrados = {};
+  const shC = ss.getSheetByName('Cierres');
+  if (!shC || shC.getLastRow() < 2) return [];
+
   const dc = shC.getDataRange().getValues();
   const ec = dc[0].map(norm);
-  for (let i = 1; i < dc.length; i++) {
-    cerrados[String(dc[i][ec.indexOf('tienda')]).trim() + '|' +
-             String(dc[i][ec.indexOf('mes')]).trim()] = true;
-  }
-  if (!Object.keys(cerrados).length) return [];
+  const cT = ec.indexOf('tienda'), cM = ec.indexOf('mes');
+  if (cT === -1 || cM === -1) return [];
 
-  const dp = shP.getDataRange().getValues();
-  const ep = dp[0].map(norm);
-  const cT = ep.indexOf('tienda'), cF = ep.indexOf('fecha'), cE = ep.indexOf('estado');
-  const tocados = {};
-  for (let i = 1; i < dp.length; i++) {
-    if (norm(dp[i][cE]) !== texto) continue;
-    const f = aISO(dp[i][cF], 'UTC');
-    if (!f) continue;
-    const k = String(dp[i][cT]).trim() + '|' + f.slice(0, 7);
-    if (cerrados[k]) tocados[k] = (tocados[k] || 0) + 1;
+  const cerrados = {};
+  for (let i = 1; i < dc.length; i++) {
+    cerrados[String(dc[i][cT]).trim() + '|' + String(dc[i][cM]).trim()] = true;
   }
-  return Object.keys(tocados).map(function (k) {
-    return { tienda: k.split('|')[0], mes: k.split('|')[1], pedidos: tocados[k] };
-  });
+
+  return claves.filter(function (k) { return cerrados[k]; })
+    .map(function (k) {
+      return { tienda: k.split('|')[0], mes: k.split('|')[1], pedidos: porMes[k] };
+    });
 }
 
 function apiCrear(s, p) {

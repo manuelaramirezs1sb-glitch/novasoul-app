@@ -1225,3 +1225,143 @@ todavía** — no pauta. Se deja de insistir con eso.
 Lo que sigue en pie, para cuando conecte: `ads_read` únicamente, permiso
 de activo «ver rendimiento», nunca «Administrar cuentas publicitarias»,
 y el token va a Script Properties por `sheetId`, nunca a una celda.
+
+### 15 · Pedidos y Novedades: la tabla con panel al lado
+
+Ella lo dijo así: *«hay algo que no hiciste ni aplicaste, y es el nuevo
+diseño de la pantalla de pedidos y novedades»*. Y tenía razón: mandó seis
+imágenes de referencia y la número 4 decía exactamente esto —
+
+> **Imagen 4 (Polytrox)** → Nova Empresarial, pantalla Pedidos y pantalla
+> novedades con los estados (estructura, no colores). La tabla de pedidos
+> con columnas + panel derecho de detalle del pedido seleccionado es lo
+> que le falta a tu pantalla de Pedidos actual. Los colores naranja/coral
+> los cambias por el oliva+dorado de Nova.
+
+**Hecho.** Tabla a la izquierda (Cliente · Producto · Destino · Valor ·
+Estado), panel de detalle a la derecha, con el color de Nova y una franja
+del color del estado en el borde de cada fila. En teléfono se apilan: la
+fila pasa a ser una ficha de tres renglones y el panel cae debajo.
+
+Las bandas por urgencia, los filtros y el sello de EJEMPLO siguen igual.
+El ejemplo usa la MISMA tabla que los datos reales — si se dibujara
+distinto, lo que ella aprende mirándolo no le serviría después.
+
+### 16 · Los dos fallos de «no me actualiza los estados»
+
+Eran dos cosas distintas con el mismo síntoma, y las dos decían que
+habían funcionado.
+
+**a · Clasificar un estado no tocaba los pedidos que ya estaban.**
+La traducción se guardaba en la hoja `Estados` —el diccionario— y los
+pedidos importados conservaban el `estado_canonico` del día que entraron.
+La pantalla decía *«las cifras se están rehaciendo»* y no se rehacía
+nada: solo volvían a contarse bien si reimportaba el archivo entero.
+
+Peor: el código lo afirmaba en un comentario —«cada pantalla recalcula
+desde Pedidos, y el estado se vuelve a traducir al leer»— y la función
+que haría eso, `estadoCanonico()`, **no la llamaba nadie**. Era código
+muerto que servía de coartada. Se borró.
+
+Ahora `reaplicarEstado_()` reescribe los pedidos que ya estaban, devuelve
+cuántos movió, y la pantalla dice el número: *«Guardado · 2 pedidos
+cambiaron de cuenta»*. Nunca pisa el `estado_nova` de un pedido corregido
+a mano: una regla general no manda sobre una decisión puntual.
+
+De paso, el aviso de mes cerrado contaba de más. Contaba todo pedido con
+ese texto, incluidos los de otra plataforma y los corregidos a mano —que
+no cambian de cifra. Ahora el aviso sale de lo que **de verdad** cambió.
+
+**b · Cambiar el estado de UN pedido no se veía.**
+La etiqueta de la fila miraba solo `estado_canonico`, nunca
+`estado_nova`. Ella elegía el estado, guardaba, salía «Guardado en la
+hoja» y la etiqueta seguía igual, el pedido no cambiaba de banda y la
+barra de arriba no se movía. Se guardaba de verdad: la que no se
+enteraba era la pantalla. Y encima no repintaba.
+
+Se arregló con **un solo lugar de verdad**: `estadoDe(p)` devuelve
+`estado_nova || estado_canonico` —la misma precedencia del servidor— y
+lo usan la etiqueta, las bandas y los diez filtros. Guardar ahora
+repinta tabla, filtros y barra.
+
+**Una prueba que faltaba.** Al armar la tabla dejé un `let` repetido que
+tumbaba TODO el JavaScript de `empresarial.html`. Ninguna prueba dibujaba
+Pedidos, así que no se supo hasta que reventó otra pantalla.
+`pruebas/pedidos-pantalla.js` ahora dibuja las dos.
+
+---
+
+## LO QUE SIGUE · pedido el 23 de septiembre
+
+Lo apunta aquí porque ella lo pidió así: *«lo que te diga aquí y no esté
+en contexto con lo que haces en este momento guárdalo en la carpeta de
+pendientes»*. **Nada de esto está empezado, y hay preguntas que hacerle
+antes de empezar.**
+
+### P1 · El clima astral de verdad, y el pensum automático
+
+Sus palabras: *«hay algo que no entiendo y es el pensum kármico, la idea
+es que con la información que yo brindo, y la que debes cruzar con
+internet… solo necesito que lea y profundice en el clima astral con toda
+la información que hay de mí, que en el sheet haga un enlace o algo para
+leer directo los tránsitos de la semana, mes y año, cruzar esa
+información con mi revolución solar y mi carta natal y sacar un análisis
+detallado, no lo quiero solo en una ventana, y el pensum kármico debe
+crearlo Nova automáticamente»*.
+
+Hoy el pensum se escribe a mano, o se acepta lo que Nova propone desde
+los tránsitos que ella pegó. Ella quiere que Nova **los traiga sola**.
+
+**La frontera real:** Apps Script SÍ puede llamar a una API por internet
+(`UrlFetchApp`), pero **no hay efemérides dentro de Nova**. Calcular
+dónde está Saturno el martes que viene pide o una librería astronómica
+—que en Apps Script no existe— o una API externa. Esa es la pregunta
+que hay que hacerle antes de escribir una línea.
+
+### P2 · Cómo se cobra: por hora, día, semana o mes
+
+Sus palabras: *«me estás pidiendo en Nova Central al poner el trabajo
+como un pago único y no me das a elegir si es único o es por día, por
+mes o por semana, ni por hora… dámelo también por hora porque el PHH es
+por horas»*.
+
+Hoy `modalidad` en `Trabajos` tiene: precio fijo, porcentaje, por hora y
+nada. Falta que la PANTALLA deje elegir la **periodicidad**: única, por
+hora, por día, por semana, por mes. Y con PHH por horas, hay que decidir
+de dónde salen esas horas.
+
+### P3 · Archivos por proyecto que Nova lee y recuerda
+
+Sus palabras: *«necesito que me des la opción de subir archivos para que
+lean y tengan guardados para cada proyecto, de esos archivos pueden sacar
+fechas de entrega, tareas, tips, libros, temas de evaluaciones!! todo eso
+necesito que Nova lo recuerde y cree automáticamente el pendiente y le
+saque horario… no solo el enlace del documento en Drive, porque son
+muchos documentos»*.
+
+Hoy `Fuentes` guarda **enlaces**, no contenido. Y Apps Script no lee un
+PDF, un Word ni un PowerPoint: eso necesita un LLM. Ella ya propuso la
+salida: *«yo voy a hacer el asistente virtual en n8n si es necesario»*.
+
+### P4 · Los artefactos, y que se vean desde NovaSoul
+
+Sus palabras: *«voy a organizar los artefactos para que lean el sílabus y
+saquen el plan de estudio con fechas y tiempos estimados… cosas y
+pendientes que debo hacer que Nova Soul me debe preguntar y yo responder
+esa pregunta y poder editar las respuestas, que no todas sean
+predeterminadas, para ubicar las tareas con mayor urgencia, también los
+trabajos… que en Nova Soul me aparezca el link del artefacto para
+trabajar ahí y poder encontrarlo fácil»*.
+
+Dos piezas: **el link del artefacto** guardado por proyecto/materia y
+visible en NovaSoul, y **preguntas con respuesta editable** para ordenar
+la urgencia, en vez de que todo sea predeterminado.
+
+### P5 · De antes, sin tocar
+
+- novAcademy: su pantalla de Meta, y la de profesorado/estudiantes.
+- El equipo de Nutrea, visible en Nova Empresarial.
+- Demo por artefacto (uno por proyecto, seleccionable).
+- NovaBot separado de NovaChat.
+- Onboarding: 3 planes, módulos por cliente, moneda de residencia.
+- Empresarial: 15 viajes al servidor al cargar → una sola llamada.

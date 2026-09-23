@@ -353,6 +353,66 @@ input.li:focus{border-color:var(--acc-d);}
 .ometa b{font-weight:600;color:var(--t-ink);}
 .ptog{color:var(--acc-d);cursor:pointer;font-weight:600;}
 .ped-dtl{border-top:1px solid var(--s-line2);margin-top:4px;padding-top:4px;}
+
+/* ─── TABLA + DETALLE AL LADO ─────────────────────────
+   La referencia que mandó (Polytrox) es tabla a la izquierda y el
+   detalle de lo seleccionado a la derecha. Se toma la ESTRUCTURA; los
+   colores siguen siendo los de Nova, no el coral de la referencia.
+
+   En teléfono no hay dos columnas: la tabla se vuelve una lista y el
+   panel cae debajo. Es la misma información, no una versión recortada.
+   ──────────────────────────────────────────────────── */
+.tsplit{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);
+        gap:16px;align-items:start;}
+.tbl{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.thead{display:grid;grid-template-columns:var(--cols);gap:12px;padding:0 13px 7px;
+       font:600 9.5px/1 'DM Sans';letter-spacing:.9px;color:var(--t-mut3);
+       text-transform:uppercase;}
+.trow{display:grid;grid-template-columns:var(--cols);gap:12px;align-items:center;
+      background:var(--s-bg);border:1px solid var(--s-line2);border-left:3px solid var(--fila,var(--s-line4));
+      border-radius:10px;padding:11px 13px;cursor:pointer;min-width:0;
+      transition:border-color .12s,background .12s;}
+.trow:hover{background:var(--s-bg2,var(--s-bg));border-color:var(--s-line4);border-left-color:var(--fila,var(--s-line4));}
+.trow.on{border-color:var(--acc-d);border-left-color:var(--fila,var(--acc-d));
+         box-shadow:inset 0 0 0 1px var(--acc-d);}
+.trow:focus-visible{outline:2px solid var(--acc-d);outline-offset:2px;}
+.tc{min-width:0;font:500 12px/1.35 'DM Sans';color:var(--t-mut);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tc-a{font:600 13px/1.3 'DM Sans';color:var(--t-ink);}
+.tc-id{font:500 11px/1.3 'DM Sans';color:var(--t-mut3);font-variant-numeric:tabular-nums;}
+.tc-n{font:600 12.5px/1.3 'DM Sans';color:var(--t-ink);text-align:right;
+      font-variant-numeric:tabular-nums;}
+.tgrupo{margin:14px 0 4px;padding:0 2px;}
+.tgrupo:first-child{margin-top:0;}
+.tvacio{padding:26px 14px;text-align:center;font:500 12.5px/1.6 'DM Sans';color:var(--t-mut2);
+        border:1px dashed var(--s-line4);border-radius:12px;}
+
+/* El panel. Se queda a la vista mientras se recorre la tabla. */
+.tpanel{position:sticky;top:12px;background:var(--s-bg);border:1px solid var(--s-line2);
+        border-radius:14px;padding:16px 17px;display:flex;flex-direction:column;gap:12px;
+        min-width:0;}
+.tpanel-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.tpanel-t{font:600 16px/1.25 'Fraunces',serif;color:var(--t-ink);}
+.tpanel-x{font:600 11px/1 'DM Sans';color:var(--acc-d);cursor:pointer;}
+.tpanel-g{display:grid;grid-template-columns:1fr 1fr;gap:11px;
+          border-top:1px solid var(--s-line2);padding-top:11px;}
+.tpanel-nada{font:500 12.5px/1.65 'DM Sans';color:var(--t-mut2);}
+
+@media(max-width:900px){
+  .tsplit{grid-template-columns:1fr;}
+  .tpanel{position:static;}
+  /* En teléfono una fila deja de ser fila y pasa a ser una ficha de tres
+     renglones: quién + en qué va arriba, qué es en medio, a dónde y
+     cuánto abajo. Mismas celdas, distinto acomodo. */
+  .thead{display:none;}
+  .trow{grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:12px 13px;}
+  .trow > :nth-child(1){grid-column:1;grid-row:1;}
+  .trow > :nth-child(5){grid-column:2;grid-row:1;}
+  .trow > :nth-child(2){grid-column:1 / -1;grid-row:2;}
+  .trow > :nth-child(3){grid-column:1;grid-row:3;}
+  .trow > :nth-child(4){grid-column:2;grid-row:3;}
+  .tc-n{text-align:right;}
+}
 /* ─── TOAST ──────────────────────────────────────────── */
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--t-ink);color:var(--s-bg);font:600 13px/1 'DM Sans';padding:10px 18px;border-radius:20px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:999;white-space:nowrap;}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -1358,7 +1418,10 @@ input.li:focus{border-color:var(--acc-d);}
         <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Los pedidos del día en esta tienda. Ves quién los tiene y en qué van.</p>
         <div class="imp-slot" data-tipo="pedidos"></div>
         <div id="pedfiltros" style="display:none;flex-wrap:wrap;gap:6px;margin:2px 0 4px;"></div>
-        <div style="display:flex;flex-direction:column;gap:9px;" id="pedlist"></div>
+        <div class="tsplit">
+          <div class="tbl" id="pedlist"></div>
+          <div id="pedpanel"></div>
+        </div>
       </div>
 
       <!-- ════ NOVEDADES ════ -->
@@ -1369,7 +1432,10 @@ input.li:focus{border-color:var(--acc-d);}
         </div>
         <div class="imp-slot" data-tipo="novedades"></div>
         <div class="kgrid" id="novkpi"></div>
-        <div style="display:flex;flex-direction:column;gap:9px;" id="novlist"></div>
+        <div class="tsplit">
+          <div class="tbl" id="novlist"></div>
+          <div id="novpanel"></div>
+        </div>
       </div>
 
       <!-- ════ OFICINA ════ -->
@@ -2270,34 +2336,74 @@ function buildHoy() {
 }
 
 function buildPedidos() {
+  /**
+   * El ejemplo usa la MISMA tabla y el MISMO panel que los pedidos de
+   * verdad. Si el ejemplo se dibujara distinto, lo que ella aprende
+   * mirándolo no le serviría el día que entren sus datos.
+   */
   const rows = POR_TIENDA[ST].pedidos;
-  const ests = ['Por confirmar','En gestión','Confirmado','En tránsito','Novedad','Devuelto','Entregado'];
-  let h = '';
-  rows.forEach((p,i)=>{
-    h += `<div class="orow" id="prow${i}" onclick="togPed(${i})" style="cursor:pointer;">
-      <div class="otop"><div><span class="onm">${p.cli}</span>&ensp;<span class="oid">#${p.id}</span></div><span class="bd" style="color:${p.eInk};background:${p.eBg};">${p.est}</span></div>
-      <div class="ometa"><span>${p.prod}</span><span>${p.ciu}</span><b>${p.val}</b><span>Gestiona ${p.ges}</span><span class="ntog ptog">Ver detalle ▾</span></div>
-      <div class="ped-dtl" id="pd${i}" style="display:none;flex-direction:column;gap:10px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;border-top:1px solid var(--s-line2);padding-top:10px;">
-          <div><div class="dlbl">TELÉFONO</div><div class="dtxt">${p.tel}</div></div>
-          <div><div class="dlbl">DIRECCIÓN</div><div class="dtxt">${p.dir}</div></div>
-        </div>
-        <div><div class="dlbl">CAMBIAR ESTADO</div><div class="nstates">${ests.map(e=>`<div class="nst${e===p.est?' on':''}" onclick="event.stopPropagation();this.closest('.nstates').querySelectorAll('.nst').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${e}</div>`).join('')}</div></div>
-        <textarea class="narea" placeholder="Nota sobre este pedido…" onclick="event.stopPropagation()"></textarea>
-        <div class="nsavebtn" onclick="event.stopPropagation();showToast('Cambios guardados')">Guardar</div>
-      </div>
-    </div>`;
+  const COLS = 'minmax(0,1.25fr) minmax(0,1.35fr) minmax(0,.85fr) auto auto';
+  let h = '<div class="thead" style="--cols:' + COLS + '">' +
+    '<div>Cliente</div><div>Producto</div><div>Destino</div>' +
+    '<div style="text-align:right">Valor</div><div>Estado</div></div>';
+  rows.forEach((p, i) => {
+    h += `<div class="trow" id="prow${i}" style="--cols:${COLS};--fila:${p.eInk}" `
+       + `tabindex="0" role="button" onclick="togPed(${i})" `
+       + `onkeydown="if(event.key==='Enter'){togPed(${i});}">`
+       + `<div class="tc tc-a">${p.cli}<div class="tc-id">#${p.id}</div></div>`
+       + `<div class="tc">${p.prod}</div><div class="tc">${p.ciu}</div>`
+       + `<div class="tc tc-n">${p.val}</div>`
+       + `<div class="tc"><span class="bd" style="color:${p.eInk};background:${p.eBg};">${p.est}</span></div>`
+       + `</div>`;
   });
   document.getElementById('pedlist').innerHTML = h;
+  PED_DEMO = -1;
+  pintarPanelDemo();
 }
-function togPed(i){
-  const d=document.getElementById('pd'+i), t=document.querySelector(`#prow${i} .ptog`);
-  const open=d.style.display!=='none';
-  const n=POR_TIENDA[ST].pedidos.length;
-  for(let j=0;j<n;j++){if(j!==i){const dj=document.getElementById('pd'+j),tj=document.querySelector(`#prow${j} .ptog`);if(dj)dj.style.display='none';if(tj)tj.textContent='Ver detalle ▾';document.getElementById('prow'+j)?.classList.remove('open');}}
-  d.style.display=open?'none':'flex';
-  t.textContent=open?'Ver detalle ▾':'Cerrar ▴';
-  document.getElementById('prow'+i).classList.toggle('open',!open);
+
+let PED_DEMO = -1;
+
+function togPed(i) {
+  PED_DEMO = (PED_DEMO === i) ? -1 : i;
+  document.querySelectorAll('#pedlist .trow').forEach((r, j) => {
+    r.classList.toggle('on', j === PED_DEMO);
+  });
+  pintarPanelDemo();
+  if (PED_DEMO !== -1 && window.matchMedia('(max-width:900px)').matches) {
+    document.getElementById('pedpanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function pintarPanelDemo() {
+  const cont = document.getElementById('pedpanel');
+  if (!cont) return;
+  const p = POR_TIENDA[ST].pedidos[PED_DEMO];
+  if (!p) {
+    cont.innerHTML = '<div class="tpanel"><div class="tpanel-t">El detalle</div>' +
+      '<p class="tpanel-nada">Toca un pedido de la tabla y aquí sale su teléfono, ' +
+      'su dirección y el estado — y desde aquí mismo lo cambias.</p></div>';
+    return;
+  }
+  const ests = ['Por confirmar','En gestión','Confirmado','En tránsito','Novedad','Devuelto','Entregado'];
+  cont.innerHTML = '<div class="tpanel">' +
+    `<div class="tpanel-h"><div><div class="tpanel-t">${p.cli}</div>` +
+      `<div class="tc-id">#${p.id}</div></div>` +
+      `<span class="tpanel-x" onclick="togPed(${PED_DEMO})">CERRAR ✕</span></div>` +
+    `<div><span class="bd" style="color:${p.eInk};background:${p.eBg};">${p.est}</span></div>` +
+    '<div class="tpanel-g">' +
+      `<div><div class="dlbl">TELÉFONO</div><div class="dtxt">${p.tel}</div></div>` +
+      `<div><div class="dlbl">VALOR</div><div class="dtxt">${p.val}</div></div>` +
+      `<div style="grid-column:1/-1"><div class="dlbl">DIRECCIÓN</div><div class="dtxt">${p.dir}</div></div>` +
+      `<div><div class="dlbl">PRODUCTO</div><div class="dtxt">${p.prod}</div></div>` +
+      `<div><div class="dlbl">GESTIONA</div><div class="dtxt">${p.ges}</div></div>` +
+    '</div>' +
+    '<div style="border-top:1px solid var(--s-line2);padding-top:11px;">' +
+      '<div class="dlbl">ESTADO EN NOVA</div><div class="nstates">' +
+      ests.map(e => `<div class="nst${e === p.est ? ' on' : ''}" onclick="elegirEstado(this)">${e}</div>`).join('') +
+      '</div></div>' +
+    '<textarea class="narea" placeholder="Nota sobre este pedido…"></textarea>' +
+    '<div class="nsavebtn" onclick="showToast(\'Cambios guardados\')">Guardar</div>' +
+  '</div>';
 }
 
 function buildNovedades() {
@@ -2310,25 +2416,73 @@ function buildNovedades() {
     {lb:'% ENTREGA 7D', v:ec?'71%':'68%',sub:'Umbral mínimo: 65%', c:'#6d7d4a'},
   ].map(k=>`<div class="kc" style="border-left:4px solid ${k.c};"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
 
+  /** El ejemplo, con la misma tabla y el mismo panel que las de verdad. */
   const novs = POR_TIENDA[ST].novedades;
-  let h='';
-  novs.forEach((n,i)=>{
-    const urg=n.eI==='#b8322f'||n.eI==='#8a6a13';
-    h+=`<div class="nrow${urg?' urg':''}" id="nrow${i}">
-      <div class="nh"><div><span class="ncl">${n.cli}</span>&ensp;<span style="font:500 11.5px/1 'DM Sans';color:var(--t-mut2);">${n.id} · ${n.zona}</span></div><span class="bd" style="color:${n.eI};background:${n.eB};">${n.est}</span></div>
-      <div class="nmeta"><span>${n.motivo}</span><span>${n.transp} · ${n.prod}</span><span class="nval">${n.val}</span><span class="ntime">${n.dias}</span><span style="color:var(--t-mut3);">${n.veces}</span><span class="ntog" onclick="togNov(${i})">Ver detalle ▾</span></div>
-      <div class="ndtl" id="nd${i}" style="display:none;">
-        <div><div class="dlbl">QUÉ PASÓ</div><div class="dtxt">${n.detalle}</div></div>
-        <div class="gnote"><div class="dlbl">NOTA DE LA GESTORA</div><div class="dtxt" style="margin-top:4px;">${n.nota}</div><div style="font:500 10.5px/1 'DM Sans';color:var(--t-mut2);margin-top:4px;">${n.aut}</div></div>
-        <div><div class="dlbl">CAMBIAR ESTADO</div><div class="nstates">${['En gestión','Esperando clienta','Reprogramar','Reenviar','Devolver','Resuelto'].map(e=>`<div class="nst${e===n.est?' on':''}" onclick="this.closest('.nstates').querySelectorAll('.nst').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${e}</div>`).join('')}</div></div>
-        <textarea class="narea" placeholder="Qué pasó, qué acordaste con la clienta y qué sigue."></textarea>
-        <div class="nsavebtn" onclick="event.stopPropagation();showToast('Cambios guardados')">Guardar</div>
-      </div>
-    </div>`;
+  const COLS = 'minmax(0,1fr) minmax(0,1.5fr) auto auto auto';
+  let h = '<div class="thead" style="--cols:' + COLS + '">' +
+    '<div>Pedido</div><div>Motivo</div><div>Transportadora</div>' +
+    '<div style="text-align:right">Días</div><div>Estado</div></div>';
+  novs.forEach((n, i) => {
+    h += `<div class="trow" id="nrow${i}" style="--cols:${COLS};--fila:${n.eI}" `
+       + `tabindex="0" role="button" onclick="togNov(${i})" `
+       + `onkeydown="if(event.key==='Enter'){togNov(${i});}">`
+       + `<div class="tc tc-a">${n.cli}<div class="tc-id">${n.id} · ${n.zona}</div></div>`
+       + `<div class="tc">${n.motivo}</div><div class="tc">${n.transp}</div>`
+       + `<div class="tc tc-n">${n.dias}</div>`
+       + `<div class="tc"><span class="bd" style="color:${n.eI};background:${n.eB};">${n.est}</span></div>`
+       + `</div>`;
   });
   document.getElementById('novlist').innerHTML = h;
+  NOV_DEMO = -1;
+  pintarPanelNovDemo();
 }
-function togNov(i){const d=document.getElementById('nd'+i),t=document.querySelector(`#nrow${i} .ntog`),op=d.style.display!=='none';d.style.display=op?'none':'flex';if(!op){d.style.flexDirection='column';d.style.gap='10px';}t.textContent=op?'Ver detalle ▾':'Cerrar ▴';}
+
+let NOV_DEMO = -1;
+
+function togNov(i) {
+  NOV_DEMO = (NOV_DEMO === i) ? -1 : i;
+  document.querySelectorAll('#novlist .trow').forEach((r, j) => {
+    r.classList.toggle('on', j === NOV_DEMO);
+  });
+  pintarPanelNovDemo();
+  if (NOV_DEMO !== -1 && window.matchMedia('(max-width:900px)').matches) {
+    document.getElementById('novpanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function pintarPanelNovDemo() {
+  const cont = document.getElementById('novpanel');
+  if (!cont) return;
+  const n = POR_TIENDA[ST].novedades[NOV_DEMO];
+  if (!n) {
+    cont.innerHTML = '<div class="tpanel"><div class="tpanel-t">El detalle</div>' +
+      '<p class="tpanel-nada">Toca una novedad y aquí sale qué pasó, la nota de la ' +
+      'gestora y el historial de contactos.</p></div>';
+    return;
+  }
+  const ests = ['En gestión','Esperando clienta','Reprogramar','Reenviar','Devolver','Resuelto'];
+  cont.innerHTML = '<div class="tpanel">' +
+    `<div class="tpanel-h"><div><div class="tpanel-t">${n.cli}</div>` +
+      `<div class="tc-id">${n.id} · ${n.zona} · ${n.veces}</div></div>` +
+      `<span class="tpanel-x" onclick="togNov(${NOV_DEMO})">CERRAR ✕</span></div>` +
+    `<div><span class="bd" style="color:${n.eI};background:${n.eB};">${n.est}</span></div>` +
+    '<div class="tpanel-g">' +
+      `<div style="grid-column:1/-1"><div class="dlbl">QUÉ PASÓ</div><div class="dtxt">${n.detalle}</div></div>` +
+      `<div><div class="dlbl">TRANSPORTADORA</div><div class="dtxt">${n.transp}</div></div>` +
+      `<div><div class="dlbl">VALOR</div><div class="dtxt">${n.val}</div></div>` +
+    '</div>' +
+    `<div class="gnote"><div class="dlbl">NOTA DE LA GESTORA</div>` +
+      `<div class="dtxt" style="margin-top:4px;">${n.nota}</div>` +
+      `<div style="font:500 10.5px/1 'DM Sans';color:var(--t-mut2);margin-top:4px;">${n.aut}</div></div>` +
+    '<div style="border-top:1px solid var(--s-line2);padding-top:11px;">' +
+      '<div class="dlbl">CAMBIAR ESTADO</div><div class="nstates">' +
+      ests.map(e => `<div class="nst${e === n.est ? ' on' : ''}" onclick="elegirEstado(this)">${e}</div>`).join('') +
+      '</div></div>' +
+    '<textarea class="narea" placeholder="Qué pasó, qué acordaste con la clienta y qué sigue."></textarea>' +
+    '<div class="nsavebtn" onclick="showToast(\'Cambios guardados\')">Guardar</div>' +
+  '</div>';
+}
+
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2200);}
 
 /**
@@ -3463,9 +3617,27 @@ const COLOR_ESTADO = {
   cancelado:        ['#5b5b55', '#e6e4de', 'Cancelado'],
 };
 
+/**
+ * EN QUÉ ESTADO ESTÁ ESTE PEDIDO. Un solo lugar, para toda la pantalla.
+ *
+ * `estado_nova` es lo que la dueña dijo de ESTE pedido; `estado_canonico`
+ * es lo que el diccionario dedujo del texto de la plataforma. Manda el
+ * primero — es la misma precedencia que usa el servidor en todas sus
+ * cuentas.
+ *
+ * Antes la pantalla solo miraba `estado_canonico`. Por eso ella elegía
+ * un estado en el detalle del pedido, le daba Guardar, salía «Guardado
+ * en la hoja»… y la etiqueta seguía igual, el pedido no cambiaba de
+ * banda y la barra de estados no se movía. Se había guardado de verdad:
+ * lo que no se había enterado era la pantalla.
+ */
+function estadoDe(p) {
+  return String(p.estado_nova || p.estado_canonico || '').trim();
+}
+
 /** El estado tal como se muestra. Lo sin mapear se ve, no se esconde. */
 function fichaEstado(p) {
-  const c = String(p.estado_canonico || '').trim();
+  const c = estadoDe(p);
   if (COLOR_ESTADO[c]) return COLOR_ESTADO[c];
   const crudo = String(p.estado || p.estado_transportadora || '').trim();
   // Un estado que Nova no conoce se muestra tal cual y en gris: si se
@@ -3536,19 +3708,19 @@ let FILTRO_PED = 'accion';   // al entrar, lo que hay que resolver
  */
 const FILTROS_PED = [
   ['accion',    'Necesitan acción', function (p) { return bandaDe(p) === 0; }],
-  ['novedad',   'Con novedad',      function (p) { return p.estado_canonico === 'novedad'; }],
-  ['pendiente', 'Sin confirmar',    function (p) { return p.estado_canonico === 'pendiente'; }],
-  ['oficina',   'En oficina',       function (p) { return p.estado_canonico === 'en_oficina'; }],
+  ['novedad',   'Con novedad',      function (p) { return estadoDe(p) === 'novedad'; }],
+  ['pendiente', 'Sin confirmar',    function (p) { return estadoDe(p) === 'pendiente'; }],
+  ['oficina',   'En oficina',       function (p) { return estadoDe(p) === 'en_oficina'; }],
   ['curso',     'En curso',         function (p) { return bandaDe(p) === 1; }],
-  ['entregado', 'Entregados',       function (p) { return p.estado_canonico === 'entregado'; }],
-  ['devuelto',  'Devueltos',        function (p) { return p.estado_canonico === 'devolucion'; }],
-  ['cancelado', 'Cancelados',       function (p) { return p.estado_canonico === 'cancelado'; }],
-  ['raro',      'Estado desconocido', function (p) { return !COLOR_ESTADO[String(p.estado_canonico||'').trim()]; }],
+  ['entregado', 'Entregados',       function (p) { return estadoDe(p) === 'entregado'; }],
+  ['devuelto',  'Devueltos',        function (p) { return estadoDe(p) === 'devolucion'; }],
+  ['cancelado', 'Cancelados',       function (p) { return estadoDe(p) === 'cancelado'; }],
+  ['raro',      'Estado desconocido', function (p) { return !COLOR_ESTADO[estadoDe(p)]; }],
   ['todos',     'Todos',            function () { return true; }],
 ];
 
 function bandaDe(p) {
-  const e = String(p.estado_canonico || '').trim();
+  const e = estadoDe(p);
   if (['novedad','pendiente','en_oficina'].indexOf(e) !== -1 || !COLOR_ESTADO[e]) return 0;
   if (['entregado','devolucion','cancelado'].indexOf(e) !== -1) return 2;
   return 1;
@@ -3619,55 +3791,55 @@ function pintarPedidosReales(todas, total) {
   ];
   const cuenta = [0, 0, 0];
   filas.forEach(function (p) { cuenta[banda(p)]++; });
-  let bandaActual = -1;
 
-  document.getElementById('pedlist').innerHTML = filas.map(function (p, i) {
+  /**
+   * ── LA TABLA ──
+   * La referencia que pidió: columnas fijas a la izquierda, detalle de
+   * lo seleccionado a la derecha. Antes cada pedido era una tarjeta que
+   * se desplegaba hacia abajo, y comparar dos pedidos obligaba a abrir,
+   * leer, cerrar y abrir el otro. En columnas se comparan de un vistazo.
+   */
+  const COLS = 'minmax(0,1.25fr) minmax(0,1.35fr) minmax(0,.85fr) auto auto';
+  const cabecera =
+    '<div class="thead" style="--cols:' + COLS + '">' +
+    '<div>Cliente</div><div>Producto</div><div>Destino</div>' +
+    '<div style="text-align:right">Valor</div><div>Estado</div></div>';
+
+  let bandaActual = -1;
+  const cuerpo = filas.map(function (p, i) {
     const e = fichaEstado(p);
-    let cabecera = '';
+    let grupo = '';
     const bp = banda(p);
     if (bp !== bandaActual) {
       bandaActual = bp;
-      cabecera =
-        '<div style="margin:' + (i ? '18px' : '2px') + ' 0 2px;">' +
+      grupo =
+        '<div class="tgrupo">' +
           '<div class="slbl">' + TITULO_BANDA[bp][0] + ' · ' + cuenta[bp] + '</div>' +
           '<div style="font:500 11.5px/1.5 \'DM Sans\';color:var(--t-mut2);">' +
             TITULO_BANDA[bp][1] + '</div></div>';
     }
     const val = S + ' ' + Math.round(Number(p.valor) || 0).toLocaleString(LOC());
-    const tel = p.telefono || p.telefono_norm || '—';
-    const tel2 = p.telefono_2 || p.telefono_2_norm || '';
-    return cabecera +
-      '<div class="orow' + (bp === 0 ? ' urg' : '') + '" id="prow' + i + '" ' +
-        'onclick="togPedReal(' + i + ')" style="cursor:pointer;">' +
-      '<div class="otop"><div><span class="onm">' + esc(p.cliente || 'Sin nombre') + '</span>&ensp;' +
-        '<span class="oid">#' + esc(p.id_externo || p.id) + '</span></div>' +
-        '<span class="bd" style="color:' + e[0] + ';background:' + e[1] + ';">' + esc(e[2]) + '</span></div>' +
-      '<div class="ometa"><span>' + esc(p.producto || '') + '</span>' +
-        '<span>' + esc(p.ciudad || '') + '</span><b>' + val + '</b>' +
-        '<span>' + (p.gestora_asignada ? 'Gestiona ' + esc(p.gestora_asignada) : 'Sin asignar') + '</span>' +
-        '<span>' + fechaCorta(p.fecha) + '</span>' +
-        '<span class="ntog ptog">Ver detalle ▾</span></div>' +
-      '<div class="ped-dtl" id="pd' + i + '" style="display:none;flex-direction:column;gap:10px;">' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;border-top:1px solid var(--s-line2);padding-top:10px;">' +
-          '<div><div class="dlbl">TELÉFONO</div><div class="dtxt">' + esc(tel) +
-            (tel2 ? '<br><span style="color:var(--t-mut2);">2º: ' + esc(tel2) + '</span>' : '') + '</div></div>' +
-          '<div><div class="dlbl">DIRECCIÓN</div><div class="dtxt">' + esc(p.direccion || '—') + '</div></div>' +
-          '<div><div class="dlbl">TRANSPORTADORA</div><div class="dtxt">' +
-            esc(p.transportadora || '—') + (p.guia ? ' · ' + esc(p.guia) : '') + '</div></div>' +
-          '<div><div class="dlbl">ESTADO EN LA PLATAFORMA</div><div class="dtxt">' +
-            esc(p.estado || p.estado_transportadora || '—') + '</div></div>' +
-        '</div>' +
-        '<div><div class="dlbl">ESTADO EN NOVA</div><div class="nstates" data-id="' + esc(p.id) + '">' +
-          ests.map(function (x) {
-            return '<div class="nst' + (x === p.estado_nova ? ' on' : '') + '" data-val="' + x + '" ' +
-              'onclick="event.stopPropagation();elegirEstado(this)">' +
-              (COLOR_ESTADO[x] ? COLOR_ESTADO[x][2] : x) + '</div>';
-          }).join('') + '</div></div>' +
-        '<textarea class="narea" id="nota' + i + '" placeholder="Nota sobre este pedido…" ' +
-          'onclick="event.stopPropagation()">' + esc(p.nota || '') + '</textarea>' +
-        '<div class="nsavebtn" onclick="event.stopPropagation();guardarPedido(' + i + ')">Guardar</div>' +
-      '</div></div>';
+    return grupo +
+      '<div class="trow' + (p.id === PED_SEL_ID ? ' on' : '') + '" id="prow' + i + '" ' +
+        'style="--cols:' + COLS + ';--fila:' + e[0] + '" tabindex="0" role="button" ' +
+        'onclick="abrirPedido(' + i + ')" ' +
+        'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();abrirPedido(' + i + ');}">' +
+      '<div class="tc tc-a" title="' + esc(p.cliente || '') + '">' +
+        esc(p.cliente || 'Sin nombre') +
+        '<div class="tc-id">#' + esc(p.id_externo || p.id) + '</div></div>' +
+      '<div class="tc" title="' + esc(p.producto || '') + '">' + esc(p.producto || '—') + '</div>' +
+      '<div class="tc" title="' + esc(p.ciudad || '') + '">' + esc(p.ciudad || '—') + '</div>' +
+      '<div class="tc tc-n">' + val + '</div>' +
+      '<div class="tc"><span class="bd" style="color:' + e[0] + ';background:' + e[1] + ';">' +
+        esc(e[2]) + '</span></div>' +
+      '</div>';
   }).join('');
+
+  document.getElementById('pedlist').innerHTML = filas.length
+    ? cabecera + cuerpo
+    : '<div class="tvacio">Ningún pedido con este filtro.</div>';
+
+  pintarPanelPedido();
 
   const cab = document.querySelector('#v-pedidos > p');
   if (cab) {
@@ -3692,36 +3864,134 @@ function elegirEstado(el) {
   el.classList.add('on');
 }
 
-function togPedReal(i) {
-  const d = document.getElementById('pd' + i);
-  const t = document.querySelector('#prow' + i + ' .ptog');
-  const abierto = d.style.display !== 'none';
-  PEDS_VISTA.forEach(function (_, j) {
-    if (j === i) return;
-    const dj = document.getElementById('pd' + j);
-    const tj = document.querySelector('#prow' + j + ' .ptog');
-    if (dj) dj.style.display = 'none';
-    if (tj) tj.textContent = 'Ver detalle ▾';
-    const rj = document.getElementById('prow' + j);
-    if (rj) rj.classList.remove('open');
-  });
-  d.style.display = abierto ? 'none' : 'flex';
-  t.textContent = abierto ? 'Ver detalle ▾' : 'Cerrar ▴';
-  document.getElementById('prow' + i).classList.toggle('open', !abierto);
-}
+/**
+ * ── EL PANEL ──
+ *
+ * La selección se guarda por ID y no por posición. Al guardar un estado
+ * la tabla se repinta y el pedido cambia de banda: si se guardara el
+ * índice, el panel terminaría mostrando el pedido de otra persona sin
+ * avisar. Un panel que cambia de dueño en silencio es peor que uno que
+ * se cierra.
+ */
+let PED_SEL_ID = '';
 
-async function guardarPedido(i) {
+function abrirPedido(i) {
   const p = PEDS_VISTA[i];
   if (!p) return;
-  const sel = document.querySelector('#pd' + i + ' .nstates .nst.on');
-  const campos = { nota: document.getElementById('nota' + i).value };
+  PED_SEL_ID = (p.id === PED_SEL_ID) ? '' : p.id;
+  document.querySelectorAll('#pedlist .trow').forEach(function (r, j) {
+    r.classList.toggle('on', !!PED_SEL_ID && PEDS_VISTA[j] && PEDS_VISTA[j].id === PED_SEL_ID);
+  });
+  pintarPanelPedido();
+  // En teléfono el panel queda debajo de la tabla: sin esto, tocar una
+  // fila no parece hacer nada.
+  if (PED_SEL_ID && window.matchMedia('(max-width:900px)').matches) {
+    const el = document.getElementById('pedpanel');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function pintarPanelPedido() {
+  const cont = document.getElementById('pedpanel');
+  if (!cont) return;
+
+  const p = (PEDS_VISTA || []).filter(function (x) { return x.id === PED_SEL_ID; })[0];
+  if (!p) {
+    cont.innerHTML = '<div class="tpanel"><div class="tpanel-t">El detalle</div>' +
+      '<p class="tpanel-nada">Toca un pedido de la tabla y aquí sale su teléfono, ' +
+      'su dirección, la guía y el estado — y desde aquí mismo lo cambias.</p></div>';
+    return;
+  }
+
+  const e = fichaEstado(p);
+  const tel = p.telefono || p.telefono_norm || '—';
+  const tel2 = p.telefono_2 || p.telefono_2_norm || '';
+  const S = (STORES[ST] || STORES.ec).sym;
+  const ests = ['pendiente','confirmado','en_transito','en_oficina','novedad',
+                'entregado','devolucion','cancelado'];
+
+  cont.innerHTML = '<div class="tpanel">' +
+    '<div class="tpanel-h">' +
+      '<div><div class="tpanel-t">' + esc(p.cliente || 'Sin nombre') + '</div>' +
+        '<div class="tc-id">#' + esc(p.id_externo || p.id) + ' · ' + fechaCorta(p.fecha) + '</div></div>' +
+      '<span class="tpanel-x" onclick="PED_SEL_ID=\'\';pintarPanelPedido();' +
+        'document.querySelectorAll(\'#pedlist .trow\').forEach(function(r){r.classList.remove(\'on\');});">CERRAR ✕</span>' +
+    '</div>' +
+    '<div><span class="bd" style="color:' + e[0] + ';background:' + e[1] + ';">' + esc(e[2]) + '</span></div>' +
+
+    '<div class="tpanel-g">' +
+      '<div><div class="dlbl">TELÉFONO</div><div class="dtxt">' + esc(tel) +
+        (tel2 ? '<br><span style="color:var(--t-mut2);">2º: ' + esc(tel2) + '</span>' : '') + '</div></div>' +
+      '<div><div class="dlbl">VALOR</div><div class="dtxt">' + S + ' ' +
+        Math.round(Number(p.valor) || 0).toLocaleString(LOC()) + '</div></div>' +
+      '<div style="grid-column:1/-1"><div class="dlbl">DIRECCIÓN</div><div class="dtxt">' +
+        esc(p.direccion || '—') + (p.ciudad ? ' · ' + esc(p.ciudad) : '') + '</div></div>' +
+      '<div><div class="dlbl">PRODUCTO</div><div class="dtxt">' + esc(p.producto || '—') + '</div></div>' +
+      '<div><div class="dlbl">GESTIONA</div><div class="dtxt">' +
+        esc(p.gestora_asignada || 'Sin asignar') + '</div></div>' +
+      '<div><div class="dlbl">TRANSPORTADORA</div><div class="dtxt">' +
+        esc(p.transportadora || '—') + (p.guia ? '<br>' + esc(p.guia) : '') + '</div></div>' +
+      '<div><div class="dlbl">ESTADO EN LA PLATAFORMA</div><div class="dtxt">' +
+        esc(p.estado || p.estado_transportadora || '—') + '</div></div>' +
+    '</div>' +
+
+    '<div style="border-top:1px solid var(--s-line2);padding-top:11px;">' +
+      '<div class="dlbl">ESTADO EN NOVA</div>' +
+      /**
+       * Lo que ella elija aquí es de ESTE pedido y manda sobre lo que
+       * diga el diccionario. Por eso se dice, en vez de dejarlo como un
+       * botón más que parece lo mismo que cambiar la traducción.
+       */
+      '<div style="font:500 11.5px/1.5 \'DM Sans\';color:var(--t-mut2);margin:3px 0 2px;">' +
+        'Vale solo para este pedido. Para cambiar qué significa «' +
+        esc(String(p.estado || '').toLowerCase() || 'ese texto') +
+        '» en todos, es en Ajustes → Estados.</div>' +
+      '<div class="nstates" data-id="' + esc(p.id) + '">' +
+        ests.map(function (x) {
+          return '<div class="nst' + (x === p.estado_nova ? ' on' : '') + '" data-val="' + x + '" ' +
+            'onclick="elegirEstado(this)">' +
+            (COLOR_ESTADO[x] ? COLOR_ESTADO[x][2] : x) + '</div>';
+        }).join('') + '</div></div>' +
+
+    '<textarea class="narea" id="pd-nota" placeholder="Nota sobre este pedido…">' +
+      esc(p.nota || '') + '</textarea>' +
+    '<div class="nsavebtn" onclick="guardarPedido()">Guardar</div>' +
+  '</div>';
+}
+
+async function guardarPedido() {
+  const p = (PEDS_VISTA || []).filter(function (x) { return x.id === PED_SEL_ID; })[0];
+  if (!p) return;
+  const sel = document.querySelector('#pedpanel .nstates .nst.on');
+  const nota = document.getElementById('pd-nota');
+  const campos = { nota: nota ? nota.value : '' };
   if (sel) campos.estado_nova = sel.dataset.val;
 
   try {
     const r = await api('escribir', { entidad: 'Pedidos', id: p.id, campos: campos });
     if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
     Object.assign(p, campos);
-    showToast('Guardado en la hoja');
+
+    /**
+     * Y REPINTAR. Guardar sin repintar es lo que hacía que pareciera que
+     * no se había guardado: la etiqueta seguía igual, el pedido no
+     * cambiaba de banda y la barra de arriba no se movía. Se guardaba de
+     * verdad; la que no se enteraba era la pantalla.
+     *
+     * Se actualiza también la copia en PEDS_REALES, que es de donde
+     * salen los filtros y sus cuentas: tocar solo la de la vista deja el
+     * «Con novedad · 7» mintiendo hasta la próxima carga.
+     */
+    const enTodas = (PEDS_REALES || []).filter(function (x) { return x.id === p.id; })[0];
+    if (enTodas && enTodas !== p) Object.assign(enTodas, campos);
+    pintarFiltrosPedidos(PEDS_REALES || []);
+    pintarPedidosReales(PEDS_REALES || [], PEDS_TOTAL);
+    pintarEstadosReales(PEDS_REALES || []);
+
+    showToast(campos.estado_nova
+      ? 'Guardado · ahora cuenta como ' +
+        ((COLOR_ESTADO[campos.estado_nova] || [])[2] || campos.estado_nova).toLowerCase()
+      : 'Guardado en la hoja');
   } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
 
@@ -3818,44 +4088,118 @@ function pintarNovedadesReales(filas) {
   const estados = ['abierta','en_gestion','esperando_cliente','reprogramar',
                    'reenviar','resuelta','cerrada'];
 
-  document.getElementById('novlist').innerHTML = filas.map(function (n, i) {
+  NOVS_VISTA = filas;
+  const COLS = 'minmax(0,1fr) minmax(0,1.5fr) auto auto auto';
+  const cabecera =
+    '<div class="thead" style="--cols:' + COLS + '">' +
+    '<div>Pedido</div><div>Motivo</div><div>Grupo</div>' +
+    '<div style="text-align:right">Días</div><div>Estado</div></div>';
+
+  const cuerpo = filas.map(function (n, i) {
     const d = dias(n.fecha);
-    const abierta = es(n, 'abierta');
-    const urg = abierta && d !== null && d >= 1;
-    const veces = porPedido[n.pedido_id] > 1 ? porPedido[n.pedido_id] + 'ª vez' : '1ª vez';
+    const urg = es(n, 'abierta') && d !== null && d >= 1;
     const col = COLOR_NOV[norm2(n.estado)] || COLOR_NOV.cerrada;
-    const fin = n.desenlace
-      ? (COLOR_ESTADO[n.desenlace] ? COLOR_ESTADO[n.desenlace][2] : n.desenlace)
-      : '';
-    return '<div class="nrow' + (urg ? ' urg' : '') + '" id="nrow' + i + '">' +
-      '<div class="nh"><div><span class="ncl">' + esc(n.pedido_id || n.id) + '</span>&ensp;' +
-        '<span style="font:500 11.5px/1 \'DM Sans\';color:var(--t-mut2);">' +
-        esc(n.fuente || '') + ' · ' + fechaCorta(n.fecha) + '</span></div>' +
-        '<span class="bd" style="color:' + col[0] + ';background:' + col[1] + ';">' +
+    return '<div class="trow' + (n.id === NOV_SEL_ID ? ' on' : '') + '" id="nrow' + i + '" ' +
+      'style="--cols:' + COLS + ';--fila:' + (urg ? '#b8322f' : col[0]) + '" ' +
+      'tabindex="0" role="button" onclick="abrirNovedad(' + i + ')" ' +
+      'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();abrirNovedad(' + i + ');}">' +
+      '<div class="tc tc-a">' + esc(n.pedido_id || n.id) +
+        '<div class="tc-id">' + esc(n.fuente || '') + ' · ' + fechaCorta(n.fecha) + '</div></div>' +
+      '<div class="tc" title="' + esc(n.motivo || '') + '">' +
+        esc(n.motivo || n.tipo || 'Sin motivo') + '</div>' +
+      '<div class="tc">' + esc(n.grupo || '—') + '</div>' +
+      '<div class="tc tc-n"' + (urg ? ' style="color:#b8322f"' : '') + '>' +
+        (d === null ? '—' : d + ' d') + '</div>' +
+      '<div class="tc"><span class="bd" style="color:' + col[0] + ';background:' + col[1] + ';">' +
         esc(n.estado || 'abierta') + '</span></div>' +
-      '<div class="nmeta"><span>' + esc(n.motivo || n.tipo || 'Sin motivo') + '</span>' +
-        '<span>' + esc(n.grupo || '') + '</span>' +
-        (fin ? '<span>Terminó ' + esc(fin).toLowerCase() + '</span>' : '') +
-        '<span class="ntime">' + (d === null ? '' : d + ' d') + '</span>' +
-        '<span style="color:var(--t-mut3);">' + veces + '</span>' +
-        '<span class="ntog" onclick="togNov(' + i + ')">Ver detalle ▾</span></div>' +
-      '<div class="ndtl" id="nd' + i + '" style="display:none;">' +
-        '<div><div class="dlbl">QUÉ PASÓ</div><div class="dtxt">' +
-          esc(n.motivo || '—') + '</div></div>' +
-        (n.fecha_solucion ? '<div><div class="dlbl">LA PLATAFORMA LA DIO POR SOLUCIONADA</div>' +
-          '<div class="dtxt">' + esc(n.fecha_solucion) + '</div></div>' : '') +
-        (n.solucion ? '<div><div class="dlbl">SOLUCIÓN PEDIDA AL COURIER</div>' +
-          '<div class="dtxt">' + esc(n.solucion) + '</div></div>' : '') +
-        '<div><div class="dlbl">CAMBIAR ESTADO</div><div class="nstates">' +
-          estados.map(function (x) {
-            return '<div class="nst' + (norm2(x) === norm2(n.estado) ? ' on' : '') + '" data-val="' + x + '" ' +
-              'onclick="elegirEstado(this)">' + x.replace(/_/g,' ') + '</div>';
-          }).join('') + '</div></div>' +
-        '<textarea class="narea" id="nnota' + i + '" placeholder="Qué pasó, qué acordaste con la clienta y qué sigue.">' +
-          esc(n.nota || '') + '</textarea>' +
-        '<div class="nsavebtn" onclick="event.stopPropagation();guardarNovedad(' + i + ')">Guardar</div>' +
-      '</div></div>';
+      '</div>';
   }).join('');
+
+  document.getElementById('novlist').innerHTML = filas.length
+    ? cabecera + cuerpo
+    : '<div class="tvacio">Ninguna novedad en esta tienda.</div>';
+
+  NOV_VECES = porPedido;
+  pintarPanelNovedad();
+}
+
+let NOVS_VISTA = [], NOV_SEL_ID = '', NOV_VECES = {};
+
+function abrirNovedad(i) {
+  const n = NOVS_VISTA[i];
+  if (!n) return;
+  NOV_SEL_ID = (n.id === NOV_SEL_ID) ? '' : n.id;
+  document.querySelectorAll('#novlist .trow').forEach(function (r, j) {
+    r.classList.toggle('on', !!NOV_SEL_ID && NOVS_VISTA[j] && NOVS_VISTA[j].id === NOV_SEL_ID);
+  });
+  pintarPanelNovedad();
+  if (NOV_SEL_ID && window.matchMedia('(max-width:900px)').matches) {
+    const el = document.getElementById('novpanel');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function pintarPanelNovedad() {
+  const cont = document.getElementById('novpanel');
+  if (!cont) return;
+
+  const n = (NOVS_VISTA || []).filter(function (x) { return x.id === NOV_SEL_ID; })[0];
+  if (!n) {
+    cont.innerHTML = '<div class="tpanel"><div class="tpanel-t">El detalle</div>' +
+      '<p class="tpanel-nada">Toca una novedad y aquí sale qué pasó, qué se le pidió ' +
+      'al courier y la nota de la gestora.</p></div>';
+    return;
+  }
+
+  const COLOR_NOV2 = { abierta: ['#b8322f','#f6e3db'], resuelta: ['#3f5330','#d3e0c2'],
+                       cerrada: ['#5b5b55','#e6e4de'] };
+  const col = COLOR_NOV2[norm2(n.estado)] || COLOR_NOV2.cerrada;
+  const estados = ['abierta','en_gestion','esperando_cliente','reprogramar',
+                   'reenviar','resuelta','cerrada'];
+  const veces = NOV_VECES[n.pedido_id] > 1 ? NOV_VECES[n.pedido_id] + 'ª vez' : '1ª vez';
+  const fin = n.desenlace
+    ? (COLOR_ESTADO[n.desenlace] ? COLOR_ESTADO[n.desenlace][2] : n.desenlace) : '';
+
+  cont.innerHTML = '<div class="tpanel">' +
+    '<div class="tpanel-h">' +
+      '<div><div class="tpanel-t">' + esc(n.pedido_id || n.id) + '</div>' +
+        '<div class="tc-id">' + esc(n.fuente || '') + ' · ' + fechaCorta(n.fecha) +
+        ' · ' + veces + '</div></div>' +
+      '<span class="tpanel-x" onclick="NOV_SEL_ID=\'\';pintarPanelNovedad();' +
+        'document.querySelectorAll(\'#novlist .trow\').forEach(function(r){r.classList.remove(\'on\');});">CERRAR ✕</span>' +
+    '</div>' +
+    '<div><span class="bd" style="color:' + col[0] + ';background:' + col[1] + ';">' +
+      esc(n.estado || 'abierta') + '</span>' +
+      (fin ? '&ensp;<span class="tc-id">Terminó ' + esc(fin).toLowerCase() + '</span>' : '') +
+    '</div>' +
+
+    '<div class="tpanel-g">' +
+      '<div style="grid-column:1/-1"><div class="dlbl">QUÉ PASÓ</div><div class="dtxt">' +
+        esc(n.motivo || '—') + '</div></div>' +
+      '<div><div class="dlbl">GRUPO</div><div class="dtxt">' + esc(n.grupo || '—') + '</div></div>' +
+      '<div><div class="dlbl">GESTIONA</div><div class="dtxt">' +
+        esc(n.gestora_asignada || 'Sin asignar') + '</div></div>' +
+      (n.fecha_solucion
+        ? '<div style="grid-column:1/-1"><div class="dlbl">LA PLATAFORMA LA DIO POR SOLUCIONADA</div>' +
+          '<div class="dtxt">' + esc(n.fecha_solucion) + '</div></div>' : '') +
+      (n.solucion
+        ? '<div style="grid-column:1/-1"><div class="dlbl">SOLUCIÓN PEDIDA AL COURIER</div>' +
+          '<div class="dtxt">' + esc(n.solucion) + '</div></div>' : '') +
+    '</div>' +
+
+    '<div style="border-top:1px solid var(--s-line2);padding-top:11px;">' +
+      '<div class="dlbl">CAMBIAR ESTADO</div><div class="nstates">' +
+        estados.map(function (x) {
+          return '<div class="nst' + (norm2(x) === norm2(n.estado) ? ' on' : '') +
+            '" data-val="' + x + '" onclick="elegirEstado(this)">' +
+            x.replace(/_/g, ' ') + '</div>';
+        }).join('') + '</div></div>' +
+
+    '<textarea class="narea" id="nv-nota" ' +
+      'placeholder="Qué pasó, qué acordaste con la clienta y qué sigue.">' +
+      esc(n.nota || '') + '</textarea>' +
+    '<div class="nsavebtn" onclick="guardarNovedad()">Guardar</div>' +
+  '</div>';
 }
 
 function norm2(v) {
@@ -3863,18 +4207,29 @@ function norm2(v) {
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_');
 }
 
-async function guardarNovedad(i) {
-  const n = NOVS_REALES[i];
+async function guardarNovedad() {
+  const n = (NOVS_VISTA || []).filter(function (x) { return x.id === NOV_SEL_ID; })[0];
   if (!n) return;
-  const sel = document.querySelector('#nd' + i + ' .nstates .nst.on');
-  const campos = { nota: document.getElementById('nnota' + i).value };
+  const sel = document.querySelector('#novpanel .nstates .nst.on');
+  const nota = document.getElementById('nv-nota');
+  const campos = { nota: nota ? nota.value : '' };
   if (sel) campos.estado = sel.dataset.val;
 
   try {
     const r = await api('escribir', { entidad: 'Novedades', id: n.id, campos: campos });
     if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
     Object.assign(n, campos);
-    showToast('Guardado en la hoja');
+
+    // Y repintar: los KPIs de arriba (ABIERTAS, MÁS DE 24H) salen de
+    // estas mismas filas. Sin esto, cerrar una novedad la deja contada
+    // como abierta hasta la próxima carga.
+    const enTodas = (NOVS_REALES || []).filter(function (x) { return x.id === n.id; })[0];
+    if (enTodas && enTodas !== n) Object.assign(enTodas, campos);
+    pintarNovedadesReales(NOVS_REALES || []);
+
+    showToast(campos.estado
+      ? 'Guardado · queda ' + String(campos.estado).replace(/_/g, ' ')
+      : 'Guardado en la hoja');
   } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
 
@@ -5170,17 +5525,17 @@ function pintarPantallasGestora() {
   const mios = PEDS_REALES || [];
   const abierto = function (p) {
     return ['entregado','devolucion','cancelado']
-      .indexOf(String(p.estado_canonico || '').trim()) === -1;
+      .indexOf(estadoDe(p)) === -1;
   };
   const pendientes = mios.filter(abierto);
   const enNovedad = mios.filter(function (p) {
-    return String(p.estado_canonico || '').trim() === 'novedad';
+    return estadoDe(p) === 'novedad';
   });
   const entregados = mios.filter(function (p) {
-    return String(p.estado_canonico || '').trim() === 'entregado';
+    return estadoDe(p) === 'entregado';
   });
   const devueltos = mios.filter(function (p) {
-    return String(p.estado_canonico || '').trim() === 'devolucion';
+    return estadoDe(p) === 'devolucion';
   });
   const resueltos = entregados.length + devueltos.length;
 
@@ -6308,7 +6663,7 @@ function botResponde(q) {
       if (!mios.length) return 'No tienes pedidos asignados ahora mismo.';
       const abiertos = mios.filter(function (p) {
         return ['entregado', 'devolucion', 'cancelado']
-          .indexOf(String(p.estado_canonico || '').trim()) === -1;
+          .indexOf(estadoDe(p)) === -1;
       });
       return 'Tienes ' + b(mios.length + (mios.length === 1 ? ' pedido' : ' pedidos')) +
         ' asignado' + (mios.length === 1 ? '' : 's') + '. ' +
@@ -6406,7 +6761,7 @@ function botResponde(q) {
   if (tema === 'siguiente') {
     const mios = (PEDS_REALES || []).filter(function (p) {
       return ['entregado', 'devolucion', 'cancelado']
-        .indexOf(String(p.estado_canonico || '').trim()) === -1;
+        .indexOf(estadoDe(p)) === -1;
     });
     if (!mios.length) return 'No tienes nada pendiente ahora mismo.';
     const quieto = mios.map(function (p) {
@@ -6719,7 +7074,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-23 · 906b';
+const VERSION_PANTALLA = '2026-09-23 · 40a8';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -7455,7 +7810,7 @@ let OFI_SEL = 0;
 
 function cargarOficina() {
   const enOficina = PEDS_REALES.filter(function (p) {
-    return String(p.estado_canonico || '').trim() === 'en_oficina';
+    return estadoDe(p) === 'en_oficina';
   });
   OFICINA = enOficina.sort(function (a, b) {
     return String(a.fecha || '') < String(b.fecha || '') ? -1 : 1;
@@ -8382,14 +8737,29 @@ async function clasificarEstado(fuente, texto, estado, sel) {
      * sabría nunca.
      */
     const afectados = r.cerradosAfectados || [];
+    /**
+     * Cuántos pedidos se movieron DE VERDAD.
+     *
+     * Antes esto decía siempre «las cifras se están rehaciendo», y no se
+     * rehacía nada: la traducción entraba al diccionario y los pedidos ya
+     * importados se quedaban como estaban. Ahora el servidor devuelve la
+     * cuenta y se dice el número — que además es la forma de notar el día
+     * que vuelva a ser cero sin motivo.
+     */
+    const n = r.pedidosActualizados;
+    const cuantos = n === undefined ? 'las cifras se están rehaciendo'
+                  : n === 0 ? 'no había ningún pedido con ese estado todavía'
+                  : n === 1 ? '1 pedido cambió de cuenta'
+                  : n + ' pedidos cambiaron de cuenta';
+
     if (afectados.length) {
-      alert('Guardado.\n\nOjo: ' +
+      alert('Guardado · ' + cuantos + '.\n\nOjo: ' +
         afectados.map(function (x) { return x.mes + ' (' + x.pedidos + ' pedidos)'; })
           .join(', ') +
         ' ya está cerrado y sus cifras quedaron congeladas antes de saber esto.\n\n' +
         'Si quieres que reflejen el cambio, hay que rehacer ese cierre.');
     } else {
-      showToast('Listo · las cifras se están rehaciendo');
+      showToast('Listo · ' + cuantos);
     }
 
     Object.keys(CIERRE_CACHE).forEach(function (k) { delete CIERRE_CACHE[k]; });

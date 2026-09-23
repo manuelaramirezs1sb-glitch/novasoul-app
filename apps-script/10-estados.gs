@@ -269,34 +269,23 @@ function deducirTransito(k) {
 }
 
 /**
- * Traduce el estado de una plataforma al canónico de Nova.
+ * ── POR QUÉ AQUÍ NO HAY UN `estadoCanonico()` ──
  *
- * `aprendidos` es lo que ya está clasificado en la hoja Estados, con la
- * forma { 'dropi|rechazado': 'devolucion' }. Va primero porque una
- * decisión de la dueña gana sobre cualquier tabla de aquí: si ella dice
- * que en SU operación ese estado significa otra cosa, tiene razón.
+ * Había uno, y no lo llamaba nadie. Existía para respaldar una frase
+ * que era falsa: que las pantallas «vuelven a traducir el estado al
+ * leer». No lo hacían. La traducción se escribe UNA vez, al importar
+ * (`estadoConOrigen`, abajo), y queda en la columna `estado_canonico`
+ * del pedido.
+ *
+ * Esa función muerta fue la coartada de un fallo real: la dueña
+ * clasificaba un estado, la pantalla decía «las cifras se están
+ * rehaciendo», y los pedidos ya importados no se movían. Quien leyera
+ * el código encontraba una función que parecía hacerlo.
+ *
+ * Ahora, cuando ella clasifica, `reaplicarEstado_()` reescribe los
+ * pedidos que ya estaban y devuelve cuántos movió. Se borró la función
+ * muerta para que nadie vuelva a creerle.
  */
-function estadoCanonico(fuente, texto, aprendidos) {
-  if (!texto) return '';
-  const k = norm(texto);
-
-  if (aprendidos && aprendidos[fuente + '|' + k]) return aprendidos[fuente + '|' + k];
-
-  const mapa = MAPA_ESTADOS[fuente] || MAPA_ESTADOS[fuente === 'effi' ? 'mastershop' : ''] || {};
-  if (mapa[k]) return mapa[k];
-
-  // Coincidencia por prefijo: los couriers agregan sufijos
-  // ("ENTREGADA DIGITALIZADA", "PARA RETIRO EN AGENCIA SERVIENTREGA")
-  const claves = Object.keys(mapa);
-  for (let i = 0; i < claves.length; i++) {
-    if (k.indexOf(claves[i]) === 0) return mapa[claves[i]];
-  }
-
-  const deducido = deducirTransito(k);
-  if (deducido) return deducido;
-
-  return ESTADOS.SIN_CLASIFICAR;
-}
 
 /**
  * Igual que la anterior, pero además dice CÓMO lo resolvió.
