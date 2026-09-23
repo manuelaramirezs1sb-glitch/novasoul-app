@@ -556,20 +556,27 @@ textarea,input,select,button{font-family:inherit;}
         <div class="vista-h">
           <div>
             <div class="vista-t">El cielo</div>
-            <p class="vista-p">Los planetas marcan el tiempo: hay tiempo para aprender, para descansar y para cambiar. Esta parte va a decidir en qué día cae cada entrega.</p>
+            <p class="vista-p">Los planetas marcan el tiempo: hay tiempo para aprender, para
+              descansar y para cambiar. Aquí el planeta te dice <strong>qué momento es</strong>,
+              y NovaSoul lo cruza con lo que tienes que entregar.</p>
           </div>
-          <span class="ejemplo">EJEMPLO</span>
+          <div class="row-btns">
+            <button class="card-cta" onclick="abrirCarta()">Cargar mi carta</button>
+            <button class="card-ghost" onclick="abrirPensum()">+ Temporada</button>
+          </div>
         </div>
-        <div class="card-lila" style="display:flex;flex-direction:column;gap:12px;">
-          <div class="card-lbl-amber">LO QUE FALTA PARA QUE ESTO SEA TUYO Y NO UN HORÓSCOPO</div>
-          <div class="card-h3">Todavía no calculo tu carta</div>
-          <p class="card-p">Lo que ves abajo es una maqueta con datos inventados, y lo digo en vez de dejártelo pasar por real. Para que sea tuyo faltan tres cosas: tu carta natal cargada una vez, los tránsitos <em>con su duración</em> —la Luna dura dos días y medio, Saturno meses, y un consejo que no distingue eso es ruido— y tu ciclo.</p>
-          <p class="card-p">Cuando estén, NovaSoul va a hacer lo que ninguna app de astrología hace: medir si te funcionó <strong>a ti</strong>. Cada tarea queda con la ventana en que se hizo y con si se cumplió, y a los tres meses te puede decir «las entregas que pusiste en menguante las terminaste el 80% de las veces». Si el patrón no aparece, también te lo dice.</p>
-        </div>
-        <div class="g3" style="opacity:.6;">
-          <div class="card"><div class="slbl" style="margin-bottom:8px;">CASA 8 · PLUTÓN</div><div class="card-h3">Lo que sigues sosteniendo</div><p class="card-p" style="margin-top:8px;">Cierre y transformación. Ejemplo, no tu cielo.</p></div>
-          <div class="card"><div class="slbl" style="margin-bottom:8px;">CASA 5 · VENUS</div><div class="card-h3">Creatividad que pide salida</div><p class="card-p" style="margin-top:8px;">Impulso creativo. Ejemplo, no tu cielo.</p></div>
-          <div class="card"><div class="slbl" style="margin-bottom:8px;">CASA 10 · MARTE</div><div class="card-h3">Ambición que no espera</div><p class="card-p" style="margin-top:8px;">Visibilidad pública. Ejemplo, no tu cielo.</p></div>
+        <div id="ci-hoy"></div>
+        <div id="ci-semana"></div>
+        <div class="g14">
+          <div style="display:flex;flex-direction:column;gap:18px;">
+            <div class="card" id="ci-carta"></div>
+            <div class="card" id="ci-transitos"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:18px;">
+            <div class="card-lila" id="ci-revolucion"></div>
+            <div class="card" id="ci-pensum"></div>
+            <div class="card-sage" id="ci-medicion"></div>
+          </div>
         </div>
       </div>
 
@@ -666,6 +673,98 @@ textarea,input,select,button{font-family:inherit;}
         <button class="card-ghost" onclick="volverSilabo()">← Cambiar el texto</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="modal" id="m-carta" onclick="if(event.target===this)cerrarModal('m-carta')">
+  <div class="modal-box" style="width:720px;">
+    <div class="card-h" style="margin:0;"><span class="card-h3">Mi carta natal</span><span class="link" onclick="cerrarModal('m-carta')">CERRAR ✕</span></div>
+    <div class="aviso mal" id="mc-err"></div>
+    <div id="mc-paso1">
+      <p class="card-p" style="margin-bottom:12px;">Ábrela en <strong>Horus</strong>, copia el listado de
+        planetas y pégalo aquí tal cual. Busco planeta, signo, grado y casa; te muestro lo que entendí
+        <strong>y lo que no</strong>, y no guardo nada hasta que lo confirmes. No calculo tu carta:
+        Horus ya lo hace bien y rehacerlo mal aquí no te sirve de nada.</p>
+      <div class="f-row">
+        <div class="f"><label>FECHA DE NACIMIENTO</label><input type="date" id="mc-fecha"></div>
+        <div class="f"><label>HORA</label><input type="time" id="mc-hora"><small>Si no la sabes exacta, déjala vacía.</small></div>
+      </div>
+      <div class="f"><label>LUGAR</label><input id="mc-lugar" placeholder="Medellín, Colombia"></div>
+      <div class="f"><label>PEGA AQUÍ TU CARTA</label><textarea id="mc-texto" rows="9" placeholder="Sol en Virgo 21°34' Casa 2&#10;Luna Capricornio 8°12 Casa 6&#10;Ascendente Leo 15°"></textarea></div>
+      <div class="f-btns" style="margin-top:14px;"><button class="card-cta" id="mc-leer" onclick="leerCarta()">Leer mi carta</button><button class="card-ghost" onclick="cerrarModal('m-carta')">Cancelar</button></div>
+    </div>
+    <div id="mc-paso2" style="display:none;">
+      <div id="mc-props"></div>
+      <div class="f-btns" style="margin-top:16px;">
+        <button class="card-cta" id="mc-guardar" onclick="guardarCarta()">Guardar mi carta</button>
+        <button class="card-ghost" onclick="volverCarta()">← Cambiar el texto</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="m-pensum" onclick="if(event.target===this)cerrarModal('m-pensum')">
+  <div class="modal-box">
+    <div class="card-h" style="margin:0;"><span class="card-h3" id="mp-titulo">Temporada del pensum</span><span class="link" onclick="cerrarModal('m-pensum')">CERRAR ✕</span></div>
+    <div class="aviso mal" id="mp-err"></div>
+    <p class="card-p">Una temporada de tu pensum kármico: qué planeta manda, qué pide y hasta cuándo va.
+      <strong>Lo que escribas aquí manda sobre la luna</strong> — tu marco antes que la lectura común.</p>
+    <div class="f"><label>TÍTULO</label><input id="mp-tit" placeholder="Saturno por casa 10"></div>
+    <div class="f-row">
+      <div class="f"><label>DESDE</label><input type="date" id="mp-desde"></div>
+      <div class="f"><label>HASTA</label><input type="date" id="mp-hasta"></div>
+    </div>
+    <div class="f-row">
+      <div class="f"><label>QUÉ PLANETA</label><select id="mp-cuerpo"></select><small id="mp-grupo"></small></div>
+      <div class="f"><label>CASA</label><input type="number" id="mp-casa" min="1" max="12"></div>
+    </div>
+    <div class="f"><label>QUÉ MOMENTO ES</label><select id="mp-momento"></select><small id="mp-mom-ayuda"></small></div>
+    <div class="f"><label>QUÉ PIDE</label><input id="mp-pide" placeholder="Cerrar lo que ya no sostiene."></div>
+    <div class="f"><label>QUÉ EVITAR</label><input id="mp-evitar" placeholder="Opcional"></div>
+    <div class="f-btns">
+      <button class="card-cta" onclick="guardarPensum()">Guardar</button>
+      <button class="card-ghost" onclick="cerrarModal('m-pensum')">Cancelar</button>
+      <button class="btn-mal" id="mp-borrar" onclick="borrarPensum()">Borrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="m-transito" onclick="if(event.target===this)cerrarModal('m-transito')">
+  <div class="modal-box">
+    <div class="card-h" style="margin:0;"><span class="card-h3">Un tránsito</span><span class="link" onclick="cerrarModal('m-transito')">CERRAR ✕</span></div>
+    <div class="aviso mal" id="mx-err"></div>
+    <p class="card-p">De Horus, con <strong>sus fechas</strong>. La Luna dura dos días y medio y Saturno meses:
+      un tránsito sin duración no se puede cruzar con una semana.</p>
+    <div class="f-row">
+      <div class="f"><label>PLANETA</label><select id="mx-cuerpo"></select></div>
+      <div class="f"><label>ASPECTO</label><input id="mx-aspecto" placeholder="cuadratura, trígono…"></div>
+    </div>
+    <div class="f-row">
+      <div class="f"><label>DESDE</label><input type="date" id="mx-desde"></div>
+      <div class="f"><label>HASTA</label><input type="date" id="mx-hasta"></div>
+    </div>
+    <div class="f-row">
+      <div class="f"><label>A QUÉ NATAL</label><input id="mx-natal" placeholder="mi Luna, mi Ascendente…"></div>
+      <div class="f"><label>CASA</label><input type="number" id="mx-casa" min="1" max="12"></div>
+    </div>
+    <div class="f"><label>TEMA</label><input id="mx-tema" placeholder="Lo que sigues sosteniendo"></div>
+    <div class="f"><label>CÓMO TRABAJARLO</label><input id="mx-como" placeholder="Opcional"></div>
+    <div class="f-btns"><button class="card-cta" onclick="guardarTransito()">Guardar</button><button class="card-ghost" onclick="cerrarModal('m-transito')">Cancelar</button></div>
+  </div>
+</div>
+
+<div class="modal" id="m-revolucion" onclick="if(event.target===this)cerrarModal('m-revolucion')">
+  <div class="modal-box">
+    <div class="card-h" style="margin:0;"><span class="card-h3" id="mrv-titulo">Mi revolución solar</span><span class="link" onclick="cerrarModal('m-revolucion')">CERRAR ✕</span></div>
+    <div class="aviso mal" id="mrv-err"></div>
+    <p class="card-p" id="mrv-sub"></p>
+    <div class="f-row">
+      <div class="f"><label>ASCENDENTE DEL AÑO</label><select id="mrv-asc"></select></div>
+      <div class="f"><label>EN QUÉ CASA CAE TU SOL</label><input type="number" id="mrv-casa" min="1" max="12"></div>
+    </div>
+    <div class="f"><label>EL TEMA DEL AÑO</label><input id="mrv-tema" placeholder="Una frase"></div>
+    <div class="f"><label>LO QUE DICE</label><textarea id="mrv-texto" rows="5" placeholder="Pega aquí la lectura de Horus"></textarea></div>
+    <div class="f-btns"><button class="card-cta" onclick="guardarRevolucion()">Guardar</button><button class="card-ghost" onclick="cerrarModal('m-revolucion')">Cancelar</button></div>
   </div>
 </div>
 
@@ -781,7 +880,7 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-23 · 00aa';
+const VERSION_PANTALLA = '2026-09-23 · fa7c';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
@@ -1822,6 +1921,446 @@ async function borrarFijo() {
   await cargarPlata();
 }
 
+// ══════════════════════════════════════════════════════
+//  EL CIELO
+//  «Los planetas marcan el tiempo.» Aquí el planeta dice
+//  qué momento es, y NovaSoul lo cruza con la semana.
+// ══════════════════════════════════════════════════════
+let CI = null, CI_LEIDO = null, PENSUM_ID = '';
+
+const MOM_COLOR = { aprender: 'var(--acc)', descansar: 'var(--sage-d)', cambiar: 'var(--rojo)' };
+
+async function cargarCielo() {
+  let r;
+  try { r = await nc('nc_soul_cielo'); }
+  catch (e) {
+    CI = null;
+    document.getElementById('ci-hoy').innerHTML =
+      '<div class="card"><div class="vacio">No pude hablar con la hoja: ' +
+      esc(e && e.message || e) + '</div></div>';
+    return;
+  }
+  if (!r || !r.ok) {
+    CI = null;
+    document.getElementById('ci-hoy').innerHTML =
+      '<div class="card"><div class="vacio">' +
+      esc(traducirError(r && r.error) || 'Sin datos.') + '</div></div>';
+    return;
+  }
+  CI = r;
+  try { pintarCielo(); }
+  catch (e) {
+    CI = null;
+    document.getElementById('ci-hoy').innerHTML =
+      '<div class="card"><div class="vacio">Traje tu cielo pero no lo pude dibujar: ' +
+      esc(e && e.message || e) + '</div></div>';
+  }
+}
+
+function pintarCielo() {
+  const hoy = CI.semana.dias.filter(function (d) { return d.esHoy; })[0] || CI.semana.dias[0];
+  const mom = CI.momentos[hoy.momento] || {};
+
+  // ── Qué momento es HOY ──
+  document.getElementById('ci-hoy').innerHTML =
+    '<div class="card-lila" style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">' +
+      '<div style="flex:1;min-width:250px;">' +
+        '<div class="card-lbl-lila">HOY ES TIEMPO DE</div>' +
+        '<div style="font:600 34px/1.1 \'Fraunces\',serif;color:' +
+          (MOM_COLOR[hoy.momento] || 'var(--ink)') + ';margin:10px 0;">' +
+          esc(mom.nombre || '—') + '</div>' +
+        '<p class="card-p">' + esc(mom.que || '') + '</p>' +
+        '<div class="kcard-m" style="margin-top:12px;">' +
+          '<span class="chip' + (hoy.deDonde === 'pensum' ? ' proy' : '') + '">' +
+            (hoy.deDonde === 'pensum' ? 'tu pensum: ' : 'la luna: ') + esc(hoy.porque) + '</span>' +
+          (CI.transitosHoy.length ? '<span class="chip horas">' + CI.transitosHoy.length +
+            ' tránsito' + (CI.transitosHoy.length === 1 ? '' : 's') + ' activo' +
+            (CI.transitosHoy.length === 1 ? '' : 's') + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div style="text-align:center;">' +
+        '<div style="font:600 40px/1 \'Fraunces\',serif;color:var(--ink);">' +
+          CI.lunaHoy.iluminacion + '%</div>' +
+        '<div class="kpi-s" style="margin-top:8px;">' + esc(CI.lunaHoy.nombre) + '</div>' +
+        '<div class="kpi-s">' + (CI.lunaHoy.creciendo ? 'creciendo' : 'menguando') + '</div>' +
+      '</div>' +
+    '</div>';
+
+  // ── La semana, día por día ──
+  document.getElementById('ci-semana').innerHTML =
+    '<div class="card"><div class="card-h"><span class="card-lbl">QUÉ MOMENTO ES CADA DÍA</span>' +
+    '<span class="card-lbl">' + esc(fcorta(CI.semana.lunes)) + '</span></div>' +
+    '<div class="sem7">' + CI.semana.dias.map(function (d) {
+      const m = CI.momentos[d.momento] || {};
+      return '<div class="sdia' + (d.esHoy ? ' hoy' : '') + '" style="min-height:0;">' +
+        '<div class="sdia-h"><span class="sdia-d">' + DOW[(new Date(d.fecha + 'T12:00:00Z').getUTCDay() + 6) % 7] + '</span>' +
+        '<span class="sdia-n">' + Number(d.fecha.split('-')[2]) + '</span></div>' +
+        '<div style="font:600 12px/1.2 \'DM Sans\';color:' + (MOM_COLOR[d.momento] || 'var(--mut)') +
+          ';">' + esc(m.nombre || '') + '</div>' +
+        '<div class="sdia-lib">' + esc(d.luna.nombre) + '</div>' +
+        '<div class="sdia-lib" style="opacity:.7;">' +
+          (d.deDonde === 'pensum' ? 'tu pensum' : d.luna.iluminacion + '%') + '</div></div>';
+    }).join('') + '</div>' +
+    '<p class="card-p" style="margin-top:13px;">Manda tu pensum. La luna solo habla los días en que ' +
+    'no escribiste una temporada: tu marco antes que la lectura común.</p></div>';
+
+  // ── La carta ──
+  const c = document.getElementById('ci-carta');
+  if (!CI.tieneCarta) {
+    c.innerHTML = '<div class="card-h"><span class="card-lbl">TU CARTA</span></div>' +
+      '<div class="card-h3">Todavía no la tengo</div>' +
+      '<p class="card-p" style="margin-top:9px;">Ábrela en Horus, copia el listado de planetas y ' +
+      'pégalo. Sin tu carta puedo decirte la fase de la luna, pero no de qué te habla a <em>ti</em>.</p>' +
+      '<div class="row-btns" style="margin-top:14px;">' +
+      '<button class="card-cta" onclick="abrirCarta()">Cargar mi carta</button></div>';
+  } else {
+    c.innerHTML = '<div class="card-h"><span class="card-lbl">TU CARTA</span>' +
+      '<button class="link" onclick="abrirCarta()">ACTUALIZAR</button></div>' +
+      (CI.nacimiento.fecha
+        ? '<div class="kpi-s" style="margin-bottom:12px;">' + esc(fcorta(CI.nacimiento.fecha)) +
+          ' de ' + esc(CI.nacimiento.fecha.slice(0, 4)) +
+          (CI.nacimiento.hora ? ' · ' + esc(CI.nacimiento.hora) : '') +
+          (CI.nacimiento.lugar ? ' · ' + esc(CI.nacimiento.lugar) : '') + '</div>'
+        : '') +
+      ['personal', 'social', 'generacional', 'angulo'].map(function (g) {
+        const lista = CI.cartaPorGrupo[g] || [];
+        if (!lista.length) return '';
+        const info = CI.grupos[g];
+        return '<div style="margin-bottom:14px;">' +
+          '<div class="card-lbl" style="margin-bottom:4px;">' + esc(info.nombre.toUpperCase()) + '</div>' +
+          '<div class="kpi-s" style="margin-bottom:8px;">' + esc(info.que) + '</div>' +
+          lista.map(function (x) {
+            return '<div class="fila" style="padding:8px 0;">' +
+              '<span class="fila-t">' + esc(x.nombre) + '</span>' +
+              '<span class="chip">' + esc(x.signoNombre) +
+                (x.grado !== null ? ' ' + Math.floor(x.grado) + '°' : '') + '</span>' +
+              (x.casa ? '<span class="chip proy">casa ' + x.casa + '</span>' : '') +
+              (x.retrogrado ? '<span class="chip tarde">R</span>' : '') + '</div>';
+          }).join('') + '</div>';
+      }).join('');
+  }
+
+  // ── Tránsitos ──
+  document.getElementById('ci-transitos').innerHTML =
+    '<div class="card-h"><span class="card-lbl">TRÁNSITOS</span>' +
+    '<button class="link" onclick="abrirTransito()">+ AGREGAR</button></div>' +
+    (CI.transitos.length
+      ? CI.transitos.map(function (x) {
+          const vigente = x.desde <= CI.hoy && (!x.hasta || x.hasta >= CI.hoy);
+          const dias = x.hasta
+            ? Math.round((new Date(x.hasta + 'T00:00:00Z') -
+                          new Date(x.desde + 'T00:00:00Z')) / 86400000) + 1 : 1;
+          return '<div class="fila"><span class="fila-t"><strong>' + esc(x.nombre) + '</strong>' +
+            (x.aspecto ? ' ' + esc(x.aspecto) : '') + (x.aNatal ? ' a ' + esc(x.aNatal) : '') +
+            (x.tema ? '<br><span style="color:var(--mut3);font-size:12px;">' + esc(x.tema) + '</span>' : '') +
+            '</span>' +
+            '<span class="chip' + (vigente ? ' hoy' : '') + '">' +
+              esc(fcorta(x.desde)) + (x.hasta && x.hasta !== x.desde ? '–' + esc(fcorta(x.hasta)) : '') +
+            '</span>' +
+            '<span class="chip horas">' + dias + (dias === 1 ? ' día' : ' días') + '</span>' +
+            '<span class="chip">' + esc((CI.grupos[x.grupo] || {}).nombre || '') + '</span></div>';
+        }).join('')
+      : '<div class="vacio">Todavía no has cargado ninguno. Tráelos de Horus <strong>con sus ' +
+        'fechas</strong>: la Luna dura dos días y medio y Saturno meses, y un consejo que no ' +
+        'distingue eso es ruido.</div>');
+
+  // ── Revolución solar ──
+  const rv = CI.revolucion;
+  document.getElementById('ci-revolucion').innerHTML = rv
+    ? '<div class="card-h"><span class="card-lbl-lila">TU AÑO · REVOLUCIÓN SOLAR</span>' +
+      '<button class="link" onclick="abrirRevolucion()">' +
+        (rv.carta ? 'CAMBIAR' : 'CARGARLA') + '</button></div>' +
+      '<div class="card-h3">' + rv.edad + ' años</div>' +
+      '<div class="kpi-s" style="margin:8px 0 12px;">Del ' + esc(fcorta(rv.desde)) + ' al ' +
+        esc(fcorta(rv.hasta)) + ' · quedan ' + rv.diasRestantes + ' días</div>' +
+      '<div class="prog-track"><div class="prog-fill" style="width:' +
+        Math.max(0, Math.min(100, rv.transcurrido)) + '%;"></div></div>' +
+      (rv.carta
+        ? '<div style="margin-top:13px;">' +
+          (rv.carta.ascendente ? '<div class="fila"><span class="fila-t">Ascendente del año</span>' +
+            '<span class="chip proy">' + esc(nombreSigno(rv.carta.ascendente)) + '</span></div>' : '') +
+          (rv.carta.casaSol ? '<div class="fila"><span class="fila-t">Tu Sol cae en</span>' +
+            '<span class="chip proy">casa ' + rv.carta.casaSol + '</span></div>' : '') +
+          (rv.carta.tema ? '<p class="card-p" style="margin-top:10px;"><strong>' +
+            esc(rv.carta.tema) + '</strong></p>' : '') +
+          (rv.carta.texto ? '<p class="card-p" style="margin-top:8px;">' +
+            esc(rv.carta.texto) + '</p>' : '') + '</div>'
+        : '<p class="card-p" style="margin-top:12px;">La ventana la calculo yo —es tu cumpleaños—. ' +
+          'La carta de este año la traes de Horus.</p>')
+    : '<div class="card-lbl-lila">TU AÑO</div>' +
+      '<p class="card-p" style="margin-top:9px;">Necesito tu fecha de nacimiento para saber dónde ' +
+      'empieza y termina tu año solar.</p>' +
+      '<div class="row-btns" style="margin-top:12px;">' +
+      '<button class="card-cta" onclick="abrirCarta()">Ponerla</button></div>';
+
+  // ── Pensum ──
+  document.getElementById('ci-pensum').innerHTML =
+    '<div class="card-h"><span class="card-lbl">PENSUM KÁRMICO</span>' +
+    '<button class="link" onclick="abrirPensum()">+ TEMPORADA</button></div>' +
+    (CI.pensum.length
+      ? CI.pensum.map(function (x) {
+          const abierta = x.desde <= CI.hoy && (!x.hasta || x.hasta >= CI.hoy);
+          const m = CI.momentos[x.momento] || {};
+          return '<div class="fila" onclick="editarPensum(\'' + x.id + '\')" style="cursor:pointer;">' +
+            '<span class="fila-t"><strong>' + esc(x.titulo) + '</strong>' +
+            (x.quePide ? '<br><span style="color:var(--mut3);font-size:12px;">' +
+              esc(x.quePide) + '</span>' : '') + '</span>' +
+            (x.momento ? '<span class="chip" style="color:' + MOM_COLOR[x.momento] + ';">' +
+              esc(m.nombre) + '</span>' : '') +
+            '<span class="chip' + (abierta ? ' hoy' : '') + '">' + esc(fcorta(x.desde)) +
+              (x.hasta ? '–' + esc(fcorta(x.hasta)) : '') + '</span></div>';
+        }).join('')
+      : '<div class="vacio">Tu pensum de los próximos meses: qué pide cada temporada. ' +
+        'Lo que escribas aquí manda sobre la luna.</div>');
+
+  // ── Si le funcionó a ella ──
+  const M = CI.medicion;
+  document.getElementById('ci-medicion').innerHTML =
+    '<div class="card-lbl-sage">SI TE FUNCIONÓ A TI</div>' +
+    '<p class="card-p" style="margin-top:9px;">Esto no lo hace ninguna app de astrología: mirar ' +
+    'tus entregas fase por fase y contar cuántas cumpliste. Es tu dato, no una creencia prestada.</p>' +
+    (M.patron
+      ? '<div style="font:600 17px/1.45 \'Fraunces\',serif;color:var(--ink);margin:14px 0;">' +
+        esc(M.patron) + '</div>'
+      : '<p class="card-p" style="margin-top:12px;color:var(--mut3);">' + esc(M.porque) + '</p>') +
+    (M.promedio !== null
+      ? '<div class="fila"><span class="fila-t">En general cumples</span>' +
+        '<span class="chip horas">' + M.promedio + '%</span></div>' +
+        M.fases.filter(function (f) { return f.n; }).map(function (f) {
+          return '<div class="fila"><span class="fila-t">' + esc(f.nombre) + '</span>' +
+            '<span class="fila-m">' + f.hechas + ' de ' + f.n + '</span>' +
+            '<span class="chip' + (f.pct === null ? '' : ' horas') + '">' +
+            (f.pct === null ? 'faltan ' + f.faltan : f.pct + '%') + '</span></div>';
+        }).join('')
+      : '');
+}
+
+/* ─── Cargar la carta ─── */
+function abrirCarta() {
+  if (!CI) { avisoGlobal('Todavía no cargó tu cielo.'); return; }
+  document.getElementById('mc-fecha').value = CI.nacimiento.fecha || '';
+  document.getElementById('mc-hora').value = CI.nacimiento.hora || '';
+  document.getElementById('mc-lugar').value = CI.nacimiento.lugar || '';
+  document.getElementById('mc-texto').value = '';
+  document.getElementById('mc-paso1').style.display = 'block';
+  document.getElementById('mc-paso2').style.display = 'none';
+  errModal('mc-err', '');
+  document.getElementById('m-carta').classList.add('on');
+}
+function volverCarta() {
+  document.getElementById('mc-paso1').style.display = 'block';
+  document.getElementById('mc-paso2').style.display = 'none';
+}
+async function leerCarta() {
+  const texto = document.getElementById('mc-texto').value || '';
+  if (!texto.trim()) { errModal('mc-err', 'Pega tu carta primero.'); return; }
+  const btn = document.getElementById('mc-leer');
+  btn.textContent = 'Leyendo…'; btn.style.opacity = '.6';
+  errModal('mc-err', '');
+  try {
+    const r = await nc('nc_soul_carta_leer', { texto: texto });
+    if (!r || !r.ok) { errModal('mc-err', traducirError(r && r.error) || 'No pude leerla.'); return; }
+    CI_LEIDO = r;
+    pintarPropuestaCarta();
+    document.getElementById('mc-paso1').style.display = 'none';
+    document.getElementById('mc-paso2').style.display = 'block';
+  } catch (e) {
+    errModal('mc-err', 'Falló: ' + (e && e.message || e));
+  } finally { btn.textContent = 'Leer mi carta'; btn.style.opacity = '1'; }
+}
+function pintarPropuestaCarta() {
+  const E = CI_LEIDO.encontradas, I = CI_LEIDO.ignoradas;
+  let h = '<div class="card-h" style="margin-bottom:10px;">' +
+    '<span class="card-lbl">ENTENDÍ ' + E.length + ' CUERPOS</span></div>';
+  h += E.length ? E.map(function (e, i) {
+    return '<div class="fila">' +
+      '<input type="checkbox" class="mc-ck" id="mc-ck' + i + '" checked ' +
+        'style="width:18px;height:18px;accent-color:var(--acc);flex:none;">' +
+      '<span class="fila-t"><strong>' + esc(e.nombre) + '</strong> en ' +
+        esc(e.signoNombre) + (e.grado !== null ? ' ' + Math.floor(e.grado) + '°' : '') +
+        (e.casa ? ' · casa ' + e.casa : '') + (e.retrogrado ? ' · R' : '') +
+        '<br><span style="color:var(--mut4);font-size:11.5px;">' + esc(e.linea) + '</span></span>' +
+      '<span class="chip">' + esc((CI_LEIDO.grupos[e.grupo] || {}).nombre || '') + '</span></div>';
+  }).join('')
+  : '<div class="vacio">No encontré ningún planeta con su signo. ¿Seguro que pegaste el listado?</div>';
+
+  if (CI_LEIDO.faltan.length) {
+    h += '<div class="aviso mal on" style="margin-top:14px;">Me faltaron: ' +
+      esc(CI_LEIDO.faltan.join(', ')) + '. Una carta a la que le falta un planeta en silencio ' +
+      'es peor que una carta vacía, así que te lo digo.</div>';
+  }
+  if (I.length) {
+    h += '<div style="margin-top:14px;border-top:1px solid var(--soft2);padding-top:12px;">' +
+      '<div class="card-lbl" style="margin-bottom:8px;">ESTAS LÍNEAS LAS DEJÉ FUERA</div>' +
+      I.slice(0, 12).map(function (x) {
+        return '<div class="fila"><span class="fila-t" style="opacity:.8;">' + esc(x.linea) +
+          '</span><span class="fila-m">' + esc(x.porque) + '</span></div>';
+      }).join('') + '</div>';
+  }
+  document.getElementById('mc-props').innerHTML = h;
+}
+async function guardarCarta() {
+  const filas = [];
+  CI_LEIDO.encontradas.forEach(function (e, i) {
+    if (document.getElementById('mc-ck' + i).checked) filas.push(e);
+  });
+  const btn = document.getElementById('mc-guardar');
+  btn.textContent = 'Guardando…'; btn.style.opacity = '.6';
+  try {
+    // Los datos de nacimiento van aparte: son de la hoja Usuarios.
+    await nc('nc_soul_nacimiento', {
+      fecha: document.getElementById('mc-fecha').value,
+      hora: document.getElementById('mc-hora').value,
+      lugar: document.getElementById('mc-lugar').value,
+    });
+    if (filas.length) {
+      const r = await nc('nc_soul_carta', { filas: filas });
+      if (!r || !r.ok) { errModal('mc-err', traducirError(r && r.error) || 'No se pudo.'); return; }
+    }
+    cerrarModal('m-carta');
+    avisoGlobal('Tu carta quedó guardada.', true);
+    CI = null;
+    await cargarCielo();
+  } catch (e) {
+    errModal('mc-err', 'Falló: ' + (e && e.message || e));
+  } finally { btn.textContent = 'Guardar mi carta'; btn.style.opacity = '1'; }
+}
+
+/* ─── Pensum ─── */
+/** El signo se guarda en minúscula; en pantalla va con su nombre. */
+function nombreSigno(id) {
+  const s = (CI && CI.signos || []).filter(function (x) { return x.id === id; })[0];
+  return s ? s.nombre : String(id || '');
+}
+
+function opcionesCuerpo(sel) {
+  return '<option value="">— ninguno —</option>' +
+    Object.keys(CI.cuerpos).map(function (k) {
+      return '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' +
+        esc(CI.cuerpos[k].nombre) + '</option>';
+    }).join('');
+}
+function abrirPensum() { formPensum(null); }
+function editarPensum(id) {
+  formPensum(CI.pensum.filter(function (x) { return x.id === id; })[0] || null);
+}
+function formPensum(x) {
+  if (!CI) { avisoGlobal('Todavía no cargó tu cielo.'); return; }
+  PENSUM_ID = x ? x.id : '';
+  document.getElementById('mp-titulo').textContent = x ? 'Cambiar la temporada' : 'Nueva temporada';
+  document.getElementById('mp-tit').value = x ? x.titulo : '';
+  document.getElementById('mp-desde').value = x ? x.desde : '';
+  document.getElementById('mp-hasta').value = x ? x.hasta : '';
+  document.getElementById('mp-cuerpo').innerHTML = opcionesCuerpo(x ? x.cuerpo : '');
+  document.getElementById('mp-casa').value = x && x.casa ? x.casa : '';
+  document.getElementById('mp-momento').innerHTML = '<option value="">— sin decir —</option>' +
+    Object.keys(CI.momentos).map(function (k) {
+      return '<option value="' + k + '"' + (x && x.momento === k ? ' selected' : '') + '>' +
+        esc(CI.momentos[k].nombre) + '</option>';
+    }).join('');
+  document.getElementById('mp-pide').value = x ? x.quePide : '';
+  document.getElementById('mp-evitar').value = x ? x.queEvitar : '';
+  document.getElementById('mp-borrar').style.display = x ? 'block' : 'none';
+  ayudaPensum();
+  errModal('mp-err', '');
+  document.getElementById('m-pensum').classList.add('on');
+}
+function ayudaPensum() {
+  const c = document.getElementById('mp-cuerpo').value;
+  const g = c && CI.cuerpos[c] ? CI.grupos[CI.cuerpos[c].grupo] : null;
+  document.getElementById('mp-grupo').textContent = g ? g.nombre + ': ' + g.que : '';
+  const m = document.getElementById('mp-momento').value;
+  document.getElementById('mp-mom-ayuda').textContent =
+    (CI.momentos[m] || {}).que || 'Si lo dejas vacío, ese día habla la luna.';
+}
+async function guardarPensum() {
+  const r = await nc('nc_soul_pensum', { datos: {
+    id: PENSUM_ID,
+    titulo: document.getElementById('mp-tit').value,
+    desde: document.getElementById('mp-desde').value,
+    hasta: document.getElementById('mp-hasta').value,
+    cuerpo: document.getElementById('mp-cuerpo').value,
+    casa: document.getElementById('mp-casa').value || 0,
+    momento: document.getElementById('mp-momento').value,
+    quePide: document.getElementById('mp-pide').value,
+    queEvitar: document.getElementById('mp-evitar').value,
+  } });
+  if (!r || !r.ok) { errModal('mp-err', traducirError(r && r.error) || 'No se pudo.'); return; }
+  cerrarModal('m-pensum');
+  CI = null;
+  await cargarCielo();
+}
+async function borrarPensum() {
+  if (!PENSUM_ID) return;
+  if (!confirm('¿Borrar esta temporada?')) return;
+  const r = await nc('nc_soul_pensum_borrar', { id: PENSUM_ID });
+  if (!r || !r.ok) { errModal('mp-err', traducirError(r && r.error) || 'No se pudo.'); return; }
+  cerrarModal('m-pensum');
+  CI = null;
+  await cargarCielo();
+}
+
+/* ─── Tránsitos ─── */
+function abrirTransito() {
+  if (!CI) { avisoGlobal('Todavía no cargó tu cielo.'); return; }
+  document.getElementById('mx-cuerpo').innerHTML = opcionesCuerpo('');
+  ['mx-aspecto','mx-desde','mx-hasta','mx-natal','mx-casa','mx-tema','mx-como']
+    .forEach(function (id) { document.getElementById(id).value = ''; });
+  errModal('mx-err', '');
+  document.getElementById('m-transito').classList.add('on');
+}
+async function guardarTransito() {
+  const r = await nc('nc_soul_transito', { datos: {
+    cuerpo: document.getElementById('mx-cuerpo').value,
+    aspecto: document.getElementById('mx-aspecto').value,
+    desde: document.getElementById('mx-desde').value,
+    hasta: document.getElementById('mx-hasta').value,
+    a_natal: document.getElementById('mx-natal').value,
+    casa: document.getElementById('mx-casa').value || 0,
+    tema: document.getElementById('mx-tema').value,
+    como: document.getElementById('mx-como').value,
+  } });
+  if (!r || !r.ok) { errModal('mx-err', traducirError(r && r.error) || 'No se pudo.'); return; }
+  cerrarModal('m-transito');
+  CI = null;
+  await cargarCielo();
+}
+
+/* ─── Revolución solar ─── */
+function abrirRevolucion() {
+  if (!CI || !CI.revolucion) { avisoGlobal('Necesito tu fecha de nacimiento primero.'); return; }
+  const rv = CI.revolucion;
+  document.getElementById('mrv-titulo').textContent = 'Revolución solar ' + rv.anio;
+  document.getElementById('mrv-sub').textContent =
+    'Tu año va del ' + fcorta(rv.desde) + ' al ' + fcorta(rv.hasta) + '. Esa ventana la calculo yo; ' +
+    'la carta de la revolución la traes de Horus.';
+  document.getElementById('mrv-asc').innerHTML = '<option value="">— sin decir —</option>' +
+    CI.signos.map(function (s) {
+      return '<option value="' + s.id + '"' +
+        (rv.carta && rv.carta.ascendente === s.id ? ' selected' : '') + '>' +
+        esc(s.nombre) + '</option>';
+    }).join('');
+  document.getElementById('mrv-casa').value = rv.carta && rv.carta.casaSol ? rv.carta.casaSol : '';
+  document.getElementById('mrv-tema').value = rv.carta ? rv.carta.tema : '';
+  document.getElementById('mrv-texto').value = rv.carta ? rv.carta.texto : '';
+  errModal('mrv-err', '');
+  document.getElementById('m-revolucion').classList.add('on');
+}
+async function guardarRevolucion() {
+  const rv = CI.revolucion;
+  const r = await nc('nc_soul_revolucion', {
+    anio: rv.anio, desde: rv.desde, hasta: rv.hasta,
+    ascendente: document.getElementById('mrv-asc').value,
+    casaSol: document.getElementById('mrv-casa').value || 0,
+    tema: document.getElementById('mrv-tema').value,
+    texto: document.getElementById('mrv-texto').value,
+  });
+  if (!r || !r.ok) { errModal('mrv-err', traducirError(r && r.error) || 'No se pudo.'); return; }
+  cerrarModal('m-revolucion');
+  CI = null;
+  await cargarCielo();
+}
+
 // ── RUTINA: TURNOS Y CLASES ───────────────────────────
 let RUT = null, RUTINA = '';
 
@@ -2491,6 +3030,7 @@ function go(view, el) {
   if (view === 'plata' && !PLATA) cargarPlata();
   if (view === 'uni' && !UNI) cargarUni();
   if (view === 'rutina' && !RUT) cargarRutina();
+  if (view === 'cielo' && !CI) cargarCielo();
   if (view === 'family' && !FAM) cargarFamily();
 }
 function abrirMenu() {
@@ -2527,6 +3067,9 @@ document.addEventListener('DOMContentLoaded', function () {
     d.classList.toggle('on', d.dataset.t === TM);
   });
   document.getElementById('mt-riesgo').addEventListener('change', ayudaRiesgo);
+  ['mp-cuerpo', 'mp-momento'].forEach(function (id) {
+    document.getElementById(id).addEventListener('change', ayudaPensum);
+  });
   ['mtu-paga', 'mtu-propinas'].forEach(function (id) {
     document.getElementById(id).addEventListener('input', totalTurno);
   });

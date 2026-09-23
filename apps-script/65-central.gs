@@ -133,6 +133,14 @@ function manejarCentral(accion, p) {
     case 'nc_proyecto_tareas':     return centralProyectoGuardarTareas(s, p);
     case 'nc_fuente':              return centralFuenteGuardar(s, p);
     case 'nc_fuente_borrar':       return centralFuenteBorrar(s, p);
+    case 'nc_soul_cielo':          return soulCielo(s, p);
+    case 'nc_soul_carta_leer':     return soulCartaLeer(s, p);
+    case 'nc_soul_carta':          return soulCartaGuardar(s, p);
+    case 'nc_soul_nacimiento':     return soulNacimientoGuardar(s, p);
+    case 'nc_soul_transito':       return soulTransitoGuardar(s, p);
+    case 'nc_soul_pensum':         return soulPensumGuardar(s, p);
+    case 'nc_soul_pensum_borrar':  return soulPensumBorrar(s, p);
+    case 'nc_soul_revolucion':     return soulRevolucionGuardar(s, p);
     case 'nc_salir':
       CacheService.getScriptCache().remove('nc_' + p.token);
       return { ok: true };

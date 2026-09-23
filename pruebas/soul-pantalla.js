@@ -177,6 +177,96 @@ const PLATA = {
   },
 };
 
+const CUERPOS = {
+  sol: { nombre: 'Sol', grupo: 'personal' }, luna: { nombre: 'Luna', grupo: 'personal' },
+  mercurio: { nombre: 'Mercurio', grupo: 'personal' }, venus: { nombre: 'Venus', grupo: 'personal' },
+  marte: { nombre: 'Marte', grupo: 'personal' }, jupiter: { nombre: 'Júpiter', grupo: 'social' },
+  saturno: { nombre: 'Saturno', grupo: 'social' }, urano: { nombre: 'Urano', grupo: 'generacional' },
+  neptuno: { nombre: 'Neptuno', grupo: 'generacional' }, pluton: { nombre: 'Plutón', grupo: 'generacional' },
+  ascendente: { nombre: 'Ascendente', grupo: 'angulo' },
+};
+const GRUPOS = {
+  personal: { nombre: 'Personales', que: 'Lo inmediato, lo mío, lo propio.' },
+  social: { nombre: 'Sociales', que: 'Expansión y estructura.' },
+  generacional: { nombre: 'Generacionales', que: 'Marcan época. Van más allá del ego.' },
+  angulo: { nombre: 'Ángulos', que: 'Por dónde entras y hacia dónde apuntas.' },
+};
+const MOMENTOS = {
+  aprender: { nombre: 'Aprender', que: 'Entra información.' },
+  descansar: { nombre: 'Descansar', que: 'Se sostiene lo que hay.' },
+  cambiar: { nombre: 'Cambiar', que: 'Se cierra, se suelta, se mueve.' },
+};
+const lunaDia = (n, ilum, crece) => ({ id: 'llena', nombre: n, momento: 'cambiar',
+  que: '', edadDias: 14, iluminacion: ilum, creciendo: crece });
+
+const CIELO = {
+  ok: true, hoy: HOY,
+  nacimiento: { nombre: 'Manuela', fecha: '1998-09-14', hora: '04:20',
+                lugar: 'Medellín, Colombia', zona: 'America/Bogota' },
+  cuerpos: CUERPOS, grupos: GRUPOS, momentos: MOMENTOS,
+  signos: [{ id: 'leo', nombre: 'Leo' }, { id: 'virgo', nombre: 'Virgo' }],
+  fases: [{ id: 'llena', nombre: 'Luna llena', momento: 'cambiar' }],
+  tieneCarta: true,
+  carta: [], cartaPorGrupo: {
+    personal: [{ cuerpo: 'sol', nombre: 'Sol', grupo: 'personal', signo: 'virgo',
+                 signoNombre: 'Virgo', grado: 21.5, casa: 2, retrogrado: false },
+               { cuerpo: 'marte', nombre: 'Marte', grupo: 'personal', signo: 'virgo',
+                 signoNombre: 'Escorpio', grado: 14, casa: 4, retrogrado: true }],
+    social: [{ cuerpo: 'saturno', nombre: 'Saturno', grupo: 'social', signo: 'leo',
+               signoNombre: 'Aries', grado: 29, casa: 9, retrogrado: false }],
+    generacional: [{ cuerpo: 'pluton', nombre: 'Plutón', grupo: 'generacional', signo: 'leo',
+                     signoNombre: 'Sagitario', grado: 7, casa: null, retrogrado: true }],
+    angulo: [{ cuerpo: 'ascendente', nombre: 'Ascendente', grupo: 'angulo', signo: 'leo',
+               signoNombre: 'Leo', grado: 15, casa: null, retrogrado: false }],
+  },
+  lunaHoy: lunaDia('Luna llena', 96, false),
+  semana: { lunes: '2026-09-21', dias: [1,2,3,4,5,6,7].map(function (i) {
+    return { fecha: '2026-09-' + (20 + i), esHoy: i === 3,
+             luna: lunaDia('Luna llena', 90 + i, false),
+             momento: 'cambiar', deDonde: i === 3 ? 'pensum' : 'luna',
+             porque: i === 3 ? 'Saturno por casa 10' : 'Luna llena',
+             pensum: [], transitos: 1 };
+  }) },
+  pensum: [{ id: 'pn1', desde: '2026-09-01', hasta: '2026-12-31', titulo: 'Saturno por casa 10',
+             cuerpo: 'saturno', cuerpoNombre: 'Saturno', grupo: 'social', casa: 10,
+             momento: 'cambiar', quePide: 'Cerrar lo que ya no sostiene.', queEvitar: '', nota: '' }],
+  pensumAbierto: [{ id: 'pn1', titulo: 'Saturno por casa 10', momento: 'cambiar' }],
+  transitos: [
+    { cuerpo: 'saturno', nombre: 'Saturno', grupo: 'social', aspecto: 'cuadratura',
+      aNatal: 'mi Luna', casa: 10, tema: 'Estructura', intensidad: null,
+      desde: '2026-09-01', hasta: '2026-11-30', texto: '', porQue: '', como: '',
+      elOtroLado: '', fuente: 'Horus' },
+    { cuerpo: 'luna', nombre: 'Luna', grupo: 'personal', aspecto: '', aNatal: '', casa: 4,
+      tema: 'Luna por casa 4', intensidad: null, desde: '2026-09-22', hasta: '2026-09-24',
+      texto: '', porQue: '', como: '', elOtroLado: '', fuente: 'Horus' },
+  ],
+  transitosHoy: [{ cuerpo: 'saturno' }, { cuerpo: 'luna' }],
+  revolucion: { anio: 2026, desde: '2026-09-14', hasta: '2027-09-13', edad: 28,
+                diasRestantes: 355, transcurrido: 3,
+                carta: { anio: 2026, ascendente: 'leo', casaSol: 11,
+                         tema: 'El año de mostrar', texto: 'Lectura de Horus.', nota: '' } },
+  medicion: { minimo: 8, conFecha: 30, promedio: 62,
+    fases: [{ id: 'llena', nombre: 'Luna llena', momento: 'cambiar', n: 12, hechas: 5, pct: 42, faltan: 0 },
+            { id: 'cuarto_menguante', nombre: 'Cuarto menguante', momento: 'cambiar', n: 10, hechas: 8, pct: 80, faltan: 0 },
+            { id: 'nueva', nombre: 'Luna nueva', momento: 'aprender', n: 3, hechas: 2, pct: null, faltan: 5 }],
+    conMuestra: 2,
+    patron: 'Las entregas que pusiste en cuarto menguante las terminaste el 80% de las veces, contra un 62% en general. En luna llena bajas al 42%.',
+    porque: '' },
+};
+
+const CARTA_LEIDA = {
+  ok: true, cuerpos: CUERPOS, grupos: GRUPOS,
+  signos: [{ id: 'virgo', nombre: 'Virgo' }],
+  encontradas: [
+    { cuerpo: 'sol', nombre: 'Sol', grupo: 'personal', signo: 'virgo', signoNombre: 'Virgo',
+      grado: 21.5, casa: 2, retrogrado: false, linea: "Sol en Virgo 21°34' Casa 2" },
+    { cuerpo: 'saturno', nombre: 'Saturno', grupo: 'social', signo: 'virgo', signoNombre: 'Aries',
+      grado: 29, casa: 9, retrogrado: false, linea: 'Saturno en Aries 29°48 Casa 9' },
+  ],
+  ignoradas: [{ linea: 'Generado por Horus', porque: 'No encontré ni planeta ni signo.' }],
+  faltan: ['Luna', 'Mercurio'],
+};
+
 const MATERIAS = {
   ok: true, hoy: HOY,
   trabajos: [{ id: 't3', nombre: 'Universidad', tipo: 'estudio', estado: 'activo', horasSemana: 6, entrega: '' }],
@@ -241,6 +331,8 @@ const FAMILY = {
         if (accion === 'nc_soul') return x.foto;
         if (accion === 'nc_soul_plata') return x.plata;
         if (accion === 'nc_soul_rutina') return x.rut;
+        if (accion === 'nc_soul_cielo') return x.cielo;
+        if (accion === 'nc_soul_carta_leer') return x.cartaLeida;
         if (accion === 'nc_soul_turno') return { ok: true, total: 114000, moneda: 'COP' };
         if (accion === 'nc_soul_family') return x.fam;
         if (accion === 'nc_soul_materias') return x.mat;
@@ -252,7 +344,8 @@ const FAMILY = {
       (0, eval)('SES = ' + JSON.stringify({ correo: 'm@nova.com', nombre: 'Manuela', rol: x.rol }) + ';');
       (0, eval)('entrar();');
     }, { foto: foto(conHoras), plata: PLATA, fam: FAMILY, mat: MATERIAS,
-         rut: RUTINA, sil: SILABO_LEIDO, rol: rol || 'socia' });
+         rut: RUTINA, sil: SILABO_LEIDO, cielo: CIELO, cartaLeida: CARTA_LEIDA,
+         rol: rol || 'socia' });
     await p.waitForTimeout(200);
     return p;
   };
@@ -549,6 +642,60 @@ const FAMILY = {
        await p.textContent('#av-global'));
     await p.evaluate(() => avisoGlobal(''));
 
+    // ══ El cielo ══
+    await p.evaluate(() => go('cielo', null));
+    await p.waitForTimeout(200);
+    const ci = await p.textContent('#v-cielo');
+    ok('dice qué momento es hoy' + A, /HOY ES TIEMPO DE/.test(ci) && /Cambiar/.test(ci));
+    ok('y de dónde salió: su pensum, no la luna' + A,
+       /tu pensum: Saturno por casa 10/.test(ci));
+    ok('la luna de hoy, con su iluminación' + A, /96%/.test(ci) && /menguando/.test(ci));
+    ok('la semana trae un momento por día' + A,
+       (await p.$$eval('#ci-semana .sdia', e => e.length)) === 7);
+    ok('dice que manda el pensum sobre la luna' + A,
+       /tu marco antes que la lectura común/.test(ci));
+    /**
+     * Su división, con sus palabras. Si esto cambia, cambió su marco y
+     * alguien tiene que haberlo decidido.
+     */
+    ok('la carta va por sus tres grupos' + A,
+       /PERSONALES/.test(ci) && /SOCIALES/.test(ci) && /GENERACIONALES/.test(ci));
+    ok('con lo que mira cada uno, en sus palabras' + A,
+       /Lo inmediato, lo mío, lo propio/.test(ci) &&
+       /Expansión y estructura/.test(ci) &&
+       /Marcan época. Van más allá del ego/.test(ci));
+    ok('Marte retrógrado se marca' + A, /\bR\b/.test(ci));
+    ok('los tránsitos llevan su duración' + A, /91 días/.test(ci) && /3 días/.test(ci),
+       (ci.match(/\d+ días?/g) || []).join(','));
+    ok('la revolución solar sale con su ventana' + A,
+       /28 años/.test(ci) && /14 sep/.test(ci) && /quedan 355 días/.test(ci));
+    ok('y con lo que ella cargó de Horus' + A, /El año de mostrar/.test(ci));
+    /** Lo que ninguna app hace: medir si le funcionó A ELLA. */
+    ok('mide si le funcionó a ella' + A,
+       /SI TE FUNCIONÓ A TI/.test(ci) && /cuarto menguante las terminaste el 80%/.test(ci));
+    ok('y dice que es su dato, no una creencia' + A,
+       /no una creencia prestada/.test(ci));
+    ok('una fase sin muestra dice cuántas faltan, no un porcentaje' + A,
+       /faltan 5/.test(ci));
+
+    // El cargador de la carta
+    await p.evaluate(() => { window.LLAMADAS.length = 0; abrirCarta(); });
+    ok('el cargador trae sus datos de nacimiento' + A,
+       (await p.inputValue('#mc-fecha')) === '1998-09-14');
+    ok('y dice que no calcula la carta, que la trae de Horus' + A,
+       /Horus ya lo hace bien/.test(await p.textContent('#m-carta')));
+    await p.fill('#mc-texto', 'Sol en Virgo 21°34 Casa 2');
+    await p.click('#mc-leer');
+    await p.waitForTimeout(150);
+    const propC = await p.textContent('#mc-paso2');
+    ok('propone lo que entendió' + A, /ENTENDÍ 2 CUERPOS/.test(propC));
+    ok('avisa qué planetas le faltaron' + A,
+       /Me faltaron: Luna, Mercurio/.test(propC) && /peor que una carta vacía/.test(propC));
+    ok('y muestra lo que dejó fuera' + A, /Generado por Horus/.test(propC));
+    ok('leer NO guardó nada' + A,
+       (await p.evaluate(() => window.LLAMADAS)).filter(l => l.accion === 'nc_soul_carta').length === 0);
+    await p.evaluate(() => cerrarModal('m-carta'));
+
     // ══ Nova Family ══
     await p.evaluate(() => go('family', null));
     await p.waitForTimeout(200);
@@ -605,7 +752,7 @@ const FAMILY = {
     ok('sin scroll lateral' + A, lateral === 0, lateral + 'px');
 
     if (ancho === 1200) {
-      for (const [v, f] of [['rutina', 'soul-rutina'], ['uni', 'soul-uni'], ['hoy', 'soul-hoy'], ['pendientes', 'soul-tablero'],
+      for (const [v, f] of [['cielo', 'soul-cielo'], ['rutina', 'soul-rutina'], ['uni', 'soul-uni'], ['hoy', 'soul-hoy'], ['pendientes', 'soul-tablero'],
                             ['semana', 'soul-semana'], ['plata', 'soul-plata'],
                             ['family', 'soul-family'], ['mindlab', 'soul-mindlab']]) {
         await p.evaluate((x) => go(x, null), v);

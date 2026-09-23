@@ -47,6 +47,8 @@ const SOUL_HOJAS = {
                'activo','nota'],
   Turnos:     ['id','usuario_id','rutina_id','fecha','paga','propinas','moneda',
                'estado','finanza_id','nota'],
+  Pensum:     ['id','usuario_id','desde','hasta','titulo','cuerpo','casa','momento',
+               'que_pide','que_evitar','nota'],
 };
 
 /** Las tres columnas del tablero. Un pendiente está en una sola. */

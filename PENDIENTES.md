@@ -915,3 +915,81 @@ que gusta.
    generacionales marcan época y van más allá del ego.* El planeta tiene
    que decirle **qué momento es**.
 4. novAcademy: Equipo sale de Central y entra ahí.
+
+---
+
+## 11 · El cielo de NovaSoul (23-09-2026)
+
+Su marco, con sus palabras, porque manda sobre todo el diseño:
+
+> «Los planetas marcan el tiempo: hay tiempo para aprender, tiempo para
+> descansar y tiempo para cambiar. Los personales afectan lo inmediato,
+> lo mío, lo propio. Los sociales hablan de expansión y estructura. Los
+> generacionales marcan época, van más allá del ego. **El planeta me
+> debe mostrar qué momento es.**»
+
+### El reparto: qué calcula Nova y qué trae ella
+
+**NOVA CALCULA**, sin internet y sin inventar:
+
+- **La fase de la Luna** de cualquier día. Es la única astronomía que
+  Nova hace sola: una cuenta de dos líneas desde una luna nueva conocida
+  (6 de enero de 2000, 18:14 UTC) y el mes sinódico. Comprobada contra
+  seis lunas reales de 2026 — si algún día se corre, la prueba falla.
+- **La ventana de su revolución solar**: de cumpleaños a cumpleaños. Es
+  aritmética de calendario.
+- **Qué temporada del pensum está abierta hoy.**
+
+**ELLA TRAE**, de Horus, que ya se lo da bien: su carta natal, los
+tránsitos con sus fechas, y la carta de la revolución. Calcular
+efemérides aquí sería rehacer mal algo que ya está bien hecho, y con una
+precisión que no se puede verificar desde una hoja de cálculo.
+
+### Su pensum manda sobre la luna
+
+Cada día dice **qué momento es**: aprender, descansar o cambiar. Si hay
+una temporada del pensum abierta, manda esa. Si no, habla la luna. Su
+marco antes que la lectura común, siempre — y la pantalla dice de cuál
+de las dos salió.
+
+### Lo único que aquí es un dato y no una creencia
+
+`cieloMedir_` cuenta, **fase por fase**, cuántas de sus entregas
+cumplió. *«Las entregas que pusiste en cuarto menguante las terminaste
+el 80% de las veces, contra un 62% en general.»* Eso es su propio
+número, no una creencia prestada.
+
+Tres guardas para que sea honesto:
+
+1. **No se habla sin muestra.** Con menos de 8 entregas en una fase se
+   dice cuántas faltan. Un 100% sobre dos casos no es un patrón: es una
+   casualidad con decimales.
+2. **El patrón se mide contra SU promedio**, no contra cero. Si cumple
+   el 70% de todo, un 72% en menguante no es nada.
+3. **Si no hay patrón, se dice.** «Miré tus entregas fase por fase y no
+   encontré diferencia que valga la pena nombrar. Eso también es un
+   resultado.»
+
+Y una regla de conteo: una entrega **del futuro** no cuenta como
+incumplida. Todavía no se ha cumplido ni incumplido.
+
+### El lector de la carta
+
+Pega el listado de Horus y Nova propone: planeta, signo, grado, casa y
+retrógrado. Como con el sílabo, **muestra lo que no entendió** y además
+**avisa qué planetas le faltaron** — una carta a la que le falta Saturno
+en silencio es peor que una carta vacía. Volver a cargarla actualiza las
+filas, no las duplica.
+
+Una guarda que salió de la prueba: «Urano Acuario 12» **no** inventa una
+casa. El 12 es el grado. La casa solo se toma si la palabra «casa» está,
+porque una casa inventada mueve el tema entero.
+
+### Lo que sigue
+
+1. **Meta Ads en Nova Central y novAcademy** — solo la pantalla, con la
+   misma lectura que Empresarial. Sin token y sin conectar todavía.
+2. **Equipo sale de Central.** Hoy en Central es una maqueta con nombres
+   inventados que duplica lo que Empresarial ya hace de verdad.
+3. Que los tránsitos entren pegando el texto de Horus de una vez, como
+   el sílabo, en vez de uno por uno.

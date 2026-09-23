@@ -628,8 +628,44 @@ const ESQUEMA_SOUL = {
   Dias: ['usuario_id','fecha','comidas_marcadas','movimiento_hecho','puntos',
          'cerrado','cerrado_en','perdonado'],
   Recompensas: ['id','usuario_id','nombre','costo_puntos','canjeada','canjeada_en'],
+  /**
+   * La carta natal. Una fila por cuerpo.
+   *
+   * No se calcula: se carga. Ella la saca de Horus, que ya le da todo
+   * bien, y Nova la guarda para poder cruzarla con su semana. Calcular
+   * efemérides aquí sería rehacer mal algo que ya está bien hecho.
+   */
+  Carta: ['usuario_id','cuerpo','signo','grado','casa','retrogrado','nota'],
+
+  /**
+   * Los tránsitos, CON SU DURACIÓN.
+   *
+   * `desde` y `hasta` no son un adorno: la Luna dura dos días y medio y
+   * Saturno meses, y un consejo que no distingue eso es ruido. Un
+   * tránsito sin fechas no se puede cruzar con una semana.
+   */
   Transitos: ['usuario_id','fecha','casa','tema','intensidad_pct','texto_transito',
-              'por_que','como_trabajarlo','el_otro_lado'],
+              'por_que','como_trabajarlo','el_otro_lado',
+              'cuerpo','aspecto','a_natal','desde','hasta','fuente'],
+
+  /**
+   * El pensum kármico: qué pide cada temporada.
+   *
+   * Es suyo y lo carga ella. Nova no dice qué significa un tránsito —
+   * dice qué ventana está abierta hoy, según lo que ella escribió, y la
+   * cruza con lo que tiene que entregar.
+   */
+  Pensum: ['id','usuario_id','desde','hasta','titulo','cuerpo','casa','momento',
+           'que_pide','que_evitar','nota'],
+
+  /**
+   * La revolución solar: su año, de cumpleaños a cumpleaños.
+   *
+   * La ventana la calcula Nova —es aritmética de calendario—. La carta
+   * de ese año la trae ella de Horus.
+   */
+  Revolucion: ['usuario_id','anio','desde','hasta','ascendente','casa_sol',
+               'tema','texto','nota'],
   // Gastos personales — pendiente comprometido, NovaSoul no corre pauta
   Gastos: ['id','usuario_id','fecha','concepto','categoria','tipo','monto',
            'moneda','recurrente','nota'],
