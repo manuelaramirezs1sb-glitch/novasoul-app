@@ -33,6 +33,7 @@ ORDEN = [
     ('76-meta-leer.gs',    '13 · META · LECTURA DIARIA'),
     ('77-semaforo.gs',     '14 · SEMÁFORO SEMANAL'),
     ('78-soul.gs',         '15 · NOVASOUL · EL DÍA A DÍA'),
+    ('79-silabo.gs',       '16 · NOVASOUL · LA UNIVERSIDAD'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

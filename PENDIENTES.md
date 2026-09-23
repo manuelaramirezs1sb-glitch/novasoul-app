@@ -707,3 +707,51 @@ lo único que esa pantalla no podía hacer.
 - **Medir si la astrología le funciona a ella**: guardar la ventana en
   que se hizo cada tarea, que es lo que hace posible el dato de los tres
   meses.
+
+### 9b · Dónde se leen los archivos de la universidad (23-09-2026)
+
+Ella preguntó, y la respuesta honesta era «en ninguna parte todavía».
+No estaba construido. Ahora sí, con una frontera explícita.
+
+**Los archivos no se leen y no se copian.** Viven en su Drive, en la
+carpeta de cada materia, y Nova guarda el **enlace**. Misma regla que
+con PHH: Nova sabe dónde están las cosas, no qué dicen.
+
+**Lo que sí se lee es el texto que ella pegue.** Un cronograma de sílabo
+casi siempre es texto —«Parcial 1 · 15 de octubre · 25%»— y de ahí salen
+fechas y porcentajes con aritmética, no con adivinanza. Formatos que
+entiende: `15 de octubre`, `octubre 15`, `15/10/2026`, `03/11`, y
+rangos (`del 12 al 16 de octubre`, del que toma el **último** día porque
+es cuando se entrega).
+
+**Lo que NO hace: entender un PDF.** Subir el archivo y que se lea solo
+necesita un modelo de lenguaje, que cuesta por cada lectura. La decisión
+sigue aparcada, y la pantalla lo dice en vez de disimularlo.
+
+**Tres reglas que lo hacen confiable:**
+
+1. **Nunca escribe sola.** Propone, ella confirma casilla por casilla, y
+   puede corregir el título y la fecha antes de guardar.
+2. **Muestra lo que ignoró y por qué.** Un lector que solo enseña sus
+   aciertos parece infalible y no lo es — lo peligroso de un parcial no
+   es que quede mal escrito, es que no quede.
+3. **Dice cuándo adivinó.** Un sílabo no escribe el año; se elige el más
+   cercano a hoy y se marca «el año lo puse yo». Una fecha adivinada que
+   no se anuncia es una fecha inventada.
+
+**Un parcial entra como `inamovible`**, y eso conecta con el repartidor
+de la semana: nunca se lo va a proponer como candidato a caerse.
+
+**Borrar una materia NO borra sus entregas**, y el aviso lo dice antes.
+Un parcial sigue teniendo fecha aunque se borre la carpeta que lo
+mencionaba.
+
+**Dos errores que encontré corriéndolo**, y que vale dejar escritos
+porque son del mismo tipo: el encabezado `ESTADÍSTICA 2026-2` entraba
+como «26 de febrero», y pegar el mismo sílabo dos veces duplicaba los
+parciales porque el anti-duplicados comparaba «Parcial 1» contra
+«Estadística · Parcial 1». Los dos habrían pasado desapercibidos hasta
+el día del examen.
+
+**Falta**: los horarios de clase. Con ellos, las horas libres de cada
+día se calcularían solas en vez de escribirse a mano.

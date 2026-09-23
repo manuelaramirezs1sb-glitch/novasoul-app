@@ -35,7 +35,9 @@
 const SOUL_HOJAS = {
   Pendientes: ['id','usuario_id','texto','tipo','origen','fecha','hecho',
                'hecho_en','plataforma_id','trabajo_id','estado','prioridad',
-               'horas_estimadas','horas_reales','riesgo','nota'],
+               'horas_estimadas','horas_reales','riesgo','nota','materia_id'],
+  Materias:   ['id','usuario_id','nombre','codigo','profesor','carpeta',
+               'semestre','trabajo_id','estado','nota'],
   Mindlab:    ['id','usuario_id','semana','mes','tema','tarea','horas_estimadas',
                'desde','hasta','estado','nota'],
   Fijos:      ['id','usuario_id','categoria','concepto','monto','moneda',

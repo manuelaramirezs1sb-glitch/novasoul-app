@@ -374,6 +374,7 @@ textarea,input,select,button{font-family:inherit;}
     <div style="display:flex;flex-direction:column;gap:3px;">
       <div class="sb-section">LO MÍO</div>
       <div class="ni" data-v="mindlab" onclick="go('mindlab',this)">◆ Mindlab<span class="ni-badge" id="nb-ml">·</span></div>
+      <div class="ni" data-v="uni" onclick="go('uni',this)">▣ Universidad<span class="ni-mal" id="nb-uni" style="display:none;">·</span></div>
       <div class="ni" data-v="plata" onclick="go('plata',this)">◇ Gastos fijos</div>
       <div class="ni" data-v="cielo" onclick="go('cielo',this)">◐ El cielo</div>
     </div>
@@ -481,6 +482,21 @@ textarea,input,select,button{font-family:inherit;}
         <div class="card"><div class="card-h"><span class="card-lbl">LAS DOCE SEMANAS</span><span class="card-lbl" id="ml-cuenta"></span></div><div id="ml-lista"></div></div>
       </div>
 
+      <!-- ════ UNIVERSIDAD ════ -->
+      <div class="view" id="v-uni">
+        <div class="vista-h">
+          <div>
+            <div class="vista-t">Universidad</div>
+            <p class="vista-p">Una materia por tarjeta, con su carpeta de Drive y sus entregas.
+              <strong>Los archivos no se copian aquí:</strong> Nova guarda el enlace, no el contenido.
+              Misma regla que con PHH.</p>
+          </div>
+          <button class="card-cta" onclick="nuevaMateria()">+ Materia</button>
+        </div>
+        <div class="g2" id="uni-lista"></div>
+        <div class="card" id="uni-nota"></div>
+      </div>
+
       <!-- ════ GASTOS FIJOS ════ -->
       <div class="view" id="v-plata">
         <div class="vista-h">
@@ -583,6 +599,48 @@ textarea,input,select,button{font-family:inherit;}
   </div>
 </div>
 
+<div class="modal" id="m-materia" onclick="if(event.target===this)cerrarModal('m-materia')">
+  <div class="modal-box">
+    <div class="card-h" style="margin:0;"><span class="card-h3" id="mm-titulo">Materia</span><span class="link" onclick="cerrarModal('m-materia')">CERRAR ✕</span></div>
+    <div class="aviso mal" id="mm-err"></div>
+    <div class="f-row">
+      <div class="f"><label>NOMBRE</label><input id="mm-nombre" placeholder="Estadística Inferencial"></div>
+      <div class="f"><label>CÓDIGO</label><input id="mm-codigo" placeholder="EST-301"></div>
+    </div>
+    <div class="f-row">
+      <div class="f"><label>PROFESOR</label><input id="mm-profesor" placeholder="Opcional"></div>
+      <div class="f"><label>SEMESTRE</label><input id="mm-semestre" placeholder="2026-2"></div>
+    </div>
+    <div class="f"><label>CARPETA EN DRIVE</label><input id="mm-carpeta" placeholder="https://drive.google.com/drive/folders/…"><small>El enlace, no el archivo. Nova nunca abre lo que hay adentro ni lo copia a ninguna hoja.</small></div>
+    <div class="f"><label>PROYECTO EN NOVA CENTRAL</label><select id="mm-trabajo"></select><small>Todas las materias pesan como un solo proyecto en tu semana.</small></div>
+    <div class="f-btns">
+      <button class="card-cta" onclick="guardarMateria()">Guardar</button>
+      <button class="card-ghost" onclick="cerrarModal('m-materia')">Cancelar</button>
+      <button class="btn-mal" id="mm-borrar" onclick="borrarMateria()">Borrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="m-silabo" onclick="if(event.target===this)cerrarModal('m-silabo')">
+  <div class="modal-box" style="width:720px;">
+    <div class="card-h" style="margin:0;"><span class="card-h3" id="ms-titulo">Pegar el cronograma</span><span class="link" onclick="cerrarModal('m-silabo')">CERRAR ✕</span></div>
+    <div class="aviso mal" id="ms-err"></div>
+    <div id="ms-paso1">
+      <p class="card-p" style="margin-bottom:12px;">Copia el cronograma del sílabo —del PDF, del aula virtual, de donde sea— y pégalo aquí tal cual. Busco fechas y porcentajes, te muestro lo que entendí <strong>y lo que no</strong>, y no guardo nada hasta que lo confirmes.</p>
+      <div class="f"><label>CRONOGRAMA</label><textarea id="ms-texto" rows="10" placeholder="Parcial 1 — 15 de octubre — 25%&#10;Entrega del proyecto: semana del 12 al 16 de octubre  20%"></textarea></div>
+      <div class="f-btns" style="margin-top:14px;"><button class="card-cta" id="ms-leer" onclick="leerSilabo()">Leer lo que pegué</button><button class="card-ghost" onclick="cerrarModal('m-silabo')">Cancelar</button></div>
+    </div>
+    <div id="ms-paso2" style="display:none;">
+      <div id="ms-encontradas"></div>
+      <div id="ms-ignoradas"></div>
+      <div class="f-btns" style="margin-top:16px;">
+        <button class="card-cta" id="ms-guardar" onclick="guardarSilabo()">Guardar las marcadas</button>
+        <button class="card-ghost" onclick="volverSilabo()">← Cambiar el texto</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="m-horas" onclick="if(event.target===this)cerrarModal('m-horas')">
   <div class="modal-box">
     <div class="card-h" style="margin:0;"><span class="card-h3">Mis horas libres</span><span class="link" onclick="cerrarModal('m-horas')">CERRAR ✕</span></div>
@@ -631,7 +689,7 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-23 · 53c0';
+const VERSION_PANTALLA = '2026-09-23 · 5b76';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
@@ -809,10 +867,27 @@ function traducirError(err) {
   return e;
 }
 
+/**
+ * El aviso de arriba, y una trampa que ya cayó una vez.
+ *
+ * Guardar algo escribe «guardé 2 entregas» y acto seguido recarga la
+ * foto — y la recarga limpiaba el aviso, así que el mensaje aparecía y
+ * desaparecía en el mismo parpadeo. Un buen aviso sobrevive a su propia
+ * recarga; se va solo a los nueve segundos, o cuando algo falla.
+ */
+let AVISO_BUENO = false;
+let AVISO_RELOJ = null;
 function avisoGlobal(msg, bien) {
   const el = document.getElementById('av-global');
   el.textContent = msg || '';
   el.className = 'aviso ' + (bien ? 'bien' : 'mal') + (msg ? ' on' : '');
+  AVISO_BUENO = !!(msg && bien);
+  if (AVISO_RELOJ) { clearTimeout(AVISO_RELOJ); AVISO_RELOJ = null; }
+  if (msg && bien) {
+    AVISO_RELOJ = setTimeout(function () {
+      if (AVISO_BUENO) avisoGlobal('');
+    }, 9000);
+  }
 }
 
 /**
@@ -838,7 +913,8 @@ async function cargar() {
   D = r;
   try {
     pintarTodo();
-    avisoGlobal('');
+    // Un «guardé 2 entregas» no se borra por recargar justo después.
+    if (!AVISO_BUENO) avisoGlobal('');
   } catch (e) {
     // D se limpia ANTES de avisar: si no, el siguiente intento vuelve a
     // entrar al mismo dibujo roto y el error se pierde sin mensaje.
@@ -1505,6 +1581,265 @@ async function borrarFijo() {
   await cargarFinanzas();
 }
 
+// ── UNIVERSIDAD ───────────────────────────────────────
+let UNI = null, MATERIA = '', SILABO = null;
+
+async function cargarUni() {
+  let r;
+  try { r = await nc('nc_soul_materias'); }
+  catch (e) {
+    UNI = null;
+    document.getElementById('uni-lista').innerHTML =
+      '<div class="vacio">No pude hablar con la hoja: ' + esc(e && e.message || e) + '</div>';
+    return;
+  }
+  if (!r || !r.ok) {
+    UNI = null;
+    document.getElementById('uni-lista').innerHTML =
+      '<div class="vacio">' + esc(traducirError(r && r.error) || 'Sin datos.') + '</div>';
+    return;
+  }
+  UNI = r;
+  try { pintarUni(); }
+  catch (e) {
+    UNI = null;
+    document.getElementById('uni-lista').innerHTML =
+      '<div class="vacio">Traje tus materias pero no las pude dibujar: ' +
+      esc(e && e.message || e) + '</div>';
+  }
+}
+
+function pintarUni() {
+  const ms = UNI.materias.filter(function (m) { return m.estado !== 'cerrada'; });
+  document.getElementById('nb-uni').style.display =
+    ms.some(function (m) { return m.vencidas; }) ? 'inline-block' : 'none';
+
+  document.getElementById('uni-lista').innerHTML = ms.length
+    ? ms.map(function (m) {
+        return '<div class="card" style="display:flex;flex-direction:column;gap:12px;">' +
+          '<div class="card-h" style="margin:0;">' +
+            '<span class="card-lbl">' + esc(m.codigo || 'MATERIA') +
+            (m.semestre ? ' · ' + esc(m.semestre) : '') + '</span>' +
+            '<button class="link" onclick="editarMateria(\'' + m.id + '\')">EDITAR</button></div>' +
+          '<div class="card-h3">' + esc(m.nombre) + '</div>' +
+          (m.profesor ? '<div class="kpi-s">' + esc(m.profesor) + '</div>' : '') +
+          '<div class="kcard-m">' +
+            '<span class="chip">' + m.abiertas +
+              (m.abiertas === 1 ? ' entrega abierta' : ' entregas abiertas') + '</span>' +
+            (m.vencidas ? '<span class="chip tarde">' + m.vencidas + ' vencida' +
+              (m.vencidas === 1 ? '' : 's') + '</span>' : '') +
+            (m.proxima ? '<span class="chip hoy">próxima: ' + esc(fcorta(m.proxima)) + '</span>' : '') +
+          '</div>' +
+          '<div class="row-btns">' +
+            '<button class="card-cta" onclick="abrirSilabo(\'' + m.id + '\')">Pegar cronograma</button>' +
+            (m.carpeta
+              ? '<a class="card-ghost" href="' + esc(m.carpeta) + '" target="_blank" rel="noopener">Abrir carpeta ↗</a>'
+              : '<button class="card-ghost" onclick="editarMateria(\'' + m.id + '\')">Enlazar carpeta</button>') +
+          '</div></div>';
+      }).join('')
+    : '<div class="card"><div class="vacio">Todavía no has creado ninguna materia. ' +
+      'Cada una guarda el enlace a su carpeta y sus fechas de entrega.</div></div>';
+
+  document.getElementById('uni-nota').innerHTML =
+    '<div class="card-h"><span class="card-lbl">DÓNDE SE LEEN LOS ARCHIVOS</span></div>' +
+    '<p class="card-p">Los archivos viven en tu Drive y ahí se quedan: Nova guarda el enlace de la ' +
+    'carpeta, nunca una copia de lo que hay adentro.</p>' +
+    '<p class="card-p" style="margin-top:9px;">Lo que sí leo es el <strong>texto que pegues</strong>. ' +
+    'Un cronograma casi siempre es texto, y de ahí saco fechas y porcentajes con aritmética. ' +
+    'Te muestro lo que entendí y lo que ignoré, y no guardo nada hasta que lo confirmes.</p>' +
+    '<p class="card-p" style="margin-top:9px;">Lo que <strong>todavía no hago</strong> es entender un ' +
+    'PDF por su cuenta: subir el archivo y que se lea solo necesita un modelo de lenguaje, que ' +
+    'cuesta por cada lectura. Esa decisión está aparcada, no olvidada.</p>';
+}
+
+function opcionesEstudio(sel) {
+  return '<option value="">— Sin proyecto —</option>' +
+    (UNI ? UNI.trabajos : []).map(function (t) {
+      return '<option value="' + esc(t.id) + '"' + (t.id === sel ? ' selected' : '') + '>' +
+        esc(t.nombre) + '</option>';
+    }).join('');
+}
+function nuevaMateria() { abrirMateria(null); }
+function editarMateria(id) {
+  abrirMateria((UNI.materias.filter(function (m) { return m.id === id; })[0]) || null);
+}
+function abrirMateria(m) {
+  if (!UNI) { avisoGlobal('Todavía no cargaron tus materias.'); return; }
+  MATERIA = m ? m.id : '';
+  document.getElementById('mm-titulo').textContent = m ? 'Cambiar la materia' : 'Nueva materia';
+  document.getElementById('mm-nombre').value = m ? m.nombre : '';
+  document.getElementById('mm-codigo').value = m ? m.codigo : '';
+  document.getElementById('mm-profesor').value = m ? m.profesor : '';
+  document.getElementById('mm-semestre').value = m ? m.semestre : '';
+  document.getElementById('mm-carpeta').value = m ? m.carpeta : '';
+  document.getElementById('mm-trabajo').innerHTML = opcionesEstudio(
+    m ? m.trabajoId : ((UNI.trabajos[0] || {}).id || ''));
+  document.getElementById('mm-borrar').style.display = m ? 'block' : 'none';
+  errModal('mm-err', '');
+  document.getElementById('m-materia').classList.add('on');
+}
+async function guardarMateria() {
+  const r = await nc('nc_soul_materia', { datos: {
+    id: MATERIA,
+    nombre: document.getElementById('mm-nombre').value,
+    codigo: document.getElementById('mm-codigo').value,
+    profesor: document.getElementById('mm-profesor').value,
+    semestre: document.getElementById('mm-semestre').value,
+    carpeta: document.getElementById('mm-carpeta').value,
+    trabajo_id: document.getElementById('mm-trabajo').value,
+  } });
+  if (!r || !r.ok) { errModal('mm-err', traducirError(r && r.error) || 'No se pudo guardar.'); return; }
+  cerrarModal('m-materia');
+  await cargarUni();
+}
+async function borrarMateria() {
+  if (!MATERIA) return;
+  const m = UNI.materias.filter(function (x) { return x.id === MATERIA; })[0] || {};
+  // Se dice ANTES qué sobrevive. Borrar la carpeta no borra el parcial.
+  if (!confirm('¿Borrar «' + (m.nombre || 'esta materia') + '»?\n\n' +
+      (m.abiertas ? 'Sus ' + m.abiertas + ' entregas NO se borran: siguen en tus pendientes ' +
+        'con su fecha.' : 'No tiene entregas abiertas.'))) return;
+  const r = await nc('nc_soul_materia_borrar', { id: MATERIA });
+  if (!r || !r.ok) { errModal('mm-err', traducirError(r && r.error) || 'No se pudo borrar.'); return; }
+  cerrarModal('m-materia');
+  await cargarUni();
+  await cargar();
+}
+
+// ── EL LECTOR DE CRONOGRAMAS ──────────────────────────
+function abrirSilabo(id) {
+  MATERIA = id;
+  SILABO = null;
+  const m = UNI.materias.filter(function (x) { return x.id === id; })[0] || {};
+  document.getElementById('ms-titulo').textContent = 'Cronograma de ' + (m.nombre || 'la materia');
+  document.getElementById('ms-texto').value = '';
+  document.getElementById('ms-paso1').style.display = 'block';
+  document.getElementById('ms-paso2').style.display = 'none';
+  errModal('ms-err', '');
+  document.getElementById('m-silabo').classList.add('on');
+  setTimeout(function () { document.getElementById('ms-texto').focus(); }, 60);
+}
+function volverSilabo() {
+  document.getElementById('ms-paso1').style.display = 'block';
+  document.getElementById('ms-paso2').style.display = 'none';
+}
+
+async function leerSilabo() {
+  const texto = document.getElementById('ms-texto').value || '';
+  if (!texto.trim()) { errModal('ms-err', 'Pega el cronograma primero.'); return; }
+  const btn = document.getElementById('ms-leer');
+  btn.textContent = 'Leyendo…'; btn.style.opacity = '.6';
+  errModal('ms-err', '');
+  try {
+    const r = await nc('nc_soul_silabo', { texto: texto });
+    if (!r || !r.ok) { errModal('ms-err', traducirError(r && r.error) || 'No pude leerlo.'); return; }
+    SILABO = r;
+    pintarSilabo();
+    document.getElementById('ms-paso1').style.display = 'none';
+    document.getElementById('ms-paso2').style.display = 'block';
+  } catch (e) {
+    errModal('ms-err', 'Falló al leer: ' + (e && e.message || e));
+  } finally { btn.textContent = 'Leer lo que pegué'; btn.style.opacity = '1'; }
+}
+
+function pintarSilabo() {
+  const E = SILABO.encontradas, I = SILABO.ignoradas;
+  let html = '<div class="card-h" style="margin-bottom:10px;">' +
+    '<span class="card-lbl">ENCONTRÉ ' + E.length +
+      (E.length === 1 ? ' ENTREGA' : ' ENTREGAS') + '</span>' +
+    (E.length ? '<button class="link" onclick="marcarTodas()">MARCAR / DESMARCAR TODAS</button>' : '') +
+    '</div>';
+
+  html += E.length ? E.map(function (e, i) {
+    return '<div class="fila" style="align-items:flex-start;">' +
+      '<input type="checkbox" class="ms-ck" id="ms-ck' + i + '" checked ' +
+        'style="width:19px;height:19px;accent-color:var(--acc);margin-top:9px;flex:none;">' +
+      '<div style="flex:1;min-width:180px;display:flex;flex-direction:column;gap:7px;">' +
+        '<input id="ms-t' + i + '" value="' + esc(e.titulo) + '" ' +
+          'style="border:1px solid var(--line4);background:var(--bg);border-radius:9px;' +
+          'padding:10px 11px;font:500 13px/1 \'DM Sans\';color:var(--ink);outline:none;width:100%;">' +
+        '<div class="kcard-m">' +
+          (e.peso ? '<span class="chip horas">' + e.peso + '% de la nota</span>' : '') +
+          (e.anioInferido ? '<span class="chip">el año lo puse yo</span>' : '') +
+          (e.rango ? '<span class="chip">era un rango · tomé el último día</span>' : '') +
+          (e.sinTitulo ? '<span class="chip tarde">no le encontré título</span>' : '') +
+        '</div>' +
+        '<div class="kpi-s" style="opacity:.75;">' + esc(e.linea) + '</div>' +
+      '</div>' +
+      '<input type="date" id="ms-f' + i + '" value="' + esc(e.fecha) + '" ' +
+        'style="border:1px solid var(--line4);background:var(--bg);border-radius:9px;' +
+        'padding:10px 11px;font:500 12.5px/1 \'DM Sans\';color:var(--ink);outline:none;">' +
+      '</div>';
+  }).join('')
+  : '<div class="vacio">No encontré ninguna línea con fecha. Revisa que hayas pegado el ' +
+    'cronograma y no el temario.</div>';
+
+  document.getElementById('ms-encontradas').innerHTML = html;
+
+  /**
+   * Lo ignorado se muestra SIEMPRE, con el porqué.
+   *
+   * Un lector que solo enseña sus aciertos parece infalible y no lo es.
+   * Lo peligroso de un parcial no es que quede mal escrito: es que no
+   * quede.
+   */
+  document.getElementById('ms-ignoradas').innerHTML = I.length
+    ? '<div style="margin-top:18px;border-top:1px solid var(--soft2);padding-top:14px;">' +
+      '<div class="card-lbl" style="margin-bottom:9px;">ESTAS LAS DEJÉ FUERA · ' + I.length +
+      ' LÍNEAS</div>' +
+      '<p class="card-p" style="margin-bottom:10px;">Si alguna era una entrega, agrégala a mano ' +
+      'desde el tablero. No le invento una fecha para que la lista quede completa.</p>' +
+      I.slice(0, 25).map(function (x) {
+        return '<div class="fila"><span class="fila-t" style="opacity:.8;">' + esc(x.linea) +
+          '</span><span class="fila-m">' + esc(x.porque) + '</span></div>';
+      }).join('') +
+      (I.length > 25 ? '<div class="kpi-s" style="margin-top:8px;">y ' + (I.length - 25) +
+        ' más</div>' : '') +
+      '</div>'
+    : '';
+
+  if (SILABO.truncado) {
+    errModal('ms-err', 'Pegaste más de ' + SILABO.maximo + ' líneas y solo miré las primeras. ' +
+      'Pega el cronograma en dos veces.');
+  }
+}
+
+function marcarTodas() {
+  const cks = document.querySelectorAll('.ms-ck');
+  const prender = Array.prototype.filter.call(cks, function (c) { return !c.checked; }).length > 0;
+  Array.prototype.forEach.call(cks, function (c) { c.checked = prender; });
+}
+
+async function guardarSilabo() {
+  const items = [];
+  SILABO.encontradas.forEach(function (e, i) {
+    if (!document.getElementById('ms-ck' + i).checked) return;
+    items.push({
+      titulo: document.getElementById('ms-t' + i).value,
+      fecha: document.getElementById('ms-f' + i).value,
+      peso: e.peso,
+    });
+  });
+  if (!items.length) { errModal('ms-err', 'No marcaste ninguna entrega.'); return; }
+
+  const btn = document.getElementById('ms-guardar');
+  btn.textContent = 'Guardando…'; btn.style.opacity = '.6';
+  try {
+    const r = await nc('nc_soul_silabo_guardar', { materia: MATERIA, items: items });
+    if (!r || !r.ok) { errModal('ms-err', traducirError(r && r.error) || 'No se pudo guardar.'); return; }
+    cerrarModal('m-silabo');
+    avisoGlobal(
+      (r.creadas ? 'Guardé ' + r.creadas + (r.creadas === 1 ? ' entrega' : ' entregas') : 'No guardé ninguna') +
+      (r.repetidas ? ' · ' + r.repetidas + ' ya estaban y no las repetí' : '') +
+      (r.errores && r.errores.length ? ' · ' + r.errores.length + ' con problemas' : '') +
+      '. Ponles las horas que crees que cuestan desde el tablero.', !!r.creadas);
+    await cargarUni();
+    await cargar();
+  } catch (e) {
+    errModal('ms-err', 'Falló al guardar: ' + (e && e.message || e));
+  } finally { btn.textContent = 'Guardar las marcadas'; btn.style.opacity = '1'; }
+}
+
 // ── NOVA FAMILY ───────────────────────────────────────
 async function cargarFamily(cliente, tienda) {
   const btn = document.getElementById('fam-btn');
@@ -1652,6 +1987,7 @@ function go(view, el) {
   cerrarMenu();
   // Las dos secciones lentas se traen cuando se abren, no al arrancar.
   if (view === 'plata' && !FIN) cargarFinanzas();
+  if (view === 'uni' && !UNI) cargarUni();
   if (view === 'family' && !FAM) cargarFamily();
 }
 function abrirMenu() {

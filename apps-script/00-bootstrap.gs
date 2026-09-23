@@ -512,7 +512,20 @@ const ESQUEMA_SOUL = {
    */
   Pendientes: ['id','usuario_id','texto','tipo','origen','fecha','hecho',
                'hecho_en','plataforma_id','trabajo_id','estado','prioridad',
-               'horas_estimadas','horas_reales','riesgo','nota'],
+               'horas_estimadas','horas_reales','riesgo','nota','materia_id'],
+
+  /**
+   * Las materias del semestre.
+   *
+   * Una por materia y no una por semestre, porque cada una tiene su
+   * profesor, su carpeta y sus fechas. Todas suben a Central como UN
+   * solo proyecto —«Universidad»—, que es como pesa en su semana.
+   *
+   * `carpeta` es un ENLACE a Drive. Los archivos no se copian aquí:
+   * misma regla que con PHH. Nova guarda dónde están, no qué dicen.
+   */
+  Materias: ['id','usuario_id','nombre','codigo','profesor','carpeta',
+             'semestre','trabajo_id','estado','nota'],
 
   /**
    * Cuántas horas libres tiene cada día de la semana.

@@ -116,6 +116,11 @@ function manejarCentral(accion, p) {
     case 'nc_soul_fijo':       return soulFijoGuardar(s, p);
     case 'nc_soul_fijo_borrar':return soulFijoBorrar(s, p);
     case 'nc_soul_family':     return soulFamily(s, p);
+    case 'nc_soul_materias':       return soulMaterias(s, p);
+    case 'nc_soul_materia':        return soulMateriaGuardar(s, p);
+    case 'nc_soul_materia_borrar': return soulMateriaBorrar(s, p);
+    case 'nc_soul_silabo':         return soulSilaboLeer(s, p);
+    case 'nc_soul_silabo_guardar': return soulSilaboGuardar(s, p);
     case 'nc_salir':
       CacheService.getScriptCache().remove('nc_' + p.token);
       return { ok: true };

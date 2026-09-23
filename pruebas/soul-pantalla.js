@@ -114,6 +114,33 @@ const FINANZAS = {
   error: '',
 };
 
+const MATERIAS = {
+  ok: true, hoy: HOY,
+  trabajos: [{ id: 't3', nombre: 'Universidad', tipo: 'estudio', estado: 'activo', horasSemana: 6, entrega: '' }],
+  materias: [
+    { id: 'm1', nombre: 'Estadística', codigo: 'EST-301', profesor: 'Prof. Gómez',
+      carpeta: 'https://drive.google.com/drive/folders/abc', semestre: '2026-2',
+      trabajoId: 't3', estado: 'activa', nota: '', abiertas: 2, vencidas: 1, proxima: '2026-10-15' },
+    { id: 'm2', nombre: 'Química Ambiental', codigo: '', profesor: '', carpeta: '',
+      semestre: '', trabajoId: 't3', estado: 'activa', nota: '',
+      abiertas: 0, vencidas: 0, proxima: '' },
+  ],
+};
+
+const SILABO_LEIDO = {
+  ok: true, maximo: 300, truncado: false,
+  encontradas: [
+    { titulo: 'Parcial 1', sinTitulo: false, fecha: '2026-10-15', anioInferido: true,
+      rango: false, peso: 25, linea: 'Parcial 1 — 15 de octubre — 25%' },
+    { titulo: 'Entrega del proyecto', sinTitulo: false, fecha: '2026-10-16', anioInferido: true,
+      rango: true, peso: 20, linea: 'Entrega del proyecto: semana del 12 al 16 de octubre 20%' },
+  ],
+  ignoradas: [
+    { linea: 'Bibliografía: Walpole, 9a edición', porque: 'No encontré ninguna fecha.' },
+    { linea: 'Participación en clase 10%', porque: 'Tiene un porcentaje pero ninguna fecha.' },
+  ],
+};
+
 const FAMILY = {
   ok: true,
   clientes: [{ id: 'c1', empresa: 'Nutrea', sheetId: 'sid' }],
@@ -151,12 +178,16 @@ const FAMILY = {
         if (accion === 'nc_soul') return x.foto;
         if (accion === 'nc_soul_finanzas') return x.fin;
         if (accion === 'nc_soul_family') return x.fam;
+        if (accion === 'nc_soul_materias') return x.mat;
+        if (accion === 'nc_soul_silabo') return x.sil;
+        if (accion === 'nc_soul_silabo_guardar') return { ok: true, creadas: 2, repetidas: 0, errores: [] };
         return { ok: true };
       };
       (0, eval)('nc = window.nc;');
       (0, eval)('SES = ' + JSON.stringify({ correo: 'm@nova.com', nombre: 'Manuela', rol: x.rol }) + ';');
       (0, eval)('entrar();');
-    }, { foto: foto(conHoras), fin: FINANZAS, fam: FAMILY, rol: rol || 'socia' });
+    }, { foto: foto(conHoras), fin: FINANZAS, fam: FAMILY, mat: MATERIAS,
+         sil: SILABO_LEIDO, rol: rol || 'socia' });
     await p.waitForTimeout(200);
     return p;
   };
@@ -287,6 +318,58 @@ const FAMILY = {
     ok('el ahorro no se suma con los gastos' + A,
        /va aparte, no es un gasto/.test(await p.textContent('#fin-kpis')));
 
+    // ══ Universidad ══
+    await p.evaluate(() => go('uni', null));
+    await p.waitForTimeout(180);
+    const uni = await p.textContent('#v-uni');
+    ok('lista las materias' + A, /Estadística/.test(uni) && /Química Ambiental/.test(uni));
+    ok('con sus entregas abiertas y las vencidas' + A,
+       /2 entregas abiertas/.test(uni) && /1 vencida/.test(uni));
+    ok('dice dónde viven los archivos: en Drive, no aquí' + A,
+       /guarda el enlace/.test(uni) && /nunca una copia/.test(uni));
+    ok('y admite que todavía no entiende un PDF solo' + A,
+       /todavía no hago/.test(uni) && /modelo de lenguaje/.test(uni));
+    const carpeta = await p.$$eval('#uni-lista a', e => e.map(x => x.getAttribute('href')));
+    ok('la carpeta abre en Drive, en otra pestaña' + A,
+       carpeta.length === 1 && /drive\.google/.test(carpeta[0]), JSON.stringify(carpeta));
+    ok('la materia sin carpeta ofrece enlazarla' + A, /Enlazar carpeta/.test(uni));
+
+    // El lector: propone, no escribe
+    await p.evaluate(() => { window.LLAMADAS.length = 0; abrirSilabo('m1'); });
+    ok('el lector abre con la materia en el título' + A,
+       /Estadística/.test(await p.textContent('#ms-titulo')));
+    await p.fill('#ms-texto', 'Parcial 1 — 15 de octubre — 25%');
+    await p.click('#ms-leer');
+    await p.waitForTimeout(150);
+    const prop = await p.textContent('#ms-paso2');
+    ok('muestra lo que encontró' + A, /ENCONTRÉ 2 ENTREGAS/.test(prop));
+    ok('avisa cuándo el año lo puso él' + A, /el año lo puse yo/.test(prop));
+    ok('y cuándo la fecha venía de un rango' + A, /tomé el último día/.test(prop));
+    ok('MUESTRA lo que ignoró, con el motivo' + A,
+       /ESTAS LAS DEJÉ FUERA/.test(prop) && /Walpole/.test(prop) &&
+       /porcentaje pero ninguna fecha/.test(prop));
+    ok('y dice que no inventa fechas para completar la lista' + A,
+       /No le invento una fecha/.test(prop));
+    ok('leer NO guardó nada todavía' + A,
+       (await p.evaluate(() => window.LLAMADAS)).filter(l => /guardar/.test(l.accion)).length === 0);
+    ok('las dos vienen marcadas, y se pueden desmarcar' + A,
+       await p.$$eval('.ms-ck', e => e.filter(x => x.checked).length) === 2);
+
+    await p.evaluate(() => { document.getElementById('ms-ck1').checked = false; });
+    await p.click('#ms-guardar');
+    await p.waitForTimeout(200);
+    const env = (await p.evaluate(() => window.LLAMADAS))
+      .filter(l => l.accion === 'nc_soul_silabo_guardar')[0];
+    ok('guarda SOLO la que quedó marcada' + A,
+       env && env.datos.items.length === 1 && env.datos.items[0].titulo === 'Parcial 1',
+       JSON.stringify(env && env.datos));
+    ok('y la manda con su materia' + A, env && env.datos.materia === 'm1');
+    ok('después avisa qué guardó y qué falta ponerle' + A,
+       /Guardé 2/.test(await p.textContent('#av-global')) &&
+       /horas que crees que cuestan/.test(await p.textContent('#av-global')),
+       await p.textContent('#av-global'));
+    await p.evaluate(() => avisoGlobal(''));
+
     // ══ Nova Family ══
     await p.evaluate(() => go('family', null));
     await p.waitForTimeout(200);
@@ -343,7 +426,7 @@ const FAMILY = {
     ok('sin scroll lateral' + A, lateral === 0, lateral + 'px');
 
     if (ancho === 1200) {
-      for (const [v, f] of [['hoy', 'soul-hoy'], ['pendientes', 'soul-tablero'],
+      for (const [v, f] of [['uni', 'soul-uni'], ['hoy', 'soul-hoy'], ['pendientes', 'soul-tablero'],
                             ['semana', 'soul-semana'], ['plata', 'soul-plata'],
                             ['family', 'soul-family'], ['mindlab', 'soul-mindlab']]) {
         await p.evaluate((x) => go(x, null), v);
