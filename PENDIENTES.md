@@ -543,3 +543,69 @@ mostrarle Nova Empresarial a un cliente potencial. Manuela quiere que
 abra la plantilla de trabajo del proyecto. Son dos cosas distintas con
 el mismo nombre: por ahora el de clientes se llama «Demo para clientes»
 y el otro será «Plantilla» dentro de cada proyecto.
+
+---
+
+## 8 · Correcciones y encargos del 22-09-2026 (noche)
+
+### NovaBot y NovaChat son DOS cosas, y yo las mezclé
+
+Corrección de Manuela, y es de fondo:
+
+| | Quién lo usa | Para qué |
+|---|---|---|
+| **NovaChat** | la dueña y su equipo, adentro | hablar entre ellos |
+| **NovaBot** | la dueña | leer, analizar y avisar |
+
+Lo que hay hoy en Empresarial es un solo panel que hace de las dos cosas
+a medias. Se separan.
+
+**NovaChat** vuelve a ser lo que era: el chat interno del equipo.
+
+**NovaBot** tiene pantalla propia, y ahí vive todo lo de la operación
+que hoy está regado:
+
+- El **enlace a la plataforma** de esa tienda —Dropi, Effi, Mastershop,
+  la que sea— para entrar a confirmar y gestionar pedidos.
+- Las **condiciones de la tienda**: lo que el equipo tiene que saber de
+  memoria y hoy pregunta cada vez.
+- El **enlace al chat** de la tienda.
+- Las **plantillas** para los casos de siempre. Si el cliente ya las
+  tiene en un Drive, que comparta el enlace — y **hay que insistir en
+  que lo comparta como «cualquiera con el enlace»**, porque un Drive
+  privado se ve perfecto desde la cuenta de quien lo subió y sale en
+  blanco para todo el equipo. Es el error más común y el más silencioso.
+
+Y lo que la convierte en NovaBot y no en una página de enlaces:
+**análisis por pantalla, sin que nadie lo pida.** Fallos, olvidos,
+errores que se repiten, incumplimientos. Cada pantalla con el suyo.
+
+### Lo demás que pidió, en orden de lo que bloquea
+
+1. **Equipo sale de Central y entra a novAcademy**, enlazado con
+   Empresarial y con las tiendas que tengan vacante de admin o gestora.
+2. **Meta Ads en Central** con su propia llave, igual que en
+   Empresarial: si pauta para Nova o para novAcademy, esas cifras van en
+   su centro de mando. **Sin mezclar funciones entre pantallas.**
+3. **El Demo es por artefacto, no uno solo.** Cada proyecto que suba
+   genera su demo: Empresarial, novAcademy (estudiante y docente), Son
+   de Sky, Procesos Químicos, Química Ambiental. Que se dupliquen, lean
+   los documentos que les dé y reflejen eso en el demo.
+   *(Yo lo había separado en «Demo para clientes» y «Plantilla». Ella
+   dice que es lo mismo. Tiene razón: es un artefacto que se duplica.)*
+4. **El panel de NovaSoul no la convence.** Hay que rehacerlo con las
+   referencias que mandó: kanban de pendientes, calendario semanal,
+   plan de seis semanas.
+
+### Una pregunta que hizo y vale escribir
+
+*«¿Esta pantalla se guarda para siempre ya activada la automatización?»*
+
+**Sí.** Los disparadores viven en el proyecto de Apps Script, no en el
+navegador ni en la sesión. Sobreviven a cerrar la página, a cerrar
+sesión, y a publicar una versión nueva del código.
+
+Solo dejan de correr si alguien los borra, o si Google los desactiva
+después de que fallen muchos días seguidos. Para eso está
+`verAutomatico()`, y la tarjeta de Clientes que los muestra: «instalado»
+y «funcionando» no son lo mismo.
