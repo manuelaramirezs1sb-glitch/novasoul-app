@@ -180,7 +180,7 @@ function convertir(ss, monto, fecha, origen, destino) {
  * cargado. Córrela antes de confiar en cualquier número de dinero.
  */
 function tasasFaltantes(cliente, monedaDestino) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const destino = String(monedaDestino || 'COP').toUpperCase();
   const faltan = {};
 

@@ -113,7 +113,16 @@ class Carta:
         for cid, nom, cuerpo in NATALES:
             self.natal[cid] = (nom, swe.calc_ut(self.jd, cuerpo)[0][0])
         self.natal['ascendente'] = ('Ascendente', self.asc)
+        self.natal['descendente'] = ('Descendente', (self.asc + 180) % 360)
         self.natal['medio_cielo'] = ('Mediocielo', self.mc)
+        self.natal['fondo_cielo'] = ('Fondo del cielo', (self.mc + 180) % 360)
+
+        # Los nodos: el eje del karma. Ella los pidió por nombre para el
+        # pensum, y sin ellos la mitad de lo que quiere leer no existe.
+        # El Nodo Sur es siempre el Norte más 180°, no se calcula aparte.
+        nn = swe.calc_ut(self.jd, swe.TRUE_NODE)[0][0]
+        self.natal['nodo_norte'] = ('Nodo Norte', nn)
+        self.natal['nodo_sur'] = ('Nodo Sur', (nn + 180) % 360)
 
     def casa_entera(self, lon):
         """Un signo, una casa. Es como se hacen las profecciones."""
@@ -156,7 +165,7 @@ def generar(carta, desde, hasta, incluir_personales):
                         if dentro and clave not in abiertos:
                             abiertos[clave] = {
                                 'desde': d, 'grupo': grupo, 'tnom': tnom,
-                                'nnom': nnom, 'aspecto': anom,
+                                'nnom': nnom, 'nid': nid, 'aspecto': anom,
                                 'casa_e': carta.casa_entera(tlon),
                                 'casa_p': carta.casa_placidus(tlon),
                                 'retro': retro, 'pico': abs(s - ang),
@@ -217,6 +226,79 @@ def fila(e, uid):
     }
 
 
+def semilla(eventos, carta, cfg):
+    """
+    La misma tabla, pero como código para el bundle de Apps Script.
+
+    ┌─ POR QUÉ NO SE PEGA A MANO ────────────────────────────────┐
+    │                                                            │
+    │ Ella lo dijo así: «en ese cuadro me pides que te de toda   │
+    │ la info que no tengo y debería tener tú o Nova, no yo».    │
+    │ Tenía razón: la pantalla le pedía sus tránsitos, y los     │
+    │ tránsitos no son un dato suyo, son una cuenta.             │
+    │                                                            │
+    │ Así que la cuenta viaja DENTRO del servidor. El bundle de  │
+    │ Apps Script no se sirve a ningún navegador —solo lo ve su  │
+    │ propio proyecto de Google—, y desde ahí Nova siembra sus   │
+    │ tránsitos en la hoja sola, la primera vez que entra.       │
+    │                                                            │
+    │ Va comprimido a una línea por temporada porque son ciento  │
+    │ y pico y no tienen por qué ocupar mil.                     │
+    │                                                            │
+    └────────────────────────────────────────────────────────────┘
+    """
+    uid = cfg.get('usuario_id', '')
+    filas = []
+    for e in eventos:
+        filas.append('%s|%s|%s|%s|%s|%s|%d|%d|%d' % (
+            e['tnom'].lower().replace('ó', 'o').replace('ú', 'u'),
+            e['aspecto'], e['nid'], e['desde'].isoformat(),
+            e['hasta'].isoformat(), e['fpico'].isoformat(),
+            e['casa_e'], e['casa_p'] or 0, 1 if e['retro'] else 0))
+
+    cuerpo = []
+    cuerpo.append('/**')
+    cuerpo.append(' * LAS EFEMÉRIDES, YA CALCULADAS. No se pegan: se siembran solas.')
+    cuerpo.append(' *')
+    cuerpo.append(' * Generado por efemerides/generar-transitos.py con Swiss Ephemeris,')
+    cuerpo.append(' * el mismo motor que hay debajo de las APIs de astrología de pago.')
+    cuerpo.append(' * Se comprobó contra su carta real de Horus: los once cuerpos, el')
+    cuerpo.append(' * Ascendente y el Mediocielo salen al grado.')
+    cuerpo.append(' *')
+    cuerpo.append(' * Este archivo vive en el servidor. NO se sirve a ningún navegador.')
+    cuerpo.append(' *')
+    cuerpo.append(' * Cada línea es una temporada:')
+    cuerpo.append(' *   cuerpo|aspecto|a natal|desde|hasta|día que aprieta|casa entera|')
+    cuerpo.append(' *   casa Placidus|retrógrado')
+    cuerpo.append(' *')
+    cuerpo.append(' * Horizonte: %s → %s. Cuando se acabe hay que volver a correr'
+                  % (eventos[0]['desde'].isoformat(), max(e['hasta'] for e in eventos).isoformat()))
+    cuerpo.append(' * el script; Nova avisa sola cuando queden menos de seis meses.')
+    cuerpo.append(' */')
+    cuerpo.append('')
+    cuerpo.append('const EFEMERIDES_HASTA = %r;' % max(e['hasta'] for e in eventos).isoformat())
+    cuerpo.append('')
+    cuerpo.append('/** La carta natal de quien la sembró, para leer sin volver a calcular. */')
+    cuerpo.append('const EFEMERIDES_CARTA = {')
+    cuerpo.append("  usuario_id: %r," % uid)
+    cuerpo.append('  ascendente: %.4f,' % carta.asc)
+    cuerpo.append('  medio_cielo: %.4f,' % carta.mc)
+    cuerpo.append('  natal: {')
+    for nid, (nnom, nlon) in carta.natal.items():
+        cuerpo.append('    %s: { nombre: %r, grado: %.4f, signo: %r, casa: %d, casaPlacidus: %d },'
+                      % (nid, nnom, nlon, SIGNOS_ID[int(nlon // 30)],
+                         carta.casa_entera(nlon), carta.casa_placidus(nlon) or 0))
+    cuerpo.append('  },')
+    cuerpo.append('};')
+    cuerpo.append('')
+    cuerpo.append('const EFEMERIDES_SEMILLA = [')
+    for f in filas:
+        cuerpo.append("  '%s'," % f)
+    cuerpo.append('];')
+    cuerpo.append('')
+    return '\n'.join(cuerpo)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -226,6 +308,7 @@ def main():
     ap.add_argument('--personales', action='store_true',
                     help='incluir Sol, Mercurio, Venus y Marte (muchas más filas)')
     ap.add_argument('--salida', default='transitos.tsv')
+    ap.add_argument('--semilla', help='además, escribe el .gs que siembra la hoja sola')
     args = ap.parse_args()
 
     cfg = json.load(open(args.config, encoding='utf-8'))
@@ -247,6 +330,11 @@ def main():
         f.write('\t'.join(COLUMNAS) + '\n')
         for r in filas:
             f.write('\t'.join(str(r[c]) for c in COLUMNAS) + '\n')
+
+    if args.semilla:
+        with open(args.semilla, 'w', encoding='utf-8') as f:
+            f.write(semilla(eventos, carta, cfg))
+        print('   y la semilla para Apps Script → %s' % args.semilla)
 
     difieren = sum(1 for e in eventos if e['casa_e'] != e['casa_p'])
     por_grupo = {}

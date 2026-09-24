@@ -463,7 +463,7 @@ function coberturaDe_(pedidos, lunes, semanas) {
  * @param {string} lunes    lunes de la semana a analizar; vacío = la última cerrada
  */
 function semaforoSemanal(sheetId, tienda, lunes) {
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
   const hoyISO = ahoraISO().slice(0, 10);
   const L = lunes || semanaCerrada_(hoyISO);
   const SEMANAS = 8;
@@ -644,7 +644,7 @@ function semaforoLunes() {
   listarClientes().forEach(function (c) {
     if (!c.sheetId) return;
     try {
-      const ss = SpreadsheetApp.openById(c.sheetId);
+      const ss = libro_(c.sheetId);
       const modulos = modulosDeCliente_(c.sheetId);
       if (modulos.indexOf('pauta') === -1 || modulos.indexOf('dinero') === -1) {
         log.push(c.empresa + ': el plan no incluye pauta y dinero. Saltado.');
@@ -717,7 +717,7 @@ function tiendasActivas_(ss) {
  */
 function modulosDeCliente_(sheetId) {
   try {
-    const shC = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+    const shC = libro_(IDS_().central).getSheetByName('Clientes');
     if (!shC || shC.getLastRow() < 2) return [];
     const d = shC.getDataRange().getValues();
     const e = d[0].map(norm);

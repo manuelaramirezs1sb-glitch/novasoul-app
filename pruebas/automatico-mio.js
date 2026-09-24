@@ -106,6 +106,18 @@ const C_PEND = ['id','usuario_id','texto','tipo','origen','fecha','hecho','hecho
 function fila(cols, o) { return cols.map(c => (o[c] === undefined ? '' : o[c])); }
 
 function sembrar(opts) {
+  /**
+   * Cada caso de prueba es una PETICIÓN nueva, y una petición real
+   * empieza soltando lo que Nova tenga en memoria de la anterior
+   * (`manejar()` lo hace). Aquí hay que decirlo a mano porque las
+   * pruebas llaman a las funciones directamente, sin pasar por ahí.
+   *
+   * Sin esto, el manejador del libro y las hojas ya leídas seguirían
+   * apuntando a los datos del caso anterior, y la prueba mediría un
+   * Nova que no existe.
+   */
+  libroOlvidar_(); soulOlvidar_();
+
   opts = opts || {};
   BUZON = []; UUID = 0;
   LIBROS.cen = {
@@ -292,6 +304,14 @@ ok('contada de verdad, no inventada', /El año: casa 8 · Leo/.test(cuerpo), cue
 
 BUZON = [];
 delete LIBROS.s.Carta;
+/**
+ * Tocar la hoja por debajo es simular una edición FUERA de la app —
+ * ella abriendo el Google Sheet a mano. Eso, en la vida real, pasa
+ * entre dos peticiones, así que aquí hay que marcar el corte: Nova
+ * suelta lo que tenía leído en memoria, igual que al empezar una
+ * petición nueva.
+ */
+soulOlvidar_();
 F.soulLunes();
 igual('y sin carta el correo sale igual', 1, BUZON.length);
 ok('con lo que importa, que es la semana', /TU SEMANA/.test(BUZON[0].body));

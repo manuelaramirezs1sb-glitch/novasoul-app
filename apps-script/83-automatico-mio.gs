@@ -35,7 +35,7 @@
 
 /** Las socias activas de la plataforma. Son las dueñas de estos avisos. */
 function sociasPlataforma_() {
-  const ss = SpreadsheetApp.openById(IDS_().central);
+  const ss = libro_(IDS_().central);
   const sh = ss.getSheetByName('Plataforma');
   if (!sh || sh.getLastRow() < 2) return [];
   const d = sh.getDataRange().getValues();

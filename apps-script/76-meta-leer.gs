@@ -244,7 +244,7 @@ function metaFecha_(diasAtras) {
  * @param {number} dias     cuántos días hacia atrás pedir
  */
 function metaLeerTienda_(sheetId, tienda, token, dias) {
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
   const cuenta = metaCuenta(ss, tienda);
   const informe = {
     tienda: tienda, cuenta: cuenta, ok: false, error: '',
@@ -452,7 +452,7 @@ function metaFilasSolapadas_(ss, tienda, desde, hasta) {
  * cuadrar plata. El total de la cuenta sigue saliendo de Pauta.
  */
 function metaLeerAnuncios_(sheetId, tienda, token, dias) {
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
   const cuenta = metaCuenta(ss, tienda);
   const informe = { tienda: tienda, ok: false, error: '', filas: 0,
                     nuevas: 0, actualizadas: 0, iguales: 0,
@@ -566,7 +566,7 @@ function metaLeerCliente_(sheetId, dias) {
     .getProperty('META_TOKEN_' + String(sheetId).slice(0, 44)) || '';
   if (!token) return { sheetId: sheetId, sinLlave: true, tiendas: [] };
 
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
   const shT = ss.getSheetByName('Tiendas');
   if (!shT || shT.getLastRow() < 2) return { sheetId: sheetId, tiendas: [] };
 
@@ -669,7 +669,7 @@ function apiMetaTraer(s, p) {
    * un problema distinto —quedarse a medias sin decirlo— que ahora está
    * resuelto donde tenía que estarlo: por tramos, y avisando.
    */
-  const ss2 = SpreadsheetApp.openById(s.sheetId);
+  const ss2 = libro_(s.sheetId);
   if (norm(ajustes(ss2, tienda).meta_anuncios) === 'si') {
     try {
       informe.anuncios = metaLeerAnuncios_(s.sheetId, tienda, token, dias);

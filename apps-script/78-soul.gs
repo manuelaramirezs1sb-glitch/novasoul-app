@@ -41,7 +41,9 @@ const SOUL_HOJAS = {
   Mindlab:    ['id','usuario_id','semana','mes','tema','tarea','horas_estimadas',
                'desde','hasta','estado','nota'],
   Fijos:      ['id','usuario_id','categoria','concepto','monto','moneda',
-               'dia_del_mes','activo','nota'],
+               'dia_del_mes','activo','nota',
+               'flujo','tipo_pago','cuotas_total','cuotas_pagadas',
+               'cuota_desde','acreedor'],
   Rutina:     ['id','usuario_id','tipo','nombre','dia_semana','hora_inicio','hora_fin',
                'lugar','trabajo_id','materia_id','paga_fija','moneda','desde','hasta',
                'activo','nota'],
@@ -152,8 +154,14 @@ function soulUsuario_(s) {
 
 // ─── HOJAS ───────────────────────────────────────────────────
 
-function soulSheet_(nombre) {
-  const ss = SpreadsheetApp.openById(IDS_().soul);
+/**
+ * Abre una pestaña de Soul. Uso interno, sin efectos.
+ *
+ * Existe aparte de `soulSheet_` por una razón de seguridad, no de
+ * estilo: ver abajo.
+ */
+function soulHoja_(nombre) {
+  const ss = libro_(IDS_().soul);
   const sh = ss.getSheetByName(nombre);
   if (!sh) {
     throw new Error('Falta la hoja ' + nombre + ' en Nova_Soul. ' +
@@ -162,11 +170,71 @@ function soulSheet_(nombre) {
   return sh;
 }
 
+/**
+ * ── PEDIR EL MANEJADOR DE UNA PESTAÑA TIRA SU LECTURA EN MEMORIA ──
+ *
+ * Quien pide el manejador crudo es porque va a ESCRIBIR: `soulGuardar_`,
+ * `soulBorrar_`, el guardado de la carta, el de las horas, el de los
+ * tránsitos. Si la lectura de esa pestaña se quedara en memoria, la
+ * siguiente lectura de la misma petición devolvería lo de ANTES de
+ * escribir, y en pantalla eso se ve como «no se guardó».
+ *
+ * Se podría poner un `soulOlvidar_` al lado de cada escritura, y fue
+ * lo primero que hice: seis sitios, y cualquier función nueva que
+ * escriba sin acordarse reintroduce el error en silencio.
+ *
+ * Así que la regla vive AQUÍ, en el único sitio por donde pasan todos:
+ * pedir el manejador es declarar la intención de escribir, y eso
+ * invalida. Cuesta una lectura de más cuando alguien pide el manejador
+ * sin escribir, y a cambio el error no se puede volver a colar.
+ */
+function soulSheet_(nombre) {
+  soulOlvidar_(nombre);
+  return soulHoja_(nombre);
+}
+
+/**
+ * ── LEER CADA PESTAÑA UNA SOLA VEZ POR PETICIÓN ──
+ *
+ * Medido al responder «¿por qué NovaSoul está tan lento?»: pintar la
+ * pantalla de entrada leía VEINTICUATRO veces pestañas enteras, sobre
+ * unas diez pestañas distintas. O sea que la mitad larga del trabajo
+ * era volver a traer lo que ya estaba en memoria.
+ *
+ * Esto guarda lo leído mientras dura la petición. Dos cuidados, y los
+ * dos son la diferencia entre acelerar y corromper:
+ *
+ * 1· CUALQUIER ESCRITURA LO TIRA. `soulGuardar_` y `soulBorrar_`
+ *    llaman a `soulOlvidar_` antes de soltar el candado. Si no, un
+ *    guardar seguido de un leer devolvería lo de antes de guardar, y
+ *    eso se ve en pantalla como «no se guardó» — el peor síntoma
+ *    posible, porque invita a guardar otra vez.
+ *
+ * 2· SE GUARDA LA HOJA CRUDA, NO EL FILTRO POR USUARIO. El filtro es
+ *    barato y depende de quién pregunta; cachear ya filtrado sería
+ *    guardar las filas de una persona bajo una llave que otra puede
+ *    pedir.
+ */
+var SOUL_LEIDO_ = {};
+
+function soulOlvidar_(nombre) {
+  if (nombre) delete SOUL_LEIDO_[nombre];
+  else SOUL_LEIDO_ = {};
+}
+
+function soulCrudo_(nombre) {
+  if (SOUL_LEIDO_[nombre]) return SOUL_LEIDO_[nombre];
+  // `soulHoja_` y no `soulSheet_`: leer no invalida nada.
+  const sh = soulHoja_(nombre);
+  const d = sh.getLastRow() < 2 ? [] : sh.getDataRange().getValues();
+  SOUL_LEIDO_[nombre] = d;
+  return d;
+}
+
 /** Lee una hoja de Soul, ya filtrada por quién es. */
 function soulLeer_(nombre, uid) {
-  const sh = soulSheet_(nombre);
-  if (sh.getLastRow() < 2) return [];
-  const d = sh.getDataRange().getValues();
+  const d = soulCrudo_(nombre);
+  if (!d.length) return [];
   const enc = d[0].map(norm);
   const cU = enc.indexOf('usuario_id');
   return d.slice(1).map(function (f) {
@@ -244,6 +312,9 @@ function soulGuardar_(nombre, datos, uid) {
     }
     throw new Error('No existe ' + nombre + ' con id ' + id + '.');
   } finally {
+    // Lo que acaba de cambiar no puede seguir en memoria: la siguiente
+    // lectura de esta misma petición devolvería lo de antes.
+    soulOlvidar_(nombre);
     lock.releaseLock();
   }
 }
@@ -259,6 +330,7 @@ function soulBorrar_(nombre, id, uid) {
     const dueno = cU === -1 ? '' : String(d[i][cU] || '').toLowerCase().trim();
     if (dueno && dueno !== uid) throw new Error('Esa fila no es tuya.');
     sh.deleteRow(i + 1);
+    soulOlvidar_(nombre);
     return true;
   }
   return false;
@@ -945,6 +1017,16 @@ function soulFijoGuardar(s, p) {
   if (!cat && esNuevo) {
     return { ok: false, error: 'Falta decir de qué categoría es.' };
   }
+  if (d.tipoPago !== undefined && String(d.tipoPago).trim() &&
+      !PLATA_TIPOS[norm(d.tipoPago)]) {
+    return { ok: false, error: 'El tipo de pago tiene que ser mensual, cuotas o único.' };
+  }
+  /**
+   * Una línea por cuotas sin decir cuántas son se guarda igual, pero
+   * la pantalla va a decir que no puede calcular cuándo termina. No se
+   * bloquea: a veces ella no sabe el número todavía, y obligarla a
+   * inventarlo sería peor que quedarse sin la fecha.
+   */
   try {
     soulGuardar_('Fijos', {
       id: String(d.id || ''),
@@ -962,6 +1044,29 @@ function soulFijoGuardar(s, p) {
       activo: d.activo !== undefined ? (d.activo === false || norm(d.activo) === 'no' ? 'no' : 'si')
               : (esNuevo ? 'si' : undefined),
       nota: d.nota !== undefined ? String(d.nota) : undefined,
+
+      /**
+       * ── LO QUE ELLA PIDIÓ DISTINGUIR ──
+       *
+       * «debería haber una distinción si es único pago, pago mensual,
+       *  pago por cuotas», «los ingresos y los gastos fijos también
+       *  deben estar separados».
+       *
+       * Un tipo de pago inventado NO se guarda: dejaría la línea
+       * fuera de todos los bloques de la pantalla, o sea invisible.
+       * Es mejor rechazar el formulario que hacer desaparecer un
+       * gasto suyo sin decir nada.
+       */
+      flujo: d.flujo !== undefined
+        ? (norm(d.flujo) === 'ingreso' ? 'ingreso' : 'gasto')
+        : (esNuevo ? 'gasto' : undefined),
+      tipo_pago: d.tipoPago !== undefined && PLATA_TIPOS[norm(d.tipoPago)]
+        ? norm(d.tipoPago) : undefined,
+      cuotas_total: d.cuotasTotal !== undefined ? num(d.cuotasTotal) : undefined,
+      cuotas_pagadas: d.cuotasPagadas !== undefined ? num(d.cuotasPagadas) : undefined,
+      cuota_desde: d.cuotaDesde !== undefined
+        ? String(d.cuotaDesde).slice(0, 7) : undefined,
+      acreedor: d.acreedor !== undefined ? String(d.acreedor).trim() : undefined,
     }, soulUsuario_(s));
     return { ok: true };
   } catch (e) {
@@ -1005,7 +1110,7 @@ function soulFamily(s, p) {
 
   // ── Empresarial ──
   try {
-    const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+    const sh = libro_(IDS_().central).getSheetByName('Clientes');
     if (sh && sh.getLastRow() > 1) {
       const d = sh.getDataRange().getValues();
       const e = d[0].map(norm);
@@ -1029,7 +1134,7 @@ function soulFamily(s, p) {
 
   if (cl) {
     try {
-      const cs = SpreadsheetApp.openById(cl.sheetId);
+      const cs = libro_(cl.sheetId);
       out.tiendas = tiendasActivas_(cs).map(function (t) {
         return { id: t, nombre: nombreTienda(cs, t) };
       });
@@ -1094,7 +1199,7 @@ function soulFamily(s, p) {
   // No hay estudiantes todavía. Decirlo es más útil que un cero que
   // parece un dato.
   try {
-    const sh = SpreadsheetApp.openById(IDS_().academy).getSheetByName('Estudiantes');
+    const sh = libro_(IDS_().academy).getSheetByName('Estudiantes');
     const n = sh && sh.getLastRow() > 1 ? sh.getLastRow() - 1 : 0;
     out.academy = { estudiantes: n,
       porque: n ? '' : 'Todavía no has dado de alta a nadie en novAcademy.' };

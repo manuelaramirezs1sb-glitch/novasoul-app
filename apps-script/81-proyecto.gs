@@ -170,7 +170,7 @@ function parametroDe_(ss, tienda, clave) {
  * es exactamente el error que nadie revisa porque da un número alto.
  */
 function utilidadMes_(sheetId, tienda, mes) {
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
   const moneda = monedaDeTienda(ss, tienda) || '';
   const desde = mes + '-01';
   const hasta = mes + '-31';
@@ -227,7 +227,7 @@ function utilidadMes_(sheetId, tienda, mes) {
 
 /** La hoja y el nombre de una tienda, buscando entre los clientes. */
 function tiendaDeCentral_(tiendaId) {
-  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const sh = libro_(IDS_().central).getSheetByName('Clientes');
   if (!sh || sh.getLastRow() < 2) return null;
   const d = sh.getDataRange().getValues();
   const e = d[0].map(norm);
@@ -236,7 +236,7 @@ function tiendaDeCentral_(tiendaId) {
     const sid = String(d[i][cSheet] || '').trim();
     if (!sid) continue;
     try {
-      const cs = SpreadsheetApp.openById(sid);
+      const cs = libro_(sid);
       if (tiendasActivas_(cs).indexOf(tiendaId) === -1) continue;
       return { sheetId: sid, clienteId: String(d[i][cId] || ''),
                empresa: String(d[i][cEmp] || ''), nombre: nombreTienda(cs, tiendaId) };
@@ -249,7 +249,7 @@ function tiendaDeCentral_(tiendaId) {
 function tiendasParaProyecto_() {
   const out = [];
   try {
-    const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+    const sh = libro_(IDS_().central).getSheetByName('Clientes');
     if (!sh || sh.getLastRow() < 2) return out;
     const d = sh.getDataRange().getValues();
     const e = d[0].map(norm);
@@ -259,7 +259,7 @@ function tiendasParaProyecto_() {
       if (!sid) continue;
       if (norm(d[i][c('estado')]) === 'inactivo') continue;
       try {
-        const cs = SpreadsheetApp.openById(sid);
+        const cs = libro_(sid);
         tiendasActivas_(cs).forEach(function (t) {
           out.push({ id: t, nombre: nombreTienda(cs, t),
                      empresa: String(d[i][c('empresa')] || ''),

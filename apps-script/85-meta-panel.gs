@@ -324,7 +324,7 @@ function apiMetaPanel(s, p) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const props = PropertiesService.getScriptProperties();
   const hoyISO = ahoraISO().slice(0, 10);
   const moneda = monedaDeTienda(ss, tienda) || '';

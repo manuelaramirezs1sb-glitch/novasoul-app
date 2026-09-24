@@ -139,22 +139,49 @@ const CIELO_SIGNOS_NOMBRE = ['Aries','Tauro','Géminis','Cáncer','Leo','Virgo',
 const LUNA_EPOCA_MS = Date.UTC(2000, 0, 6, 18, 14, 0);
 const LUNA_SINODICO = 29.530588853;
 
+/**
+ * ── LOS NOMBRES, EN CASTELLANO DE VERDAD ──
+ *
+ * Ella preguntó «¿qué es gibosa creciente? no entiendo, no sé de qué me
+ * hablas», y tenía toda la razón en preguntar: la pantalla le estaba
+ * soltando el nombre técnico de la fase sin decirle qué está viendo en
+ * el cielo. «Gibosa» es giba, joroba: la luna ya pasó de media y
+ * todavía no es redonda.
+ *
+ * Por eso cada fase lleva ahora tres cosas distintas y no una sola:
+ *
+ *   nombre  · como se llama
+ *   forma   · qué vas a ver si sales a mirarla esta noche
+ *   que     · para qué sirve ese momento
+ *
+ * Un nombre que hay que ir a buscar a Google es un nombre que la
+ * pantalla no terminó de dar.
+ */
 const LUNA_FASES = [
   { id: 'nueva',            nombre: 'Luna nueva',        momento: 'aprender',
+    forma: 'No se ve nada: está entre la Tierra y el Sol.',
     que: 'Se siembra. Es para empezar algo, no para mostrarlo.' },
   { id: 'creciente',        nombre: 'Creciente',         momento: 'aprender',
+    forma: 'Una uña de luz, muy finita, que aparece al atardecer.',
     que: 'Lo que empezó toma cuerpo. Se construye.' },
   { id: 'cuarto_creciente', nombre: 'Cuarto creciente',  momento: 'cambiar',
+    forma: 'Media luna exacta, iluminada del lado derecho.',
     que: 'Aparece la resistencia. Es el punto donde se decide seguir o no.' },
   { id: 'gibosa',           nombre: 'Gibosa creciente',  momento: 'aprender',
+    forma: 'Más de media y todavía no redonda — «gibosa» es de giba, ' +
+           'joroba: el bulto de luz que le falta para ser llena.',
     que: 'Se afina. Se corrige antes de mostrar.' },
   { id: 'llena',            nombre: 'Luna llena',        momento: 'cambiar',
+    forma: 'Redonda entera, sale al anochecer y se ve toda la noche.',
     que: 'Culmina y se ve. Es para mostrar y para entregar.' },
   { id: 'diseminadora',     nombre: 'Gibosa menguante',  momento: 'descansar',
+    forma: 'La joroba otra vez, pero ya bajando: se le come la luz por la derecha.',
     que: 'Se comparte lo que salió. Se cuenta, se enseña.' },
   { id: 'cuarto_menguante', nombre: 'Cuarto menguante',  momento: 'cambiar',
+    forma: 'Media luna exacta, ahora del lado izquierdo. Sale de madrugada.',
     que: 'Se corta lo que no sirvió. Cierre con decisión.' },
   { id: 'balsamica',        nombre: 'Balsámica',         momento: 'descansar',
+    forma: 'La última uña de luz antes de desaparecer. Casi no se ve.',
     que: 'Se suelta y se descansa. No es día de arrancar nada.' },
 ];
 
@@ -170,7 +197,7 @@ function faseLunar_(fechaISO) {
   const f = LUNA_FASES[i];
 
   return {
-    id: f.id, nombre: f.nombre, momento: f.momento, que: f.que,
+    id: f.id, nombre: f.nombre, momento: f.momento, que: f.que, forma: f.forma,
     edadDias: Math.round(edad * 10) / 10,
     // Iluminación: 0 en la nueva, 100 en la llena.
     iluminacion: Math.round((1 - Math.cos(2 * Math.PI * edad / LUNA_SINODICO)) / 2 * 100),
@@ -1308,6 +1335,28 @@ function soulCielo(s, p) {
   const hoy = ahoraISO().slice(0, 10);
   const lunes = lunesDe_(hoy);
 
+  /**
+   * ── ANTES DE LEER, SEMBRAR ──
+   *
+   * Ella: «el pensum kármico tampoco me lo está dando y se supone que
+   * lo da en automático». El motor estaba bien; la hoja Tránsitos
+   * estaba vacía porque esperaba que los pegara ella, y un pensum que
+   * se arma DESDE los tránsitos sobre cero tránsitos da cero
+   * temporadas sin quejarse de nada.
+   *
+   * Así que aquí, en el orden que importa: se siembran las efemérides
+   * si faltan, y con eso ya hay de dónde armar el pensum. Las dos
+   * operaciones son idempotentes —no duplican— y por eso se pueden
+   * correr en cada entrada sin miedo.
+   *
+   * Antes esto solo pasaba los lunes, dentro del correo automático. Un
+   * pensum que solo existe si llegó un correo no es automático: es un
+   * correo.
+   */
+  const semilla = transitosSembrar_(uid);
+  let pensumNuevo = [];
+  try { pensumNuevo = pensumAuto_(uid, hoy); } catch (e) { /* no tumba la pantalla */ }
+
   const nac = nacimientoDe_(uid);
   const carta = cartaDe_(uid);
   const transitos = transitosDe_(uid);
@@ -1405,5 +1454,25 @@ function soulCielo(s, p) {
     // Las temporadas que se podrían armar solas desde sus tránsitos.
     pensumPropuesto: pensumProponer_(uid),
     medicion: cieloMedir_(uid, hoy),
+
+    /**
+     * Lo que Nova hizo sola al abrir, dicho en voz alta.
+     *
+     * Si un día aparecen doce temporadas nuevas en su pensum sin que
+     * ella tocara nada, tiene derecho a saber de dónde salieron y por
+     * qué justo hoy. Sembrar en silencio es lo mismo que no sembrar,
+     * pero con la lista más larga.
+     */
+    automatico: {
+      transitosSembrados: semilla.sembro || 0,
+      transitosPorque: semilla.porque || '',
+      pensumCreado: pensumNuevo.length,
+      pensumTitulos: pensumNuevo.map(function (x) { return x.titulo; }),
+      efemerides: efemeridesVencen_(hoy),
+    },
+    // Los ejes del karma: nodos y el eje Mediocielo–Fondo del cielo.
+    ejes: typeof EFEMERIDES_CARTA !== 'undefined' &&
+          norm(EFEMERIDES_CARTA.usuario_id) === norm(uid)
+      ? lecEjes_(EFEMERIDES_CARTA) : [],
   };
 }

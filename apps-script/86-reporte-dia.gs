@@ -64,7 +64,7 @@ const DIA_CATEGORIAS = [
  * esta mañana no es un pendiente, es un trabajo hecho.
  */
 function reporteDelDia(sheetId, tienda, diaISO) {
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
   const hoy = ahoraISO().slice(0, 10);
   const dia = diaISO || masDias_(hoy, -1);
 

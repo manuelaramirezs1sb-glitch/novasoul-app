@@ -54,6 +54,37 @@ function IDS_() {
   };
 }
 
+/**
+ * ── ABRIR UN LIBRO UNA SOLA VEZ POR EJECUCIÓN ──
+ *
+ * `libro_()` parece gratis y no lo es: cada llamada es
+ * una ida y vuelta a los servidores de Google. Se midió al responder
+ * «¿por qué NovaSoul está tan lento?» y el número fue feo: pintar la
+ * pantalla de entrada abría los libros SESENTA veces, casi todas el
+ * mismo libro, porque cada función que necesitaba una pestaña lo abría
+ * por su cuenta.
+ *
+ * Esto guarda el manejador mientras dura la ejecución. No es un caché
+ * de DATOS —eso sí sería peligroso—: es el mismo objeto vivo de Google,
+ * así que lo que una función escriba, la siguiente lo lee. Lo único que
+ * se ahorra es volver a pedir la llave de una puerta que ya está
+ * abierta.
+ *
+ * El objeto muere cuando muere la ejecución, que en Apps Script son
+ * segundos. No hay nada que invalidar.
+ */
+var LIBROS_ABIERTOS_ = {};
+
+/** Soltar los manejadores. Se llama al empezar cada petición. */
+function libroOlvidar_() { LIBROS_ABIERTOS_ = {}; }
+
+function libro_(id) {
+  const k = String(id || '');
+  if (!k) throw new Error('Me pidieron abrir un libro sin decirme cuál.');
+  if (!LIBROS_ABIERTOS_[k]) LIBROS_ABIERTOS_[k] = SpreadsheetApp.openById(k);
+  return LIBROS_ABIERTOS_[k];
+}
+
 /** En qué cuenta de Google está corriendo esto. */
 function cuentaActual() {
   const email = Session.getEffectiveUser().getEmail();
@@ -352,6 +383,20 @@ const ESQUEMA_EMPRESARIAL = {
            'casos_resueltos','nota_auditoria','ultima_conexion','permisos'],
 
   /**
+   * Los veredictos de auditoría. Uno por novedad revisada.
+   *
+   * Existe porque la pantalla de Auditoría tenía un botón de «Guardar
+   * veredicto» sin nada detrás: se marcaba el hallazgo, se escribía la
+   * nota, se guardaba, y no había ningún sitio donde eso cayera.
+   *
+   * `senales` guarda lo que Nova había levantado sola en el momento de
+   * revisar. Sirve para lo único que importa un mes después: saber si
+   * el veredicto se puso mirando los mismos datos que hay hoy.
+   */
+  Auditorias: ['id','tienda','novedad_id','pedido_id','gestora','veredicto',
+               'nota','senales','auditor','creada_en'],
+
+  /**
    * Los estados que cada plataforma inventa, y qué significan aquí.
    *
    * Existe para que agregar un estado nuevo NO exija publicar una versión
@@ -639,7 +684,29 @@ const ESQUEMA_SOUL = {
    * presupuesto se habría reescrito solo para darse la razón.
    */
   Fijos: ['id','usuario_id','categoria','concepto','monto','moneda',
-          'dia_del_mes','activo','nota'],
+          'dia_del_mes','activo','nota',
+          /**
+           * ── LO QUE ELLA RECLAMÓ DE ESTA PANTALLA ──
+           *
+           * «debería haber una distinción si es único pago, pago
+           *  mensual, pago por cuotas; las cuotas y deudas deben estar
+           *  en otra parte, separada; los ingresos y los gastos fijos
+           *  también deben estar separados».
+           *
+           * Cinco columnas nuevas, y cada una responde una de esas:
+           *
+           *   flujo        · entra o sale. Sin esto, un sueldo fijo y
+           *                  el arriendo caían en la misma lista.
+           *   tipo_pago    · mensual, cuotas o único.
+           *   cuotas_total · cuántas son en total.
+           *   cuotas_pagadas· cuántas van.
+           *   cuota_desde  · el mes de la primera (AAAA-MM), que es lo
+           *                  único que permite decir CUÁNDO TERMINA.
+           *   acreedor     · a quién se le debe. Ella tiene dos deudas
+           *                  con nombre propio y la pantalla las
+           *                  mostraba como una sola línea «Deudas».
+           */
+          'flujo','tipo_pago','cuotas_total','cuotas_pagadas','cuota_desde','acreedor'],
   Dias: ['usuario_id','fecha','comidas_marcadas','movimiento_hecho','puntos',
          'cerrado','cerrado_en','perdonado'],
   Recompensas: ['id','usuario_id','nombre','costo_puntos','canjeada','canjeada_en'],
@@ -771,7 +838,7 @@ function bootstrapTodo() {
  * toca una sola celda de datos.
  */
 function actualizarClientes() {
-  const central = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const central = libro_(IDS_().central).getSheetByName('Clientes');
   if (!central || central.getLastRow() < 2) return 'Clientes: ninguno registrado todavía';
 
   const filas = central.getDataRange().getValues();
@@ -795,7 +862,7 @@ function actualizarClientes() {
 }
 
 function construir(fileId, nombre, esquema, importsCrudos) {
-  const ss = SpreadsheetApp.openById(fileId);
+  const ss = libro_(fileId);
   const creadas = [];
 
   // Entidades + las dos comunes obligatorias
@@ -894,7 +961,7 @@ function limpiarHojaPorDefecto(ss) {
 }
 
 function sembrarParametros() {
-  const sh = SpreadsheetApp.openById(IDS_().empresarial).getSheetByName('Parametros');
+  const sh = libro_(IDS_().empresarial).getSheetByName('Parametros');
   if (!sh || sh.getLastRow() > 1) return; // ya sembrado
   sh.getRange(2, 1, PARAMETROS_DEFAULT.length, 5).setValues(PARAMETROS_DEFAULT);
 }

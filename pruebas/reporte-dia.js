@@ -93,6 +93,18 @@ function ped(o) { return C_PED.map(c => (o[c] === undefined ? '' : o[c])); }
 function nov(o) { return C_NOV.map(c => (o[c] === undefined ? '' : o[c])); }
 
 function sembrar(pedidos, novedades) {
+  /**
+   * Cada caso de prueba es una PETICIÓN nueva, y una petición real
+   * empieza soltando lo que Nova tenga en memoria de la anterior
+   * (`manejar()` lo hace). Aquí hay que decirlo a mano porque las
+   * pruebas llaman a las funciones directamente, sin pasar por ahí.
+   *
+   * Sin esto, el manejador del libro y las hojas ya leídas seguirían
+   * apuntando a los datos del caso anterior, y la prueba mediría un
+   * Nova que no existe.
+   */
+  libroOlvidar_(); soulOlvidar_();
+
   LIBROS.cli = {
     Pedidos: [C_PED].concat(pedidos || []),
     Novedades: [C_NOV].concat(novedades || []),

@@ -38,7 +38,7 @@ const COLUMNAS_DEL_EQUIPO = [
  * @param {string} cliente   nombre del cliente (o vacío si solo hay uno)
  */
 function importar(fuenteId, tienda, cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   if (!tienda) throw new Error('Falta la tienda. Ej: importar("dropi","ec")');
   if (!monedaDeTienda(ss, tienda)) {
     throw new Error('La tienda "' + tienda + '" no está en la hoja Tiendas.');
@@ -574,7 +574,7 @@ function paisDeTienda(ss, tienda) {
  * ningún pedido, y vale la pena mirarlas.
  */
 function cruzarLlamadas(cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const shL = ss.getSheetByName('Llamadas');
   const shP = ss.getSheetByName('Pedidos');
   if (!shL || shL.getLastRow() < 2) { Logger.log('No hay llamadas.'); return 'Sin llamadas.'; }
@@ -626,7 +626,7 @@ function cruzarLlamadas(cliente) {
  * conviene correr después de pegar los exports del día.
  */
 function importarTodo(cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const sh = ss.getSheetByName('Fuentes');
   if (!sh || sh.getLastRow() < 2) return 'No hay fuentes configuradas.';
 

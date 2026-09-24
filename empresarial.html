@@ -1541,9 +1541,14 @@ input.li:focus{border-color:var(--acc-d);}
 
       <!-- ════ AUDITORÍA ════ -->
       <div class="view" id="v-auditoria">
-        <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Lo que Daniela revisó contra IRIS. Si no tienes administradora todavía, la auditoría la haces tú desde aquí.</p>
+        <!--
+          Aquí decía «Lo que Daniela revisó contra IRIS». Daniela no
+          existe: era un nombre de la maqueta, y quedaba en la pantalla
+          de verdad como si fuera alguien de su equipo.
+        -->
+        <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Cada caso cerrado, con lo que <strong>escribió</strong> quien lo atendió al lado de lo que <strong>registró la central telefónica</strong>. Nova marca lo que no calza; el veredicto lo pones tú.</p>
         <div class="kgrid" id="audkpi"></div>
-        <p style="font:500 12px/1.5 'DM Sans';color:var(--t-mut2);">Puedes cambiar el veredicto tú misma. La nota es obligatoria: sin ella el veredicto no se guarda.</p>
+        <p style="font:500 12px/1.5 'DM Sans';color:var(--t-mut2);">La nota es obligatoria cuando hay hallazgo: queda en el registro de esa persona, y sin la nota dentro de un mes solo queda la marca.</p>
         <div style="display:flex;flex-direction:column;gap:10px;" id="audrows"></div>
       </div>
 
@@ -2608,30 +2613,188 @@ function buildGestoras() {
 }
 
 
+/**
+ * ── ANTES DE QUE LLEGUEN LOS CASOS ──
+ *
+ * Esta función tenía tres clientas inventadas —Andrea Morales, Luisa
+ * Fernández, Carolina Jiménez—, dos gestoras inventadas, llamadas de
+ * IRIS inventadas, y un botón de «Guardar veredicto» SIN `onclick`.
+ * Ella lo dijo así: «auditorías tampoco está guardando los hallazgos».
+ * No estaba guardando nada porque no había nada detrás del botón.
+ *
+ * Ahora esto solo pinta la espera. Lo real lo trae pintarAuditoriaCasos
+ * cuando responde la hoja.
+ */
 function buildAuditoria() {
-  document.getElementById('audkpi').innerHTML = [
-    {lb:'REVISADOS',   v:'12 de 38',sub:'11 OK · 1 hallazgo',                cl:'g'},
-    {lb:'CRUCE IRIS',  v:'93%',      sub:'171 de 184 llamadas calzan',        cl:'a'},
-    {lb:'SIN REVISAR', v:'26',       sub:'Daniela entró a las 13:05',         cl:'r'},
-    {lb:'HALLAZGOS',   v:'1',        sub:'Nota faltante en #NE-4298',         cl:'w'},
-  ].map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
+  const espera = CONECTADO
+    ? 'Buscando los casos cerrados de los últimos días…'
+    : 'Entra con tu correo para auditar a tu equipo.';
+  ['audkpi', 'audrows'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<div class="eq-vacio">' + espera + '</div>';
+  });
+}
 
-  const rows=[
-    {cli:'Andrea Morales', id:'#NE-4412',dijoGes:'La clienta confirmó recepción en Quito Norte. Entregué a las 14:20.',diceIris:'Registra llamada a las 14:05. Cliente confirmó disponibilidad.',gest:'Camila',guard:true, verdict:'OK'},
-    {cli:'Luisa Fernández',id:'#NE-4410',dijoGes:'Dirección incorrecta. Llamé 3 veces, no contesta.',diceIris:'2 intentos de llamada registrados a las 10:30 y 12:15. No se registra tercer intento.',gest:'Camila',guard:false,verdict:'Hallazgo'},
-    {cli:'Carolina Jiménez',id:'#NE-4408',dijoGes:'Reprogramé para mañana 8am con acuerdo de la clienta.',diceIris:'Registra mensaje enviado a las 9:45. Clienta respondió OK.',gest:'Valentina',guard:true,verdict:'OK'},
-  ];
-  document.getElementById('audrows').innerHTML = rows.map(r=>`<div class="aud-row">
-    <div class="nh"><div><span class="onm">${r.cli}</span>&ensp;<span class="oid">${r.id}</span></div>${r.guard?`<span class="bd bd-g">Guardado</span>`:''}</div>
-    <div class="g2" style="gap:12px;">
-      <div><div class="dlbl">DIJO LA GESTORA · ${r.gest}</div><div class="dtxt">${r.dijoGes}</div></div>
-      <div><div class="dlbl">DICE IRIS</div><div class="dtxt">${r.diceIris}</div></div>
-    </div>
-    <div><div class="dlbl">VEREDICTO</div>
-    <div style="display:flex;gap:6px;margin-top:5px;">${['OK','Hallazgo','Pendiente'].map(v=>`<div class="nst${v===r.verdict?' on':''}" onclick="this.closest('.aud-row').querySelectorAll('.nst').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${v}</div>`).join('')}</div></div>
-    <textarea class="narea" placeholder="Nota de auditoría · obligatoria para guardar el veredicto."></textarea>
-    <div class="nsavebtn">Guardar veredicto</div>
-  </div>`).join('');
+/* ═══════════════════════════════════════════════════════════════
+     AUDITORÍA · dos relatos del mismo hecho
+   ═══════════════════════════════════════════════════════════════
+
+   Auditar un caso es contrastar lo que ESCRIBIÓ la gestora con lo que
+   REGISTRÓ la central telefónica. Los dos lados son datos que Nova ya
+   tiene: Novedades trae `gestora` y `solucion`; Llamadas trae quién
+   llamó, cuándo y cuánto habló. No había que inventar nada.
+
+   Nova marca las discrepancias y se detiene ahí. El veredicto lo pone
+   una persona, porque una discrepancia no es una falta: la clienta
+   pudo llamar ella, pudo ser por WhatsApp, la central pudo no
+   registrar. Un sistema que reparte hallazgos solo, sobre el trabajo
+   de alguien con nombre y apellido, se equivoca en público. */
+
+let AUD = null;
+
+async function cargarAuditoriaCasos() {
+  if (!CONECTADO) return false;
+  let r;
+  try { r = await api('auditoria_casos', { tienda: ST, dias: 14 }); }
+  catch (e) { return false; }
+  if (!r || !r.ok) {
+    const el = document.getElementById('audrows');
+    if (el) el.innerHTML = '<div class="eq-vacio">' + esc(r && r.error || 'Sin datos.') + '</div>';
+    return false;
+  }
+  AUD = r;
+  pintarAuditoriaCasos();
+  desellar(['audkpi', 'audrows']);
+  return true;
+}
+
+function pintarAuditoriaCasos() {
+  const R = AUD.recuento;
+
+  document.getElementById('audkpi').innerHTML = [
+    { lb: 'REVISADOS',   v: R.revisados + ' de ' + R.mostrados,
+      sub: R.sinRevisar + ' sin revisar', cl: R.sinRevisar ? 'w' : 'g' },
+    { lb: 'HALLAZGOS',   v: String(R.hallazgos),
+      sub: R.hallazgos ? 'hay que hablarlos' : 'ninguno por ahora',
+      cl: R.hallazgos ? 'r' : 'g' },
+    { lb: 'CON SEÑAL',   v: String(R.conSenal),
+      sub: 'algo no calza · míralos primero', cl: R.conSenal ? 'w' : 'a' },
+    { lb: 'CERRADOS',    v: String(R.cerradasEnVentana),
+      sub: 'desde el ' + esc(AUD.desde), cl: 'a' },
+  ].map(k => `<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div>` +
+             `<div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
+
+  const cont = document.getElementById('audrows');
+
+  if (!AUD.casos.length) {
+    cont.innerHTML = '<div class="eq-vacio">' +
+      esc(AUD.porque || 'No hay casos cerrados en esta ventana.') + '</div>';
+    return;
+  }
+
+  const NIVEL = { mal: 'bd-r', ojo: 'bd-w', bien: 'bd-g' };
+
+  cont.innerHTML =
+    (AUD.sinLlamadas
+      ? '<div class="eq-vacio" style="margin-bottom:10px;">' + esc(AUD.porqueSinLlamadas) + '</div>'
+      : '') +
+    AUD.casos.map(function (c, i) {
+      const puesto = c.veredicto !== 'pendiente';
+      return `<div class="aud-row" id="aud-${i}">
+      <div class="nh">
+        <div><span class="onm">${esc(c.cliente || 'Sin nombre')}</span>&ensp;` +
+          `<span class="oid">${esc(c.pedidoId)}</span>` +
+          (c.gestora ? `&ensp;<span class="oid">· ${esc(c.gestora)}</span>` : '') + `</div>` +
+        (puesto
+          ? `<span class="bd ${c.veredicto === 'hallazgo' ? 'bd-r' : 'bd-g'}">` +
+            `${c.veredicto === 'hallazgo' ? 'Hallazgo' : 'OK'}</span>`
+          : '') + `
+      </div>
+      <div class="g2" style="gap:12px;">
+        <div><div class="dlbl">DIJO LA GESTORA${c.gestora ? ' · ' + esc(c.gestora) : ''}</div>
+          <div class="dtxt">${c.dijoGestora
+            ? esc(c.dijoGestora)
+            : '<em>Cerró el caso sin escribir qué hizo.</em>'}</div></div>
+        <div><div class="dlbl">DICE LA CENTRAL</div>
+          <div class="dtxt">${c.llamadas.length
+            ? c.llamadas.map(function (l) {
+                return esc(String(l.cuando).slice(0, 16)) + ' · ' +
+                  esc(l.estado || l.sentido || '') +
+                  (l.segundos ? ' · habló ' + l.segundos + 's' : ' · no contestó') +
+                  (l.observacion ? '<br><span style="opacity:.75;">' + esc(l.observacion) +
+                    '</span>' : '');
+              }).join('<br>')
+            : '<em>Ninguna llamada registrada para este pedido.</em>'}</div></div>
+      </div>` +
+      (c.senales.length
+        ? `<div style="display:flex;flex-direction:column;gap:5px;margin-top:4px;">` +
+          c.senales.map(function (x) {
+            return `<div style="display:flex;align-items:flex-start;gap:8px;">` +
+              `<span class="bd ${NIVEL[x.nivel] || ''}">${x.nivel === 'bien' ? 'calza' : 'ojo'}</span>` +
+              `<span class="dtxt" style="flex:1;">${esc(x.que)}</span></div>`;
+          }).join('') + `</div>`
+        : '') + `
+      <div><div class="dlbl">VEREDICTO</div>
+      <div style="display:flex;gap:6px;margin-top:5px;">` +
+        ['ok', 'hallazgo', 'pendiente'].map(function (v) {
+          return `<div class="nst${v === c.veredicto ? ' on' : ''}" ` +
+            `onclick="marcarVeredicto(${i},'${v}')">` +
+            `${esc(AUD.veredictos[v].nombre)}</div>`;
+        }).join('') + `</div></div>
+      <textarea class="narea" id="aud-nota-${i}" ` +
+        `placeholder="Nota de auditoría · obligatoria cuando hay hallazgo, porque queda en el registro de esa persona."` +
+        `>${esc(c.notaAuditoria || '')}</textarea>
+      <div class="nsavebtn" onclick="guardarVeredicto(${i})">Guardar veredicto</div>` +
+      (c.auditadoPor
+        ? `<div class="ksub" style="margin-top:4px;">Lo puso ${esc(c.auditadoPor)}` +
+          (c.auditadoEn ? ' el ' + esc(String(c.auditadoEn).slice(0, 10)) : '') + `</div>`
+        : '') + `
+      <div class="eq-vacio" id="aud-msg-${i}" style="display:none;margin-top:6px;"></div>
+    </div>`;
+    }).join('');
+}
+
+/** Marcar es solo visual. Guardar es lo que escribe. */
+function marcarVeredicto(i, v) {
+  AUD.casos[i].veredicto = v;
+  const fila = document.getElementById('aud-' + i);
+  if (!fila) return;
+  const botones = fila.querySelectorAll('.nst');
+  const ids = ['ok', 'hallazgo', 'pendiente'];
+  botones.forEach(function (b, k) { b.classList.toggle('on', ids[k] === v); });
+}
+
+async function guardarVeredicto(i) {
+  const c = AUD.casos[i];
+  const msg = document.getElementById('aud-msg-' + i);
+  const nota = (document.getElementById('aud-nota-' + i) || {}).value || '';
+  const decir = function (t, mal) {
+    if (!msg) return;
+    msg.style.display = 'block';
+    msg.textContent = t;
+    msg.style.color = mal ? 'var(--rojo, #b8322f)' : '';
+  };
+
+  decir('Guardando…');
+  let r;
+  try {
+    r = await api('auditoria_guardar', {
+      novedadId: c.novedadId, pedidoId: c.pedidoId, gestora: c.gestora,
+      veredicto: c.veredicto, nota: nota, tienda: ST,
+      senales: c.senales.map(function (x) { return x.tipo; }),
+    });
+  } catch (e) { decir('No pude hablar con la hoja: ' + (e && e.message || e), true); return; }
+
+  if (!r || !r.ok) { decir(r && r.error || 'No se pudo guardar.', true); return; }
+
+  /**
+   * Volver a traer la lista, y no solo pintar un «listo».
+   *
+   * Lo que falló aquí fue exactamente esto: parecía guardado y no lo
+   * estaba. Un mensaje de éxito escrito por la propia pantalla no
+   * prueba nada — lo que prueba es que el dato vuelva de la hoja.
+   */
+  await cargarAuditoriaCasos();
 }
 
 function buildPauta() {
@@ -3474,7 +3637,8 @@ async function cargarReales() {
     // puede dejar a Pedidos sin cargar. Se esperan las dos para saber
     // cuándo la pantalla terminó de ponerse al día.
     await Promise.all([cargarPedidosReales(), cargarNovedadesReales(),
-                       cargarEquipo(), cargarAuditoria(), cargarAlarmas(),
+                       cargarEquipo(), cargarAuditoria(), cargarAuditoriaCasos(),
+                       cargarAlarmas(),
                        cargarRecuento(), cargarProductos(), cargarAyer(),
                        cargarHistorial(), cargarCas(), cargarEstados(),
                        cargarMeta(), cargarSemaforo()]);
@@ -7280,7 +7444,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-24 · c309';
+const VERSION_PANTALLA = '2026-09-24 · 9c00';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');

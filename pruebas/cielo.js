@@ -98,6 +98,18 @@ const C_USU = ['id','nombre','correo','fecha_nacimiento','hora_nacimiento',
 const YO = 'manuela@nova.com';
 
 function sembrarHojas() {
+  /**
+   * Cada caso de prueba es una PETICIÓN nueva, y una petición real
+   * empieza soltando lo que Nova tenga en memoria de la anterior
+   * (`manejar()` lo hace). Aquí hay que decirlo a mano porque las
+   * pruebas llaman a las funciones directamente, sin pasar por ahí.
+   *
+   * Sin esto, el manejador del libro y las hojas ya leídas seguirían
+   * apuntando a los datos del caso anterior, y la prueba mediría un
+   * Nova que no existe.
+   */
+  libroOlvidar_(); soulOlvidar_();
+
   UUID = 0;
   LIBROS.cen = { Trabajos: [['id','nombre','tipo','estado','horas_semana','fecha_entrega']],
                  Cobros: [['id']], Finanzas: [['id','fecha','flujo','categoria','monto','moneda']],
@@ -400,11 +412,25 @@ igual('la temporada está abierta', 1, cielo.pensumAbierto.length);
 ok('y todos los días toman SU momento, no el de la luna',
    cielo.semana.dias.every(d => d.momento === 'cambiar' && d.deDonde === 'pensum'),
    JSON.stringify(cielo.semana.dias.map(d => d.deDonde + ':' + d.momento)));
-ok('cuando no hay temporada, habla la luna',
+/**
+ * La luna solo habla cuando NO hay pensum. Y desde que Nova siembra
+ * las efemérides y arma el pensum sola, a ELLA ya no le va a pasar:
+ * vaciar su Pensum y sus Tránsitos los vuelve a llenar en la misma
+ * llamada. Que es exactamente lo que pidió.
+ *
+ * Así que el respaldo se prueba con otra socia, sin efemérides
+ * calculadas — que es el único caso en que de verdad queda vacío. Si
+ * se probara con la de ella, esta prueba estaría comprobando que la
+ * siembra NO funciona.
+ */
+ok('una socia sin tránsitos calculados sigue teniendo la luna',
    (function () {
+     const OTRA = { correo: 'otra@socia.com', nombre: 'Otra', rol: 'socia' };
      LIBROS.s.Pensum = [C_PEN];
-     const x = F.soulCielo(SOCIA, {});
-     return x.semana.dias.every(d => d.deDonde === 'luna');
+     LIBROS.s.Transitos = [C_TRA];
+     const x = F.soulCielo(OTRA, {});
+     return x.automatico.transitosSembrados === 0 &&
+            x.semana.dias.every(d => d.deDonde === 'luna');
    })());
 ok('una temporada sin título no se guarda',
    F.soulPensumGuardar(SOCIA, { datos: { desde: '2026-01-01' } }).ok === false);
@@ -460,6 +486,15 @@ for (let i = 0; i < 12; i++) {
   // 2026-08-09 es cuarto menguante; se avanzan meses para no repetir fecha
   LIBROS.s.Pendientes.push(tarea('m' + i, '2026-0' + (1 + i % 5) + '-09', true));
 }
+/**
+ * Tocar la hoja por debajo es simular una edición FUERA de la app —
+ * ella abriendo el Google Sheet a mano. Eso, en la vida real, pasa
+ * entre dos peticiones, así que aquí hay que marcar el corte: Nova
+ * suelta lo que tenía leído en memoria, igual que al empezar una
+ * petición nueva.
+ */
+soulOlvidar_();
+
 cielo = F.soulCielo(SOCIA, {});
 ok('con muestra sí aparece un porcentaje',
    cielo.medicion.fases.filter(f => f.pct !== null).length >= 1,
@@ -533,13 +568,28 @@ igual('y el momento sacado de la casa', 'cambiar', cl.pensumPropuesto[0].momento
 igual('sin fechas inventadas: las de Horus',
       ['2026-09-01', '2026-11-30'],
       [cl.pensumPropuesto[0].desde, cl.pensumPropuesto[0].hasta]);
-ok('proponer NO guardó nada', LIBROS.s.Pensum.length === 1);
+/**
+ * ── LO QUE CAMBIÓ, Y POR QUÉ ──
+ *
+ * Antes `soulCielo` solo PROPONÍA y ella confirmaba una por una. Eso
+ * era correcto y era también la razón de que nunca viera un pensum:
+ * cinco años de tránsitos son ciento setenta y ocho confirmaciones, y
+ * la propuesta se quedaba ahí para siempre.
+ *
+ * Ahora la misma llamada crea lo que cae en la ventana de 120 días,
+ * marcado con el nombre de Nova. Lo de más allá se sigue proponiendo.
+ *
+ * Lo que NO cambió, y por eso se sigue probando: no duplica, y lo que
+ * ella escribió a mano no se toca.
+ */
+igual('abrir El cielo ya deja la temporada creada', 1, LIBROS.s.Pensum.length - 1);
+ok('y queda marcada como hecha por Nova',
+   LIBROS.s.Pensum[1][C_PEN.indexOf('nota')].indexOf(F.PENSUM_MARCA) === 0,
+   LIBROS.s.Pensum[1][C_PEN.indexOf('nota')]);
+igual('está abierta', 1, F.soulCielo(SOCIA, {}).pensumAbierto.length);
 
 g = F.soulPensumDesdeTransitos(SOCIA, { items: cl.pensumPropuesto });
-igual('al confirmar, se guarda', 1, g.creadas);
-igual('y ya está abierta', 1, F.soulCielo(SOCIA, {}).pensumAbierto.length);
-igual('confirmarla otra vez no duplica', 0,
-      F.soulPensumDesdeTransitos(SOCIA, { items: cl.pensumPropuesto }).creadas);
+igual('confirmarla a mano encima no duplica', 0, g.creadas);
 ok('y la propuesta ya la marca como puesta',
    F.soulCielo(SOCIA, {}).pensumPropuesto[0].yaEsta === true);
 ok('sin marcar nada, lo dice',

@@ -578,7 +578,7 @@ function alarma(id, nivel, titulo, detalle, casos, ir) {
  * nadie los abre — que es exactamente cuando deja de servir.
  */
 function revisarAlarmas(cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const tiendas = tiendasDeCliente(ss);
   const log = [];
 
@@ -709,7 +709,7 @@ function instalarTriggerAlarmas() {
 
 /** Recorre todos los clientes registrados. */
 function revisarAlarmasTodos() {
-  const central = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const central = libro_(IDS_().central).getSheetByName('Clientes');
   if (!central || central.getLastRow() < 2) return 'Sin clientes.';
   const filas = central.getDataRange().getValues();
   const enc = filas[0].map(norm);

@@ -137,7 +137,7 @@ function familiaDe_(t) {
 }
 
 function mioSheet_(nombre) {
-  const ss = SpreadsheetApp.openById(IDS_().central);
+  const ss = libro_(IDS_().central);
   const sh = ss.getSheetByName(nombre);
   if (!sh) {
     throw new Error('Falta la hoja ' + nombre + ' en Nova_Central. ' +

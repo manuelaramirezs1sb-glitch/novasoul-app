@@ -108,6 +108,18 @@ function ped(o) { return C_PED.map(c => (o[c] === undefined ? '' : o[c])); }
 function pau(o) { return C_PAU.map(c => (o[c] === undefined ? '' : o[c])); }
 
 function sembrar(opts) {
+  /**
+   * Cada caso de prueba es una PETICIÓN nueva, y una petición real
+   * empieza soltando lo que Nova tenga en memoria de la anterior
+   * (`manejar()` lo hace). Aquí hay que decirlo a mano porque las
+   * pruebas llaman a las funciones directamente, sin pasar por ahí.
+   *
+   * Sin esto, el manejador del libro y las hojas ya leídas seguirían
+   * apuntando a los datos del caso anterior, y la prueba mediría un
+   * Nova que no existe.
+   */
+  libroOlvidar_(); soulOlvidar_();
+
   opts = opts || {};
   Object.keys(GUARDADAS).forEach(k => delete GUARDADAS[k]);
   if (opts.llave !== false) GUARDADAS['META_TOKEN_cli'] = 'xxx';

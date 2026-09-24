@@ -61,7 +61,7 @@ function crearCliente(empresa, pais, tiendas, fuentes, plan, dueno) {
     vistos[t.id] = 1;
   });
 
-  const central = SpreadsheetApp.openById(IDS_().central);
+  const central = libro_(IDS_().central);
   const shClientes = central.getSheetByName('Clientes');
   if (!shClientes) throw new Error('Corre bootstrapTodo() primero: falta la hoja Clientes.');
 
@@ -78,7 +78,7 @@ function crearCliente(empresa, pais, tiendas, fuentes, plan, dueno) {
   const copia = DriveApp.getFileById(IDS_().empresarial)
     .makeCopy('Nova_Empresarial_' + empresa, carpeta);
   const sheetId = copia.getId();
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
 
   /**
    * Las filas se arman leyendo los encabezados, no contando columnas.
@@ -227,7 +227,7 @@ function hojaCliente(ref) {
   if (ref === 'template') return IDS_().empresarial;
   if (ref && String(ref).length > 30) return ref; // ya es un ID
 
-  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const sh = libro_(IDS_().central).getSheetByName('Clientes');
   const filas = (sh && sh.getLastRow() > 1)
     ? sh.getDataRange().getValues().slice(1).filter(function (f) { return f[0]; })
     : [];
@@ -252,7 +252,7 @@ function hojaCliente(ref) {
 
 /** Lista los clientes registrados y a qué hoja apunta cada uno. */
 function listarClientes() {
-  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const sh = libro_(IDS_().central).getSheetByName('Clientes');
   if (!sh || sh.getLastRow() < 2) { Logger.log('Sin clientes todavía.'); return []; }
   const filas = sh.getDataRange().getValues().slice(1);
   const out = filas.map(function (f) {

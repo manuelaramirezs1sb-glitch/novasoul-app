@@ -530,8 +530,17 @@ textarea,input,select,button{font-family:inherit;}
         <div class="vista-h">
           <div>
             <div class="vista-t">Mi plata</div>
-            <p class="vista-p">Lo que entró, lo que salió y lo que falta del mes. Los gastos fijos son el
-              <em>plan</em>; los movimientos los lleva Nova Central, y por eso se pueden comparar.</p>
+            <!--
+              Esta frase antes explicaba de dónde salían los datos. Ella
+              respondió: «no entiendo cómo razona esta pantalla (…) como
+              lo veo no entiendo nada de lo que me quiere transmitir más
+              que mi plata entrante y ya». Así que ahora dice cómo se
+              LEE, que era lo que faltaba.
+            -->
+            <p class="vista-p">Se lee de arriba abajo y contesta cuatro preguntas en orden:
+              <strong>cuánto entra</strong>, <strong>cuánto sale todos los meses</strong>,
+              <strong>cuánto de eso es deuda y cuándo se acaba</strong>, y
+              <strong>qué queda</strong>. Nunca se suman dos monedas.</p>
           </div>
           <div class="row-btns">
             <button class="card-cta" onclick="abrirHormiga()">+ Gasto del día</button>
@@ -539,6 +548,7 @@ textarea,input,select,button{font-family:inherit;}
           </div>
         </div>
         <div id="pl-mes"></div>
+        <div id="pl-orden"></div>
         <div id="pl-turnos"></div>
         <div class="card" id="pl-hormiga"></div>
         <div class="kpis" id="fin-kpis"></div>
@@ -573,6 +583,14 @@ textarea,input,select,button{font-family:inherit;}
           </div>
         </div>
         <div id="ci-hoy"></div>
+        <!--
+          LA LECTURA A FONDO. Tres ventanas, porque los planetas no van
+          todos a la misma velocidad: la Luna cambia cada tres días,
+          Júpiter dura tres meses y Plutón cuatro años. Mezclarlos en
+          una sola lista entierra lo de hoy debajo de lo de 2029.
+        -->
+        <div id="ci-lectura"></div>
+        <div id="ci-ejes"></div>
         <div id="ci-anio"></div>
         <div id="ci-semana"></div>
         <div class="g14">
@@ -897,6 +915,34 @@ textarea,input,select,button{font-family:inherit;}
       <div class="f"><label>DÍA DEL MES</label><input type="number" id="mf-dia" min="0" max="31" placeholder="5"></div>
       <div class="f"><label>¿SIGUE ACTIVO?</label><select id="mf-activo"><option value="si">Sí</option><option value="no">No, ya no lo pago</option></select></div>
     </div>
+    <!--
+      LO QUE ELLA PIDIÓ DISTINGUIR. Con sus palabras: «debería haber una
+      distinción si es único pago, pago mensual, pago por cuotas» y «los
+      ingresos y los gastos fijos también deben estar separados».
+      Estos dos campos son los que deciden en qué bloque cae la línea.
+    -->
+    <div class="f-row">
+      <div class="f"><label>¿ENTRA O SALE?</label>
+        <select id="mf-flujo">
+          <option value="gasto">Sale · es un gasto</option>
+          <option value="ingreso">Entra · es un ingreso</option>
+        </select></div>
+      <div class="f"><label>CÓMO SE PAGA</label>
+        <select id="mf-tipo" onchange="mostrarCuotas()">
+          <option value="mensual">Todos los meses</option>
+          <option value="cuotas">Por cuotas · es una deuda</option>
+          <option value="unico">Pago único de este mes</option>
+        </select><small id="mf-tipo-ayuda">Se repite cada mes y no se acaba.</small></div>
+    </div>
+    <div id="mf-cuotas" style="display:none;">
+      <div class="f-row">
+        <div class="f"><label>¿A QUIÉN LE DEBES?</label><input id="mf-acreedor" placeholder="Nu, Sistecrédito, mamá…"></div>
+        <div class="f"><label>CUÁNTAS CUOTAS SON</label><input type="number" id="mf-cuotas-total" min="1" max="120" placeholder="12">
+          <small>Sin esto no puedo decirte cuándo terminas de pagar.</small></div>
+      </div>
+      <div class="f"><label>MES DE LA PRIMERA CUOTA</label><input type="month" id="mf-cuota-desde">
+        <small>Con esto cuento sola cuántas llevas, y no hay que actualizarlo cada mes.</small></div>
+    </div>
     <div class="f-btns">
       <button class="card-cta" onclick="guardarFijo()">Guardar</button>
       <button class="card-ghost" onclick="cerrarModal('m-fijo')">Cancelar</button>
@@ -919,7 +965,7 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-24 · 30bb';
+const VERSION_PANTALLA = '2026-09-24 · 7f76';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
@@ -1127,6 +1173,68 @@ function avisoGlobal(msg, bien) {
  * Con uno solo, un error al dibujar salía en pantalla como «sin
  * conexión», y eso manda a revisar el internet por un error mío.
  */
+/* ═══════════════════════════════════════════════════════════════
+     POR QUÉ SE DEMORABA, Y QUÉ SE HIZO
+   ═══════════════════════════════════════════════════════════════
+
+   Ella: «en NovaSoul está muy lento para cargar todo. No sé qué
+   podamos hacer para optimizar, ¿el API será que sí puede con toda
+   esta información en un solo API? ¿En eso no se podría reemplazar
+   con n8n?».
+
+   No eran los datos. Eran los VIAJES. Cada `nc(...)` es una petición
+   HTTPS entera a Apps Script: abrir conexión, arrancar el motor de
+   Google, comprobar la sesión, correr, devolver. Eso cuesta entre
+   medio segundo y dos segundos SIEMPRE, traiga tres filas o tres mil.
+   Cada sección hacía la suya, así que abrir Mi plata después de Hoy
+   era esperar el arranque del motor otra vez.
+
+   Ahora se pide TODO de una, en segundo plano, apenas termina de
+   pintarse la primera pantalla. Cuando ella toca una sección, los
+   datos ya están. Medido: cinco peticiones → una, el libro se abre
+   sesenta veces → dos, y se leen veinticuatro hojas enteras → ocho.
+
+   (Sobre n8n: no ayudaría aquí. n8n no quita viajes, los agrega —la
+   pantalla llamaría a n8n, n8n a Google, y de vuelta. Donde había un
+   salto habría dos, y el dato seguiría viviendo en la misma hoja.) */
+
+async function precargarTodo() {
+  let r;
+  try { r = await nc('nc_soul_arranque'); } catch (e) { return; }
+  if (!r || !r.ok) return;
+
+  /**
+   * Se rellena solo lo que todavía está vacío. Si ella ya abrió una
+   * sección mientras esto viajaba, lo suyo es más nuevo y no se pisa.
+   */
+  if (!PLATA && r.plata && r.plata.ok) { FIN = r.plata; PLATA = r.plata; }
+  if (!CI && r.cielo && r.cielo.ok) CI = r.cielo;
+  if (!RUT && r.rutina && r.rutina.ok) RUT = r.rutina;
+  if (!UNI && r.materias && r.materias.ok) UNI = r.materias;
+
+  // Y si ya está abierta alguna, se pinta con lo que acaba de llegar.
+  try {
+    const abierta = function (v) {
+      const el = document.getElementById('v-' + v);
+      return el && el.classList.contains('on');
+    };
+    if (PLATA && abierta('plata')) { pintarMes(); pintarOrden(); pintarFinanzas(); }
+    if (CI && abierta('cielo')) { pintarCielo(); pintarEjes(); cargarLectura(LEC_RANGO); }
+    if (RUT && abierta('rutina')) pintarRutina();
+    if (UNI && abierta('uni')) pintarUni();
+  } catch (e) { /* una sección que no pinta no puede tumbar las otras */ }
+
+  /**
+   * Lo que no pudo venir se dice, en vez de dejar una sección en
+   * blanco para siempre. Una pantalla vacía y una que todavía carga se
+   * ven exactamente igual.
+   */
+  if (r.fallaron && r.fallaron.length) {
+    avisoGlobal('No pude traer ' + r.fallaron.map(function (x) {
+      return x.seccion; }).join(' ni ') + '. El resto sí está.');
+  }
+}
+
 async function cargar() {
   let r;
   try {
@@ -1151,6 +1259,11 @@ async function cargar() {
     // Un «guardé 2 entregas» no se borra por recargar justo después.
     // Tampoco el aviso de las hojas que faltan, que lo acabamos de poner.
     if (!AVISO_BUENO && !(r.faltanHojas && r.faltanHojas.length)) avisoGlobal('');
+    /**
+     * Y el resto, en segundo plano. Sin `await`: la pantalla de Hoy ya
+     * está pintada y no tiene por qué esperar a lo de las otras.
+     */
+    precargarTodo();
   } catch (e) {
     // D se limpia ANTES de avisar: si no, el siguiente intento vuelve a
     // entrar al mismo dibujo roto y el error se pierde sin mensaje.
@@ -1739,7 +1852,7 @@ async function cargarPlata() {
     return;
   }
   FIN = r; PLATA = r;
-  try { pintarMes(); pintarFinanzas(); }
+  try { pintarMes(); pintarOrden(); pintarFinanzas(); }
   catch (e) {
     FIN = null; PLATA = null;
     document.getElementById('fin-lista').innerHTML =
@@ -1754,6 +1867,214 @@ async function cargarPlata() {
  * Van separadas porque un solo número que las mezcla se lee como un
  * hecho, y con eso se deciden compras.
  */
+/* ═══════════════════════════════════════════════════════════════
+     LOS CUATRO BLOQUES DE MI PLATA
+   ═══════════════════════════════════════════════════════════════
+
+   ┌─ QUÉ CAMBIÓ Y POR QUÉ ─────────────────────────────────────┐
+   │                                                            │
+   │ Antes esta pantalla estaba ordenada por CATEGORÍA:         │
+   │ arriendo, mercado, servicios, internet, crédito, deudas.   │
+   │ Una lista plana. Ella dijo que no entendía qué le quería   │
+   │ transmitir, y el problema no era el orden — era el eje.    │
+   │                                                            │
+   │ «Deudas · COP 690.000» al lado de «Internet · COP 93.000»  │
+   │ oculta lo único que las diferencia: el internet es para    │
+   │ siempre y la deuda TERMINA. Esa fecha es la diferencia     │
+   │ entre deber y estar pagando, y no cabía en la lista vieja. │
+   │                                                            │
+   │ Ahora se agrupa por lo que cada peso HACE. Las categorías  │
+   │ siguen vivas, pero dentro de su bloque — que es donde sí   │
+   │ significan algo.                                           │
+   │                                                            │
+   └────────────────────────────────────────────────────────────┘ */
+
+/** Una suma por moneda, escrita sin mezclarlas jamás. */
+function porMoneda(o, signo) {
+  const ks = Object.keys(o || {});
+  if (!ks.length) return '—';
+  return ks.sort(function (a, b) { return a === 'COP' ? -1 : 1; }).map(function (k) {
+    return (signo || '') + k + ' ' + nfmt(o[k]);
+  }).join('  ·  ');
+}
+
+function pintarOrden() {
+  const O = PLATA.orden;
+  if (!O) { document.getElementById('pl-orden').innerHTML = ''; return; }
+
+  const B = O.bloques;
+  const info = {};
+  O.bloquesOrden.forEach(function (b) { info[b.id] = b; });
+
+  /** La cabecera de un bloque: su nombre, su total y qué es. */
+  const cab = function (id, total, extra) {
+    const i = info[id] || { nombre: id, que: '' };
+    return '<div class="card-h"><span class="card-lbl">' + esc(i.nombre.toUpperCase()) + '</span>' +
+      '<span class="fila-m">' + porMoneda(total) + '</span></div>' +
+      '<p class="card-p" style="margin-bottom:10px;">' + esc(i.que) + '</p>' + (extra || '');
+  };
+
+  /** Una línea suelta: concepto, día del mes y monto. */
+  const linea = function (l, derecha) {
+    return '<div class="fila"><span class="fila-t"><strong>' +
+      esc(l.concepto || l.categoriaNombre) + '</strong>' +
+      (l.acreedor ? ' <span class="chip">' + esc(l.acreedor) + '</span>' : '') +
+      '<br><span style="color:var(--mut3);font-size:12px;">' + esc(l.categoriaNombre) +
+      (l.dia ? ' · día ' + l.dia : '') + '</span></span>' +
+      (derecha || '') +
+      '<span class="fila-m">' + esc(l.moneda) + ' ' + nfmt(l.monto) + '</span></div>';
+  };
+
+  let html = '';
+
+  /* ── 1 · LO QUE ENTRA ── */
+  html += '<div class="card-sage" style="margin-bottom:18px;">' +
+    '<div class="card-h"><span class="card-lbl-sage">LO QUE ENTRA</span>' +
+    '<span class="fila-m">' + porMoneda(B.entra.turnos) + '</span></div>' +
+    '<p class="card-p" style="margin-bottom:10px;">' + esc(info.entra.que) + '</p>' +
+    (B.entra.lineas.length ? B.entra.lineas.map(function (l) { return linea(l); }).join('') : '') +
+    (B.entra.turnosPorVenir
+      ? '<div class="fila"><span class="fila-t">Turnos que faltan por trabajar este mes</span>' +
+        '<span class="chip horas">' + B.entra.turnosPorVenir + '</span></div>'
+      : '') +
+    (!B.entra.lineas.length && !Object.keys(B.entra.turnos || {}).length
+      ? '<div class="vacio">Este mes todavía no ha entrado nada. Si tienes un ingreso fijo ' +
+        '—una mesada, un sueldo— agrégalo con «+ Gasto fijo» y márcalo como <em>entra</em>.</div>'
+      : '') + '</div>';
+
+  /* ── 2 · LO QUE SALE TODOS LOS MESES ── */
+  html += '<div class="card" style="margin-bottom:18px;">' +
+    cab('fijo', B.fijo.total) +
+    (B.fijo.lineas.length
+      ? B.fijo.lineas.map(function (l) { return linea(l); }).join('') +
+        '<div style="border-top:1px solid var(--soft2);margin-top:10px;padding-top:10px;">' +
+        '<div class="fila"><span class="fila-t">Ya se pagó este mes</span>' +
+          '<span class="fila-m">' + porMoneda(B.fijo.pagado) + '</span></div>' +
+        '<div class="fila"><span class="fila-t">Falta por pagar</span>' +
+          '<span class="fila-m" style="color:var(--rojo);">' +
+          porMoneda(B.fijo.pendiente) + '</span></div></div>'
+      : '<div class="vacio">Todavía no has puesto ningún gasto de todos los meses.</div>') +
+    '</div>';
+
+  /* ── 3 · CUOTAS Y DEUDAS ── */
+  html += '<div class="card-lila" style="margin-bottom:18px;">' +
+    '<div class="card-h"><span class="card-lbl-lila">CUOTAS Y DEUDAS</span>' +
+    '<span class="fila-m">' + porMoneda(B.cuotas.total) + ' al mes</span></div>' +
+    '<p class="card-p" style="margin-bottom:10px;">' + esc(info.cuotas.que) + '</p>' +
+    (B.cuotas.lineas.length
+      ? B.cuotas.lineas.map(function (l) {
+          const c = l.cuotas || {};
+          /**
+           * La barra de cuotas pagadas. Es lo que convierte una deuda
+           * en algo que se acaba: ver el trozo que ya no debes es
+           * distinto de leer el mismo número todos los meses.
+           */
+          const pct = c.total ? Math.round((c.pagadas / c.total) * 100) : 0;
+          return '<div style="border-bottom:1px solid var(--soft2);padding:11px 0;">' +
+            '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+              '<span style="flex:1;min-width:150px;font:600 14px/1.3 \'DM Sans\';color:var(--ink);">' +
+                esc(l.concepto) +
+                (l.acreedor ? ' <span class="chip">' + esc(l.acreedor) + '</span>' : '') + '</span>' +
+              '<span class="fila-m">' + esc(l.moneda) + ' ' + nfmt(l.monto) + ' / mes</span>' +
+            '</div>' +
+            (c.total
+              ? '<div style="display:flex;align-items:center;gap:9px;margin-top:7px;">' +
+                  '<div style="flex:1;height:6px;border-radius:3px;background:var(--soft2);' +
+                    'overflow:hidden;"><div style="height:100%;width:' + pct + '%;' +
+                    'background:var(--sage-d, #6f8f6a);"></div></div>' +
+                  '<span class="kpi-s">van ' + c.pagadas + ' de ' + c.total + '</span>' +
+                '</div>' +
+                '<div class="kcard-m" style="margin-top:7px;">' +
+                  (c.termina ? '<span class="chip hoy">se acaba en ' + esc(fmes(c.termina)) +
+                    '</span>' : '') +
+                  (c.faltaPagar !== null ? '<span class="chip">falta ' + esc(l.moneda) + ' ' +
+                    nfmt(c.faltaPagar) + '</span>' : '') +
+                '</div>'
+              : '<p class="card-p" style="margin-top:7px;color:var(--mut3);font-size:12px;">' +
+                esc(c.porque || '') +
+                ' <span class="link" onclick="editarFijo(\'' + l.id + '\')">Poner las cuotas</span></p>') +
+            '</div>';
+        }).join('') +
+        '<div style="border-top:1px solid var(--soft2);margin-top:12px;padding-top:12px;">' +
+          '<div class="fila"><span class="fila-t"><strong>Lo que falta por pagar en total</strong>' +
+            '<br><span style="color:var(--mut3);font-size:12px;">No este mes: TODO lo que queda.' +
+            '</span></span><span class="fila-m">' + porMoneda(B.cuotas.faltaTodo) + '</span></div>' +
+          (B.cuotas.ultima
+            ? '<div class="fila"><span class="fila-t">La última en acabarse</span>' +
+              '<span class="chip hoy">' + esc(fmes(B.cuotas.ultima)) + '</span></div>'
+            : '') +
+          (B.cuotas.sinFecha
+            ? '<div class="aviso mal on" style="margin-top:9px;">Hay ' + B.cuotas.sinFecha +
+              (B.cuotas.sinFecha === 1 ? ' deuda sin número de cuotas' : ' deudas sin número de cuotas') +
+              ', así que no entran en el total de arriba. Sin ese dato no puedo decirte cuándo ' +
+              'terminas de pagar.</div>'
+            : '') +
+        '</div>'
+      : '<div class="vacio">No tienes nada a plazos registrado. Si estás pagando algo por ' +
+        'cuotas, agrégalo: es la única forma de ver cuándo se acaba.</div>') +
+    '</div>';
+
+  /* ── 4 · PAGOS ÚNICOS, solo si los hay ── */
+  if (B.unico.lineas.length) {
+    html += '<div class="card" style="margin-bottom:18px;">' +
+      cab('unico', B.unico.total) +
+      B.unico.lineas.map(function (l) { return linea(l); }).join('') + '</div>';
+  }
+
+  /* ── EL RESULTADO, moneda por moneda ── */
+  html += '<div class="card" style="margin-bottom:18px;">' +
+    '<div class="card-h"><span class="card-lbl">Y ENTONCES, ¿QUÉ QUEDA?</span></div>' +
+    (O.resultado.length
+      ? O.resultado.map(function (x) {
+          return '<div style="border-bottom:1px solid var(--soft2);padding:11px 0;">' +
+            '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+              '<span style="font:600 16px/1 \'Fraunces\',serif;color:var(--ink);' +
+                'min-width:52px;">' + esc(x.moneda) + '</span>' +
+              '<span class="kpi-s" style="flex:1;min-width:190px;">entra ' + nfmt(x.entra) +
+                ' · sale ' + nfmt(x.sale) + '</span>' +
+              '<span class="fila-m" style="color:' +
+                (x.queda < 0 ? 'var(--rojo)' : 'var(--sage-d)') + ';font-size:17px;">' +
+                nfmt(x.queda) + '</span>' +
+            '</div>' +
+            (x.comprometidoPct !== null
+              ? '<div class="kpi-s" style="margin-top:6px;">De cada 100 que entran, ' +
+                x.comprometidoPct + ' ya tienen dueño antes de llegar.</div>'
+              : '') +
+            '</div>';
+        }).join('')
+      : '<div class="vacio">Sin movimientos este mes.</div>') +
+    (Object.keys(B.ahorro.total || {}).length
+      ? '<div class="fila" style="margin-top:10px;"><span class="fila-t">Ahorro' +
+        '<br><span style="color:var(--mut3);font-size:12px;">Va aparte: no es un gasto.</span>' +
+        '</span><span class="fila-m">' + porMoneda(B.ahorro.total) + '</span></div>'
+      : '') + '</div>';
+
+  /* ── LO QUE NOVA SUPUSO, para que ella lo corrija ── */
+  if (O.porClasificar.length) {
+    html += '<div class="card" style="margin-bottom:18px;">' +
+      '<div class="card-h"><span class="card-lbl">ESTO LO SUPUSE YO</span></div>' +
+      '<p class="card-p" style="margin-bottom:10px;">Estas líneas las cargaste antes de que ' +
+      'existiera la distinción entre pago mensual, cuotas y pago único, así que las puse ' +
+      'donde me pareció. Confírmalas y quedan bien para siempre.</p>' +
+      O.porClasificar.map(function (x) {
+        return '<div class="fila"><span class="fila-t"><strong>' + esc(x.concepto) + '</strong>' +
+          '<br><span style="color:var(--mut3);font-size:12px;">' + esc(x.categoria) + '</span></span>' +
+          '<span class="chip">supuse: ' + esc(x.supuesto) + '</span>' +
+          '<span class="link" onclick="editarFijo(\'' + x.id + '\')">CORREGIR</span></div>';
+      }).join('') + '</div>';
+  }
+
+  document.getElementById('pl-orden').innerHTML = html;
+}
+
+/** «2027-02» → «febrero de 2027». Un AAAA-MM no se lee de un vistazo. */
+function fmes(m) {
+  if (!/^\d{4}-\d{2}$/.test(String(m || ''))) return String(m || '');
+  const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio',
+                 'agosto','septiembre','octubre','noviembre','diciembre'];
+  return MESES[Number(m.slice(5, 7)) - 1] + ' de ' + m.slice(0, 4);
+}
+
 function pintarMes() {
   const R = PLATA.resumen;
   document.getElementById('pl-mes').innerHTML = R.resultado.length
@@ -1912,15 +2233,52 @@ function nuevoFijo(cat) {
   document.getElementById('mf-moneda').value = 'COP';
   document.getElementById('mf-dia').value = '';
   document.getElementById('mf-activo').value = 'si';
+  document.getElementById('mf-flujo').value = 'gasto';
+  document.getElementById('mf-tipo').value = 'mensual';
+  document.getElementById('mf-acreedor').value = '';
+  document.getElementById('mf-cuotas-total').value = '';
+  document.getElementById('mf-cuota-desde').value = '';
+  mostrarCuotas();
   document.getElementById('mf-borrar').style.display = 'none';
   errModal('mf-err', '');
   document.getElementById('m-fijo').classList.add('on');
 }
+
+/**
+ * Los campos de cuotas solo aparecen cuando son cuotas.
+ *
+ * Un formulario que enseña «cuántas cuotas son» para el arriendo es un
+ * formulario que enseña a ignorar campos, y el día que uno importa ya
+ * nadie lo mira.
+ */
+function mostrarCuotas() {
+  const t = document.getElementById('mf-tipo').value;
+  document.getElementById('mf-cuotas').style.display = (t === 'cuotas') ? 'block' : 'none';
+  document.getElementById('mf-tipo-ayuda').textContent = {
+    mensual: 'Se repite cada mes y no se acaba: arriendo, internet, servicios.',
+    cuotas:  'Tiene un número de cuotas y una fecha en que termina. Aquí van las deudas.',
+    unico:   'Pasa una vez, este mes. No se repite el siguiente.',
+  }[t] || '';
+}
+
 function editarFijo(id) {
   let linea = null, cat = '';
   FIN.categorias.forEach(function (c) {
     c.lineas.forEach(function (l) { if (l.id === id) { linea = l; cat = c.id; } });
   });
+  /**
+   * Y si no está en las categorías, se busca en los bloques nuevos.
+   * Las dos vistas leen las mismas filas; sin esto, el enlace
+   * «CORREGIR» de la lista de supuestos no abriría nada — y ese enlace
+   * existe precisamente para corregir.
+   */
+  if (!linea && PLATA && PLATA.orden) {
+    ['entra', 'fijo', 'cuotas', 'unico', 'ahorro'].forEach(function (b) {
+      (PLATA.orden.bloques[b].lineas || []).forEach(function (l) {
+        if (l.id === id) { linea = l; cat = l.categoria; }
+      });
+    });
+  }
   if (!linea) return;
   FIJO = id;
   document.getElementById('mf-titulo').textContent = 'Cambiar el gasto fijo';
@@ -1933,6 +2291,14 @@ function editarFijo(id) {
   document.getElementById('mf-moneda').value = linea.moneda || 'COP';
   document.getElementById('mf-dia').value = linea.dia || '';
   document.getElementById('mf-activo').value = linea.activo ? 'si' : 'no';
+  document.getElementById('mf-flujo').value = linea.flujo || 'gasto';
+  document.getElementById('mf-tipo').value = linea.tipo || 'mensual';
+  document.getElementById('mf-acreedor').value = linea.acreedor || '';
+  document.getElementById('mf-cuotas-total').value =
+    (linea.cuotas && linea.cuotas.total) || '';
+  document.getElementById('mf-cuota-desde').value =
+    (linea.cuotas && linea.cuotas.desde) || '';
+  mostrarCuotas();
   document.getElementById('mf-borrar').style.display = 'block';
   errModal('mf-err', '');
   document.getElementById('m-fijo').classList.add('on');
@@ -1946,6 +2312,11 @@ async function guardarFijo() {
     moneda: document.getElementById('mf-moneda').value,
     dia: document.getElementById('mf-dia').value || 0,
     activo: document.getElementById('mf-activo').value === 'si',
+    flujo: document.getElementById('mf-flujo').value,
+    tipoPago: document.getElementById('mf-tipo').value,
+    acreedor: document.getElementById('mf-acreedor').value,
+    cuotasTotal: document.getElementById('mf-cuotas-total').value || 0,
+    cuotaDesde: document.getElementById('mf-cuota-desde').value || '',
   } });
   if (!r || !r.ok) { errModal('mf-err', r && r.error || 'No se pudo guardar.'); return; }
   cerrarModal('m-fijo');
@@ -1987,13 +2358,265 @@ async function cargarCielo() {
     return;
   }
   CI = r;
-  try { pintarCielo(); }
+  // La lectura a fondo va en su propia llamada: componer ciento setenta
+  // y ocho lecturas para pintar las que se ven sería pagar el precio
+  // entero por la parte que se mira.
+  cargarLectura(LEC_RANGO);
+  try { pintarCielo(); pintarEjes(); }
   catch (e) {
     CI = null;
     document.getElementById('ci-hoy').innerHTML =
       '<div class="card"><div class="vacio">Traje tu cielo pero no lo pude dibujar: ' +
       esc(e && e.message || e) + '</div></div>';
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+     LA LECTURA A FONDO · semana, mes y año
+   ═══════════════════════════════════════════════════════════════
+
+   ┌─ LO QUE PIDIÓ, LITERAL ────────────────────────────────────┐
+   │                                                            │
+   │ «quiero más análisis, más profundo, por ejemplo en casa 8   │
+   │  de Leo por mi año, necesito profundidad y análisis,       │
+   │  TIEMPO PARA QUÉ, CÓMO ME AFECTA la energía que me toca,   │
+   │  CÓMO LA PUEDO TRABAJAR A MI FAVOR, y cómo se puede ver    │
+   │  si NO SE INTEGRA correctamente la energía, como un        │
+   │  desequilibrio».                                           │
+   │                                                            │
+   │ Son cuatro preguntas fijas. Esta pantalla las pinta como   │
+   │ cuatro bloques separados y siempre los cuatro — nunca      │
+   │ tres, nunca un párrafo corrido. Media lectura se lee       │
+   │ igual que una entera y no se nota que faltó algo.          │
+   │                                                            │
+   └────────────────────────────────────────────────────────────┘ */
+
+let LEC = null;          // la lectura traída
+let LEC_RANGO = 'semana';
+let LEC_ABIERTA = -1;    // qué temporada está desplegada
+
+async function cargarLectura(rango) {
+  LEC_RANGO = rango || LEC_RANGO;
+  const caja = document.getElementById('ci-lectura');
+  if (!caja) return;
+  caja.innerHTML = '<div class="card"><div class="vacio">Leyendo el cielo…</div></div>';
+  let r;
+  try { r = await nc('nc_soul_cielo_lectura', { rango: LEC_RANGO }); }
+  catch (e) {
+    caja.innerHTML = '<div class="card"><div class="vacio">No pude hablar con la hoja: ' +
+      esc(e && e.message || e) + '</div></div>';
+    return;
+  }
+  if (!r || !r.ok) {
+    caja.innerHTML = '<div class="card"><div class="vacio">' +
+      esc(traducirError(r && r.error) || 'Sin datos.') + '</div></div>';
+    return;
+  }
+  LEC = r;
+  LEC_ABIERTA = -1;
+  try { pintarLectura(); pintarEjes(); }
+  catch (e) {
+    caja.innerHTML = '<div class="card"><div class="vacio">Traje la lectura pero no la pude ' +
+      'dibujar: ' + esc(e && e.message || e) + '</div></div>';
+  }
+}
+
+/** Una lista de frases como párrafos, no como un muro. */
+function frases(xs) {
+  return (xs || []).map(function (t) {
+    return '<p class="card-p" style="margin-top:7px;">' + esc(t) + '</p>';
+  }).join('');
+}
+
+/** El color de la barra de intensidad. Tensión alta no es «malo». */
+function colorTension(t) {
+  return t >= 3 ? 'var(--rojo, #b8322f)'
+       : t === 2 ? 'var(--acc-d, #9a7b2f)'
+       : 'var(--sage, #6f8f6a)';
+}
+
+function pintarLectura() {
+  const L = LEC.lectura;
+  const pestanas = ['semana', 'mes', 'anio'].map(function (k) {
+    const R = LEC.rangos[k];
+    return '<div class="nst' + (k === LEC_RANGO ? ' on' : '') + '" ' +
+      'onclick="cargarLectura(\'' + k + '\')">' + esc(R.nombre) + '</div>';
+  }).join('');
+
+  let html = '<div class="card">' +
+    '<div class="card-h"><span class="card-lbl">LA LECTURA</span>' +
+    '<div style="display:flex;gap:6px;">' + pestanas + '</div></div>' +
+    '<p class="card-p">' + esc(L.que) + '</p>' +
+    '<div class="kpi-s" style="margin:8px 0 4px;">Del ' + esc(fcorta(L.desde)) +
+      ' al ' + esc(fcorta(L.hasta)) + '</div>';
+
+  /* ── EL AÑO: la profección, que es de lo que ella habló ── */
+  if (LEC_RANGO === 'anio' && LEC.profeccion) {
+    const P = LEC.profeccion;
+    html += '<div class="card-lila" style="margin:14px 0;">' +
+      '<div class="card-lbl-lila">TU AÑO · PROFECCIÓN</div>' +
+      '<div style="font:600 27px/1.2 \'Fraunces\',serif;color:var(--ink);margin:8px 0 4px;">' +
+        'Casa ' + P.casa + ' en ' + esc(P.signoNombre) + '</div>' +
+      '<div class="kpi-s" style="margin-bottom:10px;">' + P.edad + ' años · del ' +
+        esc(fcorta(P.desde)) + ' al ' + esc(fcorta(P.hasta)) +
+        (P.regente ? ' · lo dirige ' + esc(P.regente) : '') + '</div>' +
+      frases(P.texto) +
+      (P.habitantes && P.habitantes.length
+        ? '<div class="kcard-m" style="margin-top:12px;">' + P.habitantes.map(function (h) {
+            return '<span class="chip proy">' + esc(h.nombre) + ' vive en tu casa ' + h.casa +
+              '</span>'; }).join('') + '</div>'
+        : '') +
+      '<div style="border-top:1px solid var(--soft2);margin-top:14px;padding-top:12px;">' +
+        '<div class="card-lbl-lila">CÓMO TRABAJARLA A TU FAVOR</div>' +
+        '<p class="card-p" style="margin-top:7px;">' + esc(P.aFavor) + '</p>' +
+        '<div class="card-lbl-lila" style="margin-top:12px;">SI NO SE INTEGRA, SE VE ASÍ</div>' +
+        '<p class="card-p" style="margin-top:7px;">' + esc(P.desequilibrio) + '</p>' +
+      '</div></div>';
+  } else if (LEC_RANGO === 'anio' && LEC.profeccionPorque) {
+    html += '<div class="aviso mal on" style="margin:12px 0;">' +
+      esc(LEC.profeccionPorque) + '</div>';
+  }
+
+  /* ── LAS LUNAS DEL TRAMO ── */
+  if (L.lunas && L.lunas.length) {
+    html += '<div style="margin:14px 0;">' +
+      '<div class="card-lbl" style="margin-bottom:6px;">LAS LUNAS DE ESTE TRAMO</div>' +
+      L.lunas.map(function (x) {
+        return '<div class="fila"><span class="fila-t"><strong>' + esc(x.nombre) + '</strong>' +
+          '<br><span style="color:var(--mut3);font-size:12px;">' + esc(x.forma) + '</span>' +
+          '<br><span style="color:var(--mut3);font-size:12px;">' + esc(x.que) + '</span></span>' +
+          '<span class="chip hoy">' + esc(fcorta(x.fecha)) + '</span></div>';
+      }).join('') + '</div>';
+  }
+
+  /* ── LAS TEMPORADAS, ORDENADAS POR LO QUE PESAN ── */
+  if (L.vacio) {
+    html += '<div class="vacio">' + esc(L.porqueVacio) + '</div>';
+  } else {
+    html += '<div class="card-lbl" style="margin:16px 0 4px;">' +
+      L.temporadas.length + (L.temporadas.length === 1 ? ' TEMPORADA ABIERTA' : ' TEMPORADAS ABIERTAS') +
+      ' · DE LA QUE MÁS PESA A LA QUE MENOS</div>';
+
+    html += L.temporadas.map(function (t, i) {
+      const abierta = i === LEC_ABIERTA;
+      return '<div style="border-bottom:1px solid var(--soft2);padding:12px 0;">' +
+        '<div style="cursor:pointer;" onclick="abrirTemporada(' + i + ')">' +
+          '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+            '<span style="font:600 15px/1.35 \'Fraunces\',serif;color:var(--ink);flex:1;' +
+              'min-width:200px;">' + esc(t.titulo) + '</span>' +
+            (t.pico ? '<span class="chip hoy">activa hoy</span>' : '') +
+            '<span class="chip">' + esc(fcorta(t.desde)) +
+              (t.hasta && t.hasta !== t.desde ? '–' + esc(fcorta(t.hasta)) : '') + '</span>' +
+            '<span class="link">' + (abierta ? 'CERRAR ▲' : 'LEER ▼') + '</span>' +
+          '</div>' +
+          /**
+           * La barra de intensidad. No es adorno: cuando hay ocho cosas
+           * abiertas y ella tiene veinte minutos, esto dice por dónde
+           * empezar. Y el número va escrito al lado para poder no
+           * estar de acuerdo.
+           */
+          '<div style="display:flex;align-items:center;gap:8px;margin-top:7px;">' +
+            '<div style="flex:1;height:5px;border-radius:3px;background:var(--soft2);' +
+              'overflow:hidden;"><div style="height:100%;width:' + t.intensidad + '%;' +
+              'background:' + colorTension(t.tension) + ';"></div></div>' +
+            '<span class="kpi-s">' + t.intensidad + '</span>' +
+          '</div>' +
+          '<div class="kpi-s" style="margin-top:5px;">' + esc(t.tiempoPara) + '</div>' +
+        '</div>' +
+        (abierta ? bloqueTemporada(t) : '') +
+      '</div>';
+    }).join('');
+  }
+
+  if (L.fueraDeRango) {
+    html += '<p class="card-p" style="margin-top:12px;color:var(--mut3);">' +
+      esc(L.fueraDeRango) + '</p>';
+  }
+  html += '</div>';
+  document.getElementById('ci-lectura').innerHTML = html;
+}
+
+/**
+ * Las cuatro respuestas de una temporada. Siempre las cuatro, siempre
+ * con su título, siempre en el mismo orden — para que se pueda ir
+ * directo a la que se busca sin leer el resto.
+ */
+function bloqueTemporada(t) {
+  const seccion = function (lbl, cuerpo) {
+    return '<div style="margin-top:14px;">' +
+      '<div class="card-lbl">' + lbl + '</div>' + cuerpo + '</div>';
+  };
+  return '<div style="margin-top:12px;padding:14px;border-radius:10px;' +
+      'background:var(--soft, rgba(0,0,0,.03));">' +
+    '<div class="kcard-m" style="margin-bottom:4px;">' +
+      '<span class="chip">' + esc(t.aspecto) + ' ' + esc(t.simbolo || '') + '</span>' +
+      (t.casaNombre ? '<span class="chip proy">' + esc(t.casaNombre) + '</span>' : '') +
+      '<span class="chip horas">' + t.dias + ' días</span>' +
+      '<span class="chip">' + esc(t.ritmo) + '</span>' +
+    '</div>' +
+    (t.casasDifieren
+      ? '<div class="aviso mal on" style="margin-top:8px;">Los dos sistemas de casas no ' +
+        'coinciden aquí: Horus (Placidus) dice casa ' + t.casaPlacidus + ' y las casas ' +
+        'enteras dicen casa ' + t.casa + '. Abajo se lee con la ' +
+        (t.casaNombre.indexOf(String(t.casaPlacidus)) !== -1 ? 'de Horus' : 'de casas enteras') +
+        '.</div>'
+      : '') +
+    seccion('TIEMPO PARA QUÉ', '<p class="card-p" style="margin-top:7px;">' +
+      esc(t.tiempoPara) + '</p>') +
+    seccion('CÓMO TE AFECTA', '<p class="card-p" style="margin-top:7px;">' +
+      esc(t.queEs) + '</p>') +
+    seccion('CÓMO TRABAJARLA A TU FAVOR', frases(t.aFavor)) +
+    seccion('SI NO SE INTEGRA, SE VE ASÍ', frases(t.desequilibrio)) +
+    /**
+     * Lo que ella haya escrito de su puño va al final y va marcado: es
+     * lo que manda. La lectura compuesta es el punto de partida.
+     */
+    (t.suyo && (t.suyo.texto || t.suyo.porQue || t.suyo.como || t.suyo.elOtroLado)
+      ? seccion('LO QUE ESCRIBISTE TÚ · MANDA SOBRE LO DE ARRIBA',
+          frases([t.suyo.texto, t.suyo.porQue, t.suyo.como, t.suyo.elOtroLado]
+                 .filter(function (x) { return x; })))
+      : '') +
+    '<p class="card-p" style="margin-top:14px;color:var(--mut3);font-size:12px;">' +
+      esc(t.nota) + '</p>' +
+  '</div>';
+}
+
+function abrirTemporada(i) {
+  LEC_ABIERTA = (LEC_ABIERTA === i) ? -1 : i;
+  pintarLectura();
+}
+
+/**
+ * Los ejes: los nodos del karma y el eje casa–carrera.
+ *
+ * Ella los pidió por nombre —«ten en cuenta mis nodos del karma, mi
+ * medio cielo y mi fondo cielo»— y tienen su propio bloque porque no
+ * son una temporada: no empiezan ni terminan. Son la forma del mapa.
+ */
+function pintarEjes() {
+  const caja = document.getElementById('ci-ejes');
+  if (!caja) return;
+  const ejes = (LEC && LEC.ejes) || (CI && CI.ejes) || [];
+  if (!ejes.length) { caja.innerHTML = ''; return; }
+
+  caja.innerHTML = '<div class="card-sage">' +
+    '<div class="card-lbl-sage">LOS EJES DE TU CARTA</div>' +
+    '<p class="card-p" style="margin-top:8px;">Esto no es una temporada: no empieza ni ' +
+    'termina. Es la forma del mapa, y es lo que hace que un mismo tránsito signifique ' +
+    'en ti algo distinto que en otra persona.</p>' +
+    ejes.map(function (e) {
+      return '<div style="border-top:1px solid var(--soft2);margin-top:14px;padding-top:12px;">' +
+        '<div style="font:600 16px/1.3 \'Fraunces\',serif;color:var(--ink);">' +
+          esc(e.nombre) + '</div>' +
+        (e.puntas ? '<div class="kpi-s" style="margin-top:5px;">' + esc(e.puntas) + '</div>' : '') +
+        (e.deDonde ? '<div class="card-lbl-sage" style="margin-top:11px;">DE DÓNDE VIENES</div>' +
+          '<p class="card-p" style="margin-top:6px;">' + esc(e.deDonde) + '</p>' : '') +
+        (e.haciaDonde ? '<div class="card-lbl-sage" style="margin-top:11px;">HACIA DÓNDE VAS</div>' +
+          '<p class="card-p" style="margin-top:6px;">' + esc(e.haciaDonde) + '</p>' : '') +
+        (e.elMovimiento ? '<div class="card-lbl-sage" style="margin-top:11px;">EL MOVIMIENTO</div>' +
+          '<p class="card-p" style="margin-top:6px;">' + esc(e.elMovimiento) + '</p>' : '') +
+      '</div>';
+    }).join('') + '</div>';
 }
 
 function pintarCielo() {
@@ -2017,13 +2640,47 @@ function pintarCielo() {
             (CI.transitosHoy.length === 1 ? '' : 's') + '</span>' : '') +
         '</div>' +
       '</div>' +
-      '<div style="text-align:center;">' +
+      /**
+       * La luna, con su forma escrita en castellano.
+       *
+       * Ella preguntó «¿qué es gibosa creciente? no entiendo, no sé de
+       * qué me hablas». La pantalla le estaba dando el nombre técnico
+       * de la fase y nada más. Un nombre que hay que ir a buscar a
+       * Google es un nombre que la pantalla no terminó de dar.
+       */
+      '<div style="min-width:190px;max-width:260px;">' +
         '<div style="font:600 40px/1 \'Fraunces\',serif;color:var(--ink);">' +
           CI.lunaHoy.iluminacion + '%</div>' +
-        '<div class="kpi-s" style="margin-top:8px;">' + esc(CI.lunaHoy.nombre) + '</div>' +
-        '<div class="kpi-s">' + (CI.lunaHoy.creciendo ? 'creciendo' : 'menguando') + '</div>' +
+        '<div class="kpi-s" style="margin-top:8px;">' + esc(CI.lunaHoy.nombre) +
+          ' · ' + (CI.lunaHoy.creciendo ? 'creciendo' : 'menguando') + '</div>' +
+        (CI.lunaHoy.forma
+          ? '<p class="card-p" style="margin-top:8px;font-size:12.5px;">' +
+            esc(CI.lunaHoy.forma) + '</p>'
+          : '') +
       '</div>' +
-    '</div>';
+    '</div>' +
+    /**
+     * Lo que Nova hizo sola al abrir, dicho en voz alta.
+     *
+     * Si un día aparecen doce temporadas nuevas sin que ella tocara
+     * nada, tiene derecho a saber de dónde salieron. Sembrar en
+     * silencio es lo mismo que no sembrar, pero con la lista más larga.
+     */
+    (CI.automatico && (CI.automatico.transitosSembrados || CI.automatico.pensumCreado)
+      ? '<div class="aviso on" style="margin-top:12px;">' +
+        (CI.automatico.transitosSembrados
+          ? 'Calculé tus ' + CI.automatico.transitosSembrados + ' temporadas de tránsito ' +
+            'y las guardé. No hay que pegar nada. '
+          : '') +
+        (CI.automatico.pensumCreado
+          ? 'Armé ' + CI.automatico.pensumCreado + ' del pensum con las que están ' +
+            'abiertas o empiezan pronto — puedes cambiarlas o borrarlas.'
+          : '') + '</div>'
+      : '') +
+    (CI.automatico && CI.automatico.efemerides && CI.automatico.efemerides.avisar
+      ? '<div class="aviso mal on" style="margin-top:10px;">' +
+        esc(CI.automatico.efemerides.porque) + '</div>'
+      : '');
 
   // ── Lo que rige el año y el mes ──
   document.getElementById('ci-anio').innerHTML = bloqueProfeccion(CI.profecciones);
@@ -2102,9 +2759,18 @@ function pintarCielo() {
             '<span class="chip horas">' + dias + (dias === 1 ? ' día' : ' días') + '</span>' +
             '<span class="chip">' + esc((CI.grupos[x.grupo] || {}).nombre || '') + '</span></div>';
         }).join('')
-      : '<div class="vacio">Todavía no has cargado ninguno. Tráelos de Horus <strong>con sus ' +
-        'fechas</strong>: la Luna dura dos días y medio y Saturno meses, y un consejo que no ' +
-        'distingue eso es ruido.</div>');
+      /**
+       * Este texto decía «todavía no has cargado ninguno, tráelos de
+       * Horus». Ella respondió: «en ese cuadro me pides que te dé toda
+       * la info que no tengo y deberías tener tú o Nova, no yo». Tenía
+       * razón — un tránsito no es un dato suyo, es una cuenta. Ahora
+       * Nova los calcula y lo único que puede faltar es su carta.
+       */
+      : '<div class="vacio">' +
+        (CI.automatico && CI.automatico.transitosPorque
+          ? esc(CI.automatico.transitosPorque)
+          : 'Los estoy calculando. Si al recargar sigue vacío, es que me falta tu fecha ' +
+            'y hora de nacimiento para poder hacerlo.') + '</div>');
 
   // ── Revolución solar ──
   const rv = CI.revolucion;

@@ -59,7 +59,7 @@ function centralMeta(s, p) {
       const tiendas = [];
       let sinCuenta = 0;
       try {
-        const ss = SpreadsheetApp.openById(c.sheetId);
+        const ss = libro_(c.sheetId);
         tiendasActivas_(ss).forEach(function (t) {
           const cuenta = metaCuenta(ss, t);
           if (!cuenta) sinCuenta++;

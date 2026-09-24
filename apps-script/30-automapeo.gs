@@ -392,7 +392,7 @@ function analizarFuente(ss, fuenteId, campos) {
  * para que las revises. Lo que quede en `Mapeos` manda sobre el código.
  */
 function proponerMapeo(fuenteId, tienda, cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const r = analizarFuente(ss, fuenteId);
 
   let sh = ss.getSheetByName('Mapeos');

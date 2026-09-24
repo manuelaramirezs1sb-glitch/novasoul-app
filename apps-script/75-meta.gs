@@ -55,7 +55,7 @@ function metaCuenta(ss, tienda) {
  */
 function apiMetaEstado(s, p) {
   if (s.rol !== 'dueno') return { ok: false, error: 'Solo la dueña ve la conexión con Meta.' };
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const props = PropertiesService.getScriptProperties();
   /**
    * La última prueba que salió bien.
@@ -143,7 +143,7 @@ function apiMetaProbar(s, p) {
   const token = metaToken(s);
   if (!token) return { ok: false, error: 'Todavía no has guardado la llave.' };
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const tienda = String(p.tienda || s.tiendas[0]);
   const cuenta = metaCuenta(ss, tienda);
   if (!cuenta) {
@@ -496,7 +496,7 @@ function estadoAutomatico() {
 function estadoTasasDe_(sheetId, nombre) {
   const out = { empresa: nombre, necesita: false, alDia: true, pares: [], error: '' };
   try {
-    const ss = SpreadsheetApp.openById(sheetId);
+    const ss = libro_(sheetId);
     const pares = paresNecesarios(ss);
     if (!pares.length) return out;          // no necesita: alDia se queda en true
     out.necesita = true;

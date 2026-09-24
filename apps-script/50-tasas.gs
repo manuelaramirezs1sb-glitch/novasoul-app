@@ -146,7 +146,7 @@ function monedaReporte(ss) {
  * @param {number} dias     cuántos días hacia atrás revisar (por defecto 90)
  */
 function actualizarTasas(cliente, dias) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const pares = paresNecesarios(ss);
   if (!pares.length) {
     Logger.log('No hay pares que actualizar: las tiendas reportan en su misma ' +
@@ -264,7 +264,7 @@ function actualizarTasasDiario() {
  *   tasa_referencia_USD   (opcional: la tasa con la que montaste el negocio)
  */
 function alarmaTasa(cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const pares = paresEnUso(ss);
   const destino = monedaReporte(ss);
   const hoy = Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd');
@@ -359,7 +359,7 @@ function parametro(ss, clave, tienda) {
  * @param {string} mesB      mes a comparar 'AAAA-MM'
  */
 function efectoCambiario(cliente, tienda, mesA, mesB) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const destino = monedaReporte(ss);
   const origen = monedaDeTienda(ss, tienda);
   if (!origen) throw new Error('No encuentro la tienda "' + tienda + '" en la hoja Tiendas.');

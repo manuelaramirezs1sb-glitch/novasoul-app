@@ -61,6 +61,15 @@ function doGet(e)  { return manejar(e, 'GET'); }
 function doPost(e) { return manejar(e, 'POST'); }
 
 function manejar(e, metodo) {
+  /**
+   * Los manejadores de libro que quedaran de otra petición no sirven:
+   * en Apps Script cada petición es una ejecución nueva y el objeto ya
+   * viene vacío. Se limpia igual, explícito, porque en las pruebas el
+   * proceso SÍ sobrevive entre llamadas y un manejador viejo apuntaría
+   * a datos que ya se reemplazaron.
+   */
+  libroOlvidar_();
+  soulOlvidar_();
   try {
     const p = leerParams(e, metodo);
     const accion = String(p.accion || '').trim();
@@ -132,6 +141,8 @@ function manejar(e, metodo) {
       case 'alarmas':   return json(apiAlarmas(s, p));
       case 'parametros':return json(apiParametros(s, p));
       case 'auditoria': return json(apiAuditoria(s, p));
+      case 'auditoria_casos':   return json(apiAuditoriaCasos(s, p));
+      case 'auditoria_guardar': return json(apiAuditoriaGuardar(s, p));
       case 'estados':   return json(apiEstados(s, p));
       case 'reporte_dia': return json(apiReporteDia(s, p));
       case 'meta_panel':  return json(apiMetaPanel(s, p));
@@ -239,7 +250,31 @@ function apiVerificar(p) {
   };
   cache.put('ses_' + token, JSON.stringify(s), horas * 3600);
 
-  registrarMovimiento(s, 'Equipo', persona.id, 'ultima_conexion', '', ahoraISO());
+  /**
+   * ── LA CONEXIÓN NO SE REGISTRABA ──
+   *
+   * Ella lo notó así: «he entrado desde el correo de Nova Soul y no se
+   * registra ahí; si así estará cuando se tenga un equipo, estamos
+   * mal».
+   *
+   * Tenía razón y el fallo era exacto: esta línea anotaba el movimiento
+   * en la hoja Movimientos —el rastro— pero NUNCA escribía la celda
+   * `ultima_conexion` de la hoja Equipo, que es la que lee la pantalla.
+   * Así que el rastro crecía y la pantalla decía «Nunca ha entrado»
+   * para siempre. Nova Central sí lo hacía bien; la parte empresarial,
+   * no.
+   */
+  const ahora = ahoraISO();
+  registrarMovimiento(s, 'Equipo', persona.id, 'ultima_conexion', '', ahora);
+  try {
+    const shE = libro_(persona.sheetId).getSheetByName('Equipo');
+    if (shE && persona.fila) {
+      const encE = shE.getRange(1, 1, 1, shE.getLastColumn()).getValues()[0].map(norm);
+      const colE = encE.indexOf('ultima_conexion');
+      if (colE !== -1) shE.getRange(persona.fila, colE + 1).setValue(ahora);
+    }
+  } catch (e) { /* el rastro nunca puede impedir entrar */ }
+
   return { ok: true, token: token, sesion: publico(s) };
 }
 
@@ -395,7 +430,7 @@ function publico(s, ss) {
               rol_real: s.rolReal || s.rol };
   // La ficha va con moneda y país para que la pantalla no tenga que adivinarlos
   try {
-    o.fichas = fichasDe(ss || SpreadsheetApp.openById(s.sheetId), s.tiendas);
+    o.fichas = fichasDe(ss || libro_(s.sheetId), s.tiendas);
   } catch (e) { o.fichas = []; }
   return o;
 }
@@ -405,7 +440,7 @@ function publico(s, ss) {
  * De aquí salen el rol y las tiendas — nunca de lo que mande la pantalla.
  */
 function buscarPersona(email) {
-  const clientes = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const clientes = libro_(IDS_().central).getSheetByName('Clientes');
   if (!clientes || clientes.getLastRow() < 2) return null;
 
   const filas = clientes.getDataRange().getValues().slice(1);
@@ -414,7 +449,7 @@ function buscarPersona(email) {
     if (!sheetId || norm(filas[i][6]) === 'suspendido') continue;
 
     let ss;
-    try { ss = SpreadsheetApp.openById(sheetId); } catch (x) { continue; }
+    try { ss = libro_(sheetId); } catch (x) { continue; }
     const sh = ss.getSheetByName('Equipo');
     if (!sh || sh.getLastRow() < 2) continue;
 
@@ -443,6 +478,14 @@ function buscarPersona(email) {
         id: f[c('id')],
         nombre: f[c('nombre')],
         rol: rol,
+        /**
+         * En qué fila de la hoja Equipo está. Sin esto no se puede
+         * sellar `ultima_conexion`, que es lo que hacía que la pantalla
+         * dijera «Nunca ha entrado» aunque la persona acabara de entrar.
+         * +1 porque `datos` incluye el encabezado y las filas de la hoja
+         * empiezan en 1.
+         */
+        fila: j + 1,
         // c('permisos') es -1 en hojas creadas antes de que la columna
         // existiera: sin celda, quedan los permisos del rol.
         permisos: permisosDe(rol, c('permisos') === -1 ? '' : f[c('permisos')]),
@@ -541,7 +584,7 @@ function modulosDelPlan(plan) {
   if (p === 'interno') return ['empresarial', 'soul', 'academy', 'central'];
 
   try {
-    const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Planes');
+    const sh = libro_(IDS_().central).getSheetByName('Planes');
     if (sh && sh.getLastRow() > 1) {
       const d = sh.getDataRange().getValues();
       const e = d[0].map(norm);
@@ -630,7 +673,7 @@ function apiListar(s, p) {
     return { ok: false, error: 'Solo la dueña ve ' + entidad + '.' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName(entidad);
   if (!sh) return { ok: false, error: 'No existe la hoja ' + entidad + '.' };
   if (sh.getLastRow() < 2) return { ok: true, filas: [], total: 0 };
@@ -783,7 +826,7 @@ function apiRecuento(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const tz = zonaHorariaDe(ss, tienda) || 'UTC';
   const mesActual = Utilities.formatDate(new Date(), tz, 'yyyy-MM');
 
@@ -893,7 +936,7 @@ function apiAlarmas(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const r = evaluarAlarmas(ss, tienda);
 
   // La de dinero es solo de la dueña
@@ -918,7 +961,7 @@ function apiAlarmas(s, p) {
  * lo señala.
  */
 function apiParametros(s, p) {
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const tienda = String(p.tienda || s.tiendas[0] || '').trim();
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
@@ -1072,7 +1115,7 @@ function apiProductos(s, p) {
   if (!puede(s, 'leer', 'Inventario')) {
     return { ok: false, error: 'Tu rol no ve el catálogo de productos.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const tienda = String(p.tienda || s.tiendas[0] || '').trim();
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
@@ -1292,7 +1335,7 @@ function modalidadDeTienda(ss, tienda) {
  * mantener al día a mano, y nadie puede maquillarla.
  */
 function apiEquipo(s, p) {
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('Equipo');
   /**
    * `puedeEditar` también va aquí, y no solo en la salida de abajo.
@@ -1399,7 +1442,7 @@ function apiEquipo(s, p) {
 function apiAuditoria(s, p) {
   if (s.rol === 'gestora') return { ok: false, error: 'No tienes acceso a la auditoría.' };
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('Movimientos');
   if (!sh || sh.getLastRow() < 2) return { ok: true, movimientos: [] };
 
@@ -1430,7 +1473,7 @@ function apiAuditoria(s, p) {
  * suelto es ruido, doscientos es un cierre mal hecho esperando a pasar.
  */
 function apiEstados(s, p) {
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('Estados');
   const out = { ok: true, sinClasificar: [], conocidos: [],
                 opciones: OPCIONES_ESTADO, puedeEditar: s.rol === 'dueno' };
@@ -1506,7 +1549,7 @@ function apiEstadoClasificar(s, p) {
     return { ok: false, error: 'No conozco el estado "' + estado + '".' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('Estados');
   if (!sh) return { ok: false, error: 'Falta la hoja Estados. Corre bootstrapTodo().' };
 
@@ -1687,7 +1730,7 @@ function apiCrear(s, p) {
     return { ok: false, error: 'Esa tienda no es tuya.' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName(entidad);
   if (!sh) return { ok: false, error: 'Falta la hoja ' + entidad + '. Corre bootstrapTodo().' };
 
@@ -1736,7 +1779,7 @@ function validarPersona(s, datos, idActual) {
            'administradora o asesora.';
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('Equipo');
   if (!sh || sh.getLastRow() < 2) return '';
 
@@ -1782,14 +1825,14 @@ function apiBorrar(s, p) {
 
   // Quitar a la última dueña deja la cuenta sin quién dé permisos
   if (entidad === 'Equipo') {
-    const ss0 = SpreadsheetApp.openById(s.sheetId);
+    const ss0 = libro_(s.sheetId);
     if (duenosActivosSin(ss0, String(p.id || '').trim(), '') === 0) {
       return { ok: false, error: 'No puedes quitar a la única dueña: la cuenta ' +
                'se quedaría sin quién dé permisos. Nombra otra dueña primero.' };
     }
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName(entidad);
   if (!sh) return { ok: false, error: 'Falta la hoja ' + entidad + '.' };
 
@@ -1824,7 +1867,7 @@ function apiEscribir(s, p) {
   if (!id) return { ok: false, error: 'Falta el id de la fila.' };
   if (!Object.keys(campos).length) return { ok: false, error: 'No hay campos que escribir.' };
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName(entidad);
   if (!sh) return { ok: false, error: 'No existe la hoja ' + entidad + '.' };
 
@@ -1941,7 +1984,7 @@ function apiEscribir(s, p) {
 /** Sin este registro no hay auditoría ni vista sombra. */
 function registrarMovimiento(s, entidad, entidadId, campo, antes, ahora) {
   try {
-    const sh = SpreadsheetApp.openById(s.sheetId).getSheetByName('Movimientos');
+    const sh = libro_(s.sheetId).getSheetByName('Movimientos');
     // Si estaba mirando con otra vista, queda dicho: sigue siendo ella,
     // pero conviene saber desde dónde lo hizo.
     const quien = s.vistaComo
@@ -1962,7 +2005,7 @@ function apiResumen(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const mes = String(p.mes || Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM'));
   const d = agregarMes(ss, tienda, mes, s);
   d.recaudo7 = recaudoUltimosDias(ss, tienda, 7);
@@ -2096,7 +2139,7 @@ function apiCierre(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const mes = String(p.mes || Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM'));
   const prev = mesAnterior(mes);
 
@@ -2592,7 +2635,7 @@ function apiCerrarMes(s, p) {
     return { ok: false, error: 'El mes va como AAAA-MM.' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   if (cierreGuardado(ss, tienda, mes)) {
     return { ok: false, error: 'Ese mes ya está cerrado. Para rehacerlo, ' +
              'cambia su estado a "abierto" en la hoja Cierres.' };
@@ -2736,7 +2779,7 @@ function apiImportarArchivo(s, p) {
              'Expórtalo por rangos de fecha más cortos.' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   let filas;
   try {
     filas = leerArchivo(b64, nombre);
@@ -2869,7 +2912,7 @@ function abrirConvertida(id, nombre) {
   const esperas = [500, 1000, 2000, 4000, 6000, 6000];
   let ultimo = null;
   for (let i = 0; i < esperas.length; i++) {
-    try { return SpreadsheetApp.openById(id); }
+    try { return libro_(id); }
     catch (err) {
       ultimo = err;
       Utilities.sleep(esperas[i]);
@@ -2980,7 +3023,7 @@ function apiFuentes(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('Fuentes');
   const out = [];
   if (sh && sh.getLastRow() > 1) {
@@ -3174,7 +3217,7 @@ function apiHistorial(s, p) {
     return { ok: false, error: 'El estado del histórico lo ve la dueña.' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const tz = zonaHorariaDe(ss, tienda) || 'UTC';
   const monTienda = monedaDeTienda(ss, tienda);
   const cuantos = Math.min(Math.max(parseInt(p.meses, 10) || 8, 1), 18);
@@ -3341,7 +3384,7 @@ function apiCas(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const tz = zonaHorariaDe(ss, tienda) || 'UTC';
   const u = umbrales(ss, tienda);
   const minDias = Number(u.dias_sin_mover) || 3;
@@ -3454,7 +3497,7 @@ function apiCasEscribir(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('CAS');
   if (!sh) return { ok: false, error: 'Falta la hoja CAS. Corre bootstrapTodo().' };
 

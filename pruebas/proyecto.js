@@ -105,6 +105,18 @@ const C_PAU = ['id','fecha','fecha_fin','tienda','plataforma','cuenta','campana'
   'clics','ctr','cpc','cpm','frecuencia','resultados','costo_resultado','actualizado_en'];
 
 function sembrarHojas(costosFijos) {
+  /**
+   * Cada caso de prueba es una PETICIÓN nueva, y una petición real
+   * empieza soltando lo que Nova tenga en memoria de la anterior
+   * (`manejar()` lo hace). Aquí hay que decirlo a mano porque las
+   * pruebas llaman a las funciones directamente, sin pasar por ahí.
+   *
+   * Sin esto, el manejador del libro y las hojas ya leídas seguirían
+   * apuntando a los datos del caso anterior, y la prueba mediría un
+   * Nova que no existe.
+   */
+  libroOlvidar_(); soulOlvidar_();
+
   UUID = 0;
   LIBROS.nutrea = {
     Tiendas: [['id','nombre','pais','moneda','estado'],

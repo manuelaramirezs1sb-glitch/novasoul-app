@@ -97,6 +97,18 @@ const C_HOR = ['usuario_id','dia_semana','horas_libres','nota'];
 const YO = 'manuela@nova.com';
 
 function sembrarHojas() {
+  /**
+   * Cada caso de prueba es una PETICIÓN nueva, y una petición real
+   * empieza soltando lo que Nova tenga en memoria de la anterior
+   * (`manejar()` lo hace). Aquí hay que decirlo a mano porque las
+   * pruebas llaman a las funciones directamente, sin pasar por ahí.
+   *
+   * Sin esto, el manejador del libro y las hojas ya leídas seguirían
+   * apuntando a los datos del caso anterior, y la prueba mediría un
+   * Nova que no existe.
+   */
+  libroOlvidar_(); soulOlvidar_();
+
   UUID = 0;
   LIBROS.cen = {
     Trabajos: [C_TRAB, ['t9','Salsabor','Bar','empleo','activo','COP',0,'','','',0,'','','']],
@@ -287,6 +299,14 @@ igual('el total hormiga del mes', { COP: 97900 }, plata.resumen.hormiga);
  * pagado: se mueve al día 28 y reaparece.
  */
 LIBROS.s.Fijos[1][6] = 28;
+/**
+ * Tocar la hoja por debajo es simular una edición FUERA de la app —
+ * ella abriendo el Google Sheet a mano. Eso, en la vida real, pasa
+ * entre dos peticiones, así que aquí hay que marcar el corte: Nova
+ * suelta lo que tenía leído en memoria, igual que al empezar una
+ * petición nueva.
+ */
+soulOlvidar_();
 plata = F.soulPlata(SOCIA, {});
 igual('un fijo que aún no se paga sí cuenta como pendiente', 1200000,
       plata.resumen.resultado.filter(x => x.moneda === 'COP')[0].fijosPendientes);

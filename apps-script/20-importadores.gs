@@ -607,7 +607,7 @@ function tiendasDeCliente(ss) {
 }
 
 function diagnosticar(fuenteId, tienda, cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   // Sin tienda se toma la primera del cliente, no una fija
   const t = tienda || (tiendasDeCliente(ss)[0] || '');
   const r = leerCrudo(ss, fuenteId, t);

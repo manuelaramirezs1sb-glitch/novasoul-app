@@ -58,6 +58,37 @@ function IDS_() {
   };
 }
 
+/**
+ * ── ABRIR UN LIBRO UNA SOLA VEZ POR EJECUCIÓN ──
+ *
+ * `libro_()` parece gratis y no lo es: cada llamada es
+ * una ida y vuelta a los servidores de Google. Se midió al responder
+ * «¿por qué NovaSoul está tan lento?» y el número fue feo: pintar la
+ * pantalla de entrada abría los libros SESENTA veces, casi todas el
+ * mismo libro, porque cada función que necesitaba una pestaña lo abría
+ * por su cuenta.
+ *
+ * Esto guarda el manejador mientras dura la ejecución. No es un caché
+ * de DATOS —eso sí sería peligroso—: es el mismo objeto vivo de Google,
+ * así que lo que una función escriba, la siguiente lo lee. Lo único que
+ * se ahorra es volver a pedir la llave de una puerta que ya está
+ * abierta.
+ *
+ * El objeto muere cuando muere la ejecución, que en Apps Script son
+ * segundos. No hay nada que invalidar.
+ */
+var LIBROS_ABIERTOS_ = {};
+
+/** Soltar los manejadores. Se llama al empezar cada petición. */
+function libroOlvidar_() { LIBROS_ABIERTOS_ = {}; }
+
+function libro_(id) {
+  const k = String(id || '');
+  if (!k) throw new Error('Me pidieron abrir un libro sin decirme cuál.');
+  if (!LIBROS_ABIERTOS_[k]) LIBROS_ABIERTOS_[k] = SpreadsheetApp.openById(k);
+  return LIBROS_ABIERTOS_[k];
+}
+
 /** En qué cuenta de Google está corriendo esto. */
 function cuentaActual() {
   const email = Session.getEffectiveUser().getEmail();
@@ -356,6 +387,20 @@ const ESQUEMA_EMPRESARIAL = {
            'casos_resueltos','nota_auditoria','ultima_conexion','permisos'],
 
   /**
+   * Los veredictos de auditoría. Uno por novedad revisada.
+   *
+   * Existe porque la pantalla de Auditoría tenía un botón de «Guardar
+   * veredicto» sin nada detrás: se marcaba el hallazgo, se escribía la
+   * nota, se guardaba, y no había ningún sitio donde eso cayera.
+   *
+   * `senales` guarda lo que Nova había levantado sola en el momento de
+   * revisar. Sirve para lo único que importa un mes después: saber si
+   * el veredicto se puso mirando los mismos datos que hay hoy.
+   */
+  Auditorias: ['id','tienda','novedad_id','pedido_id','gestora','veredicto',
+               'nota','senales','auditor','creada_en'],
+
+  /**
    * Los estados que cada plataforma inventa, y qué significan aquí.
    *
    * Existe para que agregar un estado nuevo NO exija publicar una versión
@@ -643,7 +688,29 @@ const ESQUEMA_SOUL = {
    * presupuesto se habría reescrito solo para darse la razón.
    */
   Fijos: ['id','usuario_id','categoria','concepto','monto','moneda',
-          'dia_del_mes','activo','nota'],
+          'dia_del_mes','activo','nota',
+          /**
+           * ── LO QUE ELLA RECLAMÓ DE ESTA PANTALLA ──
+           *
+           * «debería haber una distinción si es único pago, pago
+           *  mensual, pago por cuotas; las cuotas y deudas deben estar
+           *  en otra parte, separada; los ingresos y los gastos fijos
+           *  también deben estar separados».
+           *
+           * Cinco columnas nuevas, y cada una responde una de esas:
+           *
+           *   flujo        · entra o sale. Sin esto, un sueldo fijo y
+           *                  el arriendo caían en la misma lista.
+           *   tipo_pago    · mensual, cuotas o único.
+           *   cuotas_total · cuántas son en total.
+           *   cuotas_pagadas· cuántas van.
+           *   cuota_desde  · el mes de la primera (AAAA-MM), que es lo
+           *                  único que permite decir CUÁNDO TERMINA.
+           *   acreedor     · a quién se le debe. Ella tiene dos deudas
+           *                  con nombre propio y la pantalla las
+           *                  mostraba como una sola línea «Deudas».
+           */
+          'flujo','tipo_pago','cuotas_total','cuotas_pagadas','cuota_desde','acreedor'],
   Dias: ['usuario_id','fecha','comidas_marcadas','movimiento_hecho','puntos',
          'cerrado','cerrado_en','perdonado'],
   Recompensas: ['id','usuario_id','nombre','costo_puntos','canjeada','canjeada_en'],
@@ -775,7 +842,7 @@ function bootstrapTodo() {
  * toca una sola celda de datos.
  */
 function actualizarClientes() {
-  const central = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const central = libro_(IDS_().central).getSheetByName('Clientes');
   if (!central || central.getLastRow() < 2) return 'Clientes: ninguno registrado todavía';
 
   const filas = central.getDataRange().getValues();
@@ -799,7 +866,7 @@ function actualizarClientes() {
 }
 
 function construir(fileId, nombre, esquema, importsCrudos) {
-  const ss = SpreadsheetApp.openById(fileId);
+  const ss = libro_(fileId);
   const creadas = [];
 
   // Entidades + las dos comunes obligatorias
@@ -898,7 +965,7 @@ function limpiarHojaPorDefecto(ss) {
 }
 
 function sembrarParametros() {
-  const sh = SpreadsheetApp.openById(IDS_().empresarial).getSheetByName('Parametros');
+  const sh = libro_(IDS_().empresarial).getSheetByName('Parametros');
   if (!sh || sh.getLastRow() > 1) return; // ya sembrado
   sh.getRange(2, 1, PARAMETROS_DEFAULT.length, 5).setValues(PARAMETROS_DEFAULT);
 }
@@ -1732,7 +1799,7 @@ function convertir(ss, monto, fecha, origen, destino) {
  * cargado. Córrela antes de confiar en cualquier número de dinero.
  */
 function tasasFaltantes(cliente, monedaDestino) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const destino = String(monedaDestino || 'COP').toUpperCase();
   const faltan = {};
 
@@ -2379,7 +2446,7 @@ function tiendasDeCliente(ss) {
 }
 
 function diagnosticar(fuenteId, tienda, cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   // Sin tienda se toma la primera del cliente, no una fija
   const t = tienda || (tiendasDeCliente(ss)[0] || '');
   const r = leerCrudo(ss, fuenteId, t);
@@ -2822,7 +2889,7 @@ function analizarFuente(ss, fuenteId, campos) {
  * para que las revises. Lo que quede en `Mapeos` manda sobre el código.
  */
 function proponerMapeo(fuenteId, tienda, cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const r = analizarFuente(ss, fuenteId);
 
   let sh = ss.getSheetByName('Mapeos');
@@ -3487,7 +3554,7 @@ function alarma(id, nivel, titulo, detalle, casos, ir) {
  * nadie los abre — que es exactamente cuando deja de servir.
  */
 function revisarAlarmas(cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const tiendas = tiendasDeCliente(ss);
   const log = [];
 
@@ -3618,7 +3685,7 @@ function instalarTriggerAlarmas() {
 
 /** Recorre todos los clientes registrados. */
 function revisarAlarmasTodos() {
-  const central = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const central = libro_(IDS_().central).getSheetByName('Clientes');
   if (!central || central.getLastRow() < 2) return 'Sin clientes.';
   const filas = central.getDataRange().getValues();
   const enc = filas[0].map(norm);
@@ -3703,7 +3770,7 @@ function crearCliente(empresa, pais, tiendas, fuentes, plan, dueno) {
     vistos[t.id] = 1;
   });
 
-  const central = SpreadsheetApp.openById(IDS_().central);
+  const central = libro_(IDS_().central);
   const shClientes = central.getSheetByName('Clientes');
   if (!shClientes) throw new Error('Corre bootstrapTodo() primero: falta la hoja Clientes.');
 
@@ -3720,7 +3787,7 @@ function crearCliente(empresa, pais, tiendas, fuentes, plan, dueno) {
   const copia = DriveApp.getFileById(IDS_().empresarial)
     .makeCopy('Nova_Empresarial_' + empresa, carpeta);
   const sheetId = copia.getId();
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
 
   /**
    * Las filas se arman leyendo los encabezados, no contando columnas.
@@ -3869,7 +3936,7 @@ function hojaCliente(ref) {
   if (ref === 'template') return IDS_().empresarial;
   if (ref && String(ref).length > 30) return ref; // ya es un ID
 
-  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const sh = libro_(IDS_().central).getSheetByName('Clientes');
   const filas = (sh && sh.getLastRow() > 1)
     ? sh.getDataRange().getValues().slice(1).filter(function (f) { return f[0]; })
     : [];
@@ -3894,7 +3961,7 @@ function hojaCliente(ref) {
 
 /** Lista los clientes registrados y a qué hoja apunta cada uno. */
 function listarClientes() {
-  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const sh = libro_(IDS_().central).getSheetByName('Clientes');
   if (!sh || sh.getLastRow() < 2) { Logger.log('Sin clientes todavía.'); return []; }
   const filas = sh.getDataRange().getValues().slice(1);
   const out = filas.map(function (f) {
@@ -4059,7 +4126,7 @@ function monedaReporte(ss) {
  * @param {number} dias     cuántos días hacia atrás revisar (por defecto 90)
  */
 function actualizarTasas(cliente, dias) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const pares = paresNecesarios(ss);
   if (!pares.length) {
     Logger.log('No hay pares que actualizar: las tiendas reportan en su misma ' +
@@ -4177,7 +4244,7 @@ function actualizarTasasDiario() {
  *   tasa_referencia_USD   (opcional: la tasa con la que montaste el negocio)
  */
 function alarmaTasa(cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const pares = paresEnUso(ss);
   const destino = monedaReporte(ss);
   const hoy = Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd');
@@ -4272,7 +4339,7 @@ function parametro(ss, clave, tienda) {
  * @param {string} mesB      mes a comparar 'AAAA-MM'
  */
 function efectoCambiario(cliente, tienda, mesA, mesB) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const destino = monedaReporte(ss);
   const origen = monedaDeTienda(ss, tienda);
   if (!origen) throw new Error('No encuentro la tienda "' + tienda + '" en la hoja Tiendas.');
@@ -4480,6 +4547,15 @@ function doGet(e)  { return manejar(e, 'GET'); }
 function doPost(e) { return manejar(e, 'POST'); }
 
 function manejar(e, metodo) {
+  /**
+   * Los manejadores de libro que quedaran de otra petición no sirven:
+   * en Apps Script cada petición es una ejecución nueva y el objeto ya
+   * viene vacío. Se limpia igual, explícito, porque en las pruebas el
+   * proceso SÍ sobrevive entre llamadas y un manejador viejo apuntaría
+   * a datos que ya se reemplazaron.
+   */
+  libroOlvidar_();
+  soulOlvidar_();
   try {
     const p = leerParams(e, metodo);
     const accion = String(p.accion || '').trim();
@@ -4551,6 +4627,8 @@ function manejar(e, metodo) {
       case 'alarmas':   return json(apiAlarmas(s, p));
       case 'parametros':return json(apiParametros(s, p));
       case 'auditoria': return json(apiAuditoria(s, p));
+      case 'auditoria_casos':   return json(apiAuditoriaCasos(s, p));
+      case 'auditoria_guardar': return json(apiAuditoriaGuardar(s, p));
       case 'estados':   return json(apiEstados(s, p));
       case 'reporte_dia': return json(apiReporteDia(s, p));
       case 'meta_panel':  return json(apiMetaPanel(s, p));
@@ -4658,7 +4736,31 @@ function apiVerificar(p) {
   };
   cache.put('ses_' + token, JSON.stringify(s), horas * 3600);
 
-  registrarMovimiento(s, 'Equipo', persona.id, 'ultima_conexion', '', ahoraISO());
+  /**
+   * ── LA CONEXIÓN NO SE REGISTRABA ──
+   *
+   * Ella lo notó así: «he entrado desde el correo de Nova Soul y no se
+   * registra ahí; si así estará cuando se tenga un equipo, estamos
+   * mal».
+   *
+   * Tenía razón y el fallo era exacto: esta línea anotaba el movimiento
+   * en la hoja Movimientos —el rastro— pero NUNCA escribía la celda
+   * `ultima_conexion` de la hoja Equipo, que es la que lee la pantalla.
+   * Así que el rastro crecía y la pantalla decía «Nunca ha entrado»
+   * para siempre. Nova Central sí lo hacía bien; la parte empresarial,
+   * no.
+   */
+  const ahora = ahoraISO();
+  registrarMovimiento(s, 'Equipo', persona.id, 'ultima_conexion', '', ahora);
+  try {
+    const shE = libro_(persona.sheetId).getSheetByName('Equipo');
+    if (shE && persona.fila) {
+      const encE = shE.getRange(1, 1, 1, shE.getLastColumn()).getValues()[0].map(norm);
+      const colE = encE.indexOf('ultima_conexion');
+      if (colE !== -1) shE.getRange(persona.fila, colE + 1).setValue(ahora);
+    }
+  } catch (e) { /* el rastro nunca puede impedir entrar */ }
+
   return { ok: true, token: token, sesion: publico(s) };
 }
 
@@ -4814,7 +4916,7 @@ function publico(s, ss) {
               rol_real: s.rolReal || s.rol };
   // La ficha va con moneda y país para que la pantalla no tenga que adivinarlos
   try {
-    o.fichas = fichasDe(ss || SpreadsheetApp.openById(s.sheetId), s.tiendas);
+    o.fichas = fichasDe(ss || libro_(s.sheetId), s.tiendas);
   } catch (e) { o.fichas = []; }
   return o;
 }
@@ -4824,7 +4926,7 @@ function publico(s, ss) {
  * De aquí salen el rol y las tiendas — nunca de lo que mande la pantalla.
  */
 function buscarPersona(email) {
-  const clientes = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const clientes = libro_(IDS_().central).getSheetByName('Clientes');
   if (!clientes || clientes.getLastRow() < 2) return null;
 
   const filas = clientes.getDataRange().getValues().slice(1);
@@ -4833,7 +4935,7 @@ function buscarPersona(email) {
     if (!sheetId || norm(filas[i][6]) === 'suspendido') continue;
 
     let ss;
-    try { ss = SpreadsheetApp.openById(sheetId); } catch (x) { continue; }
+    try { ss = libro_(sheetId); } catch (x) { continue; }
     const sh = ss.getSheetByName('Equipo');
     if (!sh || sh.getLastRow() < 2) continue;
 
@@ -4862,6 +4964,14 @@ function buscarPersona(email) {
         id: f[c('id')],
         nombre: f[c('nombre')],
         rol: rol,
+        /**
+         * En qué fila de la hoja Equipo está. Sin esto no se puede
+         * sellar `ultima_conexion`, que es lo que hacía que la pantalla
+         * dijera «Nunca ha entrado» aunque la persona acabara de entrar.
+         * +1 porque `datos` incluye el encabezado y las filas de la hoja
+         * empiezan en 1.
+         */
+        fila: j + 1,
         // c('permisos') es -1 en hojas creadas antes de que la columna
         // existiera: sin celda, quedan los permisos del rol.
         permisos: permisosDe(rol, c('permisos') === -1 ? '' : f[c('permisos')]),
@@ -4960,7 +5070,7 @@ function modulosDelPlan(plan) {
   if (p === 'interno') return ['empresarial', 'soul', 'academy', 'central'];
 
   try {
-    const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Planes');
+    const sh = libro_(IDS_().central).getSheetByName('Planes');
     if (sh && sh.getLastRow() > 1) {
       const d = sh.getDataRange().getValues();
       const e = d[0].map(norm);
@@ -5049,7 +5159,7 @@ function apiListar(s, p) {
     return { ok: false, error: 'Solo la dueña ve ' + entidad + '.' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName(entidad);
   if (!sh) return { ok: false, error: 'No existe la hoja ' + entidad + '.' };
   if (sh.getLastRow() < 2) return { ok: true, filas: [], total: 0 };
@@ -5202,7 +5312,7 @@ function apiRecuento(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const tz = zonaHorariaDe(ss, tienda) || 'UTC';
   const mesActual = Utilities.formatDate(new Date(), tz, 'yyyy-MM');
 
@@ -5312,7 +5422,7 @@ function apiAlarmas(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const r = evaluarAlarmas(ss, tienda);
 
   // La de dinero es solo de la dueña
@@ -5337,7 +5447,7 @@ function apiAlarmas(s, p) {
  * lo señala.
  */
 function apiParametros(s, p) {
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const tienda = String(p.tienda || s.tiendas[0] || '').trim();
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
@@ -5491,7 +5601,7 @@ function apiProductos(s, p) {
   if (!puede(s, 'leer', 'Inventario')) {
     return { ok: false, error: 'Tu rol no ve el catálogo de productos.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const tienda = String(p.tienda || s.tiendas[0] || '').trim();
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
@@ -5711,7 +5821,7 @@ function modalidadDeTienda(ss, tienda) {
  * mantener al día a mano, y nadie puede maquillarla.
  */
 function apiEquipo(s, p) {
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('Equipo');
   /**
    * `puedeEditar` también va aquí, y no solo en la salida de abajo.
@@ -5818,7 +5928,7 @@ function apiEquipo(s, p) {
 function apiAuditoria(s, p) {
   if (s.rol === 'gestora') return { ok: false, error: 'No tienes acceso a la auditoría.' };
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('Movimientos');
   if (!sh || sh.getLastRow() < 2) return { ok: true, movimientos: [] };
 
@@ -5849,7 +5959,7 @@ function apiAuditoria(s, p) {
  * suelto es ruido, doscientos es un cierre mal hecho esperando a pasar.
  */
 function apiEstados(s, p) {
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('Estados');
   const out = { ok: true, sinClasificar: [], conocidos: [],
                 opciones: OPCIONES_ESTADO, puedeEditar: s.rol === 'dueno' };
@@ -5925,7 +6035,7 @@ function apiEstadoClasificar(s, p) {
     return { ok: false, error: 'No conozco el estado "' + estado + '".' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('Estados');
   if (!sh) return { ok: false, error: 'Falta la hoja Estados. Corre bootstrapTodo().' };
 
@@ -6106,7 +6216,7 @@ function apiCrear(s, p) {
     return { ok: false, error: 'Esa tienda no es tuya.' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName(entidad);
   if (!sh) return { ok: false, error: 'Falta la hoja ' + entidad + '. Corre bootstrapTodo().' };
 
@@ -6155,7 +6265,7 @@ function validarPersona(s, datos, idActual) {
            'administradora o asesora.';
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('Equipo');
   if (!sh || sh.getLastRow() < 2) return '';
 
@@ -6201,14 +6311,14 @@ function apiBorrar(s, p) {
 
   // Quitar a la última dueña deja la cuenta sin quién dé permisos
   if (entidad === 'Equipo') {
-    const ss0 = SpreadsheetApp.openById(s.sheetId);
+    const ss0 = libro_(s.sheetId);
     if (duenosActivosSin(ss0, String(p.id || '').trim(), '') === 0) {
       return { ok: false, error: 'No puedes quitar a la única dueña: la cuenta ' +
                'se quedaría sin quién dé permisos. Nombra otra dueña primero.' };
     }
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName(entidad);
   if (!sh) return { ok: false, error: 'Falta la hoja ' + entidad + '.' };
 
@@ -6243,7 +6353,7 @@ function apiEscribir(s, p) {
   if (!id) return { ok: false, error: 'Falta el id de la fila.' };
   if (!Object.keys(campos).length) return { ok: false, error: 'No hay campos que escribir.' };
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName(entidad);
   if (!sh) return { ok: false, error: 'No existe la hoja ' + entidad + '.' };
 
@@ -6360,7 +6470,7 @@ function apiEscribir(s, p) {
 /** Sin este registro no hay auditoría ni vista sombra. */
 function registrarMovimiento(s, entidad, entidadId, campo, antes, ahora) {
   try {
-    const sh = SpreadsheetApp.openById(s.sheetId).getSheetByName('Movimientos');
+    const sh = libro_(s.sheetId).getSheetByName('Movimientos');
     // Si estaba mirando con otra vista, queda dicho: sigue siendo ella,
     // pero conviene saber desde dónde lo hizo.
     const quien = s.vistaComo
@@ -6381,7 +6491,7 @@ function apiResumen(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const mes = String(p.mes || Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM'));
   const d = agregarMes(ss, tienda, mes, s);
   d.recaudo7 = recaudoUltimosDias(ss, tienda, 7);
@@ -6515,7 +6625,7 @@ function apiCierre(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const mes = String(p.mes || Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM'));
   const prev = mesAnterior(mes);
 
@@ -7011,7 +7121,7 @@ function apiCerrarMes(s, p) {
     return { ok: false, error: 'El mes va como AAAA-MM.' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   if (cierreGuardado(ss, tienda, mes)) {
     return { ok: false, error: 'Ese mes ya está cerrado. Para rehacerlo, ' +
              'cambia su estado a "abierto" en la hoja Cierres.' };
@@ -7155,7 +7265,7 @@ function apiImportarArchivo(s, p) {
              'Expórtalo por rangos de fecha más cortos.' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   let filas;
   try {
     filas = leerArchivo(b64, nombre);
@@ -7288,7 +7398,7 @@ function abrirConvertida(id, nombre) {
   const esperas = [500, 1000, 2000, 4000, 6000, 6000];
   let ultimo = null;
   for (let i = 0; i < esperas.length; i++) {
-    try { return SpreadsheetApp.openById(id); }
+    try { return libro_(id); }
     catch (err) {
       ultimo = err;
       Utilities.sleep(esperas[i]);
@@ -7399,7 +7509,7 @@ function apiFuentes(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('Fuentes');
   const out = [];
   if (sh && sh.getLastRow() > 1) {
@@ -7593,7 +7703,7 @@ function apiHistorial(s, p) {
     return { ok: false, error: 'El estado del histórico lo ve la dueña.' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const tz = zonaHorariaDe(ss, tienda) || 'UTC';
   const monTienda = monedaDeTienda(ss, tienda);
   const cuantos = Math.min(Math.max(parseInt(p.meses, 10) || 8, 1), 18);
@@ -7760,7 +7870,7 @@ function apiCas(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const tz = zonaHorariaDe(ss, tienda) || 'UTC';
   const u = umbrales(ss, tienda);
   const minDias = Number(u.dias_sin_mover) || 3;
@@ -7873,7 +7983,7 @@ function apiCasEscribir(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const sh = ss.getSheetByName('CAS');
   if (!sh) return { ok: false, error: 'Falta la hoja CAS. Corre bootstrapTodo().' };
 
@@ -7983,7 +8093,7 @@ function puedeCentral(s, permiso) {
  * alguien no está aquí, no entra, aunque sea dueña de tres tiendas.
  */
 function buscarOperadora(email) {
-  const ss = SpreadsheetApp.openById(IDS_().central);
+  const ss = libro_(IDS_().central);
   const sh = ss.getSheetByName('Plataforma');
   if (!sh || sh.getLastRow() < 2) return null;
 
@@ -8048,6 +8158,7 @@ function manejarCentral(accion, p) {
      * NovaSoul aunque escriba la acción a mano.
      */
     case 'nc_soul':            return soulHoy(s, p);
+    case 'nc_soul_arranque':   return soulArranque(s, p);
     case 'nc_soul_guardar':    return soulPendienteGuardar(s, p);
     case 'nc_soul_borrar':     return soulPendienteBorrar(s, p);
     case 'nc_soul_horas':      return soulHorasGuardar(s, p);
@@ -8068,7 +8179,7 @@ function manejarCentral(accion, p) {
     case 'nc_soul_turno':          return soulTurnoGuardar(s, p);
     case 'nc_soul_hormiga':        return soulHormigaGuardar(s, p);
     case 'nc_soul_hormiga_borrar': return soulHormigaBorrar(s, p);
-    case 'nc_soul_plata':          return soulPlata(s, p);
+    case 'nc_soul_plata':          return soulPlataOrdenada(s, p);
     case 'nc_proyecto':            return centralProyecto(s, p);
     case 'nc_proyecto_leer':       return centralProyectoLeer(s, p);
     case 'nc_proyecto_tareas':     return centralProyectoGuardarTareas(s, p);
@@ -8084,6 +8195,8 @@ function manejarCentral(accion, p) {
     case 'nc_soul_revolucion':     return soulRevolucionGuardar(s, p);
     case 'nc_soul_pensum_auto':    return soulPensumDesdeTransitos(s, p);
     case 'nc_soul_pensum_casa':    return soulPensumOtraCasa(s, p);
+    case 'nc_soul_cielo_lectura':  return soulCieloLectura(s, p);
+    case 'nc_soul_transito_leer':  return soulTransitoLectura(s, p);
     case 'nc_salir':
       CacheService.getScriptCache().remove('nc_' + p.token);
       return { ok: true };
@@ -8151,7 +8264,7 @@ function centralVerificar(p) {
 
   // Rastro de quién entra a la consola, en la propia hoja
   try {
-    const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Plataforma');
+    const sh = libro_(IDS_().central).getSheetByName('Plataforma');
     const e = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
     const col = e.indexOf('ultima_conexion');
     if (col !== -1) sh.getRange(op.fila, col + 1).setValue(ahoraISO());
@@ -8174,7 +8287,7 @@ function centralVerificar(p) {
 function centralClientes(s, p) {
   if (!puedeCentral(s, 'ver')) return { ok: false, error: 'Tu rol no ve los clientes.' };
 
-  const ss = SpreadsheetApp.openById(IDS_().central);
+  const ss = libro_(IDS_().central);
   const sh = ss.getSheetByName('Clientes');
   if (!sh || sh.getLastRow() < 2) return { ok: true, clientes: [] };
 
@@ -8210,7 +8323,7 @@ function centralClientes(s, p) {
 
     if (conDetalle && cl.sheetId) {
       try {
-        const cs = SpreadsheetApp.openById(cl.sheetId);
+        const cs = libro_(cl.sheetId);
         const shE = cs.getSheetByName('Equipo');
         cl.personas = shE && shE.getLastRow() > 1 ? shE.getLastRow() - 1 : 0;
         const shF = cs.getSheetByName('Fuentes');
@@ -8265,7 +8378,7 @@ function centralClientes(s, p) {
 
 function centralPlanes(s, p) {
   if (!puedeCentral(s, 'ver')) return { ok: false, error: 'Tu rol no ve los planes.' };
-  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Planes');
+  const sh = libro_(IDS_().central).getSheetByName('Planes');
   if (!sh || sh.getLastRow() < 2) return { ok: true, planes: [] };
 
   const d = sh.getDataRange().getValues();
@@ -8365,7 +8478,7 @@ function centralCrearCliente(s, p) {
 /** La bitácora de la consola vive en Nova_Central, no en la del cliente. */
 function registrarCentral(s, entidad, id, campo, antes, ahora) {
   try {
-    const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Movimientos');
+    const sh = libro_(IDS_().central).getSheetByName('Movimientos');
     if (sh) sh.appendRow([ahoraISO(), s.correo, entidad, id, campo, antes, ahora]);
   } catch (err) {
     Logger.log('No se pudo registrar en Central: ' + err.message);
@@ -8391,7 +8504,7 @@ function registrarCentral(s, entidad, id, campo, antes, ahora) {
  * es quien ya está dentro.
  */
 function primeraSocia(nombre, correo) {
-  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Plataforma');
+  const sh = libro_(IDS_().central).getSheetByName('Plataforma');
   if (!sh) throw new Error('Falta la hoja Plataforma. Corre bootstrapTodo().');
   if (sh.getLastRow() > 1) {
     const ya = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues()
@@ -8658,7 +8771,7 @@ function familiaDe_(t) {
 }
 
 function mioSheet_(nombre) {
-  const ss = SpreadsheetApp.openById(IDS_().central);
+  const ss = libro_(IDS_().central);
   const sh = ss.getSheetByName(nombre);
   if (!sh) {
     throw new Error('Falta la hoja ' + nombre + ' en Nova_Central. ' +
@@ -9014,7 +9127,7 @@ const COLUMNAS_DEL_EQUIPO = [
  * @param {string} cliente   nombre del cliente (o vacío si solo hay uno)
  */
 function importar(fuenteId, tienda, cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   if (!tienda) throw new Error('Falta la tienda. Ej: importar("dropi","ec")');
   if (!monedaDeTienda(ss, tienda)) {
     throw new Error('La tienda "' + tienda + '" no está en la hoja Tiendas.');
@@ -9550,7 +9663,7 @@ function paisDeTienda(ss, tienda) {
  * ningún pedido, y vale la pena mirarlas.
  */
 function cruzarLlamadas(cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const shL = ss.getSheetByName('Llamadas');
   const shP = ss.getSheetByName('Pedidos');
   if (!shL || shL.getLastRow() < 2) { Logger.log('No hay llamadas.'); return 'Sin llamadas.'; }
@@ -9602,7 +9715,7 @@ function cruzarLlamadas(cliente) {
  * conviene correr después de pegar los exports del día.
  */
 function importarTodo(cliente) {
-  const ss = SpreadsheetApp.openById(hojaCliente(cliente));
+  const ss = libro_(hojaCliente(cliente));
   const sh = ss.getSheetByName('Fuentes');
   if (!sh || sh.getLastRow() < 2) return 'No hay fuentes configuradas.';
 
@@ -9732,7 +9845,7 @@ function metaCuenta(ss, tienda) {
  */
 function apiMetaEstado(s, p) {
   if (s.rol !== 'dueno') return { ok: false, error: 'Solo la dueña ve la conexión con Meta.' };
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const props = PropertiesService.getScriptProperties();
   /**
    * La última prueba que salió bien.
@@ -9820,7 +9933,7 @@ function apiMetaProbar(s, p) {
   const token = metaToken(s);
   if (!token) return { ok: false, error: 'Todavía no has guardado la llave.' };
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const tienda = String(p.tienda || s.tiendas[0]);
   const cuenta = metaCuenta(ss, tienda);
   if (!cuenta) {
@@ -10173,7 +10286,7 @@ function estadoAutomatico() {
 function estadoTasasDe_(sheetId, nombre) {
   const out = { empresa: nombre, necesita: false, alDia: true, pares: [], error: '' };
   try {
-    const ss = SpreadsheetApp.openById(sheetId);
+    const ss = libro_(sheetId);
     const pares = paresNecesarios(ss);
     if (!pares.length) return out;          // no necesita: alDia se queda en true
     out.necesita = true;
@@ -10513,7 +10626,7 @@ function metaFecha_(diasAtras) {
  * @param {number} dias     cuántos días hacia atrás pedir
  */
 function metaLeerTienda_(sheetId, tienda, token, dias) {
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
   const cuenta = metaCuenta(ss, tienda);
   const informe = {
     tienda: tienda, cuenta: cuenta, ok: false, error: '',
@@ -10721,7 +10834,7 @@ function metaFilasSolapadas_(ss, tienda, desde, hasta) {
  * cuadrar plata. El total de la cuenta sigue saliendo de Pauta.
  */
 function metaLeerAnuncios_(sheetId, tienda, token, dias) {
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
   const cuenta = metaCuenta(ss, tienda);
   const informe = { tienda: tienda, ok: false, error: '', filas: 0,
                     nuevas: 0, actualizadas: 0, iguales: 0,
@@ -10835,7 +10948,7 @@ function metaLeerCliente_(sheetId, dias) {
     .getProperty('META_TOKEN_' + String(sheetId).slice(0, 44)) || '';
   if (!token) return { sheetId: sheetId, sinLlave: true, tiendas: [] };
 
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
   const shT = ss.getSheetByName('Tiendas');
   if (!shT || shT.getLastRow() < 2) return { sheetId: sheetId, tiendas: [] };
 
@@ -10938,7 +11051,7 @@ function apiMetaTraer(s, p) {
    * un problema distinto —quedarse a medias sin decirlo— que ahora está
    * resuelto donde tenía que estarlo: por tramos, y avisando.
    */
-  const ss2 = SpreadsheetApp.openById(s.sheetId);
+  const ss2 = libro_(s.sheetId);
   if (norm(ajustes(ss2, tienda).meta_anuncios) === 'si') {
     try {
       informe.anuncios = metaLeerAnuncios_(s.sheetId, tienda, token, dias);
@@ -11427,7 +11540,7 @@ function coberturaDe_(pedidos, lunes, semanas) {
  * @param {string} lunes    lunes de la semana a analizar; vacío = la última cerrada
  */
 function semaforoSemanal(sheetId, tienda, lunes) {
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
   const hoyISO = ahoraISO().slice(0, 10);
   const L = lunes || semanaCerrada_(hoyISO);
   const SEMANAS = 8;
@@ -11608,7 +11721,7 @@ function semaforoLunes() {
   listarClientes().forEach(function (c) {
     if (!c.sheetId) return;
     try {
-      const ss = SpreadsheetApp.openById(c.sheetId);
+      const ss = libro_(c.sheetId);
       const modulos = modulosDeCliente_(c.sheetId);
       if (modulos.indexOf('pauta') === -1 || modulos.indexOf('dinero') === -1) {
         log.push(c.empresa + ': el plan no incluye pauta y dinero. Saltado.');
@@ -11681,7 +11794,7 @@ function tiendasActivas_(ss) {
  */
 function modulosDeCliente_(sheetId) {
   try {
-    const shC = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+    const shC = libro_(IDS_().central).getSheetByName('Clientes');
     if (!shC || shC.getLastRow() < 2) return [];
     const d = shC.getDataRange().getValues();
     const e = d[0].map(norm);
@@ -11745,7 +11858,9 @@ const SOUL_HOJAS = {
   Mindlab:    ['id','usuario_id','semana','mes','tema','tarea','horas_estimadas',
                'desde','hasta','estado','nota'],
   Fijos:      ['id','usuario_id','categoria','concepto','monto','moneda',
-               'dia_del_mes','activo','nota'],
+               'dia_del_mes','activo','nota',
+               'flujo','tipo_pago','cuotas_total','cuotas_pagadas',
+               'cuota_desde','acreedor'],
   Rutina:     ['id','usuario_id','tipo','nombre','dia_semana','hora_inicio','hora_fin',
                'lugar','trabajo_id','materia_id','paga_fija','moneda','desde','hasta',
                'activo','nota'],
@@ -11856,8 +11971,14 @@ function soulUsuario_(s) {
 
 // ─── HOJAS ───────────────────────────────────────────────────
 
-function soulSheet_(nombre) {
-  const ss = SpreadsheetApp.openById(IDS_().soul);
+/**
+ * Abre una pestaña de Soul. Uso interno, sin efectos.
+ *
+ * Existe aparte de `soulSheet_` por una razón de seguridad, no de
+ * estilo: ver abajo.
+ */
+function soulHoja_(nombre) {
+  const ss = libro_(IDS_().soul);
   const sh = ss.getSheetByName(nombre);
   if (!sh) {
     throw new Error('Falta la hoja ' + nombre + ' en Nova_Soul. ' +
@@ -11866,11 +11987,71 @@ function soulSheet_(nombre) {
   return sh;
 }
 
+/**
+ * ── PEDIR EL MANEJADOR DE UNA PESTAÑA TIRA SU LECTURA EN MEMORIA ──
+ *
+ * Quien pide el manejador crudo es porque va a ESCRIBIR: `soulGuardar_`,
+ * `soulBorrar_`, el guardado de la carta, el de las horas, el de los
+ * tránsitos. Si la lectura de esa pestaña se quedara en memoria, la
+ * siguiente lectura de la misma petición devolvería lo de ANTES de
+ * escribir, y en pantalla eso se ve como «no se guardó».
+ *
+ * Se podría poner un `soulOlvidar_` al lado de cada escritura, y fue
+ * lo primero que hice: seis sitios, y cualquier función nueva que
+ * escriba sin acordarse reintroduce el error en silencio.
+ *
+ * Así que la regla vive AQUÍ, en el único sitio por donde pasan todos:
+ * pedir el manejador es declarar la intención de escribir, y eso
+ * invalida. Cuesta una lectura de más cuando alguien pide el manejador
+ * sin escribir, y a cambio el error no se puede volver a colar.
+ */
+function soulSheet_(nombre) {
+  soulOlvidar_(nombre);
+  return soulHoja_(nombre);
+}
+
+/**
+ * ── LEER CADA PESTAÑA UNA SOLA VEZ POR PETICIÓN ──
+ *
+ * Medido al responder «¿por qué NovaSoul está tan lento?»: pintar la
+ * pantalla de entrada leía VEINTICUATRO veces pestañas enteras, sobre
+ * unas diez pestañas distintas. O sea que la mitad larga del trabajo
+ * era volver a traer lo que ya estaba en memoria.
+ *
+ * Esto guarda lo leído mientras dura la petición. Dos cuidados, y los
+ * dos son la diferencia entre acelerar y corromper:
+ *
+ * 1· CUALQUIER ESCRITURA LO TIRA. `soulGuardar_` y `soulBorrar_`
+ *    llaman a `soulOlvidar_` antes de soltar el candado. Si no, un
+ *    guardar seguido de un leer devolvería lo de antes de guardar, y
+ *    eso se ve en pantalla como «no se guardó» — el peor síntoma
+ *    posible, porque invita a guardar otra vez.
+ *
+ * 2· SE GUARDA LA HOJA CRUDA, NO EL FILTRO POR USUARIO. El filtro es
+ *    barato y depende de quién pregunta; cachear ya filtrado sería
+ *    guardar las filas de una persona bajo una llave que otra puede
+ *    pedir.
+ */
+var SOUL_LEIDO_ = {};
+
+function soulOlvidar_(nombre) {
+  if (nombre) delete SOUL_LEIDO_[nombre];
+  else SOUL_LEIDO_ = {};
+}
+
+function soulCrudo_(nombre) {
+  if (SOUL_LEIDO_[nombre]) return SOUL_LEIDO_[nombre];
+  // `soulHoja_` y no `soulSheet_`: leer no invalida nada.
+  const sh = soulHoja_(nombre);
+  const d = sh.getLastRow() < 2 ? [] : sh.getDataRange().getValues();
+  SOUL_LEIDO_[nombre] = d;
+  return d;
+}
+
 /** Lee una hoja de Soul, ya filtrada por quién es. */
 function soulLeer_(nombre, uid) {
-  const sh = soulSheet_(nombre);
-  if (sh.getLastRow() < 2) return [];
-  const d = sh.getDataRange().getValues();
+  const d = soulCrudo_(nombre);
+  if (!d.length) return [];
   const enc = d[0].map(norm);
   const cU = enc.indexOf('usuario_id');
   return d.slice(1).map(function (f) {
@@ -11948,6 +12129,9 @@ function soulGuardar_(nombre, datos, uid) {
     }
     throw new Error('No existe ' + nombre + ' con id ' + id + '.');
   } finally {
+    // Lo que acaba de cambiar no puede seguir en memoria: la siguiente
+    // lectura de esta misma petición devolvería lo de antes.
+    soulOlvidar_(nombre);
     lock.releaseLock();
   }
 }
@@ -11963,6 +12147,7 @@ function soulBorrar_(nombre, id, uid) {
     const dueno = cU === -1 ? '' : String(d[i][cU] || '').toLowerCase().trim();
     if (dueno && dueno !== uid) throw new Error('Esa fila no es tuya.');
     sh.deleteRow(i + 1);
+    soulOlvidar_(nombre);
     return true;
   }
   return false;
@@ -12649,6 +12834,16 @@ function soulFijoGuardar(s, p) {
   if (!cat && esNuevo) {
     return { ok: false, error: 'Falta decir de qué categoría es.' };
   }
+  if (d.tipoPago !== undefined && String(d.tipoPago).trim() &&
+      !PLATA_TIPOS[norm(d.tipoPago)]) {
+    return { ok: false, error: 'El tipo de pago tiene que ser mensual, cuotas o único.' };
+  }
+  /**
+   * Una línea por cuotas sin decir cuántas son se guarda igual, pero
+   * la pantalla va a decir que no puede calcular cuándo termina. No se
+   * bloquea: a veces ella no sabe el número todavía, y obligarla a
+   * inventarlo sería peor que quedarse sin la fecha.
+   */
   try {
     soulGuardar_('Fijos', {
       id: String(d.id || ''),
@@ -12666,6 +12861,29 @@ function soulFijoGuardar(s, p) {
       activo: d.activo !== undefined ? (d.activo === false || norm(d.activo) === 'no' ? 'no' : 'si')
               : (esNuevo ? 'si' : undefined),
       nota: d.nota !== undefined ? String(d.nota) : undefined,
+
+      /**
+       * ── LO QUE ELLA PIDIÓ DISTINGUIR ──
+       *
+       * «debería haber una distinción si es único pago, pago mensual,
+       *  pago por cuotas», «los ingresos y los gastos fijos también
+       *  deben estar separados».
+       *
+       * Un tipo de pago inventado NO se guarda: dejaría la línea
+       * fuera de todos los bloques de la pantalla, o sea invisible.
+       * Es mejor rechazar el formulario que hacer desaparecer un
+       * gasto suyo sin decir nada.
+       */
+      flujo: d.flujo !== undefined
+        ? (norm(d.flujo) === 'ingreso' ? 'ingreso' : 'gasto')
+        : (esNuevo ? 'gasto' : undefined),
+      tipo_pago: d.tipoPago !== undefined && PLATA_TIPOS[norm(d.tipoPago)]
+        ? norm(d.tipoPago) : undefined,
+      cuotas_total: d.cuotasTotal !== undefined ? num(d.cuotasTotal) : undefined,
+      cuotas_pagadas: d.cuotasPagadas !== undefined ? num(d.cuotasPagadas) : undefined,
+      cuota_desde: d.cuotaDesde !== undefined
+        ? String(d.cuotaDesde).slice(0, 7) : undefined,
+      acreedor: d.acreedor !== undefined ? String(d.acreedor).trim() : undefined,
     }, soulUsuario_(s));
     return { ok: true };
   } catch (e) {
@@ -12709,7 +12927,7 @@ function soulFamily(s, p) {
 
   // ── Empresarial ──
   try {
-    const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+    const sh = libro_(IDS_().central).getSheetByName('Clientes');
     if (sh && sh.getLastRow() > 1) {
       const d = sh.getDataRange().getValues();
       const e = d[0].map(norm);
@@ -12733,7 +12951,7 @@ function soulFamily(s, p) {
 
   if (cl) {
     try {
-      const cs = SpreadsheetApp.openById(cl.sheetId);
+      const cs = libro_(cl.sheetId);
       out.tiendas = tiendasActivas_(cs).map(function (t) {
         return { id: t, nombre: nombreTienda(cs, t) };
       });
@@ -12798,7 +13016,7 @@ function soulFamily(s, p) {
   // No hay estudiantes todavía. Decirlo es más útil que un cero que
   // parece un dato.
   try {
-    const sh = SpreadsheetApp.openById(IDS_().academy).getSheetByName('Estudiantes');
+    const sh = libro_(IDS_().academy).getSheetByName('Estudiantes');
     const n = sh && sh.getLastRow() > 1 ? sh.getLastRow() - 1 : 0;
     out.academy = { estudiantes: n,
       porque: n ? '' : 'Todavía no has dado de alta a nadie en novAcademy.' };
@@ -13998,7 +14216,7 @@ function parametroDe_(ss, tienda, clave) {
  * es exactamente el error que nadie revisa porque da un número alto.
  */
 function utilidadMes_(sheetId, tienda, mes) {
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
   const moneda = monedaDeTienda(ss, tienda) || '';
   const desde = mes + '-01';
   const hasta = mes + '-31';
@@ -14055,7 +14273,7 @@ function utilidadMes_(sheetId, tienda, mes) {
 
 /** La hoja y el nombre de una tienda, buscando entre los clientes. */
 function tiendaDeCentral_(tiendaId) {
-  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+  const sh = libro_(IDS_().central).getSheetByName('Clientes');
   if (!sh || sh.getLastRow() < 2) return null;
   const d = sh.getDataRange().getValues();
   const e = d[0].map(norm);
@@ -14064,7 +14282,7 @@ function tiendaDeCentral_(tiendaId) {
     const sid = String(d[i][cSheet] || '').trim();
     if (!sid) continue;
     try {
-      const cs = SpreadsheetApp.openById(sid);
+      const cs = libro_(sid);
       if (tiendasActivas_(cs).indexOf(tiendaId) === -1) continue;
       return { sheetId: sid, clienteId: String(d[i][cId] || ''),
                empresa: String(d[i][cEmp] || ''), nombre: nombreTienda(cs, tiendaId) };
@@ -14077,7 +14295,7 @@ function tiendaDeCentral_(tiendaId) {
 function tiendasParaProyecto_() {
   const out = [];
   try {
-    const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Clientes');
+    const sh = libro_(IDS_().central).getSheetByName('Clientes');
     if (!sh || sh.getLastRow() < 2) return out;
     const d = sh.getDataRange().getValues();
     const e = d[0].map(norm);
@@ -14087,7 +14305,7 @@ function tiendasParaProyecto_() {
       if (!sid) continue;
       if (norm(d[i][c('estado')]) === 'inactivo') continue;
       try {
-        const cs = SpreadsheetApp.openById(sid);
+        const cs = libro_(sid);
         tiendasActivas_(cs).forEach(function (t) {
           out.push({ id: t, nombre: nombreTienda(cs, t),
                      empresa: String(d[i][c('empresa')] || ''),
@@ -14546,22 +14764,49 @@ const CIELO_SIGNOS_NOMBRE = ['Aries','Tauro','Géminis','Cáncer','Leo','Virgo',
 const LUNA_EPOCA_MS = Date.UTC(2000, 0, 6, 18, 14, 0);
 const LUNA_SINODICO = 29.530588853;
 
+/**
+ * ── LOS NOMBRES, EN CASTELLANO DE VERDAD ──
+ *
+ * Ella preguntó «¿qué es gibosa creciente? no entiendo, no sé de qué me
+ * hablas», y tenía toda la razón en preguntar: la pantalla le estaba
+ * soltando el nombre técnico de la fase sin decirle qué está viendo en
+ * el cielo. «Gibosa» es giba, joroba: la luna ya pasó de media y
+ * todavía no es redonda.
+ *
+ * Por eso cada fase lleva ahora tres cosas distintas y no una sola:
+ *
+ *   nombre  · como se llama
+ *   forma   · qué vas a ver si sales a mirarla esta noche
+ *   que     · para qué sirve ese momento
+ *
+ * Un nombre que hay que ir a buscar a Google es un nombre que la
+ * pantalla no terminó de dar.
+ */
 const LUNA_FASES = [
   { id: 'nueva',            nombre: 'Luna nueva',        momento: 'aprender',
+    forma: 'No se ve nada: está entre la Tierra y el Sol.',
     que: 'Se siembra. Es para empezar algo, no para mostrarlo.' },
   { id: 'creciente',        nombre: 'Creciente',         momento: 'aprender',
+    forma: 'Una uña de luz, muy finita, que aparece al atardecer.',
     que: 'Lo que empezó toma cuerpo. Se construye.' },
   { id: 'cuarto_creciente', nombre: 'Cuarto creciente',  momento: 'cambiar',
+    forma: 'Media luna exacta, iluminada del lado derecho.',
     que: 'Aparece la resistencia. Es el punto donde se decide seguir o no.' },
   { id: 'gibosa',           nombre: 'Gibosa creciente',  momento: 'aprender',
+    forma: 'Más de media y todavía no redonda — «gibosa» es de giba, ' +
+           'joroba: el bulto de luz que le falta para ser llena.',
     que: 'Se afina. Se corrige antes de mostrar.' },
   { id: 'llena',            nombre: 'Luna llena',        momento: 'cambiar',
+    forma: 'Redonda entera, sale al anochecer y se ve toda la noche.',
     que: 'Culmina y se ve. Es para mostrar y para entregar.' },
   { id: 'diseminadora',     nombre: 'Gibosa menguante',  momento: 'descansar',
+    forma: 'La joroba otra vez, pero ya bajando: se le come la luz por la derecha.',
     que: 'Se comparte lo que salió. Se cuenta, se enseña.' },
   { id: 'cuarto_menguante', nombre: 'Cuarto menguante',  momento: 'cambiar',
+    forma: 'Media luna exacta, ahora del lado izquierdo. Sale de madrugada.',
     que: 'Se corta lo que no sirvió. Cierre con decisión.' },
   { id: 'balsamica',        nombre: 'Balsámica',         momento: 'descansar',
+    forma: 'La última uña de luz antes de desaparecer. Casi no se ve.',
     que: 'Se suelta y se descansa. No es día de arrancar nada.' },
 ];
 
@@ -14577,7 +14822,7 @@ function faseLunar_(fechaISO) {
   const f = LUNA_FASES[i];
 
   return {
-    id: f.id, nombre: f.nombre, momento: f.momento, que: f.que,
+    id: f.id, nombre: f.nombre, momento: f.momento, que: f.que, forma: f.forma,
     edadDias: Math.round(edad * 10) / 10,
     // Iluminación: 0 en la nueva, 100 en la llena.
     iluminacion: Math.round((1 - Math.cos(2 * Math.PI * edad / LUNA_SINODICO)) / 2 * 100),
@@ -15715,6 +15960,28 @@ function soulCielo(s, p) {
   const hoy = ahoraISO().slice(0, 10);
   const lunes = lunesDe_(hoy);
 
+  /**
+   * ── ANTES DE LEER, SEMBRAR ──
+   *
+   * Ella: «el pensum kármico tampoco me lo está dando y se supone que
+   * lo da en automático». El motor estaba bien; la hoja Tránsitos
+   * estaba vacía porque esperaba que los pegara ella, y un pensum que
+   * se arma DESDE los tránsitos sobre cero tránsitos da cero
+   * temporadas sin quejarse de nada.
+   *
+   * Así que aquí, en el orden que importa: se siembran las efemérides
+   * si faltan, y con eso ya hay de dónde armar el pensum. Las dos
+   * operaciones son idempotentes —no duplican— y por eso se pueden
+   * correr en cada entrada sin miedo.
+   *
+   * Antes esto solo pasaba los lunes, dentro del correo automático. Un
+   * pensum que solo existe si llegó un correo no es automático: es un
+   * correo.
+   */
+  const semilla = transitosSembrar_(uid);
+  let pensumNuevo = [];
+  try { pensumNuevo = pensumAuto_(uid, hoy); } catch (e) { /* no tumba la pantalla */ }
+
   const nac = nacimientoDe_(uid);
   const carta = cartaDe_(uid);
   const transitos = transitosDe_(uid);
@@ -15812,6 +16079,26 @@ function soulCielo(s, p) {
     // Las temporadas que se podrían armar solas desde sus tránsitos.
     pensumPropuesto: pensumProponer_(uid),
     medicion: cieloMedir_(uid, hoy),
+
+    /**
+     * Lo que Nova hizo sola al abrir, dicho en voz alta.
+     *
+     * Si un día aparecen doce temporadas nuevas en su pensum sin que
+     * ella tocara nada, tiene derecho a saber de dónde salieron y por
+     * qué justo hoy. Sembrar en silencio es lo mismo que no sembrar,
+     * pero con la lista más larga.
+     */
+    automatico: {
+      transitosSembrados: semilla.sembro || 0,
+      transitosPorque: semilla.porque || '',
+      pensumCreado: pensumNuevo.length,
+      pensumTitulos: pensumNuevo.map(function (x) { return x.titulo; }),
+      efemerides: efemeridesVencen_(hoy),
+    },
+    // Los ejes del karma: nodos y el eje Mediocielo–Fondo del cielo.
+    ejes: typeof EFEMERIDES_CARTA !== 'undefined' &&
+          norm(EFEMERIDES_CARTA.usuario_id) === norm(uid)
+      ? lecEjes_(EFEMERIDES_CARTA) : [],
   };
 }
 
@@ -15857,7 +16144,7 @@ function soulCielo(s, p) {
 
 /** Las socias activas de la plataforma. Son las dueñas de estos avisos. */
 function sociasPlataforma_() {
-  const ss = SpreadsheetApp.openById(IDS_().central);
+  const ss = libro_(IDS_().central);
   const sh = ss.getSheetByName('Plataforma');
   if (!sh || sh.getLastRow() < 2) return [];
   const d = sh.getDataRange().getValues();
@@ -16276,7 +16563,7 @@ function centralMeta(s, p) {
       const tiendas = [];
       let sinCuenta = 0;
       try {
-        const ss = SpreadsheetApp.openById(c.sheetId);
+        const ss = libro_(c.sheetId);
         tiendasActivas_(ss).forEach(function (t) {
           const cuenta = metaCuenta(ss, t);
           if (!cuenta) sinCuenta++;
@@ -16676,7 +16963,7 @@ function apiMetaPanel(s, p) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
 
-  const ss = SpreadsheetApp.openById(s.sheetId);
+  const ss = libro_(s.sheetId);
   const props = PropertiesService.getScriptProperties();
   const hoyISO = ahoraISO().slice(0, 10);
   const moneda = monedaDeTienda(ss, tienda) || '';
@@ -16849,7 +17136,7 @@ const DIA_CATEGORIAS = [
  * esta mañana no es un pendiente, es un trabajo hecho.
  */
 function reporteDelDia(sheetId, tienda, diaISO) {
-  const ss = SpreadsheetApp.openById(sheetId);
+  const ss = libro_(sheetId);
   const hoy = ahoraISO().slice(0, 10);
   const dia = diaISO || masDias_(hoy, -1);
 
@@ -17079,4 +17366,2052 @@ function apiReporteDia(s, p) {
   } catch (e) {
     return { ok: false, error: e.message };
   }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   24 · EL CIELO · EL VOCABULARIO DE LA LECTURA
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  LA LECTURA DEL CIELO · el vocabulario con el que Nova interpreta
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ QUÉ PIDIÓ ELLA, CON SUS PALABRAS ─────────────────────────┐
+ * │                                                            │
+ * │ «quiero más análisis, más profundo, por ejemplo en casa 8  │
+ * │  de Leo por mi año, necesito profundidad y análisis,       │
+ * │  tiempo para qué, cómo me afecta la energía que me toca,   │
+ * │  cómo la puedo trabajar a mi favor, y cómo se puede ver    │
+ * │  si no se integra correctamente la energía, como un        │
+ * │  desequilibrio».                                           │
+ * │                                                            │
+ * │ Esas son CUATRO preguntas fijas, y esta pantalla las       │
+ * │ responde siempre las cuatro. No es una frase de galleta    │
+ * │ de la fortuna: es una lectura compuesta de piezas que se   │
+ * │ pueden mirar por separado.                                 │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ CÓMO SE COMPONE UNA LECTURA ──────────────────────────────┐
+ * │                                                            │
+ * │ Un tránsito son cuatro datos: QUÉ planeta, CÓMO toca       │
+ * │ (el aspecto), A QUÉ de tu carta, y POR DÓNDE (la casa).    │
+ * │                                                            │
+ * │   Júpiter  ·  sextil  ·  a tu Mediocielo  ·  por casa 8    │
+ * │   ───────     ──────     ───────────────     ─────────     │
+ * │   el verbo    el tono     a quién le pasa    el escenario  │
+ * │                                                            │
+ * │ Cada pieza tiene aquí su propio vocabulario, y la lectura  │
+ * │ se arma cruzándolas. Por eso una temporada que nunca       │
+ * │ estuvo escrita en ningún lado sale leída igual de fondo    │
+ * │ que una famosa: no hay lista de textos, hay una gramática. │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ LO QUE ESTO NO ES ────────────────────────────────────────┐
+ * │                                                            │
+ * │ Esto es la lectura COMÚN: lo que la tradición dice de esa  │
+ * │ combinación. Nova no sabe lo que a ella le pasa por        │
+ * │ dentro, y no va a fingir que sí.                           │
+ * │                                                            │
+ * │ Por eso todo lo que sale de aquí va marcado como lectura   │
+ * │ de partida, y CUALQUIER cosa que ella escriba en su        │
+ * │ pensum manda sobre esto. Es la misma regla que ya estaba   │
+ * │ en el resto de El cielo, sostenida.                        │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+
+// ─── LOS PLANETAS QUE TRANSITAN ──────────────────────────────
+
+/**
+ * Qué HACE cada planeta cuando pasa por encima de algo tuyo.
+ *
+ * `regala` y `tuerce` son la misma energía: la que se integra y la que
+ * no. Ella pidió las dos caras, y la segunda no es un castigo — es la
+ * primera sin digerir.
+ */
+const LEC_CUERPOS = {
+  sol: {
+    nombre: 'Sol', grupo: 'personal', ritmo: 'un mes por signo', dura: 'unos días',
+    hace: 'alumbra y pone en el centro',
+    regala: 'claridad sobre lo que de verdad es tuyo, y ganas de mostrarlo',
+    tuerce: 'volverlo todo sobre ti, y confundir ser visto con ser querido',
+  },
+  mercurio: {
+    nombre: 'Mercurio', grupo: 'personal', ritmo: 'unas semanas por signo', dura: 'unos días',
+    hace: 'nombra, pregunta y pone en palabras',
+    regala: 'la conversación que estaba pendiente y el papel que había que firmar',
+    tuerce: 'hablar de más, decidir sobre datos a medias, o quedarte analizando en vez de mover',
+  },
+  venus: {
+    nombre: 'Venus', grupo: 'personal', ritmo: 'un mes por signo', dura: 'una o dos semanas',
+    hace: 'acerca, endulza y pone precio',
+    regala: 'que te lean bien, que te paguen bien, y que lo bonito valga por sí solo',
+    tuerce: 'comprar la paz con complacencia, y gastar para tapar un vacío',
+  },
+  marte: {
+    nombre: 'Marte', grupo: 'personal', ritmo: 'unos dos meses por signo', dura: 'de una a tres semanas',
+    hace: 'empuja, corta y defiende',
+    regala: 'la fuerza para arrancar lo que llevaba meses en la lista',
+    tuerce: 'pelear con quien no era, quemarte en una semana, o apurar algo que no estaba listo',
+  },
+  jupiter: {
+    nombre: 'Júpiter', grupo: 'social', ritmo: 'un año por signo', dura: 'de dos a cuatro meses',
+    hace: 'abre, agranda y da permiso',
+    regala: 'la puerta que se abre sola y el sí que llega sin pelearlo',
+    tuerce: 'agrandar también el gasto, el riesgo y la promesa — decir que sí a todo y no caber',
+  },
+  saturno: {
+    nombre: 'Saturno', grupo: 'social', ritmo: 'dos años y medio por signo', dura: 'de tres a nueve meses',
+    hace: 'aprieta, ordena y cobra',
+    regala: 'una estructura que aguanta, y respeto por lo que sí sostuviste',
+    tuerce: 'miedo, frío, y creer que lo que cuesta trabajo es que no sirves',
+  },
+  urano: {
+    nombre: 'Urano', grupo: 'generacional', ritmo: 'siete años por signo', dura: 'de seis meses a dos años',
+    hace: 'rompe el molde y suelta de golpe',
+    regala: 'la libertad que no te atrevías a pedir, y una idea que cambia el tablero',
+    tuerce: 'romper por romper, e irte de algo que solo había que cambiar de forma',
+  },
+  neptuno: {
+    nombre: 'Neptuno', grupo: 'generacional', ritmo: 'catorce años por signo', dura: 'de uno a tres años',
+    hace: 'disuelve los bordes',
+    regala: 'compasión, intuición fina y arte — y soltar lo que ya no se puede sostener',
+    tuerce: 'niebla: idealizar a alguien, no ver la cuenta, o cansarte sin causa clara',
+  },
+  pluton: {
+    nombre: 'Plutón', grupo: 'generacional', ritmo: 'de doce a treinta años por signo', dura: 'de uno a cuatro años',
+    hace: 'saca a la superficie y transforma de raíz',
+    regala: 'poder real sobre algo donde antes solo aguantabas',
+    tuerce: 'control, obsesión y pulsos de poder donde bastaba con hablar',
+  },
+};
+
+// ─── CÓMO TOCA: EL ASPECTO ───────────────────────────────────
+
+/**
+ * El aspecto es el TONO. No dice qué pasa, dice cómo llega.
+ *
+ * `tension` de 0 a 3 sirve para dos cosas: ordenar la pantalla y
+ * calcular la intensidad. Un trígono no es «bueno» y una cuadratura no
+ * es «mala»: lo fácil se desaprovecha y lo difícil es lo que construye.
+ * Eso está escrito en los textos a propósito.
+ */
+const LEC_ASPECTOS = {
+  conjuncion: {
+    nombre: 'Conjunción', simbolo: '☌', grados: 0, tension: 2,
+    que: 'se funden: el planeta se sienta encima y por un rato no se distingue qué es tuyo y qué es suyo',
+    pide: 'arrancar algo con esa energía, sabiendo que la vas a sentir en carne propia',
+    riesgo: 'no ver de afuera lo que estás viviendo por dentro',
+  },
+  sextil: {
+    nombre: 'Sextil', simbolo: '⚹', grados: 60, tension: 0,
+    que: 'se hacen guiños: hay una puerta abierta, pero no se abre sola',
+    pide: 'hacer el movimiento — esta es la ayuda que solo sirve si la usas',
+    riesgo: 'que pase entero y ni te enteres, porque nada dolió lo suficiente para mirarlo',
+  },
+  cuadratura: {
+    nombre: 'Cuadratura', simbolo: '□', grados: 90, tension: 3,
+    que: 'chocan: dos cosas tuyas quieren lo contrario al mismo tiempo',
+    pide: 'elegir, y pagar el precio de elegir — no hay salida donde ganen las dos',
+    riesgo: 'aguantar la fricción en vez de decidir, y que se vuelva síntoma',
+  },
+  trigono: {
+    nombre: 'Trígono', simbolo: '△', grados: 120, tension: 0,
+    que: 'fluyen: la energía corre sin resistencia, como algo que siempre supiste hacer',
+    pide: 'apoyarte ahí para mover lo pesado de otra parte de la carta',
+    riesgo: 'acomodarte — lo fácil rara vez enseña algo nuevo',
+  },
+  oposicion: {
+    nombre: 'Oposición', simbolo: '☍', grados: 180, tension: 3,
+    que: 'se miran de frente: lo que te toca llega por fuera, casi siempre con cara de otra persona',
+    pide: 'ver que lo de enfrente también es tuyo, y negociar en vez de ganar',
+    riesgo: 'echarle la culpa al de enfrente y perder el aprendizaje entero',
+  },
+};
+
+/** Los nombres vienen con tilde desde las efemérides. */
+function lecAspecto_(a) {
+  const k = norm(a).replace(/ó/g, 'o').replace(/í/g, 'i');
+  return LEC_ASPECTOS[k] || LEC_ASPECTOS[k.replace('conjucion', 'conjuncion')] || null;
+}
+
+// ─── A QUÉ TE TOCA: EL PUNTO NATAL ───────────────────────────
+
+/**
+ * Qué parte de ella es cada punto de la carta.
+ *
+ * Los nodos, el Mediocielo y el Fondo del cielo están aquí porque ella
+ * los pidió por nombre: «ten en cuenta mis nodos del karma, mi medio
+ * cielo y mi fondo cielo».
+ */
+const LEC_NATAL = {
+  sol: { nombre: 'Sol', quien: 'quién eres cuando nadie te está pidiendo nada',
+         aFavor: 'decidir desde lo que sí eres, no desde lo que se espera',
+         mal: 'te cuesta reconocerte en lo que estás haciendo' },
+  luna: { nombre: 'Luna', quien: 'lo que sientes antes de pensarlo, y lo que necesitas para estar en paz',
+          aFavor: 'cuidar el cuerpo, el descanso y la casa como si fuera trabajo — porque lo es',
+          mal: 'el cuerpo habla primero: sueño, digestión, ganas de llorar sin motivo' },
+  mercurio: { nombre: 'Mercurio', quien: 'cómo piensas, hablas, escribes y cierras acuerdos',
+              aFavor: 'poner por escrito lo que estaba de palabra',
+              mal: 'malentendidos, mensajes que no llegan, decisiones tomadas a medias' },
+  venus: { nombre: 'Venus', quien: 'lo que te gusta, lo que vales y cómo te vinculas',
+           aFavor: 'revisar precios, acuerdos y a quién le estás dando tu tiempo gratis',
+           mal: 'aceptar menos de lo que vale tu trabajo, o pagar por ser querida' },
+  marte: { nombre: 'Marte', quien: 'tu empuje, tu rabia y tu manera de defenderte',
+           aFavor: 'usar la rabia como información: te está diciendo dónde te pasaron por encima',
+           mal: 'explotas con quien no era, o te quedas sin fuerza para lo que sí importaba' },
+  jupiter: { nombre: 'Júpiter', quien: 'tu fe, tu apetito de más y por dónde crece tu vida',
+             aFavor: 'apostar por lo que ya demostró que funciona, no por lo que suena bonito',
+             mal: 'exceso: más gasto, más promesas y más cosas abiertas de las que caben' },
+  saturno: { nombre: 'Saturno', quien: 'tu disciplina, tus miedos viejos y lo que sostienes aunque nadie mire',
+             aFavor: 'terminar UNA cosa hasta el final, aunque sea pequeña',
+             mal: 'parálisis, autoexigencia sin descanso, y sensación de ir atrasada en la vida' },
+  urano: { nombre: 'Urano', quien: 'lo que en ti no se deja domesticar',
+           aFavor: 'darte el permiso tú, antes de que te lo quiten a la fuerza',
+           mal: 'cambios bruscos de los que después te arrepientes' },
+  neptuno: { nombre: 'Neptuno', quien: 'tu imaginación, tu fe y por dónde te engañas',
+             aFavor: 'crear, descansar y dejar de pelear con lo que ya se acabó',
+             mal: 'confusión, cansancio raro y ver en alguien lo que querías ver' },
+  pluton: { nombre: 'Plutón', quien: 'lo que te transforma y lo que no sueltas',
+            aFavor: 'mirar de frente eso que llevas tiempo rodeando',
+            mal: 'control, celos, y quedarte en algo solo por no perder lo invertido' },
+  ascendente: { nombre: 'Ascendente', quien: 'tu cara, tu cuerpo y cómo entras a los lugares',
+                aFavor: 'cambiar algo visible: la forma de presentarte, el cuerpo, el nombre de lo que haces',
+                mal: 'no te reconoces en el espejo ni en cómo te describen los demás' },
+  descendente: { nombre: 'Descendente', quien: 'con quién te asocias y qué buscas en el otro',
+                 aFavor: 'revisar sociedades y contratos: quién pone qué',
+                 mal: 'atraes justo lo que dijiste que no querías' },
+  medio_cielo: { nombre: 'Mediocielo', quien: 'tu lugar en el mundo: la carrera, el nombre público, lo que se ve de ti',
+                 aFavor: 'mover fichas donde te ven — mostrar trabajo, cobrar, tomar el puesto',
+                 mal: 'sientes que trabajas mucho y nadie sabe qué haces' },
+  fondo_cielo: { nombre: 'Fondo del cielo', quien: 'tu raíz: la casa, la familia, de dónde vienes y dónde descansas',
+                 aFavor: 'ordenar la base — mudanza, familia, el cuarto donde duermes',
+                 mal: 'la casa pesa, o cargas algo familiar que no es tuyo' },
+  nodo_norte: { nombre: 'Nodo Norte', quien: 'hacia dónde va tu karma: lo que viniste a aprender y todavía te incomoda',
+                aFavor: 'hacer justo lo que te da pereza porque no lo dominas todavía',
+                mal: 'te quedas en lo que ya sabes hacer y la vida se te repite igual' },
+  nodo_sur: { nombre: 'Nodo Sur', quien: 'lo que ya traías sabido: tu don fácil, y también tu escondite',
+              aFavor: 'usar ese don al servicio de lo otro, sin vivir ahí',
+              mal: 'vuelves al refugio de siempre justo cuando tocaba crecer' },
+};
+
+function lecNatal_(nombre) {
+  const t = norm(nombre);
+  const alias = {
+    'sol': 'sol', 'luna': 'luna', 'mercurio': 'mercurio', 'venus': 'venus',
+    'marte': 'marte', 'jupiter': 'jupiter', 'saturno': 'saturno', 'urano': 'urano',
+    'neptuno': 'neptuno', 'pluton': 'pluton', 'ascendente': 'ascendente',
+    'descendente': 'descendente', 'mediocielo': 'medio_cielo', 'medio cielo': 'medio_cielo',
+    'medio_cielo': 'medio_cielo', 'fondo del cielo': 'fondo_cielo',
+    'fondo cielo': 'fondo_cielo', 'fondo_cielo': 'fondo_cielo',
+    'nodo norte': 'nodo_norte', 'nodo_norte': 'nodo_norte',
+    'nodo sur': 'nodo_sur', 'nodo_sur': 'nodo_sur',
+  };
+  return LEC_NATAL[alias[t] || t] || null;
+}
+
+// ─── POR DÓNDE PASA: LA CASA ─────────────────────────────────
+
+/**
+ * Las doce casas: el ESCENARIO donde se nota.
+ *
+ * `tiempoPara` es literal de lo que ella pidió: «tiempo para qué».
+ */
+const LEC_CASAS = {
+  1:  { nombre: 'Casa 1', area: 'tu cuerpo, tu cara y cómo arrancas',
+        tiempoPara: 'volver a ti: empezar de cero, cambiar de forma, ocupar tu propio espacio',
+        aFavor: 'cambia algo visible y deja que el resto se acomode a eso',
+        mal: 'te disuelves en lo que los demás necesitan y te pierdes de vista' },
+  2:  { nombre: 'Casa 2', area: 'tu plata propia, tus cosas y lo que crees que vales',
+        tiempoPara: 'ordenar ingresos, subir precios y quedarte con lo que sí usas',
+        aFavor: 'mira los números reales una vez por semana, aunque no te gusten',
+        mal: 'gastas para sentirte segura, o cobras poco para que no te dejen' },
+  3:  { nombre: 'Casa 3', area: 'lo que dices y escribes, los hermanos, lo cercano',
+        tiempoPara: 'estudiar, escribir, negociar y arreglar lo que quedó dicho a medias',
+        aFavor: 'pon por escrito lo importante y manda el mensaje que estás evitando',
+        mal: 'ruido: mucha conversación, mucha información, ninguna decisión' },
+  4:  { nombre: 'Casa 4', area: 'tu casa, tu familia y tu raíz',
+        tiempoPara: 'arreglar la base: dónde vives, con quién, y qué cargas de tu familia',
+        aFavor: 'cuida el lugar donde duermes como si fuera la oficina — decide desde ahí',
+        mal: 'llevas el trabajo a la cama y la casa deja de ser refugio' },
+  5:  { nombre: 'Casa 5', area: 'lo que creas, lo que disfrutas, los hijos y el riesgo',
+        tiempoPara: 'crear algo tuyo y mostrarlo, sin que tenga que ser rentable todavía',
+        aFavor: 'guárdate un rato de la semana para algo que hagas solo porque te gusta',
+        mal: 'lo conviertes todo en producto y se te apaga el gusto' },
+  6:  { nombre: 'Casa 6', area: 'tu rutina, tu salud y el trabajo del día a día',
+        tiempoPara: 'ajustar el sistema: horarios, cuerpo, y lo que haces todos los días',
+        aFavor: 'cambia una costumbre pequeña y sostenla tres semanas antes de juzgarla',
+        mal: 'el cuerpo pasa la cuenta de lo que la agenda no quiso mirar' },
+  7:  { nombre: 'Casa 7', area: 'tus sociedades, tu pareja y los contratos',
+        tiempoPara: 'revisar con quién estás asociada y bajo qué condiciones',
+        aFavor: 'di en voz alta el acuerdo que estabas dando por supuesto',
+        mal: 'te quedas en un trato desigual por no abrir la conversación' },
+  8:  { nombre: 'Casa 8', area: 'la plata de otros, lo que se comparte, lo que muere y lo que te transforma',
+        tiempoPara: 'soltar lo que ya se acabó y mirar de frente deudas, sociedades y acuerdos de dinero ajeno',
+        aFavor: 'nombra la cifra y la fecha — aquí lo que no se dice es lo que cobra intereses',
+        mal: 'controlas para no sentir miedo, y lo que no soltaste se te vuelve deuda' },
+  9:  { nombre: 'Casa 9', area: 'lo lejano: estudios largos, viajes, otro país, tu manera de creer',
+        tiempoPara: 'aprender en serio, publicar, irte lejos o cambiar de marco',
+        aFavor: 'estudia algo que no te sirva de inmediato: aquí eso sí paga',
+        mal: 'predicas lo que todavía no practicas, o huyes llamándolo búsqueda' },
+  10: { nombre: 'Casa 10', area: 'tu carrera, tu nombre público y lo que se ve de ti',
+        tiempoPara: 'tomar el puesto, cobrar lo que vales y dejar que se vea tu trabajo',
+        aFavor: 'muestra lo que ya hiciste antes de esperar a que esté perfecto',
+        mal: 'trabajas todo el día y nadie sabe decir a qué te dedicas' },
+  11: { nombre: 'Casa 11', area: 'tu gente, tus redes y lo que quieres a futuro',
+        tiempoPara: 'construir comunidad y pedir ayuda a quien ya te ve',
+        aFavor: 'escribe a tres personas que podrían abrirte algo, sin pedirles nada todavía',
+        mal: 'estás rodeada y sola, o te pierdes en el grupo para no decidir' },
+  12: { nombre: 'Casa 12', area: 'lo que no se ve: el descanso, lo inconsciente, lo que se cierra en silencio',
+        tiempoPara: 'descansar, cerrar puertas viejas y preparar en privado lo que aún no se muestra',
+        aFavor: 'no arranques nada público — usa este tiempo para sanar y para escribir en borrador',
+        mal: 'te agotas sin causa visible y saboteas justo antes de llegar' },
+};
+
+// ─── LOS SIGNOS: EL ESTILO ───────────────────────────────────
+
+const LEC_SIGNOS = {
+  aries:       { nombre: 'Aries',       elemento: 'fuego',  modo: 'cardinal', estilo: 'arranca de golpe y pregunta después' },
+  tauro:       { nombre: 'Tauro',       elemento: 'tierra', modo: 'fijo',     estilo: 'va lento y no se mueve de donde se planta' },
+  geminis:     { nombre: 'Géminis',     elemento: 'aire',   modo: 'mutable',  estilo: 'prueba de todo y se aburre rápido' },
+  cancer:      { nombre: 'Cáncer',      elemento: 'agua',   modo: 'cardinal', estilo: 'se mueve por lo que siente y por los suyos' },
+  leo:         { nombre: 'Leo',         elemento: 'fuego',  modo: 'fijo',     estilo: 'necesita que se vea, y da el pecho por lo suyo' },
+  virgo:       { nombre: 'Virgo',       elemento: 'tierra', modo: 'mutable',  estilo: 'afina, corrige y no entrega hasta que sirva' },
+  libra:       { nombre: 'Libra',       elemento: 'aire',   modo: 'cardinal', estilo: 'mide, compara y busca el acuerdo' },
+  escorpio:    { nombre: 'Escorpio',    elemento: 'agua',   modo: 'fijo',     estilo: 'va al fondo y no suelta' },
+  sagitario:   { nombre: 'Sagitario',   elemento: 'fuego',  modo: 'mutable',  estilo: 'apunta lejos y se aburre de lo pequeño' },
+  capricornio: { nombre: 'Capricornio', elemento: 'tierra', modo: 'cardinal', estilo: 'construye despacio y aguanta lo que sea' },
+  acuario:     { nombre: 'Acuario',     elemento: 'aire',   modo: 'fijo',     estilo: 'rompe la regla y se va por su lado' },
+  piscis:      { nombre: 'Piscis',      elemento: 'agua',   modo: 'mutable',  estilo: 'se adapta, se disuelve y siente de más' },
+};
+
+/** Quién manda en cada signo. El regente del año sale de aquí. */
+const LEC_REGENTES = {
+  aries: 'marte', tauro: 'venus', geminis: 'mercurio', cancer: 'luna',
+  leo: 'sol', virgo: 'mercurio', libra: 'venus', escorpio: 'pluton',
+  sagitario: 'jupiter', capricornio: 'saturno', acuario: 'urano', piscis: 'neptuno',
+};
+
+/** El regente tradicional, para quien lee a la antigua. Se dicen los dos. */
+const LEC_REGENTES_VIEJOS = {
+  escorpio: 'marte', acuario: 'saturno', piscis: 'jupiter',
+};
+
+// ─── EL COMPOSITOR ───────────────────────────────────────────
+
+/**
+ * La intensidad de una temporada, de 0 a 100.
+ *
+ * No es un adorno: es lo que ordena la pantalla cuando hay ocho cosas
+ * abiertas a la vez y ella tiene veinte minutos. Pesa tres cosas:
+ *
+ *   · el aspecto — una cuadratura se nota más que un sextil;
+ *   · el planeta — Plutón deja marca, Mercurio pasa;
+ *   · a quién le toca — los ángulos y las luminarias se sienten en el
+ *     cuerpo; un generacional tocando a otro generacional, mucho menos.
+ *
+ * La cuenta está a la vista a propósito. Si algún día ella dice «esto
+ * me pesó más de lo que decía Nova», se mueve un número y ya.
+ */
+function lecIntensidad_(cuerpoId, aspectoId, natalId) {
+  const c = LEC_CUERPOS[cuerpoId];
+  const a = LEC_ASPECTOS[aspectoId];
+  if (!c || !a) return 40;
+
+  const porAspecto = [22, 22, 34, 40][a.tension];       // 0..3
+  const porCuerpo = { personal: 8, social: 26, generacional: 34 }[c.grupo] || 15;
+  const angulos = ['ascendente', 'descendente', 'medio_cielo', 'fondo_cielo'];
+  const luminarias = ['sol', 'luna'];
+  const nodos = ['nodo_norte', 'nodo_sur'];
+  const lentos = ['urano', 'neptuno', 'pluton'];
+
+  let porNatal = 14;
+  if (angulos.indexOf(natalId) !== -1) porNatal = 26;
+  else if (luminarias.indexOf(natalId) !== -1) porNatal = 24;
+  else if (nodos.indexOf(natalId) !== -1) porNatal = 20;
+  else if (lentos.indexOf(natalId) !== -1) porNatal = 8;
+
+  return Math.max(5, Math.min(100, porAspecto + porCuerpo + porNatal));
+}
+
+/**
+ * La lectura completa de UNA temporada.
+ *
+ * Devuelve las cuatro respuestas que ella pidió, cada una por separado
+ * para que la pantalla las pueda pintar como cuatro bloques y no como
+ * un párrafo que nadie lee.
+ */
+function lecturaTransito_(t) {
+  const cuerpoId = norm(t.cuerpo).replace(/ó/g, 'o').replace(/ú/g, 'u');
+  const c = LEC_CUERPOS[cuerpoId];
+  const a = lecAspecto_(t.aspecto);
+  const n = lecNatal_(t.aNatal || t.a_natal || '');
+  const casa = LEC_CASAS[Number(t.casa)] || null;
+
+  // Sin planeta o sin aspecto no hay lectura posible, y decirlo es mejor
+  // que inventar una genérica que sirva para cualquier cosa.
+  if (!c || !a) {
+    return { hay: false,
+             porQue: 'Falta el planeta o el aspecto para poder leer esta temporada.' };
+  }
+
+  const titulo = c.nombre + ' ' + a.nombre.toLowerCase() +
+                 (n ? ' a tu ' + n.nombre : '') +
+                 (casa ? ' · por tu ' + casa.nombre.toLowerCase() : '');
+
+  // 1 · TIEMPO PARA QUÉ
+  const tiempoPara = casa
+    ? 'Tiempo para ' + casa.tiempoPara + '.'
+    : 'Tiempo para lo que ' + c.nombre + ' ' + c.hace.split(',')[0] + '.';
+
+  // 2 · QUÉ ES / CÓMO TE AFECTA
+  const queEs = c.nombre + ' ' + c.hace + ', y durante esta temporada lo hace sobre ' +
+    (n ? n.quien : 'lo que estés moviendo') + '. ' +
+    'El aspecto es ' + a.nombre.toLowerCase() + ': ' + a.que + '. ' +
+    (casa ? 'Y se nota sobre todo en ' + casa.area + '.' : '');
+
+  // 3 · CÓMO TRABAJARLA A FAVOR
+  const aFavor = [];
+  aFavor.push(a.pide.charAt(0).toUpperCase() + a.pide.slice(1) + '.');
+  if (n) aFavor.push('Con ' + n.nombre + ' de por medio, lo concreto es: ' + n.aFavor + '.');
+  if (casa) aFavor.push(casa.aFavor.charAt(0).toUpperCase() + casa.aFavor.slice(1) + '.');
+  aFavor.push('Si sale bien, lo que deja es ' + c.regala + '.');
+
+  // 4 · CÓMO SE VE EL DESEQUILIBRIO
+  const mal = [];
+  mal.push('La misma energía sin digerir se ve así: ' + c.tuerce + '.');
+  mal.push('Del aspecto, lo que hay que vigilar es ' + a.riesgo + '.');
+  if (n) mal.push('Y en la parte tuya que toca: ' + n.mal + '.');
+  if (casa) mal.push('En el terreno de la casa: ' + casa.mal + '.');
+
+  return {
+    hay: true,
+    titulo: titulo,
+    cuerpo: c.nombre, aspecto: a.nombre, simbolo: a.simbolo,
+    aNatal: n ? n.nombre : String(t.aNatal || t.a_natal || ''),
+    casaNombre: casa ? casa.nombre : '',
+    casaArea: casa ? casa.area : '',
+    grupo: c.grupo,
+    ritmo: c.ritmo,
+    duraTipico: c.dura,
+    tension: a.tension,
+    intensidad: lecIntensidad_(cuerpoId, norm(a.nombre), (function () {
+      const k = norm(t.aNatal || t.a_natal || '');
+      const al = { 'mediocielo': 'medio_cielo', 'fondo del cielo': 'fondo_cielo',
+                   'nodo norte': 'nodo_norte', 'nodo sur': 'nodo_sur' };
+      return al[k] || k;
+    })()),
+    tiempoPara: tiempoPara,
+    queEs: queEs,
+    aFavor: aFavor,
+    desequilibrio: mal,
+    // La marca de siempre: esto es el punto de partida, no la verdad.
+    nota: 'Lectura común de esta combinación. Lo que tú escribas en tu pensum manda sobre esto.',
+  };
+}
+
+// ─── LA PROFECCIÓN, LEÍDA DE VERDAD ──────────────────────────
+
+/**
+ * El año profectado, con la profundidad que ella pidió con un ejemplo:
+ * «por ejemplo en casa 8 de Leo por mi año».
+ *
+ * Una profección son tres datos encadenados, y los tres importan:
+ *
+ *   la CASA   → de qué va el año
+ *   el SIGNO  → con qué estilo
+ *   el REGENTE→ qué planeta lo dirige, y dónde está ÉSE en tu carta
+ *
+ * El tercero es el que casi nadie mira y el que más dice: el año de
+ * casa 8 en Leo lo dirige el Sol, y si tu Sol está en casa 9, el año
+ * de casa 8 se va a resolver por asuntos de casa 9.
+ */
+function lecProfeccion_(casa, ascendenteSigno, carta) {
+  const signoIdx = (CIELO_SIGNOS.indexOf(norm(ascendenteSigno)) + casa - 1 + 12) % 12;
+  const signo = CIELO_SIGNOS[signoIdx];
+  const sg = LEC_SIGNOS[signo];
+  const c = LEC_CASAS[casa];
+  const regenteId = LEC_REGENTES[signo];
+  const viejo = LEC_REGENTES_VIEJOS[signo];
+  const reg = LEC_CUERPOS[regenteId];
+
+  // Dónde está el regente en SU carta, si la tenemos sembrada.
+  const natal = carta && carta.natal ? carta.natal : {};
+  const donde = natal[regenteId] || null;
+  const dondeViejo = viejo && natal[viejo] ? natal[viejo] : null;
+
+  const partes = [];
+  partes.push('Este año se lee por tu ' + c.nombre.toLowerCase() + ', en ' + sg.nombre +
+              '. Va de ' + c.area + '.');
+  partes.push('Tiempo para ' + c.tiempoPara + '.');
+  partes.push('El estilo lo pone ' + sg.nombre + ', que ' + sg.estilo +
+              ' — signo de ' + sg.elemento + ' y ' + sg.modo + '.');
+
+  if (reg) {
+    let f = 'Quien dirige el año es ' + reg.nombre + ', regente de ' + sg.nombre + ': ' +
+            reg.hace + '.';
+    if (donde) {
+      const dc = LEC_CASAS[donde.casa];
+      f += ' En tu carta, ' + reg.nombre + ' está en ' + (LEC_SIGNOS[donde.signo] || {}).nombre +
+           ', casa ' + donde.casa + (dc ? ' — ' + dc.area : '') + '. ' +
+           'Eso quiere decir que los asuntos de ' + c.nombre.toLowerCase() +
+           ' se te van a resolver por ahí: ' + (dc ? dc.tiempoPara : 'por esa área') + '.';
+    }
+    partes.push(f);
+  }
+  if (dondeViejo && LEC_CUERPOS[viejo]) {
+    partes.push('Si lees a la antigua, ' + sg.nombre + ' lo rige ' + LEC_CUERPOS[viejo].nombre +
+                ', que tienes en casa ' + dondeViejo.casa + '. Los dos sirven; el moderno ' +
+                'habla de la transformación y el tradicional de la acción concreta.');
+  }
+
+  // Si hay algo natal EN esa casa, el año lo despierta. Es el dato más
+  // personal de toda la lectura y no cuesta nada mirarlo.
+  const habitantes = [];
+  Object.keys(natal).forEach(function (k) {
+    if (['ascendente', 'descendente', 'medio_cielo', 'fondo_cielo'].indexOf(k) !== -1) return;
+    if (Number(natal[k].casa) === casa) habitantes.push(natal[k]);
+  });
+  if (habitantes.length) {
+    partes.push('Y hay algo tuyo viviendo ahí: ' +
+      habitantes.map(function (h) {
+        return h.nombre + ' en ' + (LEC_SIGNOS[h.signo] || {}).nombre;
+      }).join(', ') + '. Un año de esa casa despierta lo que ya tenías puesto en ella, ' +
+      'así que no es un tema nuevo: es uno tuyo de siempre, subido de volumen.');
+  }
+
+  return {
+    casa: casa, signo: signo, signoNombre: sg.nombre,
+    area: c.area, tiempoPara: c.tiempoPara,
+    aFavor: c.aFavor, desequilibrio: c.mal,
+    regente: reg ? reg.nombre : '', regenteId: regenteId,
+    regenteDonde: donde ? { signo: donde.signo, casa: donde.casa } : null,
+    habitantes: habitantes.map(function (h) {
+      return { nombre: h.nombre, signo: h.signo, casa: h.casa };
+    }),
+    texto: partes,
+  };
+}
+
+// ─── EL EJE DEL KARMA ────────────────────────────────────────
+
+/**
+ * Los nodos, el Mediocielo y el Fondo del cielo leídos como un eje.
+ *
+ * Ella los pidió para el pensum, y tiene sentido: un pensum kármico sin
+ * los nodos es un calendario de tránsitos con otro nombre.
+ *
+ * Un eje no se lee por puntas sueltas. El Nodo Norte dice hacia dónde,
+ * el Sur de dónde vienes, y la gracia está en el movimiento entre los
+ * dos — no en «ser» el Norte y «dejar» el Sur.
+ */
+function lecEjes_(carta) {
+  const natal = (carta && carta.natal) || {};
+  const ejes = [];
+
+  if (natal.nodo_norte && natal.nodo_sur) {
+    const nn = natal.nodo_norte, ns = natal.nodo_sur;
+    const cn = LEC_CASAS[nn.casa], cs = LEC_CASAS[ns.casa];
+    ejes.push({
+      id: 'nodos',
+      nombre: 'Tu eje del karma',
+      puntas: 'Nodo Sur en ' + (LEC_SIGNOS[ns.signo] || {}).nombre + ', casa ' + ns.casa +
+              '  ·  Nodo Norte en ' + (LEC_SIGNOS[nn.signo] || {}).nombre + ', casa ' + nn.casa,
+      deDonde: cs ? 'Lo que ya traes sabido está en ' + cs.area + '. Ahí te sale fácil, ' +
+                    'y por eso mismo es donde te escondes: ' + cs.mal + '.' : '',
+      haciaDonde: cn ? 'Hacia donde vas es ' + cn.area + '. Ahí te sientes torpe, y es ' +
+                       'exactamente la señal de que es por ahí. ' + cn.aFavor + '.' : '',
+      elMovimiento: cs && cn
+        ? 'El movimiento del año: usar lo de casa ' + ns.casa + ' como herramienta, ' +
+          'no como casa. Trabajas desde ' + cs.area.split(',')[0] + ' para construir en ' +
+          cn.area.split(',')[0] + '.'
+        : '',
+    });
+  }
+
+  if (natal.medio_cielo && natal.fondo_cielo) {
+    const mc = natal.medio_cielo, ic = natal.fondo_cielo;
+    ejes.push({
+      id: 'mc_ic',
+      nombre: 'Tu eje de casa y carrera',
+      puntas: 'Fondo del cielo en ' + (LEC_SIGNOS[ic.signo] || {}).nombre +
+              '  ·  Mediocielo en ' + (LEC_SIGNOS[mc.signo] || {}).nombre,
+      deDonde: 'La raíz: ' + LEC_CASAS[4].area + '. ' + LEC_CASAS[4].aFavor + '.',
+      haciaDonde: 'Lo público: ' + LEC_CASAS[10].area + '. ' + LEC_CASAS[10].aFavor + '.',
+      elMovimiento: 'Este eje es una balanza, no una carrera. Cuando el Mediocielo se ' +
+                    'lleva todo, el Fondo del cielo pasa la cuenta en la casa y en el ' +
+                    'cuerpo — y al revés.',
+    });
+  }
+
+  // Si el Nodo Norte cae cerca de un ángulo, eso no es un detalle: es
+  // la firma del mapa. Se dice, con el número, para que se pueda dudar.
+  if (natal.nodo_norte && natal.medio_cielo) {
+    /**
+     * La separación angular entre dos grados del zodíaco, de 0 a 180.
+     * El +540 y el -180 son el truco de siempre para que el cruce por
+     * 0° Aries no dé 359 en vez de 1.
+     */
+    const sep = Math.abs(((natal.nodo_norte.grado - natal.medio_cielo.grado + 540) % 360) - 180);
+    if (sep <= 10) {
+      ejes.push({
+        id: 'nn_mc',
+        nombre: 'Tu Nodo Norte está pegado a tu Mediocielo',
+        puntas: 'Separación: ' + sep.toFixed(1) + '°',
+        deDonde: '',
+        haciaDonde: 'Tu dirección kármica y tu carrera pública son la misma cosa. ' +
+                    'No es que el trabajo «te quite tiempo» de lo espiritual: el ' +
+                    'trabajo visible ES el camino.',
+        elMovimiento: 'Lo que en otra carta sería ambición, en la tuya es tarea. ' +
+                      'Esconder el trabajo pesa más de lo que pesaría en otra persona.',
+      });
+    }
+  }
+
+  return ejes;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   25 · EL CIELO · LAS EFEMÉRIDES YA CALCULADAS
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * LAS EFEMÉRIDES, YA CALCULADAS. No se pegan: se siembran solas.
+ *
+ * Generado por efemerides/generar-transitos.py con Swiss Ephemeris,
+ * el mismo motor que hay debajo de las APIs de astrología de pago.
+ * Se comprobó contra su carta real de Horus: los once cuerpos, el
+ * Ascendente y el Mediocielo salen al grado.
+ *
+ * Este archivo vive en el servidor. NO se sirve a ningún navegador.
+ *
+ * Cada línea es una temporada:
+ *   cuerpo|aspecto|a natal|desde|hasta|día que aprieta|casa entera|
+ *   casa Placidus|retrógrado
+ *
+ * Horizonte: 2026-09-24 → 2031-09-23. Cuando se acabe hay que volver a correr
+ * el script; Nova avisa sola cuando queden menos de seis meses.
+ */
+
+const EFEMERIDES_HASTA = '2031-09-23';
+
+/** La carta natal de quien la sembró, para leer sin volver a calcular. */
+const EFEMERIDES_CARTA = {
+  usuario_id: 'manuela@nova.com',
+  ascendente: 285.1045,
+  medio_cielo: 199.3584,
+  natal: {
+    sol: { nombre: 'Sol', grado: 177.3146, signo: 'virgo', casa: 9, casaPlacidus: 9 },
+    luna: { nombre: 'Luna', grado: 130.2357, signo: 'leo', casa: 8, casaPlacidus: 7 },
+    mercurio: { nombre: 'Mercurio', grado: 200.0459, signo: 'libra', casa: 10, casaPlacidus: 10 },
+    venus: { nombre: 'Venus', grado: 185.6629, signo: 'libra', casa: 10, casaPlacidus: 9 },
+    marte: { nombre: 'Marte', grado: 219.0157, signo: 'escorpio', casa: 11, casaPlacidus: 10 },
+    jupiter: { nombre: 'Júpiter', grado: 248.9861, signo: 'sagitario', casa: 12, casaPlacidus: 11 },
+    saturno: { nombre: 'Saturno', grado: 350.8675, signo: 'piscis', casa: 3, casaPlacidus: 3 },
+    urano: { nombre: 'Urano', grado: 296.6291, signo: 'capricornio', casa: 1, casaPlacidus: 1 },
+    neptuno: { nombre: 'Neptuno', grado: 292.8307, signo: 'capricornio', casa: 1, casaPlacidus: 1 },
+    pluton: { nombre: 'Plutón', grado: 238.3304, signo: 'escorpio', casa: 11, casaPlacidus: 11 },
+    ascendente: { nombre: 'Ascendente', grado: 285.1045, signo: 'capricornio', casa: 1, casaPlacidus: 1 },
+    descendente: { nombre: 'Descendente', grado: 105.1045, signo: 'cancer', casa: 7, casaPlacidus: 7 },
+    medio_cielo: { nombre: 'Mediocielo', grado: 199.3584, signo: 'libra', casa: 10, casaPlacidus: 10 },
+    fondo_cielo: { nombre: 'Fondo del cielo', grado: 19.3584, signo: 'aries', casa: 4, casaPlacidus: 4 },
+    nodo_norte: { nombre: 'Nodo Norte', grado: 206.8590, signo: 'libra', casa: 10, casaPlacidus: 10 },
+    nodo_sur: { nombre: 'Nodo Sur', grado: 26.8590, signo: 'aries', casa: 4, casaPlacidus: 4 },
+  },
+};
+
+const EFEMERIDES_SEMILLA = [
+  'jupiter|sextil|medio_cielo|2026-09-24|2026-10-24|2026-09-29|8|8|0',
+  'jupiter|sextil|mercurio|2026-09-24|2026-10-29|2026-10-03|8|8|0',
+  'jupiter|trígono|fondo_cielo|2026-09-24|2026-10-31|2026-09-29|8|8|0',
+  'neptuno|oposición|sol|2026-09-24|2027-03-03|2026-12-12|4|3|1',
+  'neptuno|trígono|pluton|2026-09-24|2027-03-04|2026-12-12|4|3|1',
+  'neptuno|oposición|venus|2026-09-24|2030-04-23|2027-05-08|4|3|1',
+  'pluton|trígono|venus|2026-09-24|2030-02-18|2027-08-11|2|1|1',
+  'saturno|cuadratura|ascendente|2026-09-24|2026-10-19|2026-09-24|4|3|1',
+  'saturno|cuadratura|descendente|2026-09-24|2026-10-19|2026-09-24|4|3|1',
+  'saturno|trígono|jupiter|2026-09-24|2027-03-08|2027-01-14|4|3|1',
+  'saturno|trígono|luna|2026-09-24|2027-03-18|2027-01-31|4|3|1',
+  'urano|oposición|jupiter|2026-09-24|2026-12-12|2026-09-24|6|5|1',
+  'urano|trígono|venus|2026-09-24|2028-06-10|2027-05-25|6|5|1',
+  'saturno|oposición|venus|2026-09-30|2027-02-15|2026-12-10|4|3|1',
+  'jupiter|trígono|nodo_sur|2026-10-14|2027-02-11|2026-12-23|8|8|0',
+  'jupiter|sextil|nodo_norte|2026-10-21|2027-02-04|2026-12-23|8|8|0',
+  'jupiter|cuadratura|pluton|2026-10-24|2027-01-31|2026-12-13|8|8|0',
+  'urano|oposición|pluton|2026-11-10|2027-05-01|2027-02-08|6|5|1',
+  'pluton|cuadratura|marte|2026-12-20|2031-09-23|2029-12-26|2|1|0',
+  'pluton|oposición|luna|2026-12-28|2031-09-23|2030-08-31|2|1|0',
+  'urano|trígono|sol|2027-01-01|2027-03-18|2027-02-08|6|5|1',
+  'pluton|sextil|jupiter|2027-01-22|2027-09-15|2027-05-08|2|1|0',
+  'jupiter|trígono|fondo_cielo|2027-01-24|2027-06-26|2027-03-04|8|8|1',
+  'jupiter|sextil|mercurio|2027-01-26|2027-06-24|2027-02-26|8|8|1',
+  'saturno|cuadratura|ascendente|2027-01-30|2027-04-26|2027-03-18|4|3|0',
+  'saturno|cuadratura|descendente|2027-01-30|2027-04-26|2027-03-18|4|3|0',
+  'jupiter|sextil|medio_cielo|2027-02-01|2027-06-20|2027-03-04|8|8|1',
+  'saturno|oposición|medio_cielo|2027-03-03|2027-06-14|2027-04-21|4|4|0',
+  'saturno|conjunción|fondo_cielo|2027-03-03|2027-06-14|2027-04-21|4|4|0',
+  'saturno|oposición|mercurio|2027-03-09|2027-06-23|2027-04-26|4|4|0',
+  'neptuno|trígono|jupiter|2027-03-22|2027-11-23|2027-07-09|4|3|0',
+  'urano|oposición|jupiter|2027-04-05|2029-06-15|2027-07-28|6|5|0',
+  'saturno|cuadratura|neptuno|2027-04-09|2027-08-01|2027-05-20|4|4|0',
+  'neptuno|trígono|luna|2027-04-25|2027-09-28|2027-07-09|4|3|0',
+  'saturno|oposición|nodo_norte|2027-05-03|2028-05-05|2027-09-13|4|4|0',
+  'saturno|conjunción|nodo_sur|2027-05-03|2028-05-05|2027-09-13|4|4|0',
+  'saturno|cuadratura|urano|2027-05-10|2027-11-27|2027-09-17|4|4|0',
+  'urano|sextil|luna|2027-06-04|2028-01-16|2027-09-15|6|5|0',
+  'jupiter|trígono|nodo_sur|2027-06-11|2027-08-03|2027-07-10|8|8|0',
+  'jupiter|sextil|nodo_norte|2027-06-18|2027-07-29|2027-07-10|8|8|0',
+  'jupiter|cuadratura|pluton|2027-06-21|2027-08-10|2027-07-17|8|8|0',
+  'jupiter|cuadratura|jupiter|2027-08-14|2027-09-29|2027-09-06|9|8|0',
+  'saturno|cuadratura|neptuno|2027-08-17|2028-03-26|2027-11-07|4|4|1',
+  'jupiter|sextil|marte|2027-08-19|2027-09-24|2027-09-06|9|8|0',
+  'jupiter|trígono|ascendente|2027-09-11|2027-10-30|2027-10-05|9|8|0',
+  'jupiter|sextil|descendente|2027-09-16|2027-10-24|2027-10-05|9|8|0',
+  'saturno|oposición|mercurio|2027-09-27|2028-03-11|2027-12-24|4|4|1',
+  'jupiter|oposición|saturno|2027-10-04|2027-12-22|2027-11-04|9|9|0',
+  'saturno|oposición|medio_cielo|2027-10-06|2028-03-04|2027-12-24|4|4|1',
+  'saturno|conjunción|fondo_cielo|2027-10-06|2028-03-04|2027-12-24|4|4|1',
+  'jupiter|trígono|neptuno|2027-10-19|2028-04-29|2027-11-16|9|9|0',
+  'jupiter|conjunción|sol|2027-11-07|2028-03-22|2028-01-23|9|9|0',
+  'jupiter|trígono|urano|2027-11-09|2028-03-19|2027-12-19|9|9|0',
+  'pluton|sextil|jupiter|2027-11-19|2031-03-20|2029-08-12|2|1|0',
+  'jupiter|sextil|pluton|2027-11-27|2028-02-27|2028-01-12|9|9|0',
+  'neptuno|trígono|jupiter|2028-01-06|2031-04-27|2029-10-30|4|3|0',
+  'saturno|cuadratura|urano|2028-01-19|2028-04-25|2028-03-16|4|4|0',
+  'jupiter|oposición|saturno|2028-02-01|2028-08-07|2028-07-01|9|9|1',
+  'neptuno|trígono|luna|2028-02-26|2031-06-10|2029-09-13|4|3|0',
+  'urano|sextil|luna|2028-03-10|2028-09-15|2028-06-03|6|5|0',
+  'jupiter|trígono|ascendente|2028-04-02|2028-06-24|2028-05-13|9|9|1',
+  'jupiter|sextil|descendente|2028-04-11|2028-06-15|2028-05-13|9|9|1',
+  'saturno|oposición|marte|2028-05-07|2029-05-08|2028-07-01|5|4|0',
+  'saturno|cuadratura|luna|2028-05-25|2028-12-05|2028-07-18|5|4|0',
+  'jupiter|trígono|neptuno|2028-05-28|2028-08-12|2028-07-15|9|9|0',
+  'jupiter|conjunción|sol|2028-07-05|2028-09-08|2028-08-10|9|9|0',
+  'jupiter|trígono|urano|2028-07-07|2028-08-31|2028-08-06|9|9|0',
+  'saturno|trígono|ascendente|2028-07-16|2028-09-29|2028-08-22|5|4|0',
+  'jupiter|sextil|pluton|2028-07-25|2028-09-04|2028-08-15|9|9|0',
+  'saturno|sextil|descendente|2028-08-08|2028-09-06|2028-08-22|5|4|0',
+  'jupiter|conjunción|venus|2028-08-23|2028-10-17|2028-09-20|10|9|0',
+  'jupiter|sextil|jupiter|2028-09-17|2028-10-23|2028-10-05|10|9|0',
+  'jupiter|sextil|luna|2028-09-23|2028-10-29|2028-10-11|10|9|0',
+  'urano|sextil|luna|2028-09-23|2029-06-02|2029-02-24|6|5|1',
+  'jupiter|cuadratura|ascendente|2028-10-11|2028-11-28|2028-11-03|10|9|0',
+  'jupiter|cuadratura|descendente|2028-10-11|2028-11-28|2028-11-03|10|9|0',
+  'jupiter|conjunción|medio_cielo|2028-10-26|2029-01-04|2028-11-25|10|10|0',
+  'jupiter|oposición|fondo_cielo|2028-10-26|2029-01-04|2028-11-25|10|10|0',
+  'jupiter|conjunción|mercurio|2028-10-29|2029-01-11|2028-11-29|10|10|0',
+  'jupiter|cuadratura|neptuno|2028-11-17|2029-05-29|2029-04-09|10|10|0',
+  'jupiter|conjunción|nodo_norte|2028-12-04|2029-04-25|2029-01-22|10|10|0',
+  'jupiter|oposición|nodo_sur|2028-12-04|2029-04-25|2029-01-22|10|10|0',
+  'jupiter|cuadratura|urano|2028-12-08|2029-04-18|2029-03-05|10|10|0',
+  'urano|trígono|venus|2029-01-15|2029-03-20|2029-02-16|6|5|1',
+  'saturno|cuadratura|luna|2029-02-04|2029-05-09|2029-03-31|5|4|0',
+  'jupiter|conjunción|mercurio|2029-03-13|2029-09-03|2029-05-02|10|10|1',
+  'jupiter|conjunción|medio_cielo|2029-03-20|2029-08-30|2029-07-19|10|9|1',
+  'jupiter|oposición|fondo_cielo|2029-03-20|2029-08-30|2029-07-19|10|9|1',
+  'saturno|trígono|ascendente|2029-03-30|2029-06-18|2029-05-09|5|4|0',
+  'saturno|sextil|descendente|2029-04-08|2029-06-10|2029-05-09|5|4|0',
+  'jupiter|cuadratura|ascendente|2029-05-02|2029-07-26|2029-06-13|10|9|1',
+  'jupiter|cuadratura|descendente|2029-05-02|2029-07-26|2029-06-13|10|9|1',
+  'neptuno|cuadratura|ascendente|2029-05-12|2029-09-18|2029-07-14|4|3|0',
+  'neptuno|cuadratura|descendente|2029-05-12|2029-09-18|2029-07-14|4|3|0',
+  'saturno|sextil|saturno|2029-05-23|2029-08-23|2029-06-26|5|5|0',
+  'saturno|trígono|neptuno|2029-05-31|2030-05-14|2029-07-17|5|5|0',
+  'urano|trígono|medio_cielo|2029-06-05|2031-07-06|2031-01-21|6|6|0',
+  'urano|trígono|mercurio|2029-06-17|2030-01-15|2029-09-23|6|6|0',
+  'urano|sextil|fondo_cielo|2029-06-22|2030-01-06|2029-09-23|6|6|0',
+  'jupiter|cuadratura|neptuno|2029-06-29|2029-09-12|2029-08-15|10|10|0',
+  'urano|cuadratura|saturno|2029-07-01|2029-12-23|2029-09-23|6|6|0',
+  'saturno|trígono|urano|2029-07-04|2029-11-11|2029-09-06|5|5|0',
+  'saturno|trígono|sol|2029-07-11|2029-11-03|2029-09-06|5|5|0',
+  'saturno|oposición|pluton|2029-07-12|2029-11-03|2029-09-06|5|5|0',
+  'jupiter|conjunción|nodo_norte|2029-08-02|2029-10-07|2029-09-08|10|10|0',
+  'jupiter|oposición|nodo_sur|2029-08-02|2029-10-07|2029-09-08|10|10|0',
+  'jupiter|cuadratura|urano|2029-08-08|2029-10-01|2029-09-07|10|10|0',
+  'saturno|sextil|saturno|2029-09-19|2030-04-21|2030-03-16|5|5|1',
+  'jupiter|conjunción|marte|2029-10-09|2029-12-02|2029-11-05|11|10|0',
+  'jupiter|cuadratura|luna|2029-10-19|2029-12-03|2029-11-10|11|10|0',
+  'jupiter|trígono|descendente|2029-11-10|2029-12-28|2029-12-03|11|10|0',
+  'jupiter|sextil|ascendente|2029-11-15|2029-12-23|2029-12-03|11|10|0',
+  'saturno|trígono|ascendente|2029-12-02|2030-03-07|2030-01-19|5|4|1',
+  'jupiter|trígono|saturno|2029-12-07|2030-02-06|2030-01-02|11|11|0',
+  'saturno|sextil|descendente|2029-12-17|2030-02-20|2030-01-19|5|4|1',
+  'jupiter|sextil|neptuno|2029-12-22|2030-02-18|2030-01-14|11|11|0',
+  'jupiter|conjunción|pluton|2030-01-11|2030-05-16|2030-03-13|11|11|0',
+  'jupiter|sextil|urano|2030-01-13|2030-05-14|2030-04-08|11|11|0',
+  'jupiter|sextil|sol|2030-01-18|2030-05-08|2030-02-27|11|11|0',
+  'urano|oposición|jupiter|2030-01-18|2030-03-25|2030-02-20|6|5|1',
+  'neptuno|cuadratura|ascendente|2030-03-13|2031-09-23|2031-09-02|4|3|0',
+  'neptuno|cuadratura|descendente|2030-03-13|2031-09-23|2031-09-02|4|3|0',
+  'saturno|trígono|urano|2030-03-24|2030-06-13|2030-05-05|5|5|0',
+  'urano|trígono|mercurio|2030-03-28|2031-07-19|2031-01-01|6|6|0',
+  'saturno|trígono|sol|2030-03-31|2030-06-19|2030-05-11|5|5|0',
+  'saturno|oposición|pluton|2030-03-31|2030-07-06|2030-05-19|5|5|0',
+  'jupiter|sextil|neptuno|2030-04-05|2030-06-17|2030-05-12|11|11|1',
+  'urano|sextil|fondo_cielo|2030-04-06|2031-06-19|2031-01-21|6|6|0',
+  'jupiter|trígono|saturno|2030-04-17|2030-10-01|2030-05-28|11|11|1',
+  'urano|cuadratura|saturno|2030-04-19|2031-08-05|2031-05-07|6|6|0',
+  'jupiter|trígono|descendente|2030-06-05|2030-08-23|2030-07-15|11|10|1',
+  'saturno|trígono|venus|2030-06-06|2031-05-20|2031-04-08|6|5|0',
+  'jupiter|sextil|ascendente|2030-06-15|2030-08-13|2030-07-15|11|10|1',
+  'saturno|oposición|jupiter|2030-06-25|2030-12-30|2030-09-20|6|5|0',
+  'neptuno|oposición|medio_cielo|2030-07-07|2030-07-25|2030-07-16|4|3|0',
+  'neptuno|conjunción|fondo_cielo|2030-07-07|2030-07-25|2030-07-16|4|3|0',
+  'saturno|sextil|luna|2030-07-26|2030-11-17|2030-09-20|6|5|0',
+  'urano|trígono|nodo_norte|2030-08-09|2030-11-17|2030-09-28|6|6|0',
+  'jupiter|sextil|neptuno|2030-08-11|2030-10-06|2030-09-13|11|11|0',
+  'pluton|trígono|venus|2030-08-12|2030-12-29|2030-10-23|2|1|1',
+  'urano|cuadratura|sol|2030-08-22|2030-11-04|2030-09-28|6|6|0',
+  'jupiter|conjunción|pluton|2030-09-11|2030-11-11|2030-10-14|11|11|0',
+  'jupiter|sextil|urano|2030-09-13|2030-10-25|2030-10-05|11|11|0',
+  'jupiter|sextil|sol|2030-09-17|2030-10-28|2030-10-09|11|11|0',
+  'urano|sextil|nodo_sur|2030-09-19|2030-10-06|2030-09-28|6|6|0',
+  'neptuno|oposición|venus|2030-10-16|2031-02-22|2030-12-21|4|3|1',
+  'jupiter|sextil|venus|2030-10-31|2030-12-05|2030-11-18|12|11|0',
+  'jupiter|conjunción|jupiter|2030-11-06|2030-12-29|2030-12-03|12|11|0',
+  'jupiter|trígono|luna|2030-11-16|2030-12-30|2030-12-08|12|11|0',
+  'saturno|oposición|pluton|2030-12-11|2031-03-24|2031-02-02|6|5|1',
+  'jupiter|trígono|fondo_cielo|2030-12-27|2031-02-17|2031-01-20|12|12|0',
+  'jupiter|sextil|medio_cielo|2031-01-01|2031-02-10|2031-01-20|12|12|0',
+  'jupiter|cuadratura|saturno|2031-01-03|2031-02-28|2031-01-28|12|12|0',
+  'jupiter|sextil|mercurio|2031-01-04|2031-02-15|2031-01-23|12|12|0',
+  'saturno|trígono|sol|2031-01-15|2031-02-20|2031-02-02|6|5|1',
+  'jupiter|trígono|nodo_sur|2031-02-03|2031-07-03|2031-05-23|12|12|0',
+  'jupiter|cuadratura|sol|2031-02-05|2031-06-29|2031-03-13|12|12|0',
+  'jupiter|sextil|nodo_norte|2031-02-08|2031-06-24|2031-05-23|12|12|0',
+  'saturno|oposición|jupiter|2031-03-07|2031-06-22|2031-05-07|6|5|0',
+  'neptuno|oposición|medio_cielo|2031-04-11|2031-09-23|2031-07-19|4|3|0',
+  'neptuno|conjunción|fondo_cielo|2031-04-11|2031-09-23|2031-07-19|4|3|0',
+  'saturno|sextil|luna|2031-04-14|2031-06-16|2031-05-17|6|5|0',
+  'neptuno|oposición|mercurio|2031-04-30|2031-09-23|2031-07-19|4|3|0',
+  'urano|trígono|nodo_norte|2031-05-26|2031-09-23|2031-09-02|6|6|0',
+  'jupiter|cuadratura|saturno|2031-06-01|2031-09-23|2031-07-13|12|12|1',
+  'urano|cuadratura|sol|2031-06-02|2031-09-23|2031-09-23|6|6|0',
+  'urano|sextil|nodo_sur|2031-06-12|2031-09-23|2031-09-02|6|6|0',
+  'jupiter|trígono|fondo_cielo|2031-06-13|2031-09-23|2031-08-04|12|12|1',
+  'jupiter|sextil|mercurio|2031-06-16|2031-09-23|2031-09-09|12|12|1',
+  'saturno|trígono|medio_cielo|2031-06-18|2031-09-23|2031-07-31|6|6|0',
+  'jupiter|sextil|medio_cielo|2031-06-21|2031-09-23|2031-08-04|12|12|1',
+  'saturno|trígono|mercurio|2031-06-24|2031-09-23|2031-08-07|6|6|0',
+  'saturno|sextil|fondo_cielo|2031-06-26|2031-09-23|2031-07-31|6|6|0',
+  'saturno|cuadratura|saturno|2031-06-30|2031-09-23|2031-08-16|6|6|0',
+  'pluton|sextil|jupiter|2031-07-12|2031-09-23|2031-09-23|2|1|1',
+  'neptuno|trígono|luna|2031-08-27|2031-09-23|2031-09-23|4|3|1',
+  'saturno|trígono|nodo_norte|2031-08-30|2031-09-23|2031-09-23|6|6|0',
+  'saturno|cuadratura|sol|2031-09-07|2031-09-23|2031-09-23|6|6|0',
+];
+
+
+/* ═══════════════════════════════════════════════════════════════
+   26 · EL CIELO · SEMANA, MES Y AÑO
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  EL CIELO POR SEMANA, POR MES Y POR AÑO
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ LAS DOS COSAS QUE ELLA RECLAMÓ, Y SON LA MISMA ───────────┐
+ * │                                                            │
+ * │ «en ese cuadro me pides que te dé toda la info que no       │
+ * │  tengo y deberías tener tú o Nova, no yo»                  │
+ * │                                                            │
+ * │ «el pensum kármico tampoco me lo está dando y se supone    │
+ * │  que lo da en automático»                                  │
+ * │                                                            │
+ * │ Las dos salen del mismo hueco: el pensum automático ya      │
+ * │ estaba escrito y funcionando, pero leía la hoja Tránsitos, │
+ * │ y esa hoja estaba VACÍA porque esperaba que los pegara     │
+ * │ ella. Un motor correcto sin combustible no da ninguna      │
+ * │ señal de estar roto: simplemente no produce nada.          │
+ * │                                                            │
+ * │ Sus tránsitos no son un dato suyo que haya que pedirle.    │
+ * │ Son una cuenta, y la cuenta ya está hecha en               │
+ * │ 88-efemerides.gs. Aquí se siembra sola la primera vez que  │
+ * │ ella abre El cielo, y el pensum arranca detrás.            │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ TRES RANGOS Y NO UNO ─────────────────────────────┐
+ * │                                                            │
+ * │ «necesito que lea los tránsitos de los planetas, por       │
+ * │  semana, mes y año, dependiendo del planeta y su energía»  │
+ * │                                                            │
+ * │ Y tiene razón técnica, no solo de gusto: la Luna cambia    │
+ * │ de fase cada tres días, Júpiter dura tres meses y Plutón   │
+ * │ cuatro años. Mostrar los tres en la misma lista es lo que  │
+ * │ hace que una pantalla de astrología no sirva para decidir  │
+ * │ nada — lo de hoy queda enterrado debajo de lo de 2029.     │
+ * │                                                            │
+ * │   SEMANA → la Luna manda. Lo que se hace esta semana.      │
+ * │   MES    → el mes solar profectado y lo social (Júpiter,   │
+ * │            Saturno). Lo que se ordena este mes.            │
+ * │   AÑO    → la profección anual, los ejes del karma y lo    │
+ * │            generacional. De qué va el capítulo.            │
+ * │                                                            │
+ * │ Cada rango filtra por la VELOCIDAD del planeta, no por     │
+ * │ gusto: un tránsito solo aparece donde de verdad se nota.   │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+
+// ─── SEMBRAR LO QUE NOVA YA SABE ─────────────────────────────
+
+/**
+ * Pone los tránsitos calculados en la hoja, si la hoja está vacía.
+ *
+ * Tres reglas, y las tres importan:
+ *
+ * 1· SOLO SI ESTÁ VACÍA. Si ella ya escribió o corrigió tránsitos, no
+ *    se toca nada. Sembrar encima de lo que escribió alguien es la
+ *    forma más rápida de que deje de confiar en la pantalla.
+ *
+ * 2· SOLO A QUIEN LE CORRESPONDE. La semilla es de SU carta y lleva su
+ *    usuario_id dentro. A otra persona no se le siembra la carta de
+ *    Manuela: se le dice que hay que calcular la suya.
+ *
+ * 3· EN UN SOLO SETVALUES. Ciento setenta y ocho appendRow son ciento
+ *    setenta y ocho escrituras y unos veinte segundos; el mismo bloque
+ *    de una vez es una.
+ */
+function transitosSembrar_(uid) {
+  if (typeof EFEMERIDES_SEMILLA === 'undefined') {
+    return { sembro: 0, porque: 'No hay efemérides calculadas en este Nova.' };
+  }
+  if (norm(EFEMERIDES_CARTA.usuario_id) !== norm(uid)) {
+    return { sembro: 0, porque: 'Las efemérides cargadas son de otra carta. ' +
+             'Para sembrar las tuyas hay que correr el script con tus datos de nacimiento.' };
+  }
+
+  let sh;
+  try { sh = soulSheet_('Transitos'); }
+  catch (e) { return { sembro: 0, porque: 'Todavía no existe la hoja Tránsitos. ' +
+                                          'Corre bootstrapTodo() una vez.' }; }
+
+  const mias = soulLeerSuave_('Transitos', uid, []).length;
+  if (mias > 0) return { sembro: 0, yaHabia: mias };
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { sembro: 0, porque: 'Hay otro cambio guardándose.' };
+  try {
+    // Otra vez dentro del candado: dos pestañas abiertas a la vez
+    // sembrarían dos veces, y la comprobación de arriba no sirve para eso.
+    if (soulLeerSuave_('Transitos', uid, []).length > 0) return { sembro: 0 };
+
+    const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
+    const filas = EFEMERIDES_SEMILLA.map(function (linea) {
+      const x = linea.split('|');
+      const cuerpoId = x[0], aspecto = x[1], natalId = x[2];
+      const desde = x[3], hasta = x[4], pico = x[5];
+      const casa = Number(x[6]), casaP = Number(x[7]), retro = x[8] === '1';
+
+      const nat = LEC_NATAL[natalId];
+      const cue = LEC_CUERPOS[cuerpoId];
+      const nombreNatal = nat ? nat.nombre : natalId;
+      const tema = (cue ? cue.nombre : cuerpoId) + ' ' + aspecto + ' a mi ' + nombreNatal;
+
+      const v = {
+        usuario_id: uid, fecha: pico, desde: desde, hasta: hasta,
+        cuerpo: cuerpoId, aspecto: aspecto, a_natal: nombreNatal,
+        casa: casa || '', casa_placidus: casaP || '',
+        tema: tema,
+        intensidad_pct: lecIntensidad_(cuerpoId, norm(aspecto), natalId),
+        // Los textos se dejan EN BLANCO a propósito: la lectura la
+        // compone Nova al leer, no se congela en la hoja. Así, cuando
+        // el vocabulario mejore, mejoran también las filas viejas.
+        texto_transito: '', por_que: '', como_trabajarlo: '', el_otro_lado: '',
+        fuente: 'Swiss Ephemeris' + (retro ? ' · retrógrado' : ''),
+      };
+      return enc.map(function (c) { return v[c] !== undefined ? v[c] : ''; });
+    });
+
+    if (!filas.length) return { sembro: 0 };
+    sh.getRange(sh.getLastRow() + 1, 1, filas.length, enc.length).setValues(filas);
+    // Se acaba de escribir en bloque: lo que hubiera en memoria ya no
+    // sirve, y justo después el pensum va a leer esta misma hoja.
+    soulOlvidar_('Transitos');
+    return { sembro: filas.length, hasta: EFEMERIDES_HASTA };
+  } catch (e) {
+    return { sembro: 0, porque: e.message };
+  } finally { lock.releaseLock(); }
+}
+
+/**
+ * Cuándo hay que volver a correr el script de efemérides.
+ *
+ * Se avisa con seis meses, no el día que se acaba. Un horizonte que se
+ * agota en silencio se ve igual que un pensum que dejó de funcionar, y
+ * ese error ya pasó una vez.
+ */
+function efemeridesVencen_(hoyISO) {
+  if (typeof EFEMERIDES_HASTA === 'undefined') return null;
+  const dias = Math.round((new Date(EFEMERIDES_HASTA + 'T00:00:00Z') -
+                           new Date(hoyISO + 'T00:00:00Z')) / 86400000);
+  return {
+    hasta: EFEMERIDES_HASTA, diasRestantes: dias,
+    avisar: dias < 180,
+    porque: dias < 180
+      ? 'Las efemérides llegan hasta ' + EFEMERIDES_HASTA + '. Cuando falten menos de ' +
+        'seis meses hay que volver a correr efemerides/generar-transitos.py para ' +
+        'extender el horizonte.'
+      : '',
+  };
+}
+
+// ─── LAS LUNAS DE UN TRAMO ───────────────────────────────────
+
+/**
+ * Las lunas nuevas y llenas que caen dentro de un rango.
+ *
+ * Se buscan recorriendo días y mirando cuándo cambia la fase, en vez de
+ * calcular el instante exacto. La diferencia con el instante real son
+ * horas; para «qué día entrego» eso no cambia nada, y para «a qué hora
+ * exacta» ella ya tiene Horus.
+ */
+function lunasEntre_(desdeISO, hastaISO) {
+  const out = [];
+  let f = desdeISO, anterior = '';
+  let guarda = 0;
+  while (f <= hastaISO && guarda++ < 800) {
+    const fase = faseLunar_(f);
+    if (fase.id !== anterior && (fase.id === 'nueva' || fase.id === 'llena')) {
+      out.push({ fecha: f, id: fase.id, nombre: fase.nombre, forma: fase.forma,
+                 que: fase.que, momento: fase.momento });
+    }
+    anterior = fase.id;
+    f = masDias_(f, 1);
+  }
+  return out;
+}
+
+// ─── LOS TRES RANGOS ─────────────────────────────────────────
+
+/**
+ * Qué planetas tienen sentido mirar en cada ventana.
+ *
+ * No es una preferencia: es la velocidad. En una semana Plutón no se
+ * movió, así que ponerlo en la lista de la semana es ruido; y Mercurio
+ * ya pasó tres veces en un año, así que ponerlo en la del año también.
+ */
+const CIELO_RANGOS = {
+  semana: { nombre: 'Esta semana', dias: 7,
+            grupos: ['personal', 'social'],
+            que: 'Lo que se decide en días. Aquí manda la Luna.' },
+  mes:    { nombre: 'Este mes', dias: 30,
+            grupos: ['personal', 'social', 'generacional'],
+            que: 'El mes solar de tu revolución, y lo que Júpiter y Saturno están ordenando.' },
+  anio:   { nombre: 'Este año', dias: 365,
+            grupos: ['social', 'generacional'],
+            que: 'De qué va el capítulo: la casa que rige tu año y lo que está transformándose de fondo.' },
+};
+
+/**
+ * La lectura de un rango, con las cuatro preguntas respondidas.
+ *
+ * Devuelve las temporadas ORDENADAS POR INTENSIDAD, no por fecha. En
+ * una semana cualquiera hay seis cosas abiertas y cinco no importan;
+ * ordenar por fecha pone arriba la que empezó primero, que no tiene
+ * ninguna razón para ser la que más pesa.
+ */
+function cieloRango_(uid, rango, hoyISO, carta, nac) {
+  const R = CIELO_RANGOS[rango] || CIELO_RANGOS.semana;
+  const desde = rango === 'semana' ? lunesDe_(hoyISO) : hoyISO;
+  const hasta = masDias_(desde, R.dias - 1);
+
+  const transitos = transitosDe_(uid);
+  const dentro = transitos.filter(function (t) {
+    // Cruza el tramo: empieza antes y termina después, o cae adentro.
+    if (t.desde > hasta) return false;
+    if (t.hasta && t.hasta < desde) return false;
+    return R.grupos.indexOf(t.grupo) !== -1;
+  });
+
+  const leidos = dentro.map(function (t) {
+    const l = lecturaTransito_(t);
+    if (!l.hay) return null;
+    const dias = Math.round((new Date((t.hasta || t.desde) + 'T00:00:00Z') -
+                             new Date(t.desde + 'T00:00:00Z')) / 86400000) + 1;
+    return Object.assign({}, l, {
+      desde: t.desde, hasta: t.hasta, dias: dias,
+      pico: t.desde <= hoyISO && (!t.hasta || t.hasta >= hoyISO),
+      casa: t.casa, casaPlacidus: t.casaPlacidus, casasDifieren: t.casasDifieren,
+      // Lo que ella haya escrito a mano manda sobre lo compuesto.
+      suyo: t.texto || t.porQue || t.como || t.elOtroLado ? {
+        texto: t.texto, porQue: t.porQue, como: t.como, elOtroLado: t.elOtroLado,
+      } : null,
+    });
+  }).filter(function (x) { return x; })
+    .sort(function (a, b) { return b.intensidad - a.intensidad; });
+
+  const fuera = {
+    semana: 'Los planetas lentos no se mueven en una semana. Míralos en el año.',
+    mes: '',
+    anio: 'Los planetas rápidos ya pasaron varias veces este año. Míralos en la semana.',
+  }[rango];
+
+  return {
+    rango: rango, nombre: R.nombre, que: R.que,
+    desde: desde, hasta: hasta,
+    temporadas: leidos,
+    lunas: rango === 'anio' ? [] : lunasEntre_(desde, hasta),
+    lunaHoy: faseLunar_(hoyISO),
+    fueraDeRango: fuera,
+    // Un tramo sin nada no es un error. Se dice.
+    vacio: leidos.length === 0,
+    porqueVacio: leidos.length ? '' :
+      'No hay ningún tránsito de ' + R.grupos.join(' ni ') + ' abierto en este tramo. ' +
+      'Un cielo tranquilo también es información: es tiempo para sostener lo que ya está.',
+  };
+}
+
+// ─── LA LLAMADA ──────────────────────────────────────────────
+
+/**
+ * `nc_soul_cielo_lectura` · la profundidad, en su propia llamada.
+ *
+ * Va aparte de `nc_soul_cielo` a propósito: la foto del cielo se pinta
+ * al entrar, y la lectura de fondo solo cuando ella toca una pestaña.
+ * Componer ciento setenta y ocho lecturas para pintar una que se ve
+ * sería pagar el precio entero por la parte que se mira.
+ */
+function soulCieloLectura(s, p) {
+  if (!soulPuede_(s)) return { ok: false, error: 'NovaSoul es de Manuela.' };
+  const uid = soulUsuario_(s);
+  const hoy = ahoraISO().slice(0, 10);
+  const rango = CIELO_RANGOS[String(p.rango || '')] ? String(p.rango) : 'semana';
+
+  // Si nunca se sembró, se siembra aquí también: ella puede llegar por
+  // esta pantalla antes que por la otra.
+  const semilla = transitosSembrar_(uid);
+
+  const carta = cartaDe_(uid);
+  const nac = nacimientoDe_(uid);
+  const rev = revolucionVentana_(nac.fecha, hoy);
+
+  const out = {
+    ok: true, hoy: hoy,
+    rangos: CIELO_RANGOS,
+    lectura: cieloRango_(uid, rango, hoy, carta, nac),
+    sembro: semilla.sembro || 0,
+    efemerides: efemeridesVencen_(hoy),
+  };
+
+  // El año trae además la profección leída a fondo y los ejes: es lo
+  // que ella pidió con el ejemplo de «casa 8 de Leo por mi año».
+  if (rango === 'anio') {
+    const asc = (carta || []).filter(function (c) { return c.cuerpo === 'ascendente'; })[0];
+    if (asc && asc.signo && rev) {
+      out.profeccion = lecProfeccion_((rev.edad % 12) + 1, asc.signo,
+        typeof EFEMERIDES_CARTA !== 'undefined' &&
+        norm(EFEMERIDES_CARTA.usuario_id) === norm(uid) ? EFEMERIDES_CARTA : null);
+      out.profeccion.desde = rev.desde;
+      out.profeccion.hasta = rev.hasta;
+      out.profeccion.edad = rev.edad;
+    } else {
+      out.profeccionPorque = !asc || !asc.signo
+        ? 'Para leer tu año necesito tu Ascendente, y todavía no está en tu carta.'
+        : 'Necesito tu fecha de nacimiento para contar los años cumplidos.';
+    }
+    out.ejes = typeof EFEMERIDES_CARTA !== 'undefined' &&
+               norm(EFEMERIDES_CARTA.usuario_id) === norm(uid)
+      ? lecEjes_(EFEMERIDES_CARTA) : [];
+  }
+
+  return out;
+}
+
+/**
+ * La lectura de UNA temporada, a fondo. Para cuando toca una de la lista.
+ *
+ * Se recompone en vez de guardarse: el vocabulario de 87-lectura.gs va
+ * a seguir creciendo, y una lectura congelada en la hoja el día que se
+ * creó envejecería sin que nadie se entere.
+ */
+function soulTransitoLectura(s, p) {
+  if (!soulPuede_(s)) return { ok: false, error: 'NovaSoul es de Manuela.' };
+  const uid = soulUsuario_(s);
+  const clave = String(p.clave || '').trim();
+  if (!clave) return { ok: false, error: 'No sé qué temporada leer.' };
+
+  const t = transitosDe_(uid).filter(function (x) {
+    return x.cuerpo + '|' + norm(x.aspecto) + '|' + norm(x.aNatal) + '|' + x.desde === clave;
+  })[0];
+  if (!t) return { ok: false, error: 'No encuentro esa temporada.' };
+
+  const l = lecturaTransito_(t);
+  if (!l.hay) return { ok: false, error: l.porQue };
+
+  // Las dos casas, cuando discrepan, con las dos lecturas enteras.
+  let otraCasa = null;
+  if (t.casasDifieren) {
+    const otra = lecturaTransito_(Object.assign({}, t, { casa: t.casaPlacidus }));
+    otraCasa = {
+      casa: t.casaPlacidus, sistema: 'Placidus (el de Horus)',
+      tiempoPara: otra.tiempoPara, aFavor: otra.aFavor, desequilibrio: otra.desequilibrio,
+    };
+  }
+
+  return { ok: true, lectura: l, desde: t.desde, hasta: t.hasta,
+           casaEntera: t.casa, casaPlacidus: t.casaPlacidus, otraCasa: otraCasa,
+           suyo: { texto: t.texto, porQue: t.porQue, como: t.como, elOtroLado: t.elOtroLado } };
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   27 · MI PLATA · ENTRA, SALE, CUOTAS
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  MI PLATA · ordenada por lo que hace cada peso, no por categoría
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ LO QUE ELLA DIJO, ENTERO ─────────────────────────────────┐
+ * │                                                            │
+ * │ «la parte de mi plata no la entiendo (…) no entiendo cómo  │
+ * │  razona esta pantalla, porque los gastos fijos están       │
+ * │  abajo, debería haber una distinción si es único pago,     │
+ * │  pago mensual, pago por cuotas; las cuotas y deudas deben  │
+ * │  estar en otra parte, separada; los ingresos y los gastos  │
+ * │  fijos también deben estar separados, que tenga una        │
+ * │  coherencia ahí; como lo veo no entiendo nada de lo que    │
+ * │  me quiere transmitir la pantalla más que mi plata         │
+ * │  entrante y ya.»                                           │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ QUÉ ESTABA MAL, DE VERDAD ────────────────────────────────┐
+ * │                                                            │
+ * │ No era el orden de los bloques. Era que la pantalla estaba │
+ * │ ordenada por CATEGORÍA —arriendo, mercado, servicios,      │
+ * │ internet, crédito, deudas— y la categoría no responde      │
+ * │ ninguna pregunta que ella se haga con la plata.            │
+ * │                                                            │
+ * │ Las preguntas reales son cuatro, y son de otro eje:        │
+ * │                                                            │
+ * │   ¿cuánto entra?                                           │
+ * │   ¿cuánto sale TODOS los meses, pase lo que pase?          │
+ * │   ¿cuánto de eso es deuda, y cuándo se acaba?              │
+ * │   ¿qué queda?                                              │
+ * │                                                            │
+ * │ «Deudas · COP 690.000» en la misma lista que «Internet ·   │
+ * │ COP 93.000» hace imposible la tercera: el internet es para │
+ * │ siempre y la deuda tiene fecha de salida, y esa fecha es   │
+ * │ EL dato — es la diferencia entre deber y estar pagando.    │
+ * │                                                            │
+ * │ Así que esta pantalla no reordena: reagrupa por lo que     │
+ * │ cada peso HACE. Las categorías siguen vivas, pero adentro  │
+ * │ de su bloque, que es donde sí sirven.                      │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ NUNCA HAY UN TOTAL ÚNICO ─────────────────────────┐
+ * │                                                            │
+ * │ Cobra en dólares por Upwork, vive en pesos y se va a       │
+ * │ España. Un total que sume USD, COP y EUR cambia solo de un │
+ * │ día para otro sin que ella gaste ni cobre nada. Todo va    │
+ * │ moneda por moneda, y eso no es una limitación: es lo       │
+ * │ único honesto que se puede mostrar.                        │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+
+/** Entra o sale. Una línea fija puede ser cualquiera de las dos. */
+const PLATA_FLUJOS = {
+  ingreso: { nombre: 'Entra', signo: 1 },
+  gasto:   { nombre: 'Sale',  signo: -1 },
+};
+
+/**
+ * Cómo se paga. Es la distinción que ella pidió por nombre, y la que
+ * decide en qué bloque cae la línea.
+ */
+const PLATA_TIPOS = {
+  mensual: { nombre: 'Todos los meses', orden: 1,
+             ayuda: 'Se repite cada mes y no se acaba: arriendo, internet, servicios.' },
+  cuotas:  { nombre: 'Por cuotas', orden: 2,
+             ayuda: 'Tiene un número de cuotas y una fecha en que termina. Aquí van las deudas.' },
+  unico:   { nombre: 'Pago único', orden: 3,
+             ayuda: 'Pasa una vez, este mes. No se repite el siguiente.' },
+};
+
+/**
+ * Los bloques de la pantalla, en el orden en que se leen.
+ *
+ * El orden no es estético: es el orden en que se contesta la pregunta
+ * «¿me alcanza?». Primero lo que entra, después lo que sale sí o sí,
+ * después lo que se puede negociar, y al final lo que queda.
+ */
+const PLATA_BLOQUES = [
+  { id: 'entra',   nombre: 'Lo que entra',
+    que: 'Turnos, propinas y todo lo que te pagan. Lo de este mes y lo que falta por entrar.' },
+  { id: 'fijo',    nombre: 'Lo que sale todos los meses',
+    que: 'Lo que se repite pase lo que pase. Esto es tu piso: por debajo de esto no se puede bajar el mes.' },
+  { id: 'cuotas',  nombre: 'Cuotas y deudas',
+    que: 'Lo que estás pagando a plazos. Esto SÍ se acaba, y aquí ves cuándo.' },
+  { id: 'unico',   nombre: 'Pagos únicos de este mes',
+    que: 'Lo que pasa una vez y no vuelve el mes que viene.' },
+  { id: 'hormiga', nombre: 'Gastos hormiga',
+    que: 'Lo pequeño que no estaba en el plan. Sumado, casi siempre pesa más de lo que parece.' },
+  { id: 'ahorro',  nombre: 'Ahorro',
+    que: 'No es un gasto. Va aparte para que no ensucie la cuenta de lo que sale.' },
+];
+
+/**
+ * Una línea fija, leída con todo lo que hace falta para entenderla.
+ *
+ * Lo importante de aquí es `cuotas`: sin el mes de la primera cuota no
+ * se puede decir cuándo termina, y decir «van 3 de 6» sin decir «acaba
+ * en febrero» es justamente el dato a medias que no sirve para
+ * decidir nada.
+ */
+function plataLinea_(f, mesISO) {
+  const tipo = PLATA_TIPOS[norm(f.tipo_pago)] ? norm(f.tipo_pago) : '';
+  const flujo = norm(f.flujo) === 'ingreso' ? 'ingreso' : 'gasto';
+  const categoria = norm(f.categoria) || 'varios';
+
+  const o = {
+    id: String(f.id || ''),
+    categoria: categoria,
+    categoriaNombre: (SOUL_CATEGORIAS.filter(function (c) { return c.id === categoria; })[0]
+                      || { nombre: 'Gastos varios' }).nombre,
+    concepto: String(f.concepto || ''),
+    monto: num(f.monto),
+    moneda: String(f.moneda || 'COP').toUpperCase(),
+    dia: num(f.dia_del_mes) || null,
+    activo: norm(f.activo) !== 'no',
+    nota: String(f.nota || ''),
+    flujo: flujo,
+    acreedor: String(f.acreedor || ''),
+    /**
+     * Sin tipo de pago declarado, se deduce en vez de dejar la línea
+     * fuera de todos los bloques. Las que ella ya tenía cargadas no
+     * traen la columna —es nueva— y desaparecer de la pantalla sería
+     * el peor comportamiento posible para un dato viejo.
+     */
+    tipo: tipo || (categoria === 'ahorro' ? 'mensual'
+                 : (categoria === 'deudas' || categoria === 'credito') ? 'cuotas'
+                 : 'mensual'),
+    tipoDeducido: !tipo,
+  };
+
+  if (o.tipo === 'cuotas') {
+    const total = num(f.cuotas_total);
+    const desde = String(f.cuota_desde || '').slice(0, 7);
+    let pagadas = num(f.cuotas_pagadas);
+
+    /**
+     * Si hay mes de arranque, las pagadas se CUENTAN en vez de
+     * creerle a la columna. Una columna que hay que actualizar a mano
+     * cada mes es una columna que va a estar desactualizada, y una
+     * deuda que dice «van 2 de 6» un año después es peor que no decir
+     * nada.
+     */
+    let contadas = null;
+    if (/^\d{4}-\d{2}$/.test(desde)) {
+      const meses = (Number(mesISO.slice(0, 4)) - Number(desde.slice(0, 4))) * 12 +
+                    (Number(mesISO.slice(5, 7)) - Number(desde.slice(5, 7)));
+      contadas = Math.max(0, Math.min(total || 9999, meses));
+      pagadas = contadas;
+    }
+
+    const faltan = total ? Math.max(0, total - pagadas) : null;
+    o.cuotas = {
+      total: total || null,
+      pagadas: pagadas || 0,
+      faltan: faltan,
+      contadasSolas: contadas !== null,
+      desde: desde || '',
+      // El dato que convierte una deuda en algo que se acaba.
+      termina: (total && /^\d{4}-\d{2}$/.test(desde))
+        ? plataMasMeses_(desde, total - 1) : '',
+      faltaPagar: faltan !== null ? faltan * o.monto : null,
+      porque: total ? '' :
+        'Sin saber cuántas cuotas son no puedo decirte cuándo se acaba. ' +
+        'Es el dato que convierte una deuda en algo con fecha de salida.',
+    };
+  }
+
+  return o;
+}
+
+/** Sumar meses a un AAAA-MM sin pasar por Date, que aquí sobra. */
+function plataMasMeses_(mesISO, n) {
+  let a = Number(mesISO.slice(0, 4));
+  let m = Number(mesISO.slice(5, 7)) + n;
+  a += Math.floor((m - 1) / 12);
+  m = ((m - 1) % 12 + 12) % 12 + 1;
+  return a + '-' + (m < 10 ? '0' + m : m);
+}
+
+/** Suma por moneda. Nunca entre monedas. */
+function plataSumar_(lineas) {
+  const o = {};
+  lineas.forEach(function (l) { o[l.moneda] = (o[l.moneda] || 0) + l.monto; });
+  return o;
+}
+
+/**
+ * La pantalla entera, agrupada por lo que hace cada peso.
+ *
+ * Devuelve bloques, no categorías. Cada bloque trae sus líneas, su
+ * total por moneda y su propia frase de qué es — porque «Cuotas y
+ * deudas» no se explica solo, y la pantalla anterior tampoco lo
+ * intentaba.
+ */
+function plataOrdenada_(uid, mes, hoyISO) {
+  const fijos = soulLeerSuave_('Fijos', uid, []).map(function (f) {
+    return plataLinea_(f, mes);
+  }).filter(function (l) { return l.activo; });
+
+  const del = function (tipo, flujo) {
+    return fijos.filter(function (l) {
+      if (l.categoria === 'ahorro') return false;
+      return l.tipo === tipo && l.flujo === flujo;
+    });
+  };
+
+  const entraFijo = fijos.filter(function (l) { return l.flujo === 'ingreso'; });
+  const saleMensual = del('mensual', 'gasto');
+  const saleCuotas = del('cuotas', 'gasto');
+  const saleUnico = del('unico', 'gasto');
+  const ahorro = fijos.filter(function (l) { return l.categoria === 'ahorro'; });
+
+  /**
+   * Lo que YA entró y lo que FALTA por entrar, de los turnos.
+   *
+   * Se reutiliza `soulMes_`, que ya lo calculaba: no se vuelve a
+   * escribir la cuenta de los turnos aquí. Dos cuentas del mismo
+   * número en dos sitios es cómo se consiguen dos respuestas distintas
+   * a la misma pregunta.
+   */
+  const mesResumen = soulMes_(uid, mes, hoyISO);
+
+  const dia = hoyISO.slice(0, 7) === mes ? Number(hoyISO.slice(8, 10)) : 32;
+  const yaPaso = function (l) { return l.dia && l.dia < dia; };
+
+  const bloques = {
+    entra: {
+      lineas: entraFijo,
+      total: plataSumar_(entraFijo),
+      // Lo de los turnos va aparte porque no es un plan: ya pasó.
+      turnos: mesResumen.entro || {},
+      porVenir: {},
+      turnosPorVenir: mesResumen.turnosPorVenir || 0,
+    },
+    fijo: {
+      lineas: saleMensual,
+      total: plataSumar_(saleMensual),
+      pagado: plataSumar_(saleMensual.filter(yaPaso)),
+      pendiente: plataSumar_(saleMensual.filter(function (l) { return !yaPaso(l); })),
+    },
+    cuotas: {
+      lineas: saleCuotas,
+      total: plataSumar_(saleCuotas),
+      // Lo que falta por pagar EN TOTAL, no este mes. Es el número que
+      // dice de qué tamaño es la deuda de verdad.
+      faltaTodo: (function () {
+        const o = {};
+        saleCuotas.forEach(function (l) {
+          if (l.cuotas && l.cuotas.faltaPagar !== null) {
+            o[l.moneda] = (o[l.moneda] || 0) + l.cuotas.faltaPagar;
+          }
+        });
+        return o;
+      })(),
+      /** La última en acabarse: el mes en que deja de doler. */
+      ultima: (function () {
+        const fs = saleCuotas.map(function (l) { return l.cuotas && l.cuotas.termina; })
+                             .filter(function (x) { return x; }).sort();
+        return fs.length ? fs[fs.length - 1] : '';
+      })(),
+      sinFecha: saleCuotas.filter(function (l) {
+        return !l.cuotas || !l.cuotas.termina; }).length,
+    },
+    unico: { lineas: saleUnico, total: plataSumar_(saleUnico) },
+    ahorro: { lineas: ahorro, total: plataSumar_(ahorro) },
+  };
+
+  // Lo que sale, sumado de verdad: fijo + cuotas + único. Sin ahorro.
+  const sale = {};
+  [saleMensual, saleCuotas, saleUnico].forEach(function (grupo) {
+    grupo.forEach(function (l) { sale[l.moneda] = (sale[l.moneda] || 0) + l.monto; });
+  });
+
+  /**
+   * El resultado, moneda por moneda. `queda` no es una proyección: es
+   * lo que entró menos lo que está comprometido. Y se dice cuál de las
+   * dos cosas es, porque confundirlas es cómo se gasta plata que ya
+   * tenía dueño.
+   */
+  const monedas = {};
+  [bloques.entra.total, bloques.entra.turnos, sale, bloques.ahorro.total]
+    .forEach(function (o) { Object.keys(o || {}).forEach(function (k) { monedas[k] = 1; }); });
+
+  const resultado = Object.keys(monedas).sort(function (a, b) {
+    return a === 'COP' ? -1 : b === 'COP' ? 1 : (a < b ? -1 : 1);
+  }).map(function (k) {
+    const entra = (bloques.entra.total[k] || 0) + (bloques.entra.turnos[k] || 0);
+    const salen = sale[k] || 0;
+    return {
+      moneda: k,
+      entra: entra,
+      sale: salen,
+      ahorro: bloques.ahorro.total[k] || 0,
+      queda: entra - salen,
+      // Cuánto de lo que entra ya tiene dueño antes de llegar.
+      comprometidoPct: entra > 0 ? Math.round(salen / entra * 100) : null,
+    };
+  });
+
+  return {
+    mes: mes,
+    bloquesOrden: PLATA_BLOQUES,
+    tipos: PLATA_TIPOS,
+    bloques: bloques,
+    sale: sale,
+    resultado: resultado,
+    /**
+     * Cuántas líneas están en un bloque porque Nova lo dedujo y no
+     * porque ella lo dijo. Se muestra para que pueda corregirlas: una
+     * deducción en silencio es una mentira con buena intención.
+     */
+    porClasificar: fijos.filter(function (l) { return l.tipoDeducido; })
+      .map(function (l) {
+        return { id: l.id, concepto: l.concepto, categoria: l.categoriaNombre,
+                 supuesto: PLATA_TIPOS[l.tipo].nombre };
+      }),
+  };
+}
+
+/**
+ * `nc_soul_plata` · la pantalla, ya reagrupada.
+ *
+ * Se mantiene todo lo que la pantalla vieja devolvía —las categorías,
+ * lo hormiga, los turnos pendientes— porque hay partes de la interfaz
+ * que siguen leyéndolo, y se agrega `orden`, que es lo nuevo. Cambiar
+ * la forma de la respuesta y la pantalla a la vez deja sin saber cuál
+ * de las dos cosas rompió.
+ */
+function soulPlataOrdenada(s, p) {
+  if (!soulPuede_(s)) return { ok: false, error: 'NovaSoul es de Manuela.' };
+  const uid = soulUsuario_(s);
+  const hoy = ahoraISO().slice(0, 10);
+  const mes = String(p.mes || hoy.slice(0, 7));
+
+  const base = soulPlata(s, { mes: mes });
+  if (!base.ok) return base;
+
+  base.orden = plataOrdenada_(uid, mes, hoy);
+  base.flujos = PLATA_FLUJOS;
+  return base;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   28 · NOVASOUL EN UNA SOLA PETICIÓN
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  NOVASOUL EN UNA SOLA PETICIÓN
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ POR QUÉ SE DEMORA, EN UNA FRASE ──────────────────────────┐
+ * │                                                            │
+ * │ No son los datos. Son los VIAJES.                          │
+ * │                                                            │
+ * │ Cada `nc(...)` de la pantalla es una petición HTTPS entera  │
+ * │ a Apps Script: abrir conexión, arrancar el motor de Google, │
+ * │ comprobar la sesión, correr, devolver, cerrar. Eso cuesta   │
+ * │ entre medio segundo y dos segundos SIEMPRE, traiga tres     │
+ * │ filas o tres mil.                                          │
+ * │                                                            │
+ * │ NovaSoul hacía cinco de esos viajes para pintar lo que ella │
+ * │ mira al entrar. Cinco viajes son cinco arranques de motor,  │
+ * │ y ahí están los segundos que ella siente.                  │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ Y POR QUÉ n8n NO ARREGLA ESTO ────────────────────────────┐
+ * │                                                            │
+ * │ Ella preguntó si n8n serviría para que no fuera tan lento.  │
+ * │ La respuesta honesta es que no, y por una razón que no      │
+ * │ tiene que ver con si n8n es bueno o malo:                   │
+ * │                                                            │
+ * │ n8n no quita viajes. Los AGREGA. La pantalla llamaría a     │
+ * │ n8n, n8n llamaría a Google Sheets, Google respondería, n8n  │
+ * │ respondería. Donde había un salto, hay dos. Y el dato sigue │
+ * │ viviendo en la misma hoja, leído por la misma API.          │
+ * │                                                            │
+ * │ Lo que n8n sí hace bien —conectar servicios ajenos entre    │
+ * │ sí sin escribir código— es otro problema, y ese día se      │
+ * │ mira. Para ESTA demora, lo que sirve es hacer un viaje en   │
+ * │ vez de cinco. Que es lo que hay en este archivo.            │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ LO QUE NO SE JUNTA, Y POR QUÉ ────────────────────────────┐
+ * │                                                            │
+ * │ `soulFamily` NO entra aquí. Esa abre los libros de las      │
+ * │ tiendas —Nutrea EC y GT, miles de pedidos— y calcula el     │
+ * │ semáforo. Son segundos de verdad, y meterla en el arranque  │
+ * │ haría que la pantalla de Pendientes esperara por datos de   │
+ * │ una tienda que ella ni está mirando.                        │
+ * │                                                            │
+ * │ La regla: se junta lo que se pinta AL ENTRAR. Lo que cuesta │
+ * │ segundos y se mira a veces, se pide cuando se mira.         │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+
+/**
+ * Todo lo de NovaSoul que se pinta al entrar, de una.
+ *
+ * Cada sección va envuelta en su propio try. Una hoja que falta no
+ * puede dejar la pantalla entera en blanco: eso ya pasó una vez con
+ * Tránsitos, y el síntoma —una pantalla vacía sin ningún mensaje— es
+ * el peor de todos porque no se distingue de «todavía está cargando».
+ */
+function soulArranque(s, p) {
+  if (!soulPuede_(s)) return { ok: false, error: 'NovaSoul es de Manuela.' };
+
+  const out = { ok: true, hoy: ahoraISO().slice(0, 10), fallaron: [] };
+
+  const parte = function (nombre, clave, fn) {
+    try {
+      const r = fn();
+      // Una sección que devuelve su propio error lo dice y no se pierde.
+      if (r && r.ok === false) {
+        out.fallaron.push({ seccion: nombre, porque: r.error || 'no respondió' });
+      }
+      out[clave] = r;
+    } catch (e) {
+      out.fallaron.push({ seccion: nombre, porque: e.message });
+      out[clave] = null;
+    }
+  };
+
+  /**
+   * `hoy_` con guion bajo porque `hoy` ya es la fecha. Dos cosas con el
+   * mismo nombre en la misma respuesta es cómo se consigue que la
+   * pantalla pinte una fecha donde iba una lista.
+   */
+  parte('Hoy', 'hoy_', function () { return soulHoy(s, p); });
+  parte('Mi plata', 'plata', function () { return soulPlataOrdenada(s, p); });
+  parte('El cielo', 'cielo', function () { return soulCielo(s, p); });
+  parte('Mi rutina', 'rutina', function () { return soulRutina(s, p); });
+  parte('Universidad', 'materias', function () { return soulMaterias(s, p); });
+
+  return out;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   29 · AUDITORÍA · CASOS REALES
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  AUDITORÍA · casos reales, veredicto que se guarda
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ LO QUE ELLA ENCONTRÓ ─────────────────────────────────────┐
+ * │                                                            │
+ * │ «auditorías tampoco está guardando los hallazgos».         │
+ * │                                                            │
+ * │ No era un fallo de guardado. La pantalla ENTERA era una    │
+ * │ maqueta: tres clientas inventadas —Andrea Morales, Luisa   │
+ * │ Fernández, Carolina Jiménez—, dos gestoras inventadas,     │
+ * │ transcripciones de llamadas inventadas, y un botón de      │
+ * │ «Guardar veredicto» que no tenía ni un `onclick`. Se podía │
+ * │ marcar OK o Hallazgo, escribir la nota, darle a guardar, y │
+ * │ no pasaba absolutamente nada — sin un solo mensaje de      │
+ * │ error, porque no había nada que fallara.                   │
+ * │                                                            │
+ * │ Un botón que no hace nada es peor que un botón que falla.  │
+ * │ El que falla se arregla; el que no hace nada se usa        │
+ * │ durante semanas creyendo que sí.                           │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ QUÉ ES AUDITAR AQUÍ, DE VERDAD ───────────────────────────┐
+ * │                                                            │
+ * │ Auditar un caso es contrastar DOS relatos del mismo hecho: │
+ * │                                                            │
+ * │   lo que escribió la gestora  ←→  lo que registró IRIS     │
+ * │   (la solución de la novedad)     (la central telefónica)  │
+ * │                                                            │
+ * │ Cuando una gestora escribe «llamé tres veces» y la central │
+ * │ registra dos llamadas, eso es un hallazgo. Cuando escribe  │
+ * │ «entregado, la clienta confirmó» y no hay ni una llamada,  │
+ * │ eso es otro. Y cuando calzan, se cierra el caso y ya.      │
+ * │                                                            │
+ * │ Los dos lados son datos que Nova YA tiene: Novedades trae  │
+ * │ `gestora` y `solucion`; Llamadas trae quién llamó, cuándo  │
+ * │ y cuánto habló. No había que inventar nada — había que     │
+ * │ cruzarlo.                                                  │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ NOVA NO PONE EL VEREDICTO ────────────────────────┐
+ * │                                                            │
+ * │ Nova marca las DISCREPANCIAS —dijo tres llamadas, hay dos— │
+ * │ y ahí se detiene. El veredicto lo pone una persona.        │
+ * │                                                            │
+ * │ Porque una discrepancia no es una falta: la clienta pudo   │
+ * │ haber llamado ella, pudo ser por WhatsApp, la central pudo │
+ * │ no haber registrado. Un sistema que reparte «hallazgos»    │
+ * │ solo, sobre el trabajo de una persona concreta, se         │
+ * │ equivoca en público y con nombre propio.                   │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+
+/** Los tres veredictos. No hay más, y no se aceptan inventados. */
+const AUD_VEREDICTOS = {
+  ok:        { nombre: 'OK', que: 'Lo que escribió calza con lo que hay registrado.' },
+  hallazgo:  { nombre: 'Hallazgo', que: 'Hay algo que no calza y hay que hablarlo.' },
+  pendiente: { nombre: 'Pendiente', que: 'Todavía no se revisó.' },
+};
+
+/** Cuántos días atrás se revisan por defecto. */
+const AUD_VENTANA_DIAS = 14;
+
+/**
+ * Las señales que Nova sí puede levantar sola, sin juzgar.
+ *
+ * Cada una dice qué se comprobó y con qué números, para que quien
+ * ponga el veredicto pueda estar en desacuerdo con el dato a la vista.
+ * Una señal sin sus cifras es una acusación.
+ */
+function audSenales_(nov, llamadas) {
+  const out = [];
+  const texto = String(nov.solucion || '') + ' ' + String(nov.nota || '');
+  const t = norm(texto);
+
+  const hechas = llamadas.filter(function (l) {
+    return norm(l.sentido) !== 'entrante';
+  });
+  const contestadas = llamadas.filter(function (l) {
+    return num(l.seg_conversado) > 0;
+  });
+
+  /**
+   * «Llamé N veces» contra las llamadas registradas.
+   *
+   * Se buscan números escritos con cifra y con letra, porque una
+   * gestora escribe «llamé 3 veces» y también «llamé tres veces», y
+   * una comprobación que solo entiende cifras deja pasar la mitad.
+   */
+  const letras = { un: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6 };
+  let dichas = null;
+  const m = t.match(/(\d+|un|una|dos|tres|cuatro|cinco|seis)\s+(veces|vez|intentos|intento|llamadas|llamada)/);
+  if (m) dichas = /^\d+$/.test(m[1]) ? Number(m[1]) : letras[m[1]];
+
+  if (dichas !== null && dichas > llamadas.length) {
+    out.push({
+      tipo: 'llamadas_de_menos', nivel: 'mal',
+      que: 'Escribió ' + dichas + (dichas === 1 ? ' intento' : ' intentos') +
+           ' y en la central hay ' + llamadas.length + '.',
+      dato: { dijo: dichas, hay: llamadas.length },
+    });
+  }
+
+  if (/entregad|confirm|acord|reprogram/.test(t) && llamadas.length === 0) {
+    out.push({
+      tipo: 'sin_llamada', nivel: 'ojo',
+      que: 'Dice que hubo acuerdo con la clienta y no hay ninguna llamada registrada ' +
+           'para este pedido. Puede haber sido por WhatsApp.',
+      dato: { hay: 0 },
+    });
+  }
+
+  if (llamadas.length > 0 && contestadas.length === 0 && /confirm|acord/.test(t)) {
+    out.push({
+      tipo: 'nadie_contesto', nivel: 'ojo',
+      que: 'Hay ' + llamadas.length + ' llamada(s), pero ninguna con conversación. ' +
+           'Dice que la clienta confirmó.',
+      dato: { llamadas: llamadas.length, contestadas: 0 },
+    });
+  }
+
+  if (!String(nov.solucion || '').trim() && norm(nov.estado) !== 'abierta') {
+    out.push({
+      tipo: 'sin_nota', nivel: 'mal',
+      que: 'La novedad se cerró sin escribir qué se hizo.',
+      dato: {},
+    });
+  }
+
+  if (!out.length && llamadas.length && hechas.length) {
+    out.push({
+      tipo: 'calza', nivel: 'bien',
+      que: 'Lo escrito y lo registrado calzan: ' + llamadas.length +
+           ' llamada(s), ' + contestadas.length + ' con conversación.',
+      dato: { llamadas: llamadas.length, contestadas: contestadas.length },
+    });
+  }
+
+  return out;
+}
+
+/**
+ * Los casos a revisar, con los dos relatos al lado.
+ *
+ * Solo novedades CERRADAS: una abierta todavía se está trabajando, y
+ * auditar el trabajo de alguien mientras lo está haciendo no dice nada
+ * salvo que va por la mitad.
+ */
+function apiAuditoriaCasos(s, p) {
+  if (s.rol === 'gestora') return { ok: false, error: 'No tienes acceso a la auditoría.' };
+  const tienda = String(p.tienda || '').trim();
+  if (!tienda) return { ok: false, error: 'Falta decir de qué tienda.' };
+
+  const ss = libro_(s.sheetId);
+  const hoy = ahoraISO().slice(0, 10);
+  const desde = masDias_(hoy, -(num(p.dias) || AUD_VENTANA_DIAS));
+
+  const leer = function (nombre) {
+    const sh = ss.getSheetByName(nombre);
+    if (!sh || sh.getLastRow() < 2) return { enc: [], filas: [] };
+    const d = sh.getDataRange().getValues();
+    return { enc: d[0].map(norm), filas: d.slice(1) };
+  };
+
+  const nov = leer('Novedades');
+  if (!nov.filas.length) {
+    return { ok: true, casos: [], veredictos: AUD_VEREDICTOS, desde: desde, hoy: hoy,
+             porque: 'Todavía no hay novedades importadas. La auditoría revisa novedades ' +
+                     'cerradas, así que aparece en cuanto tu equipo cierre la primera.' };
+  }
+
+  const ped = leer('Pedidos');
+  const lla = leer('Llamadas');
+  const obj = function (enc, f) {
+    const o = {};
+    enc.forEach(function (c, i) { o[c] = f[i]; });
+    return o;
+  };
+
+  // Los pedidos por id, para sacar cliente, teléfono y tienda.
+  const porPedido = {};
+  ped.filas.forEach(function (f) {
+    const o = obj(ped.enc, f);
+    if (o.id) porPedido[String(o.id)] = o;
+  });
+
+  /**
+   * Las llamadas, indexadas por pedido Y por teléfono.
+   *
+   * IRIS no siempre trae `pedido_id` —el comentario del esquema ya lo
+   * decía: «cruza con Pedidos por telefono_norm, no por id de orden»—.
+   * Así que se indexa por los dos y se usa el que haya. Indexar solo
+   * por pedido dejaría la mitad de las llamadas sin encontrar, y el
+   * resultado sería una pantalla llena de «no hay llamadas» falsos.
+   */
+  const llaPorPedido = {}, llaPorTel = {};
+  lla.filas.forEach(function (f) {
+    const o = obj(lla.enc, f);
+    const pid = String(o.pedido_id || '').trim();
+    const tel = String(o.telefono_norm || '').trim();
+    if (pid) (llaPorPedido[pid] = llaPorPedido[pid] || []).push(o);
+    if (tel) (llaPorTel[tel] = llaPorTel[tel] || []).push(o);
+  });
+
+  // Lo ya auditado, para no volver a pedir el mismo veredicto.
+  const yaHecho = {};
+  const aud = leer('Auditorias');
+  aud.filas.forEach(function (f) {
+    const o = obj(aud.enc, f);
+    if (o.novedad_id) yaHecho[String(o.novedad_id)] = o;
+  });
+
+  const casos = [];
+  const tope = Math.min(120, Math.max(1, num(p.limite) || 40));
+  let cerradas = 0;
+
+  for (let i = nov.filas.length - 1; i >= 0 && casos.length < tope; i--) {
+    const n = obj(nov.enc, nov.filas[i]);
+    const abierta = norm(n.estado) === 'abierta' ||
+                    (!norm(n.solucionada) && !String(n.fecha_solucion || '').trim());
+    if (abierta) continue;
+
+    const fecha = aISO(n.fecha_solucion, 'UTC') || aISO(n.fecha, 'UTC') || '';
+    if (fecha && fecha < desde) continue;
+
+    const pedido = porPedido[String(n.pedido_id || '')] || {};
+    if (tienda && pedido.tienda && norm(pedido.tienda) !== norm(tienda)) continue;
+    cerradas++;
+
+    const tel = String(pedido.telefono_norm || '').trim();
+    const suyas = (llaPorPedido[String(n.pedido_id || '')] ||
+                   (tel ? llaPorTel[tel] : []) || []).slice();
+    suyas.sort(function (a, b) {
+      return String(a.fecha_hora) < String(b.fecha_hora) ? -1 : 1;
+    });
+
+    const guardado = yaHecho[String(n.id)] || null;
+
+    casos.push({
+      novedadId: String(n.id || ''),
+      pedidoId: String(n.pedido_id || ''),
+      fecha: fecha,
+      cliente: String(pedido.cliente || ''),
+      ciudad: String(pedido.ciudad || ''),
+      motivo: String(n.motivo || ''),
+      desenlace: String(n.desenlace || ''),
+      gestora: String(n.gestora || '').trim(),
+      /** Lo que escribió la persona. Tal cual, sin recortar. */
+      dijoGestora: String(n.solucion || n.nota || '').trim(),
+      /** Lo que registró la central. */
+      llamadas: suyas.map(function (l) {
+        return {
+          cuando: String(l.fecha_hora || ''),
+          agente: String(l.agente || ''),
+          sentido: String(l.sentido || ''),
+          estado: String(l.estado || ''),
+          segundos: num(l.seg_conversado),
+          observacion: String(l.observacion || ''),
+          grabacion: String(l.grabacion || ''),
+        };
+      }),
+      senales: audSenales_(n, suyas),
+      veredicto: guardado ? norm(guardado.veredicto) : 'pendiente',
+      notaAuditoria: guardado ? String(guardado.nota || '') : '',
+      auditadoPor: guardado ? String(guardado.auditor || '') : '',
+      auditadoEn: guardado ? String(guardado.creada_en || '') : '',
+    });
+  }
+
+  // El recuento honesto: cuántas hay, cuántas se revisaron.
+  const conVeredicto = casos.filter(function (c) { return c.veredicto !== 'pendiente'; });
+  const hallazgos = casos.filter(function (c) { return c.veredicto === 'hallazgo'; });
+  const conSenal = casos.filter(function (c) {
+    return c.senales.filter(function (x) { return x.nivel !== 'bien'; }).length > 0;
+  });
+
+  return {
+    ok: true, hoy: hoy, desde: desde, tienda: tienda,
+    casos: casos,
+    veredictos: AUD_VEREDICTOS,
+    recuento: {
+      cerradasEnVentana: cerradas,
+      mostrados: casos.length,
+      revisados: conVeredicto.length,
+      sinRevisar: casos.length - conVeredicto.length,
+      hallazgos: hallazgos.length,
+      /**
+       * Cuántos tienen una señal automática. NO es «cuántos están mal»:
+       * es cuántos vale la pena mirar primero.
+       */
+      conSenal: conSenal.length,
+    },
+    /**
+     * Si no hay ni una llamada importada, la mitad del cruce no existe
+     * y hay que decirlo: si no, la pantalla mostraría «sin llamada» en
+     * todos los casos y parecería que el equipo nunca llama.
+     */
+    sinLlamadas: lla.filas.length === 0,
+    porqueSinLlamadas: lla.filas.length === 0
+      ? 'No hay llamadas importadas de IRIS. Sin ellas solo se ve un lado del caso: ' +
+        'lo que escribió la gestora. El cruce aparece en cuanto importes la central.'
+      : '',
+  };
+}
+
+/**
+ * Guardar el veredicto. Esto es lo que el botón no hacía.
+ *
+ * La nota es OBLIGATORIA cuando hay hallazgo, y no por burocracia: un
+ * hallazgo sin nota es una marca negra en el registro de una persona
+ * sin nada que explique qué pasó. Dentro de un mes nadie se acuerda, y
+ * lo único que queda es la marca.
+ *
+ * Para un OK la nota es opcional: cerrar cien casos correctos no puede
+ * costar cien párrafos o nadie audita nada.
+ */
+function apiAuditoriaGuardar(s, p) {
+  if (s.rol === 'gestora') return { ok: false, error: 'No tienes acceso a la auditoría.' };
+  if (s.rol !== 'dueno' && s.rol !== 'admin' && s.rol !== 'supervisora') {
+    return { ok: false, error: 'Solo quien supervisa puede poner un veredicto.' };
+  }
+
+  const novedadId = String(p.novedadId || p.novedad_id || '').trim();
+  if (!novedadId) return { ok: false, error: 'No sé a qué caso le estás poniendo veredicto.' };
+
+  const veredicto = norm(p.veredicto);
+  if (!AUD_VEREDICTOS[veredicto]) {
+    return { ok: false, error: 'El veredicto tiene que ser OK, Hallazgo o Pendiente.' };
+  }
+  const nota = String(p.nota || '').trim();
+  if (veredicto === 'hallazgo' && nota.length < 10) {
+    return { ok: false, error: 'Un hallazgo necesita una nota que explique qué pasó. ' +
+                               'Queda en el registro de esa persona: sin la nota, dentro ' +
+                               'de un mes solo queda la marca.' };
+  }
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) return { ok: false, error: 'Hay otro veredicto guardándose.' };
+  try {
+    const ss = libro_(s.sheetId);
+    let sh = ss.getSheetByName('Auditorias');
+    if (!sh) {
+      return { ok: false, error: 'Falta la hoja Auditorias. Corre bootstrapTodo() una vez ' +
+                                 'desde el editor de Apps Script y vuelve a intentar.' };
+    }
+    const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
+    const ahora = ahoraISO();
+
+    const fila = {
+      id: 'au' + Utilities.getUuid().slice(0, 8),
+      tienda: String(p.tienda || ''),
+      novedad_id: novedadId,
+      pedido_id: String(p.pedidoId || p.pedido_id || ''),
+      gestora: String(p.gestora || ''),
+      veredicto: veredicto,
+      nota: nota,
+      senales: Array.isArray(p.senales) ? p.senales.join(' · ') : String(p.senales || ''),
+      auditor: String(s.email || s.nombre || ''),
+      creada_en: ahora,
+    };
+
+    /**
+     * Un caso tiene UN veredicto, no un historial de veredictos. Si ya
+     * había uno, se reemplaza la fila en vez de apilar otra: de lo
+     * contrario «revisados: 12» contaría doce veredictos sobre tres
+     * casos y el número dejaría de significar nada.
+     *
+     * El cambio no se pierde: queda en Movimientos, que es el sitio del
+     * rastro.
+     */
+    const d = sh.getLastRow() > 1 ? sh.getDataRange().getValues() : [enc];
+    const cN = enc.indexOf('novedad_id');
+    let reemplazo = 0;
+    for (let i = 1; i < d.length; i++) {
+      if (String(d[i][cN] || '').trim() === novedadId) { reemplazo = i + 1; break; }
+    }
+
+    const valores = enc.map(function (c) { return fila[c] !== undefined ? fila[c] : ''; });
+    if (reemplazo) {
+      const antes = d[reemplazo - 1][enc.indexOf('veredicto')];
+      // Se conserva el id original: es la misma auditoría, corregida.
+      valores[enc.indexOf('id')] = d[reemplazo - 1][enc.indexOf('id')];
+      sh.getRange(reemplazo, 1, 1, enc.length).setValues([valores]);
+      registrarMovimiento(s, 'Auditorias', novedadId, 'veredicto',
+                          String(antes || ''), veredicto);
+    } else {
+      sh.appendRow(valores);
+      registrarMovimiento(s, 'Auditorias', novedadId, 'veredicto', '', veredicto);
+    }
+
+    return { ok: true, veredicto: veredicto, reemplazo: !!reemplazo, cuando: ahora };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  } finally { lock.releaseLock(); }
 }

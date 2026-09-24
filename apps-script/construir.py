@@ -41,6 +41,12 @@ ORDEN = [
     ('84-central-meta.gs',  '21 · CENTRAL · META, DESDE LA CONSOLA'),
     ('85-meta-panel.gs',   '22 · META · TODO EN UNA PANTALLA'),
     ('86-reporte-dia.gs',  '23 · QUÉ QUEDÓ DE AYER'),
+    ('87-lectura.gs',      '24 · EL CIELO · EL VOCABULARIO DE LA LECTURA'),
+    ('88-efemerides.gs',   '25 · EL CIELO · LAS EFEMÉRIDES YA CALCULADAS'),
+    ('89-cielo-rangos.gs', '26 · EL CIELO · SEMANA, MES Y AÑO'),
+    ('90-plata.gs',        '27 · MI PLATA · ENTRA, SALE, CUOTAS'),
+    ('91-arranque-soul.gs','28 · NOVASOUL EN UNA SOLA PETICIÓN'),
+    ('92-auditoria.gs',    '29 · AUDITORÍA · CASOS REALES'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

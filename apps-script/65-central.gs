@@ -43,7 +43,7 @@ function puedeCentral(s, permiso) {
  * alguien no está aquí, no entra, aunque sea dueña de tres tiendas.
  */
 function buscarOperadora(email) {
-  const ss = SpreadsheetApp.openById(IDS_().central);
+  const ss = libro_(IDS_().central);
   const sh = ss.getSheetByName('Plataforma');
   if (!sh || sh.getLastRow() < 2) return null;
 
@@ -108,6 +108,7 @@ function manejarCentral(accion, p) {
      * NovaSoul aunque escriba la acción a mano.
      */
     case 'nc_soul':            return soulHoy(s, p);
+    case 'nc_soul_arranque':   return soulArranque(s, p);
     case 'nc_soul_guardar':    return soulPendienteGuardar(s, p);
     case 'nc_soul_borrar':     return soulPendienteBorrar(s, p);
     case 'nc_soul_horas':      return soulHorasGuardar(s, p);
@@ -128,7 +129,7 @@ function manejarCentral(accion, p) {
     case 'nc_soul_turno':          return soulTurnoGuardar(s, p);
     case 'nc_soul_hormiga':        return soulHormigaGuardar(s, p);
     case 'nc_soul_hormiga_borrar': return soulHormigaBorrar(s, p);
-    case 'nc_soul_plata':          return soulPlata(s, p);
+    case 'nc_soul_plata':          return soulPlataOrdenada(s, p);
     case 'nc_proyecto':            return centralProyecto(s, p);
     case 'nc_proyecto_leer':       return centralProyectoLeer(s, p);
     case 'nc_proyecto_tareas':     return centralProyectoGuardarTareas(s, p);
@@ -144,6 +145,8 @@ function manejarCentral(accion, p) {
     case 'nc_soul_revolucion':     return soulRevolucionGuardar(s, p);
     case 'nc_soul_pensum_auto':    return soulPensumDesdeTransitos(s, p);
     case 'nc_soul_pensum_casa':    return soulPensumOtraCasa(s, p);
+    case 'nc_soul_cielo_lectura':  return soulCieloLectura(s, p);
+    case 'nc_soul_transito_leer':  return soulTransitoLectura(s, p);
     case 'nc_salir':
       CacheService.getScriptCache().remove('nc_' + p.token);
       return { ok: true };
@@ -211,7 +214,7 @@ function centralVerificar(p) {
 
   // Rastro de quién entra a la consola, en la propia hoja
   try {
-    const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Plataforma');
+    const sh = libro_(IDS_().central).getSheetByName('Plataforma');
     const e = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
     const col = e.indexOf('ultima_conexion');
     if (col !== -1) sh.getRange(op.fila, col + 1).setValue(ahoraISO());
@@ -234,7 +237,7 @@ function centralVerificar(p) {
 function centralClientes(s, p) {
   if (!puedeCentral(s, 'ver')) return { ok: false, error: 'Tu rol no ve los clientes.' };
 
-  const ss = SpreadsheetApp.openById(IDS_().central);
+  const ss = libro_(IDS_().central);
   const sh = ss.getSheetByName('Clientes');
   if (!sh || sh.getLastRow() < 2) return { ok: true, clientes: [] };
 
@@ -270,7 +273,7 @@ function centralClientes(s, p) {
 
     if (conDetalle && cl.sheetId) {
       try {
-        const cs = SpreadsheetApp.openById(cl.sheetId);
+        const cs = libro_(cl.sheetId);
         const shE = cs.getSheetByName('Equipo');
         cl.personas = shE && shE.getLastRow() > 1 ? shE.getLastRow() - 1 : 0;
         const shF = cs.getSheetByName('Fuentes');
@@ -325,7 +328,7 @@ function centralClientes(s, p) {
 
 function centralPlanes(s, p) {
   if (!puedeCentral(s, 'ver')) return { ok: false, error: 'Tu rol no ve los planes.' };
-  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Planes');
+  const sh = libro_(IDS_().central).getSheetByName('Planes');
   if (!sh || sh.getLastRow() < 2) return { ok: true, planes: [] };
 
   const d = sh.getDataRange().getValues();
@@ -425,7 +428,7 @@ function centralCrearCliente(s, p) {
 /** La bitácora de la consola vive en Nova_Central, no en la del cliente. */
 function registrarCentral(s, entidad, id, campo, antes, ahora) {
   try {
-    const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Movimientos');
+    const sh = libro_(IDS_().central).getSheetByName('Movimientos');
     if (sh) sh.appendRow([ahoraISO(), s.correo, entidad, id, campo, antes, ahora]);
   } catch (err) {
     Logger.log('No se pudo registrar en Central: ' + err.message);
@@ -451,7 +454,7 @@ function registrarCentral(s, entidad, id, campo, antes, ahora) {
  * es quien ya está dentro.
  */
 function primeraSocia(nombre, correo) {
-  const sh = SpreadsheetApp.openById(IDS_().central).getSheetByName('Plataforma');
+  const sh = libro_(IDS_().central).getSheetByName('Plataforma');
   if (!sh) throw new Error('Falta la hoja Plataforma. Corre bootstrapTodo().');
   if (sh.getLastRow() > 1) {
     const ya = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues()
