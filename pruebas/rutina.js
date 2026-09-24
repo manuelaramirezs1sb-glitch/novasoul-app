@@ -70,6 +70,7 @@ global.Date = class extends RealDate {
 };
 
 (0, eval)(src + '\n;globalThis.__F = { duracionHoras_, horaNum_, rutinaCorre_, rutinaDe_,' +
+  ' diasDeRutina_,' +
   ' soulRutina, soulRutinaGuardar, soulRutinaBorrar, soulTurnoGuardar, turnosPendientes_,' +
   ' soulHormigaGuardar, soulPlata, soulHoy, soulHorasGuardar, soulMes_, SOUL_HORMIGA };');
 const F = globalThis.__F;
@@ -320,6 +321,69 @@ ok('con todo, sí',
    F.soulRutinaGuardar(SOCIA, { datos: { nombre: 'Gimnasio', tipo: 'otro', dia_semana: 2,
      hora_inicio: '06:00', hora_fin: '07:00' } }).ok);
 igual('y ya son cinco bloques', 5, F.soulRutina(SOCIA, {}).rutinas.length);
+
+
+console.log('\n── Varias veces por semana, en UNA sola fila ──');
+/**
+ * Ella lo pidió así: «hay horarios que son varias veces por semana […]
+ * las 6 veces que debo de hacer ejercicio en la semana».
+ *
+ * Antes cada fila era un día: seis veces eran seis filas, y cambiar la
+ * hora había que cambiarla seis veces.
+ */
+[['1,3,5', [1, 3, 5], 'separados por coma'],
+ ['1-5', [1, 2, 3, 4, 5], 'un rango, de lunes a viernes'],
+ ['1-5,7', [1, 2, 3, 4, 5, 7], 'un rango y un suelto'],
+ ['1-6', [1, 2, 3, 4, 5, 6], 'las seis veces de ejercicio'],
+ ['L,X,V', [1, 3, 5], 'con letras, como lo dice cualquiera'],
+ ['lunes y jueves', [1, 4], 'escrito como se habla'],
+ ['diario', [1, 2, 3, 4, 5, 6, 7], 'todos los días'],
+ ['3', [3], 'uno solo, como siempre'],
+].forEach(function (caso) {
+  igual(caso[2], caso[1], F.diasDeRutina_(caso[0]));
+});
+
+/** Lo que no se entiende se descarta, no se convierte en lunes. */
+igual('un día que no se entiende NO se vuelve lunes', [], F.diasDeRutina_('cuando pueda'));
+igual('ni un número fuera de rango', [], F.diasDeRutina_('9'));
+igual('y de una lista a medias se salva lo que sí se entiende',
+      [2, 5], F.diasDeRutina_('2, cuando pueda, 5'));
+igual('sin repetidos, y en orden', [1, 3], F.diasDeRutina_('3,1,3'));
+
+console.log('\n── Y corre los días que toca ──');
+const gym = { activo: true, dias: [1, 2, 3, 4, 5, 6], desde: '', hasta: '' };
+igual('el lunes sí, el domingo no',
+      [true, false],
+      [F.rutinaCorre_(gym, '2026-09-21'), F.rutinaCorre_(gym, '2026-09-27')]);
+igual('y los seis días de la semana corren',
+      6, [21, 22, 23, 24, 25, 26, 27]
+        .filter(d => F.rutinaCorre_(gym, '2026-09-' + d)).length);
+
+/** Una fila vieja, con un solo día en la columna, tiene que seguir corriendo. */
+const deAntes = { activo: true, dia: 4, desde: '', hasta: '' };
+ok('una rutina vieja de un solo día sigue funcionando',
+   F.rutinaCorre_(deAntes, '2026-09-24') === true &&
+   F.rutinaCorre_(deAntes, '2026-09-25') === false);
+
+
+console.log('\n── Y las horas se cuentan en TODOS sus días ──');
+/**
+ * El fallo que esto atrapa: con una fila por día daba igual sumar en
+ * `r.dia`. Ahora que el gimnasio de seis veces es UNA fila, contarlo
+ * solo el lunes dejaría cinco días pareciendo libres — y esa es justo
+ * la cuenta que decide si la semana cabe.
+ */
+sembrarHojas();
+// Solo el encabezado: se mide el gimnasio, no lo que ya hubiera sembrado.
+LIBROS.s.Rutina = [LIBROS.s.Rutina[0]];
+LIBROS.s.Rutina.push(['g1', YO, 'otro', 'Gimnasio', '1-6', '06:00', '07:00',
+                      'Smart Fit', '', '', '', '', '', '', 'si', '']);
+const rr = F.soulRutina(SOCIA, {});
+igual('una hora cada uno de los seis días',
+      [1, 1, 1, 1, 1, 1, 0],
+      [1, 2, 3, 4, 5, 6, 7].map(d => rr.ocupadasPorDia[d]));
+igual('y es UN bloque, no seis', 1, rr.rutinas.length);
+igual('que sabe sus días', [1, 2, 3, 4, 5, 6], rr.rutinas[0].dias);
 
 console.log('\n── Si todavía no se corrió bootstrapTodo ──');
 sembrarHojas();

@@ -797,7 +797,18 @@ function soulPendienteGuardar(s, p) {
   const fila = {
     id: String(d.id || ''),
     texto: d.texto !== undefined ? String(d.texto).trim() : undefined,
-    trabajo_id: d.trabajo_id !== undefined ? String(d.trabajo_id) : undefined,
+    /**
+     * Se aceptan LOS DOS NOMBRES, y no es capricho.
+     *
+     * La hoja guarda `trabajo_id` y la pantalla lo manda así, pero todo
+     * lo que Nova DEVUELVE lo llama `trabajoId`. Esa asimetría es una
+     * trampa: quien copie un pendiente de la respuesta para volver a
+     * guardarlo manda `trabajoId`, el servidor lo ignora en silencio, y
+     * la tarea queda sin proyecto sin que nada falle. Nadie lo notaría
+     * hasta que las horas fijas dejaran de cuadrar.
+     */
+    trabajo_id: d.trabajo_id !== undefined ? String(d.trabajo_id)
+              : d.trabajoId !== undefined ? String(d.trabajoId) : undefined,
     fecha: d.fecha !== undefined ? String(d.fecha) : undefined,
     prioridad: SOUL_PRIORIDADES[norm(d.prioridad)] ? norm(d.prioridad) : undefined,
     riesgo: SOUL_RIESGOS[norm(d.riesgo)] ? norm(d.riesgo) : undefined,

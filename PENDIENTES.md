@@ -1621,3 +1621,56 @@ al semáforo de la semana que se elija, los dos imprimibles.
 **El texto lo arma el servidor**, no la pantalla: es el mismo que va al
 correo. Si la pantalla lo rearmara, el día que uno de los dos cambie
 dirían cosas distintas del mismo día y no habría a cuál creerle.
+
+### 23 · El puente Central ↔ Soul: revisado a fondo
+
+Ella preguntó: *«los proyectos en Nova Central y los pendientes que
+coloqué… a cada pendiente le puse el proyecto pero no sé si ya hilan y
+toman info de Nova Central o qué»*.
+
+Es una pregunta justa, porque el puente es **invisible**: un proyecto
+vive en el libro de Central y un pendiente en el de Soul, y lo único que
+los une es un `trabajo_id` en una celda. Si ese hilo se corta, nada
+falla — el pendiente sale sin nombre de proyecto y las horas fijas dejan
+de descontarse, y las dos pantallas siguen viéndose perfectas mientras
+mienten.
+
+`pruebas/puente.js` lo recorre en los dos sentidos y **sí funciona**:
+
+| | |
+|---|---|
+| **Central → Soul** | el pendiente trae el nombre del proyecto y su tipo; las horas fijas del proyecto entran al cálculo de si la semana cabe; y una tarea de un proyecto con horas fijas NO se cuenta dos veces |
+| **Soul → Central** | cada proyecto muestra cuántas tareas abiertas tiene, cuántas horas y cuál es la próxima entrega |
+| **La pared** | Central no ve el texto de ninguna tarea. La prueba busca las cadenas en toda la respuesta |
+
+Y las tres formas de romperse en silencio, todas cubiertas: un
+`trabajo_id` de un proyecto borrado (el pendiente queda sin nombre pero
+conserva el id, para poder arreglarlo), un proyecto cerrado (deja de
+descontar horas) y Central caída (Soul abre igual, sin horas fijas
+inventadas).
+
+**Una trampa encontrada al escribir la prueba, y caí yo mismo en ella:**
+la hoja guarda `trabajo_id` pero todo lo que Nova DEVUELVE lo llama
+`trabajoId`. Mandé el segundo y la tarea quedó sin proyecto sin que nada
+fallara. Ahora el servidor **acepta los dos nombres**. Un enlace que se
+pierde en silencio no se nota hasta que las horas dejan de cuadrar.
+
+### 24 · Varias veces por semana, en una sola fila
+
+Sus palabras: *«hay horarios que son varias veces por semana, también
+arregla eso, por ejemplo […] las 6 veces que debo de hacer ejercicio en
+la semana»*.
+
+Antes **una fila era un día**: el gimnasio seis veces eran seis turnos, y
+cambiar la hora había que cambiarla seis veces.
+
+Ahora `dia_semana` acepta `1,3,5`, `1-5`, `1-5,7`, `L,X,V`, `lunes y
+jueves` o `diario`. En la pantalla son **casillas**, una por día. Lo que
+no se entiende **se descarta en vez de volverse lunes**: poner el
+gimnasio un día que ella no dijo es peor que no ponerlo.
+
+**Un fallo que salió de ahí:** el resumen de horas por día sumaba solo
+en `r.dia` —el primero—. Con una fila por día daba igual; con el
+gimnasio de seis veces en una sola fila, cinco días habrían quedado
+pareciendo libres. Y esa es justo la cuenta que decide si la semana
+cabe.

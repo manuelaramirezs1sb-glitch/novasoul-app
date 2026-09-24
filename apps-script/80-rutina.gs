@@ -99,6 +99,53 @@ function hhmm_(n) {
 
 // ─── LA RUTINA ───────────────────────────────────────────────
 
+/**
+ * Qué días de la semana corre una rutina.
+ *
+ * Acepta las formas en que de verdad se escribe esto:
+ *   3            el miércoles
+ *   1,3,5        lunes, miércoles y viernes
+ *   1-5          de lunes a viernes
+ *   1-5,7        entre semana y el domingo
+ *   L,M,X,J,V    con letras, que es como lo dice cualquiera
+ *   diario       los siete
+ *
+ * Devuelve siempre una lista ordenada y sin repetidos. Un día que no se
+ * entiende se descarta en vez de convertirse en lunes: poner el gimnasio
+ * un día que ella no dijo es peor que no ponerlo.
+ */
+const RUTINA_LETRAS = { l: 1, lu: 1, lun: 1, m: 2, ma: 2, mar: 2,
+  x: 3, mi: 3, mie: 3, miercoles: 3, j: 4, ju: 4, jue: 4,
+  v: 5, vi: 5, vie: 5, s: 6, sa: 6, sab: 6, d: 7, do: 7, dom: 7,
+  lunes: 1, martes: 2, jueves: 4, viernes: 5, sabado: 6, domingo: 7 };
+
+function diasDeRutina_(crudo) {
+  const txt = norm(crudo);
+  if (!txt) return [];
+  if (txt === 'diario' || txt === 'todos' || txt === 'todos los dias') {
+    return [1, 2, 3, 4, 5, 6, 7];
+  }
+  const vistos = {}, out = [];
+  const mete = function (n) {
+    if (!(n >= 1 && n <= 7) || vistos[n]) return;
+    vistos[n] = 1; out.push(n);
+  };
+  txt.split(/[,;/y]+/).forEach(function (parte) {
+    const p = parte.trim();
+    if (!p) return;
+    const rango = p.match(/^(\d)\s*[-–a]\s*(\d)$/);
+    if (rango) {
+      const a = Number(rango[1]), b = Number(rango[2]);
+      if (a <= b) { for (let k = a; k <= b; k++) mete(k); }
+      return;
+    }
+    if (/^\d+$/.test(p)) { mete(Number(p)); return; }
+    if (RUTINA_LETRAS[p] !== undefined) { mete(RUTINA_LETRAS[p]); return; }
+    // Algo que no se entiende NO se convierte en lunes: se descarta.
+  });
+  return out.sort(function (a, b) { return a - b; });
+}
+
 function rutinaDe_(uid, faltan) {
   return soulLeerSuave_('Rutina', uid, faltan)
     .filter(function (f) { return String(f.id || '').trim(); })
@@ -106,7 +153,19 @@ function rutinaDe_(uid, faltan) {
       return {
         id: String(f.id), tipo: RUTINA_TIPOS[norm(f.tipo)] ? norm(f.tipo) : 'otro',
         nombre: String(f.nombre || ''),
-        dia: num(f.dia_semana),
+        /**
+         * ── VARIOS DÍAS EN UNA SOLA FILA ──
+         *
+         * Antes cada fila era UN día: hacer ejercicio seis veces por
+         * semana eran seis filas, y cambiar la hora había que cambiarla
+         * seis veces. Ahora `dia_semana` acepta «1,3,5» o «1-5», y una
+         * sola fila cubre toda la semana.
+         *
+         * `dia` se conserva —es el primero— porque hay pantallas y
+         * cuentas viejas que lo leen y no tienen por qué enterarse.
+         */
+        dias: diasDeRutina_(f.dia_semana),
+        dia: diasDeRutina_(f.dia_semana)[0] || 0,
         inicio: typeof f.hora_inicio === 'string' ? f.hora_inicio.trim() : hhmm_(horaNum_(f.hora_inicio)),
         fin: typeof f.hora_fin === 'string' ? f.hora_fin.trim() : hhmm_(horaNum_(f.hora_fin)),
         horas: duracionHoras_(f.hora_inicio, f.hora_fin),
@@ -120,7 +179,7 @@ function rutinaDe_(uid, faltan) {
         activo: norm(f.activo) !== 'no',
       };
     })
-    .filter(function (r) { return r.dia >= 1 && r.dia <= 7; });
+    .filter(function (r) { return r.dias.length > 0; });
 }
 
 /**
@@ -133,7 +192,7 @@ function rutinaCorre_(r, fechaISO) {
   if (!r.activo) return false;
   const dow = new Date(fechaISO + 'T00:00:00Z').getUTCDay();
   const dia = dow === 0 ? 7 : dow;
-  if (r.dia !== dia) return false;
+  if ((r.dias || [r.dia]).indexOf(dia) === -1) return false;
   if (r.desde && fechaISO < r.desde) return false;
   if (r.hasta && fechaISO > r.hasta) return false;
   return true;
@@ -151,7 +210,18 @@ function soulRutina(s, p) {
   const rutinas = rutinaDe_(uid);
   const porDia = {};
   for (let d = 1; d <= 7; d++) porDia[d] = 0;
-  rutinas.forEach(function (r) { if (r.activo) porDia[r.dia] += r.horas; });
+  /**
+   * Las horas se suman en TODOS sus días, no solo en el primero.
+   *
+   * Con una fila por día daba igual. Ahora que el gimnasio de seis
+   * veces es una sola fila, contarlo solo el lunes dejaría cinco días
+   * pareciendo libres — y esa es justo la cuenta que decide si la
+   * semana cabe.
+   */
+  rutinas.forEach(function (r) {
+    if (!r.activo) return;
+    (r.dias || [r.dia]).forEach(function (d) { porDia[d] += r.horas; });
+  });
 
   return {
     ok: true, hoy: ahoraISO().slice(0, 10),
@@ -176,7 +246,7 @@ function soulRutinaGuardar(s, p) {
   if (esNueva) {
     if (!String(d.nombre || '').trim()) return { ok: false, error: 'Ponle un nombre.' };
     if (!tipo) return { ok: false, error: 'Dime si es turno, clase u otra cosa.' };
-    if (!(num(d.dia_semana) >= 1 && num(d.dia_semana) <= 7)) {
+    if (!diasDeRutina_(d.dia_semana).length) {
       return { ok: false, error: 'Falta el día de la semana.' };
     }
     if (!duracionHoras_(d.hora_inicio, d.hora_fin)) {
@@ -192,7 +262,9 @@ function soulRutinaGuardar(s, p) {
       id: String(d.id || ''),
       tipo: tipo || undefined,
       nombre: d.nombre !== undefined ? String(d.nombre).trim() : undefined,
-      dia_semana: d.dia_semana !== undefined ? num(d.dia_semana) : undefined,
+      // Se guarda TAL COMO ella lo escribió: «1,3,5» o «L,X,V» siguen
+      // siendo legibles en la hoja, que es donde los va a volver a ver.
+      dia_semana: d.dia_semana !== undefined ? String(d.dia_semana).trim() : undefined,
       hora_inicio: d.hora_inicio !== undefined ? String(d.hora_inicio) : undefined,
       hora_fin: d.hora_fin !== undefined ? String(d.hora_fin) : undefined,
       lugar: d.lugar !== undefined ? String(d.lugar) : undefined,
