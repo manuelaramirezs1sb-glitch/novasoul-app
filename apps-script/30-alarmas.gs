@@ -283,17 +283,32 @@ function evaluarAlarmas(ss, tienda) {
   const out = [];
   const moneda = monedaDeTienda(ss, tienda);
 
-  // ── Datos del mes, una sola lectura ──
+  /**
+   * ── DATOS DEL MES, UNA SOLA LECTURA ──
+   *
+   * El comentario decía «una sola lectura» y no lo era: más abajo, la
+   * alarma de subida de CPA volvía a llamar a `agregarMes` para el mes
+   * anterior, y esa segunda llamada releía la hoja entera. Con 4.000
+   * pedidos eran 164.000 celdas de más en cada revisión de alarmas.
+   *
+   * Ahora la hoja se lee aquí y las dos agregaciones comparten esas
+   * filas. Un comentario que promete algo que el código no hace es
+   * peor que no tener comentario.
+   */
   const sesionFalsa = { rol: 'dueno' };
-  const m = agregarMes(ss, tienda, mes, sesionFalsa);
+  const shPed = ss.getSheetByName('Pedidos');
+  const filasPed = (shPed && shPed.getLastRow() > 1)
+    ? shPed.getDataRange().getValues() : null;
+  const m = agregarMes(ss, tienda, mes, sesionFalsa, filasPed);
 
   // ── 1. Pedidos detenidos ──
   const dias = Number(u.dias_sin_mover) || 0;
   if (dias > 0) {
     const detenidos = [];
-    const shP = ss.getSheetByName('Pedidos');
-    if (shP && shP.getLastRow() > 1) {
-      const d = shP.getDataRange().getValues();
+    // Las mismas filas de arriba: esta era la tercera lectura de la
+    // misma hoja dentro de una sola revisión de alarmas.
+    const d = filasPed;
+    if (d && d.length > 1) {
       const e = d[0].map(norm);
       const c = function (n) { return e.indexOf(n); };
       for (let i = 1; i < d.length; i++) {
@@ -441,7 +456,7 @@ function evaluarAlarmas(ss, tienda) {
      */
     const sub = u.cpa_subida_pct === '' ? null : Number(u.cpa_subida_pct);
     if (sub !== null && sub > 0) {
-      const ant = agregarMes(ss, tienda, mesAnterior(mes), sesionFalsa);
+      const ant = agregarMes(ss, tienda, mesAnterior(mes), sesionFalsa, filasPed);
       const cpaAnt = ant.entregados ? ant.gasto / ant.entregados : 0;
       // También el mes pasado necesita volumen: comparar contra un mes
       // de tres entregas produce porcentajes enormes que no dicen nada.

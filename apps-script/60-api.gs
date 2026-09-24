@@ -787,11 +787,23 @@ function apiRecuento(s, p) {
   const tz = zonaHorariaDe(ss, tienda) || 'UTC';
   const mesActual = Utilities.formatDate(new Date(), tz, 'yyyy-MM');
 
+  /**
+   * La hoja se lee UNA vez para todos los meses.
+   *
+   * Antes esta función la leía entera seis veces, y hasta doce cuando
+   * había que comparar contra el periodo anterior. Con 4.000 pedidos
+   * eso era un millón de celdas movidas en una sola petición, y es la
+   * razón principal de que entrar a Nova se sintiera lento.
+   */
+  const shPed = ss.getSheetByName('Pedidos');
+  const filasPed = (shPed && shPed.getLastRow() > 1)
+    ? shPed.getDataRange().getValues() : null;
+
   // Hasta seis meses atrás, quedándonos con los que tienen movimiento
   const conDatos = [];
   let m = mesAnterior(mesActual);
   for (let i = 0; i < 6 && conDatos.length < 3; i++) {
-    const d = agregarMes(ss, tienda, m, s);
+    const d = agregarMes(ss, tienda, m, s, filasPed);
     if (d.pedidos > 0) conDatos.push({ mes: m, d: d });
     m = mesAnterior(m);
   }
@@ -820,7 +832,7 @@ function apiRecuento(s, p) {
   for (let i = 0; i < usados.length; i++) { previos.push(pm); pm = mesAnterior(pm); }
   const ant = { ventas: 0, entregados: 0, resueltos: 0, gasto: 0, fijos: 0 };
   previos.forEach(function (mm) {
-    const d = agregarMes(ss, tienda, mm, s);
+    const d = agregarMes(ss, tienda, mm, s, filasPed);
     ant.ventas += d.ventas || 0; ant.entregados += d.entregados || 0;
     ant.resueltos += d.resueltos || 0; ant.gasto += d.gasto || 0;
     ant.fijos += d.fijos || 0;
@@ -2130,7 +2142,21 @@ function apiCierre(s, p) {
  * Novedades: con miles de filas, recorrerlas por cada KPI es lo que hace
  * que la pantalla tarde.
  */
-function agregarMes(ss, tienda, mes, s) {
+/**
+ * ── POR QUÉ RECIBE LAS FILAS Y NO SOLO LA HOJA ──
+ *
+ * Se midió el arranque de una cuenta con 4.000 pedidos: la pantalla
+ * dispara trece peticiones y entre todas leen la hoja Pedidos QUINCE
+ * veces enteras — dos millones y medio de celdas. De esas quince, SEIS
+ * eran de esta función, llamada en bucle por `apiRecuento` para sacar
+ * mes por mes.
+ *
+ * Leer una hoja de Google no es leer un array: es una llamada al
+ * servicio, y en Apps Script eso es lo que cuesta. Por eso ahora acepta
+ * `filas` ya leídas. Sin ellas se comporta igual que siempre, así que
+ * los otros seis sitios que la llaman no tienen que cambiar.
+ */
+function agregarMes(ss, tienda, mes, s, filas) {
   const out = {
     pedidos: 0, despachados: 0, entregados: 0, devueltos: 0, cancelados: 0,
     pendientes: 0,
@@ -2149,9 +2175,10 @@ function agregarMes(ss, tienda, mes, s) {
     grupos: {}, transportadoras: {}, productos: {},
   };
 
-  const shP = ss.getSheetByName('Pedidos');
-  if (shP && shP.getLastRow() > 1) {
-    const datos = shP.getDataRange().getValues();
+  const shP = filas ? null : ss.getSheetByName('Pedidos');
+  const datos = filas || ((shP && shP.getLastRow() > 1)
+    ? shP.getDataRange().getValues() : null);
+  if (datos && datos.length > 1) {
     const e = datos[0].map(norm);
     const c = function (n) { return e.indexOf(n); };
     const hoy = new Date();

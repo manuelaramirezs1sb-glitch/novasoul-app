@@ -485,11 +485,26 @@ const ESQUEMA_CENTRAL = {
    * abre delante de una socia o un contador, y un olvido no puede ser
    * lo único que proteja eso.
    */
+  /**
+   * `padre_id` deja que un trabajo contenga proyectos.
+   *
+   * Existe por un caso concreto: Upwork es UN trabajo —una forma de
+   * cobro, una moneda, una quincena— con muchos encargos dentro, cada
+   * uno con sus tareas y su fecha. Sin esto, cada encargo sería un
+   * trabajo suelto y no habría forma de ver cuánto lleva ese cliente en
+   * total sin sumarlo a mano.
+   *
+   * Está vacío en casi todos, y así debe ser: la jerarquía existe donde
+   * hace falta, no en todas partes. PHH y Nutrea son uno solo.
+   */
   Trabajos: ['id','nombre','contraparte','tipo','estado','moneda',
              'valor_acordado','forma_cobro','fecha_inicio','fecha_entrega',
              'horas_semana','especificacion','documento','nota',
              'mi_rol','modalidad','porcentaje','base_porcentaje',
-             'cliente_id','tienda_id','confidencial'],
+             'cliente_id','tienda_id','confidencial','padre_id',
+             // Cada cuánto paga, y a los cuántos días del trabajo hecho
+             // entra la plata. Upwork: quincenal, 7 días.
+             'periodicidad','dias_pago'],
 
   /**
    * De dónde sale la información profunda de cada proyecto.
@@ -3177,17 +3192,32 @@ function evaluarAlarmas(ss, tienda) {
   const out = [];
   const moneda = monedaDeTienda(ss, tienda);
 
-  // ── Datos del mes, una sola lectura ──
+  /**
+   * ── DATOS DEL MES, UNA SOLA LECTURA ──
+   *
+   * El comentario decía «una sola lectura» y no lo era: más abajo, la
+   * alarma de subida de CPA volvía a llamar a `agregarMes` para el mes
+   * anterior, y esa segunda llamada releía la hoja entera. Con 4.000
+   * pedidos eran 164.000 celdas de más en cada revisión de alarmas.
+   *
+   * Ahora la hoja se lee aquí y las dos agregaciones comparten esas
+   * filas. Un comentario que promete algo que el código no hace es
+   * peor que no tener comentario.
+   */
   const sesionFalsa = { rol: 'dueno' };
-  const m = agregarMes(ss, tienda, mes, sesionFalsa);
+  const shPed = ss.getSheetByName('Pedidos');
+  const filasPed = (shPed && shPed.getLastRow() > 1)
+    ? shPed.getDataRange().getValues() : null;
+  const m = agregarMes(ss, tienda, mes, sesionFalsa, filasPed);
 
   // ── 1. Pedidos detenidos ──
   const dias = Number(u.dias_sin_mover) || 0;
   if (dias > 0) {
     const detenidos = [];
-    const shP = ss.getSheetByName('Pedidos');
-    if (shP && shP.getLastRow() > 1) {
-      const d = shP.getDataRange().getValues();
+    // Las mismas filas de arriba: esta era la tercera lectura de la
+    // misma hoja dentro de una sola revisión de alarmas.
+    const d = filasPed;
+    if (d && d.length > 1) {
       const e = d[0].map(norm);
       const c = function (n) { return e.indexOf(n); };
       for (let i = 1; i < d.length; i++) {
@@ -3335,7 +3365,7 @@ function evaluarAlarmas(ss, tienda) {
      */
     const sub = u.cpa_subida_pct === '' ? null : Number(u.cpa_subida_pct);
     if (sub !== null && sub > 0) {
-      const ant = agregarMes(ss, tienda, mesAnterior(mes), sesionFalsa);
+      const ant = agregarMes(ss, tienda, mesAnterior(mes), sesionFalsa, filasPed);
       const cpaAnt = ant.entregados ? ant.gasto / ant.entregados : 0;
       // También el mes pasado necesita volumen: comparar contra un mes
       // de tres entregas produce porcentajes enormes que no dicen nada.
@@ -5176,11 +5206,23 @@ function apiRecuento(s, p) {
   const tz = zonaHorariaDe(ss, tienda) || 'UTC';
   const mesActual = Utilities.formatDate(new Date(), tz, 'yyyy-MM');
 
+  /**
+   * La hoja se lee UNA vez para todos los meses.
+   *
+   * Antes esta función la leía entera seis veces, y hasta doce cuando
+   * había que comparar contra el periodo anterior. Con 4.000 pedidos
+   * eso era un millón de celdas movidas en una sola petición, y es la
+   * razón principal de que entrar a Nova se sintiera lento.
+   */
+  const shPed = ss.getSheetByName('Pedidos');
+  const filasPed = (shPed && shPed.getLastRow() > 1)
+    ? shPed.getDataRange().getValues() : null;
+
   // Hasta seis meses atrás, quedándonos con los que tienen movimiento
   const conDatos = [];
   let m = mesAnterior(mesActual);
   for (let i = 0; i < 6 && conDatos.length < 3; i++) {
-    const d = agregarMes(ss, tienda, m, s);
+    const d = agregarMes(ss, tienda, m, s, filasPed);
     if (d.pedidos > 0) conDatos.push({ mes: m, d: d });
     m = mesAnterior(m);
   }
@@ -5209,7 +5251,7 @@ function apiRecuento(s, p) {
   for (let i = 0; i < usados.length; i++) { previos.push(pm); pm = mesAnterior(pm); }
   const ant = { ventas: 0, entregados: 0, resueltos: 0, gasto: 0, fijos: 0 };
   previos.forEach(function (mm) {
-    const d = agregarMes(ss, tienda, mm, s);
+    const d = agregarMes(ss, tienda, mm, s, filasPed);
     ant.ventas += d.ventas || 0; ant.entregados += d.entregados || 0;
     ant.resueltos += d.resueltos || 0; ant.gasto += d.gasto || 0;
     ant.fijos += d.fijos || 0;
@@ -6519,7 +6561,21 @@ function apiCierre(s, p) {
  * Novedades: con miles de filas, recorrerlas por cada KPI es lo que hace
  * que la pantalla tarde.
  */
-function agregarMes(ss, tienda, mes, s) {
+/**
+ * ── POR QUÉ RECIBE LAS FILAS Y NO SOLO LA HOJA ──
+ *
+ * Se midió el arranque de una cuenta con 4.000 pedidos: la pantalla
+ * dispara trece peticiones y entre todas leen la hoja Pedidos QUINCE
+ * veces enteras — dos millones y medio de celdas. De esas quince, SEIS
+ * eran de esta función, llamada en bucle por `apiRecuento` para sacar
+ * mes por mes.
+ *
+ * Leer una hoja de Google no es leer un array: es una llamada al
+ * servicio, y en Apps Script eso es lo que cuesta. Por eso ahora acepta
+ * `filas` ya leídas. Sin ellas se comporta igual que siempre, así que
+ * los otros seis sitios que la llaman no tienen que cambiar.
+ */
+function agregarMes(ss, tienda, mes, s, filas) {
   const out = {
     pedidos: 0, despachados: 0, entregados: 0, devueltos: 0, cancelados: 0,
     pendientes: 0,
@@ -6538,9 +6594,10 @@ function agregarMes(ss, tienda, mes, s) {
     grupos: {}, transportadoras: {}, productos: {},
   };
 
-  const shP = ss.getSheetByName('Pedidos');
-  if (shP && shP.getLastRow() > 1) {
-    const datos = shP.getDataRange().getValues();
+  const shP = filas ? null : ss.getSheetByName('Pedidos');
+  const datos = filas || ((shP && shP.getLastRow() > 1)
+    ? shP.getDataRange().getValues() : null);
+  if (datos && datos.length > 1) {
     const e = datos[0].map(norm);
     const c = function (n) { return e.indexOf(n); };
     const hoy = new Date();
@@ -8496,7 +8553,8 @@ const MIO_HOJAS = {
              'valor_acordado','forma_cobro','fecha_inicio','fecha_entrega',
              'horas_semana','especificacion','documento','nota',
              'mi_rol','modalidad','porcentaje','base_porcentaje',
-             'cliente_id','tienda_id','confidencial'],
+             'cliente_id','tienda_id','confidencial','padre_id',
+             'periodicidad','dias_pago'],
   Fuentes:  ['id','trabajo_id','nombre','tipo','enlace','nota','agregado_en'],
   Cobros:   ['id','trabajo_id','concepto','monto','moneda',
              'fecha_esperada','fecha_cobrada','estado','nota'],
@@ -8519,6 +8577,85 @@ const TIPOS_TRABAJO = {
   propio:   { nombre: 'Propio (Nova)',  cobra: false },
   estudio:  { nombre: 'Universidad',    cobra: false },
 };
+
+/**
+ * ═══════════════════════════════════════════════════════════
+ *  TRABAJOS Y PROYECTOS: DOS FAMILIAS, DOS PANTALLAS
+ * ═══════════════════════════════════════════════════════════
+ *
+ * Ella lo dijo así: «entre proyectos pueden entrar los que no son
+ * pagos, como los de Nova; en trabajos todo lo que me da ingresos y
+ * beneficios económicos».
+ *
+ * La línea es una sola y es clara: ¿esto entra plata o no?
+ *
+ *   TRABAJO    Upwork, PHH, Nutrea, un cliente. Tiene moneda, forma de
+ *              cobro y fecha de pago.
+ *   PROYECTO   Nova, novAcademy, la universidad. Ocupa horas, no paga.
+ *              No tiene moneda porque no hay nada que convertir.
+ *
+ * ── LO QUE NO SE DEDUCE, SE PREGUNTA ──
+ *
+ * Ella pidió repartir lo que ya está cargado «y lo que no esté claro
+ * para Nova que me pregunte cuando entre». Eso es lo contrario de lo
+ * fácil: lo fácil sería mandar todo lo dudoso a Trabajos y que ella lo
+ * descubra un día mirando una cifra rara.
+ *
+ * Un caso dudoso de verdad: un «cliente» sin valor, sin porcentaje y
+ * sin forma de cobro. Puede ser un cliente que todavía no negoció
+ * precio, o un favor que nunca va a pagar. Nova no puede saberlo, y
+ * adivinar mal cambia si esa fila suma o no a lo que le deben.
+ */
+const PROY_FAMILIAS = {
+  trabajo:  { nombre: 'Trabajos',  que: 'Lo que te da ingresos' },
+  proyecto: { nombre: 'Proyectos', que: 'Lo que no paga pero ocupa horas' },
+};
+
+function familiaDe_(t) {
+  const tipo = norm(t.tipo);
+  const mod = norm(t.modalidad);
+  const tienePlata = num(t.valor_acordado) > 0 || num(t.porcentaje) > 0;
+
+  // La universidad y lo propio no pagan, y eso no admite discusión.
+  if (tipo === 'estudio') {
+    return { familia: 'proyecto', universidad: true, claro: true,
+             porque: 'La universidad no paga.' };
+  }
+  if (tipo === 'propio') {
+    return { familia: 'proyecto', universidad: false, claro: true,
+             porque: 'Lo propio no factura.' };
+  }
+  // Lo que dice explícitamente que no cobra, tampoco.
+  if (mod === 'sin_cobro') {
+    return { familia: 'proyecto', universidad: false, claro: true,
+             porque: 'Está marcado como sin cobro.' };
+  }
+  // Un empleo paga siempre, por definición.
+  if (tipo === 'empleo') {
+    return { familia: 'trabajo', universidad: false, claro: true,
+             porque: 'Un empleo paga.' };
+  }
+  // Un cliente con plata puesta, o con forma de cobro escrita, es trabajo.
+  if (tipo === 'cliente' && (tienePlata || mod === 'porcentaje' ||
+                             mod === 'fijo' || mod === 'por_hora')) {
+    return { familia: 'trabajo', universidad: false, claro: true,
+             porque: 'Es un cliente con forma de cobro.' };
+  }
+  /**
+   * Y aquí es donde Nova se calla y pregunta.
+   *
+   * Se pone del lado de TRABAJO mientras ella decide —no desaparece de
+   * la lista— pero marcado, para que la pregunta se vea antes de que
+   * la cifra confunda.
+   */
+  return {
+    familia: 'trabajo', universidad: false, claro: false,
+    porque: !tipo
+      ? 'No dice qué tipo de compromiso es.'
+      : 'Es un cliente sin valor, sin porcentaje y sin forma de cobro: ' +
+        'no sé si te va a pagar.',
+  };
+}
 
 function mioSheet_(nombre) {
   const ss = SpreadsheetApp.openById(IDS_().central);
@@ -8704,9 +8841,27 @@ function centralMio(s, p) {
         rol: proyRol_(t), modalidad: proyModalidad_(t),
         porcentaje: num(t.porcentaje), tiendaId: String(t.tienda_id || ''),
         confidencial: proyConfidencial_(t),
+        // A cuál de las dos pantallas pertenece, y si Nova está segura.
+        familia: familiaDe_(t).familia,
+        universidad: familiaDe_(t).universidad,
+        claro: familiaDe_(t).claro,
+        porqueFamilia: familiaDe_(t).porque,
+        // De quién cuelga, cuando es un proyecto dentro de un trabajo.
+        padreId: String(t.padre_id || ''),
         tareas: carga[t.id] || { abiertas: 0, horas: 0, vencidas: 0, proxima: '' },
       };
     }),
+    familias: PROY_FAMILIAS,
+    /**
+     * Lo que Nova no supo clasificar. Va en su propia lista para que la
+     * pantalla lo pregunte al entrar, en vez de esconderlo en medio de
+     * los demás donde nadie lo mira.
+     */
+    porClasificar: trabajos.filter(function (t) { return !familiaDe_(t).claro; })
+      .map(function (t) {
+        return { id: String(t.id || ''), nombre: String(t.nombre || ''),
+                 porque: familiaDe_(t).porque };
+      }),
     porCobrar: porCobrar.sort(function (a, b) { return (a.esperada || '9') < (b.esperada || '9') ? -1 : 1; }),
     atrasados: atrasados.sort(function (a, b) { return b.dias - a.dias; }),
     totales: {

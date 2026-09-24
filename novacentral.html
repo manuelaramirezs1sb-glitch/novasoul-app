@@ -486,9 +486,24 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
         <span class="ni-ico">◇</span> Mis finanzas
       </div>
 
-      <div class="sb-grupo socia-solo">Mis proyectos</div>
+      <!--
+        DOS ENTRADAS, NO UNA NI TRES.
+
+        La línea es «¿entra plata o no?». Trabajos: Upwork, PHH, Nutrea.
+        Proyectos: Nova, novAcademy, la universidad — ocupan horas y no
+        pagan.
+
+        La universidad NO tiene entrada propia aquí: sus materias, su
+        sílabo y sus parciales ya viven en NovaSoul, que es donde ella
+        estudia. En Central solo existe su fila, para que sus horas
+        descuenten de la semana como las demás.
+      -->
+      <div class="sb-grupo socia-solo">Lo mío</div>
       <div class="ni socia-solo" data-v="trabajos" onclick="go('trabajos',this)">
-        <span class="ni-ico">◈</span> Todos
+        <span class="ni-ico">◈</span> Trabajos
+      </div>
+      <div class="ni socia-solo" data-v="proyectos" onclick="go('proyectos',this)">
+        <span class="ni-ico">◇</span> Proyectos
       </div>
       <!-- Los proyectos se pintan aquí, desde la hoja Trabajos. -->
       <div id="sb-proyectos"></div>
@@ -595,16 +610,46 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
           <div class="fam-grid" id="fam-links"></div>
         </div>
 
+        <!-- Lo que Nova no supo repartir: se pregunta, no se adivina. -->
+        <div id="clasificar"></div>
+
         <div class="card">
-          <div class="card-ttl">Lo que tengo encima</div>
+          <div class="card-ttl">Lo que te paga</div>
           <div style="font:400 12.5px/1.6 'DM Sans';color:var(--ink3);margin-bottom:4px">
-            Cada compromiso con su fecha y su plata. La universidad y lo propio
-            no facturan, pero ocupan las mismas horas que un cliente que sí —
-            por eso están en la misma lista.</div>
+            Cada uno con su moneda, su forma de cobro y cuándo entra la plata.
+            Un trabajo puede llevar proyectos adentro cuando hace falta —
+            Upwork es uno, con un encargo por proyecto.</div>
           <div id="trab-lista"></div>
         </div>
         <button class="btn" onclick="formTrabajo(null)">+ Nuevo trabajo</button>
         <div id="trab-form"></div>
+      </div>
+
+      <!--
+        PROYECTOS · lo que no paga.
+
+        Estos son los que se caen. Un proyecto sin cliente que reclame
+        pierde siempre contra uno que sí, y por eso van con sus horas a
+        la vista: es lo que permite que NovaSoul los defienda igual.
+      -->
+      <div class="view" id="v-proyectos">
+        <div class="card">
+          <div class="card-ttl">Lo que no paga pero ocupa horas</div>
+          <div style="font:400 12.5px/1.6 'DM Sans';color:var(--ink3);margin-bottom:4px">
+            Nova, novAcademy y la universidad. No tienen moneda ni forma de
+            cobro porque no hay nada que cobrar, pero sí horas — y esas horas
+            se descuentan de tu semana igual que las de un cliente.</div>
+          <div id="proy-lista"></div>
+        </div>
+        <div class="card">
+          <div class="card-ttl">La universidad</div>
+          <div style="font:400 12.5px/1.6 'DM Sans';color:var(--ink3)">
+            Sus materias, su sílabo y sus parciales viven en
+            <a class="link" href="./novasoul.html">NovaSoul</a>, que es donde
+            estudias. Aquí solo está su fila, para que sus horas cuenten.</div>
+        </div>
+        <button class="btn" onclick="formTrabajo(null)">+ Nuevo proyecto</button>
+        <div id="proy-form"></div>
       </div>
 
       <!-- ─── UN PROYECTO A FONDO ─── -->
@@ -839,7 +884,7 @@ let activeSt = 'gt';
  * La huella sale del contenido del archivo: cambia sola con cada cambio,
  * aunque sean dos versiones el mismo día.
  */
-const VERSION_PANTALLA = '2026-09-24 · 1465';
+const VERSION_PANTALLA = '2026-09-24 · 9220';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -1238,16 +1283,67 @@ function pintarMio(error) {
 const TIPO_ETIQ = { cliente: 'Cliente', empleo: 'Empleo', propio: 'Propio', estudio: 'U' };
 const ROL_ETIQ = { socia: 'Socia', trabajadora: 'Trabajadora', propio: 'Propio', estudio: 'Estudio' };
 
+/**
+ * Las dos listas salen de la misma respuesta.
+ *
+ * El servidor ya dice a qué familia pertenece cada fila —trabajo si
+ * entra plata, proyecto si no— así que la pantalla no vuelve a decidir
+ * nada: solo reparte. Si las dos pantallas juzgaran por su cuenta,
+ * llegaría el día en que una fila sale en las dos o en ninguna.
+ */
 function pintarTrabajos() {
-  const c = document.getElementById('trab-lista');
+  pintarFamilia('trab-lista', 'trabajo');
+  pintarFamilia('proy-lista', 'proyecto');
+  pintarPorClasificar();
+}
+
+/**
+ * Lo que Nova no supo repartir.
+ *
+ * Va arriba de la lista y con su porqué, porque ella lo pidió así:
+ * «lo que no esté claro para Nova que me pregunte cuando entre». No se
+ * esconde entre los demás — un caso dudoso mezclado con veinte claros
+ * es un caso que nadie mira nunca.
+ */
+function pintarPorClasificar() {
+  const c = document.getElementById('clasificar');
   if (!c) return;
-  if (!MIO.trabajos.length) {
-    c.innerHTML = '<div class="nc-vacio">Todavía no has anotado ningún trabajo. ' +
-      'Empieza por los que tienes encima ahora: el cliente, el empleo, la U.</div>';
+  const lista = (MIO && MIO.porClasificar) || [];
+  if (!lista.length) { c.innerHTML = ''; return; }
+  c.innerHTML = '<div class="card" style="border-color:var(--amber)">' +
+    '<div class="card-ttl">' + lista.length +
+      (lista.length === 1 ? ' no sé dónde ponerlo' : ' no sé dónde ponerlos') + '</div>' +
+    '<div style="font:400 12.5px/1.6 \'DM Sans\';color:var(--ink3);margin-bottom:10px">' +
+      'Los dejé en Trabajos mientras decides, pero mira si de verdad te pagan. ' +
+      'Si no, van a sumar a lo que te deben sin que nadie te lo deba.</div>' +
+    lista.map(function (x) {
+      return '<div class="row-item">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div class="row-nm">' + escC(x.nombre) + '</div>' +
+          '<div class="row-sub">' + escC(x.porque) + '</div>' +
+        '</div>' +
+        '<button class="mio-btn" onclick="abrirProyecto(\'' + escC(x.id) + '\')">' +
+          'Decidir</button></div>';
+    }).join('') + '</div>';
+}
+
+function pintarFamilia(destino, familia) {
+  const c = document.getElementById(destino);
+  if (!c) return;
+  const esTrabajo = familia === 'trabajo';
+  const todos = (MIO && MIO.trabajos) || [];
+  const filas = todos.filter(function (x) { return (x.familia || 'trabajo') === familia; });
+  if (!filas.length) {
+    c.innerHTML = '<div class="nc-vacio">' + (esTrabajo
+      ? 'Todavía no has anotado ningún trabajo. Empieza por los que tienes ' +
+        'encima ahora: el cliente, el empleo, Upwork.'
+      : 'Todavía no hay proyectos sin cobro. Aquí van Nova, novAcademy y la ' +
+        'universidad: no pagan, pero ocupan horas.') + '</div>';
     return;
   }
   const hoy = MIO.hoy;
-  c.innerHTML = MIO.trabajos.map(function (t, i) {
+  c.innerHTML = filas.map(function (t) {
+    const i = todos.indexOf(t);
     // Los días que faltan son un hecho; el color es la opinión.
     let plazo = '', clase = 'bd-g';
     if (t.entrega) {
@@ -1265,6 +1361,8 @@ function pintarTrabajos() {
                  ROL_ETIQ[t.rol] || null, cobra,
                  t.horasSemana ? t.horasSemana + ' h/semana' : null,
                  plazo].filter(Boolean).join(' · ');
+    // Los encargos que cuelgan de este trabajo, si los tiene.
+    const hijos = todos.filter(function (x) { return x.padreId === t.id; });
     return '<div class="mio-row">' +
       '<div><div class="mio-nm">' + escC(t.nombre) + '</div>' +
         '<div class="mio-sub">' + escC(sub) + '</div>' +
@@ -1282,7 +1380,29 @@ function pintarTrabajos() {
         '<button class="mio-btn" onclick="abrirProyecto(\'' + escC(t.id) + '\')">A fondo</button>' +
         '<button class="mio-btn" onclick="formTrabajo(' + i + ')">Editar</button>' +
       '</div>' +
-    '</div>';
+    '</div>' +
+    /**
+     * Sus proyectos adentro, sangrados. Upwork es el caso: un trabajo
+     * con un encargo por proyecto. Se dibujan aquí y no como filas
+     * sueltas para poder ver cuánto lleva ESE cliente en total.
+     */
+    (hijos.length
+      ? '<div style="margin:-4px 0 8px 22px;border-left:2px solid var(--line);' +
+        'padding-left:14px">' +
+        hijos.map(function (h) {
+          return '<div class="row-item" style="border:0;padding:8px 0">' +
+            '<div style="flex:1;min-width:0">' +
+              '<div class="row-nm" style="font-size:13px">' + escC(h.nombre) + '</div>' +
+              '<div class="row-sub">' +
+                escC([h.entrega ? 'entrega ' + h.entrega : null,
+                      h.tareas && h.tareas.abiertas
+                        ? h.tareas.abiertas + ' tarea(s) · ' + h.tareas.horas + ' h'
+                        : null].filter(Boolean).join(' · ') || 'sin tareas todavía') +
+              '</div></div>' +
+            '<button class="mio-btn" onclick="abrirProyecto(\'' + escC(h.id) +
+              '\')">A fondo</button></div>';
+        }).join('') + '</div>'
+      : '');
   }).join('');
 }
 
@@ -1940,8 +2060,9 @@ function sellarEjemploCentral() {
 
 /* ─── NAV ─── */
 const TITLES = {
-  dashboard:'Hoy', trabajos:'Mis proyectos', plata:'Mis finanzas',
+  dashboard:'Hoy', trabajos:'Trabajos · lo que paga', plata:'Mis finanzas',
   clientes:'Clientes', automatico:'Lo que Nova hace sola',
+  proyectos:'Proyectos · lo que no paga',
   pipeline:'Pipeline novAcademy', onboarding:'Onboarding de clientes',
   meta:'Meta Ads', demo:'Gestión de demo', proyecto:'El proyecto a fondo'
 };

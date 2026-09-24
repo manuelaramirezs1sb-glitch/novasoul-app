@@ -95,7 +95,7 @@ global.Date = class extends RealDate {
 };
 
 (0, eval)(src + '\n;globalThis.__F = { soulHoy, soulPendienteGuardar, centralMio,' +
-  ' soulTrabajos_, soulCargaPorTrabajo_ };');
+  ' soulTrabajos_, soulCargaPorTrabajo_, familiaDe_, PROY_FAMILIAS };');
 const F = globalThis.__F;
 
 let fallas = 0;
@@ -328,6 +328,63 @@ F.soulPendienteGuardar(SOCIA, { datos: {
   texto: 'De un proyecto por crear', fecha: '2026-09-28', trabajo_id: 'futuro' } });
 igual('un proyecto que todavía no existe no se descarta', 'futuro',
       F.soulHoy(SOCIA, {}).pendientes[0].trabajoId);
+
+
+// ═════════════════════════════════════════════════════════════
+console.log('\n── Repartir lo que ya está cargado: trabajo o proyecto ──');
+/**
+ * Su regla, con sus palabras: «entre proyectos pueden entrar los que no
+ * son pagos, como los de Nova; en trabajos todo lo que me da ingresos».
+ * La línea es una sola: ¿entra plata o no?
+ */
+[[{ tipo: 'estudio', nombre: 'Universidad' }, 'proyecto', true, 'la universidad'],
+ [{ tipo: 'propio', nombre: 'Nova' }, 'proyecto', true, 'lo propio'],
+ [{ tipo: 'empleo', nombre: 'Un empleo' }, 'trabajo', true, 'un empleo'],
+ [{ tipo: 'cliente', valor_acordado: 2000000 }, 'trabajo', true, 'un cliente con valor'],
+ [{ tipo: 'cliente', porcentaje: 50 }, 'trabajo', true, 'un cliente por porcentaje'],
+ [{ tipo: 'cliente', modalidad: 'por_hora' }, 'trabajo', true, 'un cliente por hora'],
+ [{ tipo: 'cliente', modalidad: 'sin_cobro' }, 'proyecto', true, 'un cliente que no cobra'],
+].forEach(function (caso) {
+  const f = F.familiaDe_(caso[0]);
+  igual(caso[3] + ' → ' + caso[1], [caso[1], caso[2]], [f.familia, f.claro]);
+});
+
+console.log('\n── Y lo que NO está claro, se pregunta ──');
+/**
+ * Un «cliente» sin valor, sin porcentaje y sin forma de cobro puede ser
+ * alguien que todavía no negoció precio, o un favor que nunca va a
+ * pagar. Nova no puede saberlo, y adivinar mal cambia si esa fila suma
+ * a lo que le deben. Lo fácil sería mandarlo a Trabajos y que ella lo
+ * descubra un día mirando una cifra rara.
+ */
+const dudoso = F.familiaDe_({ tipo: 'cliente', nombre: 'Alguien' });
+igual('un cliente sin nada de plata queda por preguntar', false, dudoso.claro);
+ok('y se dice por qué, con palabras',
+   /no sé si te va a pagar/.test(dudoso.porque), dudoso.porque);
+const sinTipo = F.familiaDe_({ nombre: 'Sin tipo' });
+igual('sin tipo, tampoco está claro', false, sinTipo.claro);
+ok('mientras tanto NO desaparece de la lista', dudoso.familia === 'trabajo');
+
+sembrar({
+  trabajos: [
+    trab({ id: 'phh', nombre: 'PHH', tipo: 'cliente', estado: 'activo',
+           modalidad: 'por_hora', horas_semana: 12 }),
+    trab({ id: 'nova', nombre: 'Nova', tipo: 'propio', estado: 'activo' }),
+    trab({ id: 'uni', nombre: 'Universidad', tipo: 'estudio', estado: 'activo' }),
+    trab({ id: 'raro', nombre: 'Alguien sin definir', tipo: 'cliente', estado: 'activo' }),
+  ],
+});
+const mm = F.centralMio(SOCIA, {});
+const fam = {}; mm.trabajos.forEach(x => { fam[x.id] = x.familia; });
+igual('en la pantalla, cada uno en su familia',
+      ['trabajo', 'proyecto', 'proyecto', 'trabajo'],
+      [fam.phh, fam.nova, fam.uni, fam.raro]);
+igual('la universidad va marcada aparte', true,
+      mm.trabajos.filter(x => x.id === 'uni')[0].universidad);
+igual('y solo el dudoso entra en la lista de preguntas',
+      ['Alguien sin definir'], mm.porClasificar.map(x => x.nombre));
+ok('con su porqué, para poder responder sin adivinar',
+   /no sé si te va a pagar/.test(mm.porClasificar[0].porque));
 
 console.log(fallas ? '\n' + fallas + ' FALLA(S)' : '\nTodo pasa.');
 process.exit(fallas ? 1 : 0);

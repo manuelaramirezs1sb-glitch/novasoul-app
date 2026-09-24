@@ -32,7 +32,8 @@ const MIO_HOJAS = {
              'valor_acordado','forma_cobro','fecha_inicio','fecha_entrega',
              'horas_semana','especificacion','documento','nota',
              'mi_rol','modalidad','porcentaje','base_porcentaje',
-             'cliente_id','tienda_id','confidencial'],
+             'cliente_id','tienda_id','confidencial','padre_id',
+             'periodicidad','dias_pago'],
   Fuentes:  ['id','trabajo_id','nombre','tipo','enlace','nota','agregado_en'],
   Cobros:   ['id','trabajo_id','concepto','monto','moneda',
              'fecha_esperada','fecha_cobrada','estado','nota'],
@@ -55,6 +56,85 @@ const TIPOS_TRABAJO = {
   propio:   { nombre: 'Propio (Nova)',  cobra: false },
   estudio:  { nombre: 'Universidad',    cobra: false },
 };
+
+/**
+ * ═══════════════════════════════════════════════════════════
+ *  TRABAJOS Y PROYECTOS: DOS FAMILIAS, DOS PANTALLAS
+ * ═══════════════════════════════════════════════════════════
+ *
+ * Ella lo dijo así: «entre proyectos pueden entrar los que no son
+ * pagos, como los de Nova; en trabajos todo lo que me da ingresos y
+ * beneficios económicos».
+ *
+ * La línea es una sola y es clara: ¿esto entra plata o no?
+ *
+ *   TRABAJO    Upwork, PHH, Nutrea, un cliente. Tiene moneda, forma de
+ *              cobro y fecha de pago.
+ *   PROYECTO   Nova, novAcademy, la universidad. Ocupa horas, no paga.
+ *              No tiene moneda porque no hay nada que convertir.
+ *
+ * ── LO QUE NO SE DEDUCE, SE PREGUNTA ──
+ *
+ * Ella pidió repartir lo que ya está cargado «y lo que no esté claro
+ * para Nova que me pregunte cuando entre». Eso es lo contrario de lo
+ * fácil: lo fácil sería mandar todo lo dudoso a Trabajos y que ella lo
+ * descubra un día mirando una cifra rara.
+ *
+ * Un caso dudoso de verdad: un «cliente» sin valor, sin porcentaje y
+ * sin forma de cobro. Puede ser un cliente que todavía no negoció
+ * precio, o un favor que nunca va a pagar. Nova no puede saberlo, y
+ * adivinar mal cambia si esa fila suma o no a lo que le deben.
+ */
+const PROY_FAMILIAS = {
+  trabajo:  { nombre: 'Trabajos',  que: 'Lo que te da ingresos' },
+  proyecto: { nombre: 'Proyectos', que: 'Lo que no paga pero ocupa horas' },
+};
+
+function familiaDe_(t) {
+  const tipo = norm(t.tipo);
+  const mod = norm(t.modalidad);
+  const tienePlata = num(t.valor_acordado) > 0 || num(t.porcentaje) > 0;
+
+  // La universidad y lo propio no pagan, y eso no admite discusión.
+  if (tipo === 'estudio') {
+    return { familia: 'proyecto', universidad: true, claro: true,
+             porque: 'La universidad no paga.' };
+  }
+  if (tipo === 'propio') {
+    return { familia: 'proyecto', universidad: false, claro: true,
+             porque: 'Lo propio no factura.' };
+  }
+  // Lo que dice explícitamente que no cobra, tampoco.
+  if (mod === 'sin_cobro') {
+    return { familia: 'proyecto', universidad: false, claro: true,
+             porque: 'Está marcado como sin cobro.' };
+  }
+  // Un empleo paga siempre, por definición.
+  if (tipo === 'empleo') {
+    return { familia: 'trabajo', universidad: false, claro: true,
+             porque: 'Un empleo paga.' };
+  }
+  // Un cliente con plata puesta, o con forma de cobro escrita, es trabajo.
+  if (tipo === 'cliente' && (tienePlata || mod === 'porcentaje' ||
+                             mod === 'fijo' || mod === 'por_hora')) {
+    return { familia: 'trabajo', universidad: false, claro: true,
+             porque: 'Es un cliente con forma de cobro.' };
+  }
+  /**
+   * Y aquí es donde Nova se calla y pregunta.
+   *
+   * Se pone del lado de TRABAJO mientras ella decide —no desaparece de
+   * la lista— pero marcado, para que la pregunta se vea antes de que
+   * la cifra confunda.
+   */
+  return {
+    familia: 'trabajo', universidad: false, claro: false,
+    porque: !tipo
+      ? 'No dice qué tipo de compromiso es.'
+      : 'Es un cliente sin valor, sin porcentaje y sin forma de cobro: ' +
+        'no sé si te va a pagar.',
+  };
+}
 
 function mioSheet_(nombre) {
   const ss = SpreadsheetApp.openById(IDS_().central);
@@ -240,9 +320,27 @@ function centralMio(s, p) {
         rol: proyRol_(t), modalidad: proyModalidad_(t),
         porcentaje: num(t.porcentaje), tiendaId: String(t.tienda_id || ''),
         confidencial: proyConfidencial_(t),
+        // A cuál de las dos pantallas pertenece, y si Nova está segura.
+        familia: familiaDe_(t).familia,
+        universidad: familiaDe_(t).universidad,
+        claro: familiaDe_(t).claro,
+        porqueFamilia: familiaDe_(t).porque,
+        // De quién cuelga, cuando es un proyecto dentro de un trabajo.
+        padreId: String(t.padre_id || ''),
         tareas: carga[t.id] || { abiertas: 0, horas: 0, vencidas: 0, proxima: '' },
       };
     }),
+    familias: PROY_FAMILIAS,
+    /**
+     * Lo que Nova no supo clasificar. Va en su propia lista para que la
+     * pantalla lo pregunte al entrar, en vez de esconderlo en medio de
+     * los demás donde nadie lo mira.
+     */
+    porClasificar: trabajos.filter(function (t) { return !familiaDe_(t).claro; })
+      .map(function (t) {
+        return { id: String(t.id || ''), nombre: String(t.nombre || ''),
+                 porque: familiaDe_(t).porque };
+      }),
     porCobrar: porCobrar.sort(function (a, b) { return (a.esperada || '9') < (b.esperada || '9') ? -1 : 1; }),
     atrasados: atrasados.sort(function (a, b) { return b.dias - a.dias; }),
     totales: {

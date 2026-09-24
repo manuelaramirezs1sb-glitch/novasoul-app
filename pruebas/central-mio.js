@@ -17,16 +17,39 @@ const MIO = {
       estado: 'activo', moneda: 'COP', valor: 2400000, cobrado: 800000, falta: 1600000,
       entrega: '2026-09-30', horasSemana: 8, especificacion: 'Carta, web y precios',
       documento: 'https://ejemplo.com/contrato', nota: '',
-      rol: 'trabajadora', modalidad: 'fijo', porcentaje: 0, tiendaId: '', confidencial: false },
+      rol: 'trabajadora', modalidad: 'fijo', porcentaje: 0, tiendaId: '', confidencial: false,
+      familia: 'trabajo', universidad: false, claro: true, padreId: '' },
     { id: 't2', nombre: 'PHH', contraparte: 'Upwork', tipo: 'empleo', estado: 'activo',
       moneda: 'USD', valor: 0, cobrado: 0, falta: null, entrega: '', horasSemana: 12,
       especificacion: '', documento: '', nota: '',
-      rol: 'trabajadora', modalidad: 'por_hora', porcentaje: 0, tiendaId: '', confidencial: true },
+      rol: 'trabajadora', modalidad: 'por_hora', porcentaje: 0, tiendaId: '', confidencial: true,
+      familia: 'trabajo', universidad: false, claro: true, padreId: '' },
     { id: 't3', nombre: 'Parcial de Estadística', contraparte: 'Universidad',
       tipo: 'estudio', estado: 'activo', moneda: '', valor: 0, cobrado: 0, falta: null,
       entrega: '2026-09-20', horasSemana: 6, especificacion: '', documento: '', nota: '',
-      rol: 'estudio', modalidad: 'sin_cobro', porcentaje: 0, tiendaId: '', confidencial: false },
+      rol: 'estudio', modalidad: 'sin_cobro', porcentaje: 0, tiendaId: '', confidencial: false,
+      familia: 'proyecto', universidad: true, claro: true, padreId: '' },
+    /** Un encargo que cuelga de Upwork: el caso de la jerarquía. */
+    { id: 't4', nombre: 'Landing page · cliente A', contraparte: 'Upwork',
+      tipo: 'cliente', estado: 'activo', moneda: 'USD', valor: 0, cobrado: 0,
+      falta: null, entrega: '2026-10-02', horasSemana: 0, especificacion: '',
+      documento: '', nota: '', rol: 'trabajadora', modalidad: 'por_hora',
+      porcentaje: 0, tiendaId: '', confidencial: false,
+      familia: 'trabajo', universidad: false, claro: true, padreId: 't2',
+      tareas: { abiertas: 3, horas: 7, vencidas: 0, proxima: '2026-09-28' } },
+    /** Y uno que Nova no supo clasificar. */
+    { id: 't5', nombre: 'Alguien sin definir', contraparte: '', tipo: 'cliente',
+      estado: 'activo', moneda: '', valor: 0, cobrado: 0, falta: null, entrega: '',
+      horasSemana: 0, especificacion: '', documento: '', nota: '',
+      rol: 'trabajadora', modalidad: '', porcentaje: 0, tiendaId: '',
+      confidencial: false, familia: 'trabajo', universidad: false, claro: false,
+      porqueFamilia: 'Es un cliente sin valor, sin porcentaje y sin forma de cobro: no sé si te va a pagar.',
+      padreId: '' },
   ],
+  familias: { trabajo: { nombre: 'Trabajos', que: 'Lo que te da ingresos' },
+              proyecto: { nombre: 'Proyectos', que: 'Lo que no paga pero ocupa horas' } },
+  porClasificar: [{ id: 't5', nombre: 'Alguien sin definir',
+                    porque: 'Es un cliente sin valor, sin porcentaje y sin forma de cobro: no sé si te va a pagar.' }],
   atrasados: [
     { id: 'c1', trabajo_id: 't1', trabajo: 'Son de Sky', concepto: 'Segundo pago',
       monto: 800000, moneda: 'COP', esperada: '2026-09-05', dias: 17 },
@@ -93,20 +116,62 @@ const MIO = {
     await p.evaluate(() => cargarMio());
     await p.waitForTimeout(250);
 
+    /**
+     * ── DOS LISTAS, NO UNA ──
+     *
+     * Ella lo pidió: «en trabajos todo lo que me da ingresos, entre
+     * proyectos los que no son pagos». La línea es una sola —¿entra
+     * plata o no?— y la decide el SERVIDOR: la pantalla solo reparte.
+     * Si cada pantalla juzgara por su cuenta, llegaría el día en que
+     * una fila sale en las dos o en ninguna.
+     */
     const trab = await p.textContent('#trab-lista');
     ok('cada trabajo dice qué soy yo adentro (@' + ancho + ')',
-       /Trabajadora/.test(trab) && /Estudio/.test(trab), trab.replace(/\s+/g, ' ').slice(0, 160));
-    ok('y se puede abrir a fondo (@' + ancho + ')',
-       (await p.$$eval('#trab-lista .mio-btn', e =>
-         e.filter(x => /A fondo/.test(x.textContent)).length)) === 3);
-    ok('lista los tres trabajos (@' + ancho + ')',
-       trab.includes('Son de Sky') && trab.includes('PHH') && trab.includes('Estadística'));
-    ok('la universidad aparece aunque no facture (@' + ancho + ')',
-       trab.includes('no factura'));
+       /Trabajadora/.test(trab), trab.replace(/\s+/g, ' ').slice(0, 160));
+    ok('en Trabajos va lo que paga (@' + ancho + ')',
+       trab.includes('Son de Sky') && trab.includes('PHH'));
+    ok('y NO va la universidad (@' + ancho + ')',
+       !trab.includes('Estadística'), trab.replace(/\s+/g, ' ').slice(0, 200));
+
+    await p.evaluate(() => go('proyectos', document.querySelector('[data-v=proyectos]')));
+    await p.waitForTimeout(120);
+    const proyLista = await p.textContent('#proy-lista');
+    ok('la universidad vive en Proyectos (@' + ancho + ')',
+       proyLista.includes('Estadística'), proyLista.replace(/\s+/g, ' ').slice(0, 200));
+    ok('y ahí se dice que no factura (@' + ancho + ')',
+       proyLista.includes('no factura'));
+    ok('sin mezclarse con los que sí pagan (@' + ancho + ')',
+       !proyLista.includes('Son de Sky'));
+    ok('y desde ahí se llega a la U en NovaSoul (@' + ancho + ')',
+       /novasoul\.html/.test(await p.innerHTML('#v-proyectos')));
+
+    await p.evaluate(() => go('trabajos', document.querySelector('[data-v=trabajos]')));
+    await p.waitForTimeout(120);
+
+    /** Upwork lleva su encargo adentro, sangrado: es la jerarquía. */
+    ok('un trabajo puede llevar proyectos adentro (@' + ancho + ')',
+       (await p.textContent('#trab-lista')).includes('Landing page'),
+       (await p.textContent('#trab-lista')).replace(/\s+/g, ' ').slice(0, 260));
+    ok('con sus tareas y sus horas (@' + ancho + ')',
+       /3 tarea\(s\) · 7 h/.test(await p.textContent('#trab-lista')));
+
+    /**
+     * Y lo que Nova NO supo repartir se pregunta arriba, no se esconde
+     * entre los demás: un caso dudoso mezclado con veinte claros es uno
+     * que nadie mira nunca.
+     */
+    const dudas = await p.textContent('#clasificar');
+    ok('lo que no está claro se pregunta (@' + ancho + ')',
+       /no sé dónde ponerlo/.test(dudas), dudas.replace(/\s+/g, ' ').slice(0, 200));
+    ok('con su nombre y su porqué (@' + ancho + ')',
+       /Alguien sin definir/.test(dudas) && /no sé si te va a pagar/.test(dudas));
+    ok('y diciendo el riesgo de dejarlo mal (@' + ancho + ')',
+       /sumar a lo que te deben/.test(dudas));
+
     ok('dice los días que faltan, no solo la fecha (@' + ancho + ')',
        /faltan \d+ días/.test(trab), trab.match(/faltan[^·]*/)?.[0]);
     ok('y marca lo que ya venció (@' + ancho + ')',
-       /venció hace \d+ días/.test(trab));
+       /venció hace \d+ días/.test(proyLista) || /venció hace \d+ días/.test(trab));
 
     const kpis = await p.textContent('#plata-kpis');
     ok('no suma monedas distintas: las muestra aparte (@' + ancho + ')',
@@ -157,7 +222,7 @@ const MIO = {
 
     const proy = await p.$$eval('#sb-proyectos .ni-proy', e => e.map(x => x.textContent));
     ok('los proyectos salen también en el menú (@' + ancho + ')',
-       proy.length === 3, JSON.stringify(proy));
+       proy.length === 5, JSON.stringify(proy));
     ok('y el vencido lleva su punto rojo (@' + ancho + ')',
        await p.$$eval('#sb-proyectos .ni-proy.tarde', e => e.length) === 1);
 

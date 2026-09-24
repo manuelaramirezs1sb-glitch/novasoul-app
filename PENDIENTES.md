@@ -1674,3 +1674,63 @@ en `r.dia` —el primero—. Con una fila por día daba igual; con el
 gimnasio de seis veces en una sola fila, cinco días habrían quedado
 pareciendo libres. Y esa es justo la cuenta que decide si la semana
 cabe.
+
+### 25 · Por qué se demoraba en cargar. Medido.
+
+Ella preguntó: *«arregla eso de que se está demorando en cargar, ¿por
+qué es? ¿qué le falta? ¿o qué le sobra?»*.
+
+`pruebas/arranque.js` lo cuenta con una cuenta de **4.000 pedidos**, que
+es el tamaño al que esto empieza a doler:
+
+| | antes | ahora |
+|---|---|---|
+| Peticiones al entrar | 13 | 13 |
+| Veces que se lee la hoja Pedidos ENTERA | **15** | **9** |
+| Celdas movidas | 2.753.911 | 1.769.665 |
+
+**Lo que sobraba.** En Apps Script, leer una hoja no es leer un array:
+es una llamada al servicio, y eso es lo que cuesta. `apiRecuento`
+llamaba a `agregarMes` en bucle —seis meses, más el periodo
+anterior— y **cada llamada releía la hoja entera**. Seis lecturas en una
+sola petición.
+
+`revisarAlarmas` hacía lo mismo por otro lado: un comentario decía
+«datos del mes, una sola lectura» y debajo había **tres**. Un comentario
+que promete algo que el código no hace es peor que no tener comentario.
+
+Ahora `agregarMes` acepta las filas ya leídas. Sin ellas se comporta
+igual que siempre, así que los otros seis sitios que la llaman no
+cambiaron.
+
+**Lo que todavía sobra: las trece peticiones.** Cada una es un viaje
+completo a Apps Script. Juntarlas en una sola llamada `arranque` es la
+siguiente mejora, y es la que se va a sentir.
+
+### 26 · Dos entradas, y el reparto automático
+
+Sus decisiones: **dos entradas en el menú**, repartir lo cargado **por su
+tipo**, y *«lo que no esté claro para Nova que me pregunte cuando
+entre»*.
+
+**Trabajos** (lo que paga) y **Proyectos** (lo que no). La línea es una
+sola: ¿entra plata o no? La decide el servidor con `familiaDe_()`, y la
+pantalla solo reparte — si cada pantalla juzgara por su cuenta, llegaría
+el día en que una fila sale en las dos o en ninguna.
+
+**La universidad no tiene entrada propia.** Sus materias, su sílabo y
+sus parciales ya viven en NovaSoul, que es donde ella estudia; en
+Central solo está su fila, para que sus horas descuenten de la semana.
+Así son dos entradas y no tres, que es lo que pidió.
+
+**Lo dudoso se pregunta, no se adivina.** Un «cliente» sin valor, sin
+porcentaje y sin forma de cobro puede ser alguien que no ha negociado
+precio o un favor que nunca va a pagar. Nova no puede saberlo, y
+adivinar mal cambia si esa fila suma a lo que le deben. Queda en
+Trabajos mientras decide —no desaparece— pero con una tarjeta arriba
+que dice cuál es y por qué.
+
+**La jerarquía:** `Trabajos` gana `padre_id`. Upwork es UN trabajo con
+un encargo por proyecto, sangrados debajo. Está vacío en casi todos, y
+así debe ser: la jerarquía existe donde hace falta, no en todas partes.
+También `periodicidad` y `dias_pago`, para lo de la quincena a 7 días.

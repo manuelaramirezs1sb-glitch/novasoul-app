@@ -481,11 +481,26 @@ const ESQUEMA_CENTRAL = {
    * abre delante de una socia o un contador, y un olvido no puede ser
    * lo único que proteja eso.
    */
+  /**
+   * `padre_id` deja que un trabajo contenga proyectos.
+   *
+   * Existe por un caso concreto: Upwork es UN trabajo —una forma de
+   * cobro, una moneda, una quincena— con muchos encargos dentro, cada
+   * uno con sus tareas y su fecha. Sin esto, cada encargo sería un
+   * trabajo suelto y no habría forma de ver cuánto lleva ese cliente en
+   * total sin sumarlo a mano.
+   *
+   * Está vacío en casi todos, y así debe ser: la jerarquía existe donde
+   * hace falta, no en todas partes. PHH y Nutrea son uno solo.
+   */
   Trabajos: ['id','nombre','contraparte','tipo','estado','moneda',
              'valor_acordado','forma_cobro','fecha_inicio','fecha_entrega',
              'horas_semana','especificacion','documento','nota',
              'mi_rol','modalidad','porcentaje','base_porcentaje',
-             'cliente_id','tienda_id','confidencial'],
+             'cliente_id','tienda_id','confidencial','padre_id',
+             // Cada cuánto paga, y a los cuántos días del trabajo hecho
+             // entra la plata. Upwork: quincenal, 7 días.
+             'periodicidad','dias_pago'],
 
   /**
    * De dónde sale la información profunda de cada proyecto.
