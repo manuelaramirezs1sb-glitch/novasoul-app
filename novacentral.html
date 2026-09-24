@@ -494,6 +494,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
       <div id="sb-proyectos"></div>
 
       <div class="sb-grupo">Nova Family</div>
+      <div class="ni" data-v="automatico" onclick="go('automatico',this)">
+        <span class="ni-ico">⟳</span> Lo automático
+      </div>
       <div class="ni" data-v="clientes" onclick="go('clientes',this)">
         <span class="ni-ico">▣</span> Clientes
       </div>
@@ -639,22 +642,32 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
       </div>
 
       <!-- ─── CLIENTES ─── -->
-      <div class="view" id="v-clientes">
+      <!--
+        LO AUTOMÁTICO, EN SU PROPIA PANTALLA.
 
-        <!--
-          Lo automático vive aquí y no en la pantalla de la dueña porque
-          los disparadores son del proyecto entero: se prenden una vez y
-          sirven para todos los clientes. Un botón en la pantalla de un
-          cliente le daría un interruptor que afecta a los demás.
-        -->
+        Estaba metido arriba de «Clientes». No estaba escondido, pero
+        nadie busca el interruptor de lo que corre solo dentro de la
+        lista de clientes — ella lo dio por desaparecido, y tenía razón
+        en no encontrarlo.
+
+        Vive en Nova Central y no en la pantalla de la dueña porque los
+        disparadores son del PROYECTO entero: se prenden una vez y
+        sirven para todas las cuentas. Un botón en la pantalla de un
+        cliente le daría un interruptor que afecta a los demás.
+      -->
+      <div class="view" id="v-automatico">
         <div class="card" id="auto-card">
           <div class="card-ttl">Lo que Nova hace sola</div>
           <div style="font:400 12.5px/1.6 'DM Sans';color:var(--ink3);margin-bottom:10px">
-            Las tasas de cambio y la revisión de alarmas tienen que correr todos
-            los días sin que nadie las pida. Se prenden una vez y sirven para
-            todas las cuentas.</div>
+            Seis trabajos que corren sin que nadie los pida: las tasas de cambio,
+            la lectura de Meta, las alarmas de cada tienda, el semáforo de los
+            lunes, tu día en Nova Central y tu semana en NovaSoul. Se prenden
+            una vez y sirven para todas las cuentas.</div>
           <div id="auto-cuerpo"><div class="nc-vacio">Revisando…</div></div>
         </div>
+      </div>
+
+      <div class="view" id="v-clientes">
 
         <div class="card">
           <div class="card-ttl">Clientes en la plataforma</div>
@@ -826,7 +839,7 @@ let activeSt = 'gt';
  * La huella sale del contenido del archivo: cambia sola con cada cambio,
  * aunque sean dos versiones el mismo día.
  */
-const VERSION_PANTALLA = '2026-09-23 · 7317';
+const VERSION_PANTALLA = '2026-09-24 · 1465';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -1928,7 +1941,7 @@ function sellarEjemploCentral() {
 /* ─── NAV ─── */
 const TITLES = {
   dashboard:'Hoy', trabajos:'Mis proyectos', plata:'Mis finanzas',
-  clientes:'Clientes',
+  clientes:'Clientes', automatico:'Lo que Nova hace sola',
   pipeline:'Pipeline novAcademy', onboarding:'Onboarding de clientes',
   meta:'Meta Ads', demo:'Gestión de demo', proyecto:'El proyecto a fondo'
 };

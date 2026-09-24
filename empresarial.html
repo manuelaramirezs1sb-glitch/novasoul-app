@@ -513,6 +513,17 @@ input.li:focus{border-color:var(--acc-d);}
 /* Lo que le falta a esta ficha, dicho dentro de la ficha */
 .inv-aviso{font:500 11.5px/1.55 'DM Sans';color:#8a6a13;background:#f6ecd0;border-radius:10px;padding:10px 12px;}
 .inv-pie{font:500 10.5px/1.4 'DM Sans';color:var(--t-mut2);}
+/* ─── QUÉ QUEDÓ DE AYER Y LOS REPORTES ───────────────── */
+.fila-r{display:flex;align-items:center;gap:12px;padding:10px 0;
+        border-bottom:1px solid var(--s-line2);flex-wrap:wrap;}
+.fila-r:last-child{border-bottom:0;}
+/* El texto del reporte se lee y se imprime tal cual: es el mismo que
+   llega al correo, y verlo con la misma forma evita dudar de si son
+   dos cosas distintas. */
+.rep-pre{font:500 12px/1.65 ui-monospace,'SFMono-Regular',Menlo,monospace;
+         color:var(--t-ink2);background:var(--s-dark2);border:1px solid var(--s-line2);
+         border-radius:12px;padding:14px 16px;margin:14px 0 0;
+         white-space:pre-wrap;overflow-x:auto;}
 .prod-falta{font:600 11px/1.4 'DM Sans';color:var(--acc-d);cursor:pointer;margin-top:2px;}
 .prod-falta:hover{text-decoration:underline;}
 /* ─── GASTOS (Dinero) ───────────────────────────────── */
@@ -1334,6 +1345,20 @@ input.li:focus{border-color:var(--acc-d);}
         -->
         <div id="sem-luces"></div>
 
+        <!--
+          QUÉ QUEDÓ DE AYER.
+
+          Ella lo pidió así: «un reporte diario de lo que quedó pendiente
+          del otro día […] que no llegue solo al correo sino también que
+          aparezca en la pantalla principal».
+
+          Va antes de las alarmas porque no es lo mismo: las alarmas
+          avisan de lo que se salió de lo normal; esto es la lista de
+          trabajo del día. Lo primero que hace falta al abrir no es
+          saber qué se rompió, es saber a quién hay que llamar.
+        -->
+        <div id="ayer"></div>
+
         <!-- Alarmas · mismo cálculo que el correo diario -->
         <div id="alarmas"></div>
 
@@ -1699,6 +1724,34 @@ input.li:focus{border-color:var(--acc-d);}
             utilidad que nunca existió. Aquí ves qué tiene cada uno y qué le falta.</p>
           <div id="historial"></div>
         </div>
+        <!--
+          Los otros dos reportes que ella pidió sacar desde aquí: el
+          semáforo de una semana (la «autopsia») y el día que elija.
+          Se imprimen con el mismo botón de arriba.
+        -->
+        <div class="card ro-dueno" id="otros-reportes">
+          <div class="card-h"><span class="ct">Otros reportes</span>
+            <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">
+              Para imprimir o guardar en PDF</span></div>
+          <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);margin:0 0 12px;max-width:78ch;">
+            El cierre de mes dice cuánto se ganó. Estos dos dicen otra cosa:
+            cómo fue una semana, y qué quedó sin hacer un día.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+            <div>
+              <div class="dlbl">SEMÁFORO DE LA SEMANA</div>
+              <select class="cm-sel" id="rep-semana"></select>
+            </div>
+            <button class="cm-btn" onclick="verSemanaCierre()">Ver</button>
+            <div style="flex:1;min-width:14px;"></div>
+            <div>
+              <div class="dlbl">QUÉ QUEDÓ DE UN DÍA</div>
+              <input class="cm-sel" type="date" id="rep-dia">
+            </div>
+            <button class="cm-btn" onclick="verDiaCierre()">Ver</button>
+          </div>
+          <div id="rep-salida"></div>
+        </div>
+
         <div class="cm-doc" id="cm-doc"></div>
       </div>
 
@@ -2251,7 +2304,7 @@ function buildAll() {
   buildHoy(); buildPedidos(); buildNovedades();
   buildOficina(); buildGestoras(); buildAuditoria();
   buildProductos();
-  if (ROL === 'dueno') { buildPauta(); buildInventario(); buildDinero(); buildPermisos(); pintarCalculadoras(); }
+  if (ROL === 'dueno') { buildPauta(); buildInventario(); buildDinero(); buildPermisos(); pintarCalculadoras(); pintarSemanasCierre(); }
 }
 
 /**
@@ -3422,7 +3475,7 @@ async function cargarReales() {
     // cuándo la pantalla terminó de ponerse al día.
     await Promise.all([cargarPedidosReales(), cargarNovedadesReales(),
                        cargarEquipo(), cargarAuditoria(), cargarAlarmas(),
-                       cargarRecuento(), cargarProductos(),
+                       cargarRecuento(), cargarProductos(), cargarAyer(),
                        cargarHistorial(), cargarCas(), cargarEstados(),
                        cargarMeta(), cargarSemaforo()]);
     // Una gestora sin pedidos asignados también merece respuesta. Si las
@@ -7227,7 +7280,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-23 · 6ea9';
+const VERSION_PANTALLA = '2026-09-24 · c309';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -8923,6 +8976,159 @@ async function clasificarEstado(fuente, texto, estado, sel) {
   } finally {
     sel.disabled = false;
   }
+}
+
+/* ─── QUÉ QUEDÓ DE AYER ───
+ *
+ * La lista de trabajo del día: a cuánta gente hay que tocar y por qué.
+ * No habla de ventas ni de márgenes —de eso hablan el semáforo y el
+ * cierre— y por eso cabe arriba de todo sin competir con nada.
+ */
+let AYER = null;
+
+async function cargarAyer() {
+  if (!CONECTADO) return false;
+  let r;
+  try { r = await api('reporte_dia', { tienda: ST }); }
+  catch (e) { return false; }
+  if (!r || !r.ok) {
+    // Si esta parte todavía no está en su Apps Script, se dice una vez
+    // y no se deja un hueco mudo en mitad de la pantalla principal.
+    const c = document.getElementById('ayer');
+    if (c && /desconocida/i.test(String((r && r.error) || ''))) {
+      c.innerHTML = '<div class="card"><div class="card-h">' +
+        '<span class="ct">Qué quedó de ayer</span></div>' +
+        '<p style="font:500 12.5px/1.6 \'DM Sans\';color:var(--t-mut);margin:0;">' +
+        'Esta parte todavía no está en tu Apps Script. Pega la última versión de ' +
+        'NOVA-COMPLETO.gs, guarda la implementación y vuelve a entrar.</p></div>';
+    }
+    return false;
+  }
+  AYER = r;
+  pintarAyer();
+  desellar(['ayer']);
+  return true;
+}
+
+function pintarAyer() {
+  const c = document.getElementById('ayer');
+  if (!c || !AYER) return;
+  const r = AYER;
+
+  if (!r.hayAlgo) {
+    c.innerHTML = '<div class="card"><div class="card-h">' +
+      '<span class="ct">Qué quedó de ayer</span>' +
+      '<span style="font:500 11px/1 \'DM Sans\';color:#3f5330;">nada esperando</span></div>' +
+      '<p style="font:500 12.5px/1.6 \'DM Sans\';color:var(--t-mut);margin:0;">' +
+      'Todo lo del ' + esc(fechaCorta(r.dia)) + ' está cerrado o en camino. ' +
+      'No hay a quién llamar por lo de ayer.</p></div>';
+    return;
+  }
+
+  const filas = r.categorias.filter(function (x) { return x.n; }).map(function (x) {
+    /**
+     * Dos números por categoría, nunca uno.
+     *
+     * «12 sin confirmar» no dice si hay que preocuparse. «12, y 5 llevan
+     * más de un día» sí: esos cinco son los que se van a perder.
+     */
+    return '<div class="fila-r"><div style="flex:1;min-width:0">' +
+      '<div class="inm">' + esc(x.nombre) + '</div>' +
+      '<div class="isub">' + esc(x.que) + '</div></div>' +
+      '<span style="font:700 17px/1 \'Fraunces\',serif;color:var(--t-ink);' +
+      'min-width:34px;text-align:right;">' + x.n + '</span>' +
+      (x.viejos
+        ? '<span class="bd" style="color:#b8322f;background:#f6e3db;min-width:84px;' +
+          'text-align:center;">' + x.viejos + ' de +' + x.limite + ' d</span>'
+        : '<span class="bd" style="color:#3f5330;background:#d3e0c2;min-width:84px;' +
+          'text-align:center;">al día</span>') +
+      '</div>';
+  }).join('');
+
+  const motivos = r.motivos.length
+    ? '<div style="margin-top:12px;"><div class="dlbl">POR QUÉ SIGUEN ABIERTAS</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">' +
+      r.motivos.map(function (m) {
+        return '<span class="bd" style="color:var(--t-ink2);background:var(--s-dark2);">' +
+          esc(String(m.grupo).replace(/_/g, ' ')) + ' · ' + m.n +
+          (m.viejas ? ' (' + m.viejas + ' viejas)' : '') + '</span>';
+      }).join('') + '</div></div>'
+    : '';
+
+  c.innerHTML = '<div class="card">' +
+    '<div class="card-h"><span class="ct">Qué quedó de ayer</span>' +
+      '<span style="font:500 11px/1 \'DM Sans\';color:' +
+      (r.totalViejo ? '#b8322f' : 'var(--t-mut2)') + ';">' +
+      r.total + ' esperando' + (r.totalViejo ? ' · ' + r.totalViejo + ' llevan demasiado' : '') +
+      '</span></div>' +
+    '<p style="font:500 12.5px/1.6 \'DM Sans\';color:var(--t-mut);margin:0 0 12px;max-width:78ch;">' +
+      'Del ' + esc(fechaCorta(r.dia)) + ' entraron ' + r.entraronEseDia +
+      ' y se cerraron ' + r.cerradosEseDia + '. Esto es lo que sigue esperando a ' +
+      'una persona — lo que va en camino (' + r.enCamino + ') no cuenta, porque ' +
+      'espera al courier, no a ti.</p>' +
+    filas + motivos +
+    (r.valorPendiente
+      ? '<div class="inv-pie" style="margin-top:10px;">Plata detenida en lo que ' +
+        'espera: ' + SYM() + ' ' + NUM(r.valorPendiente) + '</div>'
+      : '') +
+    '</div>';
+}
+
+/* ─── Los dos reportes de Cierre de mes ─── */
+function verDiaCierre() {
+  const d = document.getElementById('rep-dia');
+  const salida = document.getElementById('rep-salida');
+  if (!d || !salida) return;
+  salida.innerHTML = '<div class="inv-pie" style="margin-top:12px;">Buscando…</div>';
+  api('reporte_dia', { tienda: ST, dia: d.value }).then(function (r) {
+    if (!r || !r.ok) {
+      salida.innerHTML = '<div class="inv-aviso">' +
+        esc((r && r.error) || 'No se pudo.') + '</div>';
+      return;
+    }
+    salida.innerHTML = '<pre class="rep-pre">' + esc(r.texto || '') + '</pre>';
+  }).catch(function (e) {
+    salida.innerHTML = '<div class="inv-aviso">Sin conexión: ' + esc(e.message) + '</div>';
+  });
+}
+
+function verSemanaCierre() {
+  const sel = document.getElementById('rep-semana');
+  const salida = document.getElementById('rep-salida');
+  if (!sel || !salida) return;
+  salida.innerHTML = '<div class="inv-pie" style="margin-top:12px;">Buscando…</div>';
+  api('semaforo', { tienda: ST, lunes: sel.value }).then(function (r) {
+    if (!r || !r.ok || !r.semaforo) {
+      salida.innerHTML = '<div class="inv-aviso">' +
+        esc((r && r.error) || 'No se pudo.') + '</div>';
+      return;
+    }
+    salida.innerHTML = '<pre class="rep-pre">' + esc(r.texto || '') + '</pre>';
+  }).catch(function (e) {
+    salida.innerHTML = '<div class="inv-aviso">Sin conexión: ' + esc(e.message) + '</div>';
+  });
+}
+
+/** Las últimas doce semanas cerradas, para elegir cuál mirar. */
+function pintarSemanasCierre() {
+  const sel = document.getElementById('rep-semana');
+  const dia = document.getElementById('rep-dia');
+  if (dia && !dia.value) {
+    const d = new Date(Date.now() - 86400000);
+    dia.value = d.toISOString().slice(0, 10);
+  }
+  if (!sel || sel.options.length) return;
+  const hoy = new Date();
+  // El lunes de esta semana, y de ahí hacia atrás.
+  const l = new Date(hoy);
+  l.setUTCDate(l.getUTCDate() - ((l.getUTCDay() + 6) % 7));
+  let h = '';
+  for (let k = 1; k <= 12; k++) {
+    const x = new Date(l); x.setUTCDate(x.getUTCDate() - 7 * k);
+    const iso = x.toISOString().slice(0, 10);
+    h += '<option value="' + iso + '">Semana del ' + fechaCorta(iso) + '</option>';
+  }
+  sel.innerHTML = h;
 }
 
 async function cargarAlarmas() {

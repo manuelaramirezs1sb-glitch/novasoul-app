@@ -75,8 +75,13 @@ const ESCENAS = {
         };
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app').style.display = 'flex';
+        /**
+         * La tarjeta de lo automático ya no vive dentro de «Clientes»:
+         * tiene su propia pantalla. Estaba ahí arriba y nadie la
+         * encontraba — la dueña la dio por desaparecida.
+         */
         document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
-        document.getElementById('v-clientes').classList.add('on');
+        document.getElementById('v-automatico').classList.add('on');
       }, datos);
 
       await p.evaluate(() => cargarAutomatico());

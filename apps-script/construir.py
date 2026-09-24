@@ -40,6 +40,7 @@ ORDEN = [
     ('83-automatico-mio.gs', '20 · LO AUTOMÁTICO DE CENTRAL Y SOUL'),
     ('84-central-meta.gs',  '21 · CENTRAL · META, DESDE LA CONSOLA'),
     ('85-meta-panel.gs',   '22 · META · TODO EN UNA PANTALLA'),
+    ('86-reporte-dia.gs',  '23 · QUÉ QUEDÓ DE AYER'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

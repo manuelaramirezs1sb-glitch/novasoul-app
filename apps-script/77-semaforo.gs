@@ -557,7 +557,10 @@ function apiSemaforo(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  return { ok: true, semaforo: semaforoSemanal(s.sheetId, tienda, String(p.lunes || '')) };
+  const sem = semaforoSemanal(s.sheetId, tienda, String(p.lunes || ''));
+  // El mismo texto del correo del lunes, para que la pantalla lo pueda
+  // enseñar e imprimir sin rearmarlo por su cuenta.
+  return { ok: true, semaforo: sem, texto: semaforoTexto(sem) };
 }
 
 /**

@@ -1567,3 +1567,57 @@ Tres cuidados más, todos probados:
 - la tarjeta «Que el gasto entre solo» **debe desaparecer cuando Meta ya
   está activo** — ella lo señaló: *«que el gasto entre solo sigue
   apareciendo pero Meta ya está activo»*.
+
+### 21 · «¿Dónde está la pantalla de los permisos, me la escondiste?»
+
+**No, y vale decirlo con precisión:** «Permisos» en Nova Empresarial
+nunca se tocó — se ve en su propia captura, en el menú bajo EQUIPO. Lo
+que sí se quitó, con su visto bueno ese mismo día, fue **Equipo en Nova
+Central**, que era una maqueta con nombres inventados.
+
+Lo que ella buscaba era otra cosa: **«Prender lo automático»**. Y ahí sí
+había un problema real, aunque no fuera el que ella creía: la tarjeta
+estaba metida **arriba de la lista de Clientes**. No estaba escondida,
+pero nadie busca el interruptor de lo que corre solo dentro de la lista
+de clientes. Que lo diera por desaparecido es la prueba.
+
+Ahora tiene **su propia pantalla y su propio sitio en el menú**, y el
+texto ya no habla de dos trabajos sino de los seis que hay.
+
+### 22 · Los dos reportes que pidió
+
+Sus palabras: *«en el cierre de mes, des la opción de sacar 2 reportes
+más, el semáforo o diagnóstico o autopsia semanal y un reporte diario de
+lo que quedó pendiente del otro día […] que no llegue solo al correo
+sino también que aparezca en la pantalla principal»*.
+
+Mandó como referencia una tabla de categorías de gestión con su
+cantidad. Eso no es un tablero de métricas: es una **lista de trabajo**.
+Dice cuánta gente hay que tocar hoy y por qué. Por eso el reporte no
+habla de ventas ni de márgenes — de eso ya hablan el semáforo y el
+cierre.
+
+**Ella eligió** que «pendiente» sea: lo que sigue esperando a una
+persona, y lo que se venció y nadie movió.
+
+`apps-script/86-reporte-dia.gs` → acción `reporte_dia`. Tres decisiones
+que son las que lo hacen útil:
+
+1. **Todo se cuenta DOS veces**: cuántos hay, y cuántos de esos llevan
+   demasiado quietos. «12 sin confirmar» no dice si hay que
+   preocuparse; «12, y 5 llevan más de un día» sí — esos cinco son los
+   que se van a perder. Cada categoría tiene su propio límite: una
+   novedad se pudre en un día, un pedido en oficina aguanta tres.
+2. **Lo que va en camino NO cuenta como pendiente.** No espera a nadie,
+   espera al courier. Meterlo infla la lista con cosas que no se pueden
+   hacer, y una lista así deja de leerse. Va aparte, con su número.
+3. **Un total no se puede trabajar.** El texto termina con los ocho más
+   quietos, con nombre y teléfono, que es lo que sí se puede hacer.
+
+**Dónde se ve:** en **Hoy**, arriba de las alarmas —las alarmas dicen
+qué se rompió, esto dice a quién llamar— y en **Cierre de mes**, junto
+al semáforo de la semana que se elija, los dos imprimibles.
+
+**El texto lo arma el servidor**, no la pantalla: es el mismo que va al
+correo. Si la pantalla lo rearmara, el día que uno de los dos cambie
+dirían cosas distintas del mismo día y no habría a cuál creerle.
