@@ -585,9 +585,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
         <div id="hoy-cuerpo" class="hoy-cols"></div>
         <div id="hoy-reciente"></div>
 
-        <!-- Lo que sigue en ejemplo, marcado como tal -->
-        <div class="card" style="opacity:.75">
-          <div class="card-ttl">Tus tiendas de Nova</div>
+        <!--
+          LA RED. Esto estuvo marcado como EJEMPLO durante meses porque
+          no leía nada. Ahora abre el libro de cada cliente y cuenta con
+          la misma función que usa Nova Empresarial.
+        -->
+        <div class="card">
+          <div class="card-ttl">La red · tus clientes y sus tiendas</div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <span style="font:500 11.5px 'DM Sans';color:var(--ink3)">Vista activa:</span>
             <div class="store-tabs" id="store-tabs"></div>
@@ -829,25 +833,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 
 <script>
 /* ─── DATA ─── */
-const TIENDAS = [
-  {
-    nm:'Nutrea GT', ini:'GT', id:'gt', mon:'GTQ', sym:'Q ', pais:'Guatemala',
-    ventas:284500, pedidos:342, efectividad:88, novedades:5,
-    team:[
-      {nm:'Daniela R.',  ini:'DR', rol:'admin',   email:'daniela@nutreagt.com'},
-      {nm:'Camila R.',   ini:'CR', rol:'gestora',  email:'camila@nutreagt.com'},
-      {nm:'Katherin P.', ini:'KP', rol:'gestora',  email:'katherin@nutreagt.com'},
-    ]
-  },
-  {
-    nm:'Nutrea EC', ini:'EC', id:'ec', mon:'USD', sym:'$ ', pais:'Ecuador',
-    ventas:11240, pedidos:189, efectividad:91, novedades:2,
-    team:[
-      {nm:'María L.',    ini:'ML', rol:'admin',   email:'maria@nutreaec.com'},
-      {nm:'Ana P.',      ini:'AP', rol:'gestora',  email:'ana@nutreaec.com'},
-    ]
-  }
-];
+/**
+ * ── AQUÍ VIVÍA LA MAQUETA DE LAS TIENDAS ──
+ *
+ * Una constante `TIENDAS` con dos tiendas inventadas, sus cifras
+ * inventadas —Q 284.500, 342 pedidos, 88%— y cinco personas que no
+ * existen: Daniela R., Camila R., Katherin P., María L., Ana P.
+ *
+ * Se borra entera, y no solo se deja de usar. Un bloque de datos
+ * falsos que sigue en el archivo es una invitación a que alguien lo
+ * vuelva a enganchar «mientras tanto», y de ahí no sale más.
+ *
+ * Lo que había aquí lo trae ahora `nc_hoy`, leyendo el libro de cada
+ * cliente.
+ */
 
 const GRADS = [
   {nm:'Camila Estrada', ini:'CE', est:'Certificada', nota:'89%', disp:true,  pref:'Gestora de pedidos'},
@@ -884,7 +883,7 @@ let activeSt = 'gt';
  * La huella sale del contenido del archivo: cambia sola con cada cambio,
  * aunque sean dos versiones el mismo día.
  */
-const VERSION_PANTALLA = '2026-09-24 · 9220';
+const VERSION_PANTALLA = '2026-09-24 · 7593';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -2042,8 +2041,15 @@ async function crearClienteReal() {
  * Mismo criterio que en Empresarial: marcar lo inventado es lo único que
  * permite creerle a lo que no lo está. Se saca de aquí al conectarlo.
  */
-const EJEMPLO_CENTRAL = ['dash-kpis', 'dash-bottom',
-                         'pipe-grads', 'pipe-pos'];
+/**
+ * `dash-kpis` y `dash-bottom` salieron de esta lista: ya leen las hojas
+ * de verdad, por `nc_hoy`. Quedan el pipeline de novAcademy y sus
+ * posiciones, que siguen siendo ejemplo y por eso siguen marcados.
+ *
+ * La regla no cambia: marcar lo inventado es lo único que permite
+ * creerle a lo que no lo está. Lo que cambia es que ya hay menos.
+ */
+const EJEMPLO_CENTRAL = ['pipe-grads', 'pipe-pos'];
 
 function sellarEjemploCentral() {
   EJEMPLO_CENTRAL.forEach(function (id) {
@@ -2450,46 +2456,227 @@ async function guardarAlcance() {
   abrirProyecto(PR_ID);
 }
 
-/* ─── DASHBOARD ─── */
-function buildDashboard(){
-  const tabs = document.getElementById('store-tabs');
-  tabs.innerHTML = TIENDAS.map(t =>
-    `<div class="stab" id="stab-${t.id}" onclick="switchStore('${t.id}')">${t.nm}</div>`
-  ).join('');
-  switchStore('gt');
+/* ═══════════════════════════════════════════════════════════════
+     LA RED · las tiendas de Nova, leídas de sus hojas
+   ═══════════════════════════════════════════════════════════════
+
+   ┌─ LO QUE HABÍA AQUÍ ────────────────────────────────────────┐
+   │                                                            │
+   │ Cifras inventadas —Q 284.500, 342 pedidos, 88%— y tres     │
+   │ personas inventadas: Daniela R., Camila R., Katherin P.    │
+   │ Todo salía de una constante `TIENDAS` escrita a mano, con  │
+   │ un cartel de EJEMPLO encima.                               │
+   │                                                            │
+   │ Ella: «¿cómo que aún no lee la hoja? Recuerda que Central  │
+   │ es la RED que conecta todo con todos».                     │
+   │                                                            │
+   └────────────────────────────────────────────────────────────┘
+
+   ┌─ CÓMO LEE LA RED ──────────────────────────────────────────┐
+   │                                                            │
+   │ Central no tiene datos propios de ninguna tienda. Tiene la │
+   │ lista de clientes y, de cada uno, el id del libro SUYO.    │
+   │                                                            │
+   │   Central ──▶ Clientes ──▶ sheet_id ──▶ el libro del       │
+   │                                          cliente           │
+   │                                                            │
+   │ Los números salen de `agregarMes`, la MISMA función que    │
+   │ usa Nova Empresarial. No una copia: la misma. Si fueran    │
+   │ dos cuentas, Central y Empresarial podrían decir cifras    │
+   │ distintas de la misma tienda el mismo día.                 │
+   │                                                            │
+   └────────────────────────────────────────────────────────────┘ */
+
+/**
+ * «Acción desconocida» significa siempre lo mismo: la hoja está
+ * corriendo una versión anterior a esta pantalla. Decirlo así evita
+ * que ella salga a buscar un fallo que no existe.
+ */
+function errorCentral(err) {
+  const e = String(err || 'Sin datos.');
+  if (/Acci(ó|o)n desconocida/i.test(e)) {
+    return 'Tu Apps Script todavía tiene el código viejo y no conoce esta parte. ' +
+      'Pega NOVA-COMPLETO.gs, guarda, corre bootstrapTodo() una vez y vuelve a ' +
+      'implementar con Versión: Nueva. La URL no cambia.';
+  }
+  return e;
 }
-function switchStore(id){
-  activeSt = id;
-  const t = TIENDAS.find(x => x.id === id);
-  document.querySelectorAll('.stab').forEach(el => el.classList.remove('on'));
-  document.getElementById('stab-'+id).classList.add('on');
 
-  document.getElementById('dash-kpis').innerHTML = `
-    <div class="kpi"><div class="kpi-lbl">Ventas del mes</div><div class="kpi-val gold">${t.sym}${t.ventas.toLocaleString('es')}</div><div class="kpi-sub">${t.mon}</div></div>
-    <div class="kpi"><div class="kpi-lbl">Pedidos</div><div class="kpi-val">${t.pedidos}</div><div class="kpi-sub">este mes</div></div>
-    <div class="kpi"><div class="kpi-lbl">Efectividad</div><div class="kpi-val">${t.efectividad}%</div><div class="kpi-sub">entregas exitosas</div></div>
-    <div class="kpi"><div class="kpi-lbl">Novedades activas</div><div class="kpi-val">${t.novedades}</div><div class="kpi-sub">en gestión</div></div>
-  `;
+let HOY_RED = null;
 
-  document.getElementById('dash-bottom').innerHTML = `
-    <div class="card">
-      <div class="card-ttl">Equipo · ${t.nm}</div>
-      ${t.team.map(u => `
-        <div class="row-item">
-          <div class="ava ava-muted" style="width:34px;height:34px">${u.ini}</div>
-          <div style="flex:1"><div class="row-nm">${u.nm}</div><div class="row-sub">${u.rol === 'admin' ? 'Administradora' : 'Gestora'}</div></div>
-          <span class="bd ${u.rol==='admin'?'bd-b':'bd-a'}">${u.rol === 'admin' ? 'Admin' : 'Gestora'}</span>
-        </div>`).join('')}
-    </div>
-    <div class="card">
-      <div class="card-ttl">Acceso rápido</div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <button class="btn" onclick="go('pipeline',document.querySelector('[data-v=pipeline]'))">Pipeline novAcademy</button>
-        <button class="btn-ghost" onclick="go('onboarding',document.querySelector('[data-v=onboarding]'))">Onboarding nuevo cliente</button>
-        <button class="btn-ghost" onclick="go('demo',document.querySelector('[data-v=demo]'))">Gestionar demo</button>
-      </div>
-    </div>
-  `;
+async function cargarRed(cliente, tienda) {
+  const kpis = document.getElementById('dash-kpis');
+  const abajo = document.getElementById('dash-bottom');
+  if (!kpis) return;
+  kpis.innerHTML = '<div class="nc-vacio">Leyendo las hojas de tus clientes…</div>';
+  if (abajo) abajo.innerHTML = '';
+
+  let r;
+  try { r = await nc('nc_hoy', { cliente: cliente || '', tienda: tienda || '' }); }
+  catch (e) {
+    kpis.innerHTML = '<div class="nc-vacio">No pude hablar con la hoja: ' +
+      escC(e && e.message || e) + '</div>';
+    return;
+  }
+  if (!r || !r.ok) {
+    kpis.innerHTML = '<div class="nc-vacio">' +
+      escC(errorCentral(r && r.error)) + '</div>';
+    return;
+  }
+  HOY_RED = r;
+  try { pintarRed(); }
+  catch (e) {
+    kpis.innerHTML = '<div class="nc-vacio">Traje los datos pero no los pude dibujar: ' +
+      escC(e && e.message || e) + '</div>';
+  }
+}
+
+function pintarRed() {
+  const R = HOY_RED;
+
+  /* ── Las pestañas: primero el cliente, después su tienda ── */
+  const tabs = document.getElementById('store-tabs');
+  if (tabs) {
+    tabs.innerHTML =
+      (R.clientes.length > 1
+        ? R.clientes.map(function (c) {
+            return '<div class="stab' +
+              (R.cliente && c.id === R.cliente.id ? ' on' : '') + '"' +
+              (c.sinLibro ? ' title="Este cliente todavía no tiene libro"' : '') +
+              ' onclick="cargarRed(\'' + c.id + '\', \'\')">' + escC(c.empresa) +
+              (c.sinLibro ? ' ·' : '') + '</div>';
+          }).join('')
+        : '') +
+      R.tiendas.map(function (t) {
+        return '<div class="stab' + (t.id === R.tienda ? ' on' : '') + '" ' +
+          'onclick="cargarRed(\'' + (R.cliente ? R.cliente.id : '') + '\', \'' +
+          t.id + '\')">' + escC(t.nombre) + '</div>';
+      }).join('');
+  }
+
+  /* ── Los cuatro números, o el hueco con su explicación ── */
+  const kpis = document.getElementById('dash-kpis');
+  const K = R.kpis;
+  const nf = function (n) { return Number(n || 0).toLocaleString('es'); };
+
+  if (!K) {
+    /**
+     * Se dicen TODOS los porqués, no solo el primero. Cuando falta algo
+     * suelen ser dos cosas encadenadas —«no hay clientes» y «cuando
+     * crees el primero, aquí salen sus números»— y la segunda es la
+     * que dice qué hacer.
+     */
+    kpis.innerHTML = '<div class="nc-vacio">' +
+      (R.avisos.length ? escC(R.avisos.join(' ')) 
+                       : 'Todavía no hay de dónde leer estos números.') + '</div>';
+  } else if (K.vacio) {
+    kpis.innerHTML = '<div class="nc-vacio">' + escC(R.tiendaNombre || '') +
+      ' no tiene pedidos importados este mes. En cuanto importes, aquí salen sus ' +
+      'números de verdad — los mismos que ve Nova Empresarial.</div>';
+  } else {
+    kpis.innerHTML =
+      '<div class="kpi"><div class="kpi-lbl">Ventas del mes</div>' +
+        '<div class="kpi-val gold">' + escC(K.moneda) + ' ' + nf(K.ventas) + '</div>' +
+        '<div class="kpi-sub">solo lo entregado</div></div>' +
+      '<div class="kpi"><div class="kpi-lbl">Pedidos</div>' +
+        '<div class="kpi-val">' + nf(K.pedidos) + '</div>' +
+        '<div class="kpi-sub">' + nf(K.enCamino) + ' todavía en camino</div></div>' +
+      /**
+       * La efectividad NO se calcula sobre todos los pedidos: sobre los
+       * que ya terminaron. Contarla sobre todos castiga a una tienda por
+       * tener pedidos en camino —que a mitad de mes es lo normal— y da
+       * un número que baja solo por vender más.
+       *
+       * Y si no ha terminado ninguno, se dice. No es 0%: es que aún no
+       * se sabe, y son dos cosas muy distintas.
+       */
+      '<div class="kpi"><div class="kpi-lbl">Efectividad</div>' +
+        '<div class="kpi-val">' +
+          (K.efectividad === null ? '—' : K.efectividad + '%') + '</div>' +
+        '<div class="kpi-sub">' +
+          (K.efectividad === null
+            ? 'ninguno ha terminado aún'
+            : 'sobre ' + nf(K.efectividadSobre) + ' ya cerrados') + '</div></div>' +
+      '<div class="kpi"><div class="kpi-lbl">Novedades del mes</div>' +
+        '<div class="kpi-val">' + nf(K.novedades) + '</div>' +
+        '<div class="kpi-sub">' +
+          (K.sinMover ? nf(K.sinMover) + ' sin mover 3 días' : 'ninguna detenida') +
+        '</div></div>';
+  }
+
+  /* ── El equipo de verdad, y los accesos ── */
+  const abajo = document.getElementById('dash-bottom');
+  if (!abajo) return;
+
+  const fecha = function (iso) {
+    if (!iso) return '';
+    const p = String(iso).slice(0, 10).split('-');
+    return p.length === 3 ? p[2] + '/' + p[1] : String(iso);
+  };
+
+  abajo.innerHTML =
+    '<div class="card">' +
+      '<div class="card-ttl">Equipo · ' + escC(R.tiendaNombre || '—') + '</div>' +
+      (R.equipo.length
+        ? R.equipo.map(function (u) {
+            const ini = u.nombre.split(/\s+/).map(function (x) { return x[0]; })
+                         .slice(0, 2).join('').toUpperCase();
+            return '<div class="row-item">' +
+              '<div class="ava ava-muted" style="width:34px;height:34px">' + escC(ini) + '</div>' +
+              '<div style="flex:1"><div class="row-nm">' + escC(u.nombre) + '</div>' +
+              '<div class="row-sub">' +
+                (u.ultimaConexion ? 'Entró el ' + escC(fecha(u.ultimaConexion))
+                                  : 'Nunca ha entrado') + '</div></div>' +
+              '<span class="bd ' + (u.rol === 'dueno' || u.rol === 'admin' ? 'bd-b' : 'bd-a') +
+                '">' + escC(u.rol) + '</span></div>';
+          }).join('')
+        : '<div class="nc-vacio">No hay nadie asignado a esta tienda en la hoja Equipo.</div>') +
+    '</div>' +
+    '<div class="card">' +
+      '<div class="card-ttl">La red</div>' +
+      '<div class="row-item"><div style="flex:1"><div class="row-nm">Clientes activos</div>' +
+        '<div class="row-sub">' + R.red.conLibro + ' con libro' +
+        (R.red.sinLibro ? ' · ' + R.red.sinLibro + ' sin libro todavía' : '') +
+        '</div></div><span class="bd bd-b">' + R.red.clientes + '</span></div>' +
+      (R.alarmas.length
+        ? R.alarmas.slice(0, 3).map(function (a) {
+            return '<div class="row-item"><div style="flex:1">' +
+              '<div class="row-nm">' + escC(a.titulo || a.nombre) + '</div>' +
+              '<div class="row-sub">' + escC(a.detalle || '') + '</div></div>' +
+              '<span class="bd ' + (a.nivel === 'mal' ? 'bd-r' : 'bd-a') + '">' +
+              (a.casos || '') + '</span></div>';
+          }).join('')
+        : '<div class="row-item"><div style="flex:1">' +
+          '<div class="row-nm">Sin alarmas</div>' +
+          '<div class="row-sub">Nada que apagar hoy en esta tienda.</div></div></div>') +
+      '<div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">' +
+        '<button class="btn" onclick="go(\'clientes\',document.querySelector(\'[data-v=clientes]\'))">Ver mis clientes</button>' +
+        '<button class="btn-ghost" onclick="go(\'onboarding\',document.querySelector(\'[data-v=onboarding]\'))">Onboarding nuevo cliente</button>' +
+      '</div>' +
+    '</div>';
+
+  /* ── Lo que no se pudo leer, dicho ── */
+  if (R.avisos.length) {
+    abajo.insertAdjacentHTML('beforebegin', '');
+    const caja = document.createElement('div');
+    caja.className = 'nc-vacio';
+    caja.style.marginTop = '10px';
+    caja.textContent = R.avisos.join('  ·  ');
+    abajo.parentNode.insertBefore(caja, abajo.nextSibling);
+  }
+}
+
+/**
+ * `buildDashboard` y `switchStore` se conservan con el mismo nombre
+ * porque el resto de la pantalla los llama. Ahora solo delegan: el
+ * dashboard pide la red, y cambiar de tienda la vuelve a pedir con la
+ * tienda elegida.
+ */
+function buildDashboard() {
+  cargarRed('', '');
+}
+function switchStore(id) {
+  cargarRed(HOY_RED && HOY_RED.cliente ? HOY_RED.cliente.id : '', id);
 }
 
 /* ─── TIENDAS ─── */

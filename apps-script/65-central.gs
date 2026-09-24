@@ -87,6 +87,7 @@ function manejarCentral(accion, p) {
 
   switch (accion) {
     case 'nc_yo':       return { ok: true, sesion: publicoCentral(s) };
+    case 'nc_hoy':      return centralHoy(s, p);
     case 'nc_clientes': return centralClientes(s, p);
     case 'nc_planes':   return centralPlanes(s, p);
     case 'nc_crear':    return centralCrearCliente(s, p);
