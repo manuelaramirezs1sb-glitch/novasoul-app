@@ -71,12 +71,35 @@ PANTALLAS.forEach(function (archivo) {
   let m;
   while ((m = re.exec(h))) {
     m[1].split('\n').forEach(function (l) {
+      /**
+       * Las líneas minificadas no cuentan. `nova-demo.html` lo arma
+       * construir-demo.py y trae librerías comprimidas, donde `var n`
+       * y `var o` aparecen veinte veces en una sola línea de ocho mil
+       * letras. Eso no es código que alguien vaya a leer ni a romper.
+       */
+      if (l.length > 400) return;
       // Solo las del margen izquierdo: las de dentro de una función
       // están en otro ámbito y repetirlas es legal.
       const d = l.match(/^(let|const|var|function)\s+([A-Za-z_$][\w$]*)/);
       if (!d) return;
       const nombre = d[2];
-      if (vistos[nombre] && (d[1] !== 'var' && d[1] !== 'function')) repes.push(nombre);
+      /**
+       * ── POR QUÉ `function` TAMBIÉN CUENTA ──
+       *
+       * La primera versión de esta prueba excluía `var` y `function`,
+       * «porque redeclararlos es legal». Legal sí; inofensivo no.
+       *
+       * Dos `function porMoneda` en el mismo ámbito NO dan error: la
+       * segunda REEMPLAZA a la primera en silencio. Eso fue exactamente
+       * lo que pasó — se agregó una `porMoneda(o, signo)` nueva para la
+       * pantalla de plata y se cargó la `porMoneda(obj, vacio)` vieja
+       * que usaban otras seis partes, que empezaron a pintar el texto
+       * de «cuando está vacío» como si fuera un prefijo del monto.
+       *
+       * Ningún error en consola, ninguna pantalla en blanco: solo
+       * números mal escritos. Por eso ahora cuentan los cuatro.
+       */
+      if (vistos[nombre]) repes.push(nombre + ' (' + vistos[nombre] + ' y ' + d[1] + ')');
       vistos[nombre] = d[1];
     });
   }

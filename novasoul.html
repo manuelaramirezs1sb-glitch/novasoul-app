@@ -965,7 +965,7 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-24 · 7f76';
+const VERSION_PANTALLA = '2026-09-24 · 128d';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
@@ -1009,10 +1009,25 @@ function cuando(dias) {
   const f = -dias;
   return (f === 1 ? 'falta 1 día' : 'faltan ' + f + ' días');
 }
+/**
+ * Una suma por moneda, sin mezclarlas jamás.
+ *
+ * Hubo un momento en que existieron DOS funciones con este nombre: esta
+ * y otra que se agregó para la pantalla de plata. Dos `function` con el
+ * mismo nombre no dan error — la segunda reemplaza a la primera en
+ * silencio— y las seis partes que usaban el segundo parámetro como
+ * «qué decir cuando está vacío» empezaron a imprimirlo como prefijo del
+ * monto. Hay una sola, y pruebas/sintaxis.js vigila que siga siendo una.
+ *
+ * El orden pone COP primero porque es la moneda en la que vive: cuando
+ * hay tres, la suya es la que tiene que leerse sin buscarla.
+ */
 function porMoneda(obj, vacio) {
   const ks = Object.keys(obj || {});
   if (!ks.length) return vacio || 'sin definir';
-  return ks.map(function (k) { return k + ' ' + nfmt(obj[k]); }).join(' · ');
+  return ks.sort(function (a, b) {
+    return a === 'COP' ? -1 : b === 'COP' ? 1 : (a < b ? -1 : 1);
+  }).map(function (k) { return k + ' ' + nfmt(obj[k]); }).join(' · ');
 }
 
 // ── API ───────────────────────────────────────────────
@@ -1212,17 +1227,18 @@ async function precargarTodo() {
   if (!RUT && r.rutina && r.rutina.ok) RUT = r.rutina;
   if (!UNI && r.materias && r.materias.ok) UNI = r.materias;
 
-  // Y si ya está abierta alguna, se pinta con lo que acaba de llegar.
-  try {
-    const abierta = function (v) {
-      const el = document.getElementById('v-' + v);
-      return el && el.classList.contains('on');
-    };
-    if (PLATA && abierta('plata')) { pintarMes(); pintarOrden(); pintarFinanzas(); }
-    if (CI && abierta('cielo')) { pintarCielo(); pintarEjes(); cargarLectura(LEC_RANGO); }
-    if (RUT && abierta('rutina')) pintarRutina();
-    if (UNI && abierta('uni')) pintarUni();
-  } catch (e) { /* una sección que no pinta no puede tumbar las otras */ }
+  /**
+   * Y si ya está abierta alguna, se pinta con lo que acaba de llegar.
+   *
+   * Se pasa por `abrirSeccion`, el mismo camino que usa el menú, para
+   * que solo exista UNA definición de «pintar esta sección». Cuando
+   * había dos, la del menú se quedó sin actualizar y fue justo la que
+   * dejó la pantalla en blanco.
+   */
+  ['plata', 'cielo', 'rutina', 'uni'].forEach(function (v) {
+    const el = document.getElementById('v-' + v);
+    if (el && el.classList.contains('on')) abrirSeccion(v);
+  });
 
   /**
    * Lo que no pudo venir se dice, en vez de dejar una sección en
@@ -1889,15 +1905,6 @@ async function cargarPlata() {
    │                                                            │
    └────────────────────────────────────────────────────────────┘ */
 
-/** Una suma por moneda, escrita sin mezclarlas jamás. */
-function porMoneda(o, signo) {
-  const ks = Object.keys(o || {});
-  if (!ks.length) return '—';
-  return ks.sort(function (a, b) { return a === 'COP' ? -1 : 1; }).map(function (k) {
-    return (signo || '') + k + ' ' + nfmt(o[k]);
-  }).join('  ·  ');
-}
-
 function pintarOrden() {
   const O = PLATA.orden;
   if (!O) { document.getElementById('pl-orden').innerHTML = ''; return; }
@@ -1910,7 +1917,7 @@ function pintarOrden() {
   const cab = function (id, total, extra) {
     const i = info[id] || { nombre: id, que: '' };
     return '<div class="card-h"><span class="card-lbl">' + esc(i.nombre.toUpperCase()) + '</span>' +
-      '<span class="fila-m">' + porMoneda(total) + '</span></div>' +
+      '<span class="fila-m">' + porMoneda(total, '—') + '</span></div>' +
       '<p class="card-p" style="margin-bottom:10px;">' + esc(i.que) + '</p>' + (extra || '');
   };
 
@@ -1930,7 +1937,7 @@ function pintarOrden() {
   /* ── 1 · LO QUE ENTRA ── */
   html += '<div class="card-sage" style="margin-bottom:18px;">' +
     '<div class="card-h"><span class="card-lbl-sage">LO QUE ENTRA</span>' +
-    '<span class="fila-m">' + porMoneda(B.entra.turnos) + '</span></div>' +
+    '<span class="fila-m">' + porMoneda(B.entra.turnos, 'nada aún') + '</span></div>' +
     '<p class="card-p" style="margin-bottom:10px;">' + esc(info.entra.que) + '</p>' +
     (B.entra.lineas.length ? B.entra.lineas.map(function (l) { return linea(l); }).join('') : '') +
     (B.entra.turnosPorVenir
@@ -1949,17 +1956,17 @@ function pintarOrden() {
       ? B.fijo.lineas.map(function (l) { return linea(l); }).join('') +
         '<div style="border-top:1px solid var(--soft2);margin-top:10px;padding-top:10px;">' +
         '<div class="fila"><span class="fila-t">Ya se pagó este mes</span>' +
-          '<span class="fila-m">' + porMoneda(B.fijo.pagado) + '</span></div>' +
+          '<span class="fila-m">' + porMoneda(B.fijo.pagado, 'nada todavía') + '</span></div>' +
         '<div class="fila"><span class="fila-t">Falta por pagar</span>' +
           '<span class="fila-m" style="color:var(--rojo);">' +
-          porMoneda(B.fijo.pendiente) + '</span></div></div>'
+          porMoneda(B.fijo.pendiente, 'nada') + '</span></div></div>'
       : '<div class="vacio">Todavía no has puesto ningún gasto de todos los meses.</div>') +
     '</div>';
 
   /* ── 3 · CUOTAS Y DEUDAS ── */
   html += '<div class="card-lila" style="margin-bottom:18px;">' +
     '<div class="card-h"><span class="card-lbl-lila">CUOTAS Y DEUDAS</span>' +
-    '<span class="fila-m">' + porMoneda(B.cuotas.total) + ' al mes</span></div>' +
+    '<span class="fila-m">' + porMoneda(B.cuotas.total, '—') + ' al mes</span></div>' +
     '<p class="card-p" style="margin-bottom:10px;">' + esc(info.cuotas.que) + '</p>' +
     (B.cuotas.lineas.length
       ? B.cuotas.lineas.map(function (l) {
@@ -1998,7 +2005,7 @@ function pintarOrden() {
         '<div style="border-top:1px solid var(--soft2);margin-top:12px;padding-top:12px;">' +
           '<div class="fila"><span class="fila-t"><strong>Lo que falta por pagar en total</strong>' +
             '<br><span style="color:var(--mut3);font-size:12px;">No este mes: TODO lo que queda.' +
-            '</span></span><span class="fila-m">' + porMoneda(B.cuotas.faltaTodo) + '</span></div>' +
+            '</span></span><span class="fila-m">' + porMoneda(B.cuotas.faltaTodo, 'no se puede calcular') + '</span></div>' +
           (B.cuotas.ultima
             ? '<div class="fila"><span class="fila-t">La última en acabarse</span>' +
               '<span class="chip hoy">' + esc(fmes(B.cuotas.ultima)) + '</span></div>'
@@ -2046,7 +2053,7 @@ function pintarOrden() {
     (Object.keys(B.ahorro.total || {}).length
       ? '<div class="fila" style="margin-top:10px;"><span class="fila-t">Ahorro' +
         '<br><span style="color:var(--mut3);font-size:12px;">Va aparte: no es un gasto.</span>' +
-        '</span><span class="fila-m">' + porMoneda(B.ahorro.total) + '</span></div>'
+        '</span><span class="fila-m">' + porMoneda(B.ahorro.total, '—') + '</span></div>'
       : '') + '</div>';
 
   /* ── LO QUE NOVA SUPUSO, para que ella lo corrija ── */
@@ -3965,12 +3972,70 @@ function go(view, el) {
     if (m) m.classList.add('on');
   }
   cerrarMenu();
-  // Las dos secciones lentas se traen cuando se abren, no al arrancar.
-  if (view === 'plata' && !PLATA) cargarPlata();
-  if (view === 'uni' && !UNI) cargarUni();
-  if (view === 'rutina' && !RUT) cargarRutina();
-  if (view === 'cielo' && !CI) cargarCielo();
-  if (view === 'family' && !FAM) cargarFamily();
+  abrirSeccion(view);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+     ABRIR UNA SECCIÓN: TRAERLA, O PINTAR LA QUE YA ESTÁ
+   ═══════════════════════════════════════════════════════════════
+
+   ┌─ EL ERROR QUE ESTO ARREGLA ────────────────────────────────┐
+   │                                                            │
+   │ Antes esto era una línea por sección:                      │
+   │                                                            │
+   │     if (view === 'cielo' && !CI) cargarCielo();            │
+   │                                                            │
+   │ Y funcionaba, porque `CI` solo se llenaba DENTRO de        │
+   │ `cargarCielo`, que además pintaba. Traer y pintar eran la  │
+   │ misma cosa.                                                │
+   │                                                            │
+   │ Al agregar la precarga —una sola petición que trae las     │
+   │ cinco secciones al entrar— eso dejó de ser cierto: `CI` se │
+   │ llenaba por otro camino, la condición `!CI` daba falso, y  │
+   │ entonces al abrir El cielo NO se llamaba a nadie. Los      │
+   │ datos estaban en memoria y la pantalla en blanco.          │
+   │                                                            │
+   │ Ella lo vio así: «ya no me carga NovaSoul, ni Universidad  │
+   │ ni Cielo me carga».                                        │
+   │                                                            │
+   │ La causa de fondo era juntar dos cosas distintas en una    │
+   │ sola condición. Aquí van separadas: si no hay datos, se    │
+   │ traen; si ya están, se pintan. Nunca ninguna de las dos    │
+   │ es «no hacer nada».                                        │
+   │                                                            │
+   └────────────────────────────────────────────────────────────┘ */
+
+const SECCIONES = {
+  plata:  { hay: function () { return PLATA; }, traer: function () { return cargarPlata(); },
+            pintar: function () { pintarMes(); pintarOrden(); pintarFinanzas(); } },
+  uni:    { hay: function () { return UNI; },   traer: function () { return cargarUni(); },
+            pintar: function () { pintarUni(); } },
+  rutina: { hay: function () { return RUT; },   traer: function () { return cargarRutina(); },
+            pintar: function () { pintarRutina(); } },
+  cielo:  { hay: function () { return CI; },    traer: function () { return cargarCielo(); },
+            pintar: function () {
+              pintarCielo(); pintarEjes();
+              // La lectura viaja aparte; si todavía no llegó, se pide.
+              if (!LEC) cargarLectura(LEC_RANGO); else pintarLectura();
+            } },
+  family: { hay: function () { return FAM; },   traer: function () { return cargarFamily(); },
+            pintar: function () { pintarFamily(); } },
+};
+
+function abrirSeccion(view) {
+  const S = SECCIONES[view];
+  if (!S) return;
+  if (!S.hay()) { S.traer(); return; }
+  try { S.pintar(); }
+  catch (e) {
+    /**
+     * Si lo que hay en memoria no se puede pintar, se vuelve a traer
+     * en vez de dejarla mirando una sección vacía. Una pantalla en
+     * blanco y una que todavía carga se ven exactamente igual, y esa
+     * confusión ya costó una ronda entera.
+     */
+    S.traer();
+  }
 }
 function abrirMenu() {
   document.getElementById('sidebar').classList.add('open');
