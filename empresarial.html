@@ -1825,14 +1825,16 @@ input.li:focus{border-color:var(--acc-d);}
               dar acceso a nadie.</span></div>
             <div><b>Admin</b><span>Opera la tienda y ve al equipo. El dinero no,
               salvo que se lo actives.</span></div>
-            <div><b>Gestora</b><span>Solo los pedidos y novedades que tiene
-              asignados. No ve los de las demás ni el dinero.</span></div>
+            <div><b>Gestora</b><span>Todo lo de las tiendas que le asignes:
+              pedidos, novedades y CAS. Nunca el dinero, ni nada de una tienda
+              que no sea suya. Varias personas pueden compartir tienda.</span></div>
           </div>
           <p style="font:500 11.5px/1.55 'DM Sans';color:var(--t-mut2);
             border-top:1px solid var(--s-line2);padding-top:12px;margin:0;">
-            Lo que nadie tenga asignado lo sigues viendo tú. Así la herramienta
-            sirve igual el primer día, sin equipo, que cuando ya tienes dos
-            gestoras y una admin.</p>
+            No hay que repartir pedidos uno por uno: se asignan <strong>tiendas</strong>.
+            Quien tiene una tienda ve todo lo de esa tienda, y eso incluye lo que lleva
+            días sin que nadie lo toque — que es justo lo que se perdía cuando había
+            que asignarlo primero.</p>
         </div>
       </div>
 
@@ -4322,130 +4324,73 @@ async function cargarReparto() {
 }
 
 /**
- * La barra de reparto, arriba de la tabla de pedidos.
+ * Quién trabaja esta tienda, arriba de la tabla.
  *
- * El número que manda es «sin asignar»: mientras sea todo el total,
- * tener equipo no sirve de nada. Por eso va primero y en grande, y no
- * escondido entre estadísticas del equipo.
+ * ── ESTO ERA UNA BARRA PARA REPARTIR PEDIDOS ──
+ *
+ * Tenía un selector de persona y un botón de «asignarle los N de la
+ * lista». Funcionaba, estaba probado, y sobraba — porque la pregunta
+ * estaba mal planteada:
+ *
+ *   «de nada sirve asignar pedidos si ya asignaste la tienda. No se
+ *    asignan pedidos, se asignan tiendas. Y dos gestores o más pueden
+ *    tener la misma tienda asignada».
+ *
+ * Ahora no pide nada: informa. Quién tiene esta tienda, cuánto lleva
+ * hecho cada quien —incluidas las personas que solo existen como
+ * nombre en un archivo viejo— y cuántos casos no ha tocado nadie.
  */
 function pintarReparto() {
   const caja = document.getElementById('ped-reparto');
   if (!caja) return;
   if (!PUEDE_ASIGNAR() || !REPARTO) { caja.innerHTML = ''; return; }
   const R = REPARTO;
+  const nombreTienda = (STORES[ST] || {}).name || ST;
 
-  if (!ASIGNABLES.filter(function (g) { return g.rol === 'gestora' || g.rol === 'admin'; }).length) {
-    caja.innerHTML = '<div class="eq-vacio">Todavía no tienes a nadie más en el equipo. ' +
-      'Cuando agregues a alguien en <strong>Permisos</strong>, aquí vas a poder repartirle ' +
-      'pedidos — y hasta que no se los repartas, esa persona entra y no ve nada.</div>';
-    return;
-  }
-
-  const chip = function (g) {
-    return '<span class="bd ' + (g.abiertos ? 'bd-a' : 'bd-g') + '">' +
-      esc(g.nombre.split(' ')[0]) + ' · ' + g.abiertos + ' abiertos</span>';
-  };
+  const equipo = (R.gente || []).filter(function (g) {
+    return g.rol === 'gestora' || g.rol === 'admin';
+  });
 
   caja.innerHTML = '<div class="card">' +
-    '<div class="card-h"><span class="ct">Repartir el trabajo</span>' +
-      '<span class="bd ' + (R.sinAsignar ? 'bd-w' : 'bd-g') + '">' +
-      R.sinAsignar + ' sin asignar de ' + R.total + '</span></div>' +
-    (R.sinAsignar
+    '<div class="card-h"><span class="ct">Quién trabaja ' + esc(nombreTienda) + '</span>' +
+      (R.sinTocar
+        ? '<span class="bd bd-w">' + R.sinTocar + ' sin tocar de ' + R.total + '</span>'
+        : '<span class="bd bd-g">todo tocado</span>') + '</div>' +
+
+    (equipo.length
       ? '<p style="font:500 12.5px/1.6 \'DM Sans\';color:var(--t-mut);margin:0 0 10px;">' +
-        'Lo que nadie tiene asignado lo sigues viendo tú, pero <strong>nadie más</strong>. ' +
-        'Una gestora que no tiene pedidos asignados entra y ve la pantalla vacía.</p>'
-      : '') +
-    '<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;">' +
-      ASIGNABLES.map(chip).join('') + '</div>' +
-    (R.aNadieConocido && R.aNadieConocido.length
-      ? '<div class="eq-vacio" style="margin-bottom:12px;">Hay pedidos asignados a ' +
-        R.aNadieConocido.map(function (x) {
-          return '<strong>' + esc(x.nombre) + '</strong> (' + x.pedidos + ')';
-        }).join(', ') + ', que no está en tu equipo. <strong>Nadie los está viendo.</strong> ' +
-        'Reasígnalos o agrega a esa persona en Permisos.</div>'
-      : '') +
-    '<div class="row-btns" style="align-items:center;flex-wrap:wrap;">' +
-      '<select class="cm-sel" id="rep-quien" style="max-width:220px;">' +
-        '<option value="">— elige a quién —</option>' +
-        ASIGNABLES.map(function (g) {
-          return '<option value="' + esc(g.id) + '">' + esc(g.nombre) + '</option>';
-        }).join('') + '</select>' +
-      '<button class="btn" onclick="repartirVisibles()">Asignarle los ' +
-        (PEDS_VISTA || []).length + ' de la lista</button>' +
-      '<button class="btn-ghost" onclick="repartirVisibles(true)">Quitarles asignación</button>' +
-    '</div>' +
-    '<p style="font:500 11.5px/1.55 \'DM Sans\';color:var(--t-mut2);margin:9px 0 0;">' +
-      'Se aplica a los pedidos que ves en la tabla ahora mismo, con los filtros que ' +
-      'tengas puestos. Filtra primero, reparte después.</p>' +
-    '<div id="rep-msg" class="mt-msg" style="display:none"></div>' +
-  '</div>';
-}
+        'Todas ven <strong>toda</strong> la tienda: sus pedidos, sus novedades y sus ' +
+        'CAS. No hay que repartir nada.</p>' +
+        '<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;">' +
+        equipo.map(function (g) {
+          return '<span class="bd bd-b">' + esc(g.nombre) + '</span>';
+        }).join('') + '</div>'
+      : '<div class="eq-vacio" style="margin-bottom:12px;">Todavía no tienes a nadie ' +
+        'más en esta tienda. En <strong>Permisos</strong> agregas a tu equipo y le ' +
+        'marcas en qué tiendas trabaja — puede ser en varias.</div>') +
 
-/** Asignar UN pedido, desde su panel de detalle. */
-async function asignarPedido() {
-  const sel = document.getElementById('pd-gestora');
-  if (!sel || !PED_SEL_ID) return;
-  const antes = sel.value;
-  sel.disabled = true;
-  try {
-    const r = await api('asignar', { ids: [PED_SEL_ID], a: antes, tienda: ST });
-    if (!r || !r.ok) { showToast((r && r.error) || 'No se pudo asignar'); return; }
     /**
-     * Se recarga la lista en vez de escribir el nombre a mano en la
-     * memoria del navegador. Lo que vale es lo que quedó en la hoja —
-     * pintar un cambio que no se guardó es el peor error posible aquí,
-     * porque se ve idéntico a que sí se guardó.
+     * Cuánto lleva hecho cada quien. Sale de `gestionado_por`, que se
+     * llena solo cuando alguien toca un caso, y también viene escrito
+     * en los archivos históricos. Por eso aquí pueden aparecer nombres
+     * sin cuenta: son los de antes de Nova, y cuentan igual.
      */
-    await cargarPedidosReales();
-    await cargarReparto();
-    showToast(r.desasignado ? 'Quedó sin asignar'
-                            : 'Asignado a ' + r.a +
-                              (r.novedades ? ' · y sus ' + r.novedades + ' novedades' : ''));
-  } catch (e) { showToast('Sin conexión: no se asignó'); }
-  finally { sel.disabled = false; }
-}
-
-/** Asignar TODO lo que está a la vista, con los filtros puestos. */
-async function repartirVisibles(quitar) {
-  const sel = document.getElementById('rep-quien');
-  const msg = document.getElementById('rep-msg');
-  const decir = function (t, mal) {
-    if (!msg) return;
-    msg.style.display = 'block';
-    msg.textContent = t;
-    msg.style.color = mal ? '#b8322f' : '';
-  };
-
-  const quien = quitar ? '' : (sel ? sel.value : '');
-  if (!quitar && !quien) { decir('Primero elige a quién.', true); return; }
-
-  const ids = (PEDS_VISTA || []).map(function (p) { return p.id; });
-  if (!ids.length) { decir('No hay pedidos en la lista.', true); return; }
-  if (ids.length > 500) {
-    decir('Son ' + ids.length + ', demasiados de una vez. Filtra un poco más ' +
-          '—por estado o por fecha— y repártelos por tandas de 500.', true);
-    return;
-  }
-
-  const nombre = quitar ? '' :
-    (ASIGNABLES.filter(function (g) { return g.id === quien; })[0] || {}).nombre || '';
-  if (!confirm(quitar
-      ? '¿Quitarle la asignación a los ' + ids.length + ' pedidos de la lista?'
-      : '¿Asignarle los ' + ids.length + ' pedidos de la lista a ' + nombre + '?\n\n' +
-        'Sus novedades se van con ellos.')) return;
-
-  decir('Repartiendo…');
-  try {
-    const r = await api('asignar', { ids: ids, a: quien, tienda: ST });
-    if (!r || !r.ok) { decir((r && r.error) || 'No se pudo.', true); return; }
-    await cargarPedidosReales();
-    await cargarNovedadesReales();
-    await cargarReparto();
-    decir(r.asignados + (r.asignados === 1 ? ' pedido' : ' pedidos') +
-      (quitar ? ' sin asignar' : ' para ' + r.a) +
-      (r.novedades ? ' · ' + r.novedades + ' novedades también' : '') +
-      (r.iguales ? ' · ' + r.iguales + ' ya estaban así' : ''));
-  } catch (e) { decir('Sin conexión: no se repartió.', true); }
+    (R.etiquetas && R.etiquetas.length
+      ? '<div class="dlbl">LO QUE LLEVA HECHO CADA QUIEN</div>' +
+        R.etiquetas.slice(0, 12).map(function (e) {
+          return '<div class="fila-r"><div style="flex:1;min-width:0">' +
+            '<div class="inm">' + esc(e.nombre) +
+            (e.esUsuario ? '' : ' <span class="bd" style="background:var(--s-bg);' +
+              'color:var(--t-mut2);">sin cuenta</span>') + '</div>' +
+            '<div class="isub">' + e.abiertos + ' sin cerrar</div></div>' +
+            '<span style="font:700 17px/1 \'Fraunces\',serif;color:var(--t-ink);' +
+            'min-width:34px;text-align:right;">' + e.total + '</span></div>';
+        }).join('') +
+        '<p style="font:500 11.5px/1.55 \'DM Sans\';color:var(--t-mut2);margin:9px 0 0;">' +
+        'Los que dicen «sin cuenta» vienen del archivo que importaste, o trabajaron ' +
+        'antes de Nova. Cuentan igual.</p>'
+      : '<div class="eq-vacio">Todavía nadie ha tocado un caso en esta tienda.</div>') +
+  '</div>';
 }
 
 function pintarPanelPedido() {
@@ -4485,41 +4430,20 @@ function pintarPanelPedido() {
         esc(p.direccion || '—') + (p.ciudad ? ' · ' + esc(p.ciudad) : '') + '</div></div>' +
       '<div><div class="dlbl">PRODUCTO</div><div class="dtxt">' + esc(p.producto || '—') + '</div></div>' +
       /**
-       * ── ESTO ERA SOLO TEXTO ──
+       * ── QUIÉN LO TRABAJÓ, NO A QUIÉN SE LE ASIGNÓ ──
        *
-       * Decía «Sin asignar» y no se podía hacer nada al respecto: no
-       * había ninguna forma, en toda Nova, de poner un nombre en esta
-       * columna. Y una gestora solo ve lo que tiene asignado — o sea
-       * que entraba y no veía NADA.
+       * Aquí hubo, por un rato, un selector para asignarle el pedido a
+       * alguien. Sobró en cuanto quedó claro que se asignan TIENDAS:
+       * todas las gestoras de esta tienda ya lo ven.
        *
-       * Ahora es un selector. Quien no puede repartir sigue viendo el
-       * texto, porque una gestora eligiendo sus propios pedidos
-       * convierte el reparto en una carrera por los fáciles.
+       * Lo que sí importa saber es quién le puso la mano. Nova lo anota
+       * sola la primera vez que alguien lo mueve, y respeta lo que
+       * viniera escrito en el archivo histórico.
        */
-      '<div><div class="dlbl">GESTIONA</div>' +
-        (PUEDE_ASIGNAR()
-          ? '<select class="cm-sel" id="pd-gestora" style="width:100%;margin-top:3px;" ' +
-              'onchange="asignarPedido()">' +
-              '<option value="">— sin asignar —</option>' +
-              (ASIGNABLES || []).map(function (g) {
-                return '<option value="' + esc(g.id) + '"' +
-                  (norma(g.nombre) === norma(p.gestora_asignada) ? ' selected' : '') +
-                  '>' + esc(g.nombre) + '</option>';
-              }).join('') +
-            '</select>' +
-            /**
-             * Si la columna trae un nombre que no es de nadie del
-             * equipo, el selector no lo puede mostrar y quedaría en
-             * «sin asignar» — que es mentira. Se dice.
-             */
-            (p.gestora_asignada && !(ASIGNABLES || []).filter(function (g) {
-              return norma(g.nombre) === norma(p.gestora_asignada); }).length
-              ? '<div style="font:500 11px/1.4 \'DM Sans\';color:#b8322f;margin-top:4px;">' +
-                'Dice «' + esc(p.gestora_asignada) + '», que no es nadie de tu equipo. ' +
-                'Nadie lo está viendo.</div>'
-              : '')
-          : '<div class="dtxt">' + esc(p.gestora_asignada || 'Sin asignar') + '</div>') +
-      '</div>' +
+      '<div><div class="dlbl">LO TRABAJÓ</div><div class="dtxt">' +
+        (p.gestionado_por
+          ? esc(p.gestionado_por)
+          : '<span style="color:var(--t-mut2);">Nadie todavía</span>') + '</div></div>' +
       '<div><div class="dlbl">TRANSPORTADORA</div><div class="dtxt">' +
         esc(p.transportadora || '—') + (p.guia ? '<br>' + esc(p.guia) : '') + '</div></div>' +
       '<div><div class="dlbl">ESTADO EN LA PLATAFORMA</div><div class="dtxt">' +
@@ -6246,28 +6170,39 @@ function pintarPantallasGestora() {
   /**
    * ── CERO PEDIDOS NO ES «TODO AL DÍA» ──
    *
-   * Cuando a una gestora todavía no le han asignado nada, todas las
-   * cuentas de abajo dan cero y la pantalla queda igual que si hubiera
-   * terminado su día: cuatro ceros verdes y ninguna fila.
+   * Sin nada que mostrar, todas las cuentas de abajo dan cero y la
+   * pantalla queda igual que si la persona hubiera terminado su día:
+   * cuatro ceros verdes y ninguna fila. Es el peor mensaje posible para
+   * alguien que acaba de entrar por primera vez.
    *
-   * Eso es el peor mensaje posible para alguien que acaba de entrar por
-   * primera vez: no sabe si la herramienta está rota, si hizo algo mal,
-   * o si de verdad no hay trabajo. Y va a preguntar — o peor, no va a
-   * preguntar.
+   * ── Y POR QUÉ CAMBIÓ EL TEXTO ──
    *
-   * Así que se dice, con nombre propio y con lo que tiene que pasar
-   * para que cambie. Se corta aquí: pintar cuatro ceros debajo de este
-   * mensaje solo lo contradice.
+   * Decía «todavía no tienes pedidos asignados», porque se repartían
+   * uno por uno. Ya no: se asignan TIENDAS, y quien tiene una tienda ve
+   * todo lo de esa tienda. Así que si está vacío es por una de dos
+   * razones distintas, con dos soluciones distintas: o la tienda no
+   * tiene nada importado, o esta persona no tiene ninguna tienda.
    */
   if (!mios.length) {
     const nombre = ((SESION && SESION.nombre) || '').split(' ')[0];
+    const tiendas = (SESION && SESION.tiendas) || [];
+    const cual = (STORES[ST] || {}).name || ST;
+
     const aviso = '<div class="eq-vacio" style="padding:20px;">' +
-      '<strong>Todavía no tienes pedidos asignados' + (nombre ? ', ' + esc(nombre) : '') +
-      '.</strong><br><br>' +
-      'No es que esté vacío el día ni que algo haya fallado: en Nova cada quien ve ' +
-      'solo los pedidos que le asignaron, y a ti todavía no te han asignado ninguno.' +
-      '<br><br>Quien administra la tienda te los reparte desde <strong>Pedidos → ' +
-      'Repartir el trabajo</strong>. En cuanto lo haga, aparecen aquí solos.</div>';
+      (tiendas.length
+        ? '<strong>No hay pedidos en ' + esc(cual) + ' todavía' +
+          (nombre ? ', ' + esc(nombre) : '') + '.</strong><br><br>' +
+          'Ves <strong>toda</strong> esta tienda: sus pedidos, sus novedades y sus ' +
+          'CAS. Si está vacía es porque aún no se ha importado nada' +
+          (tiendas.length > 1
+            ? ', o porque estás parada en otra tienda — puedes cambiarla arriba.'
+            : '.')
+        : '<strong>Todavía no tienes ninguna tienda asignada' +
+          (nombre ? ', ' + esc(nombre) : '') + '.</strong><br><br>' +
+          'En Nova cada quien trabaja las tiendas que le asignaron. Pídele a quien ' +
+          'administra que te ponga en la tuya, desde <strong>Permisos</strong>.') +
+      '</div>';
+
     ['g-kpi', 'g-pedkpi'].forEach(function (id) {
       const el = document.getElementById(id);
       if (el) el.innerHTML = '';
@@ -7886,7 +7821,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-25 · ee65';
+const VERSION_PANTALLA = '2026-09-25 · caba';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -9873,7 +9808,7 @@ let PUEDE_EDITAR_EQUIPO = false;
 const ROLES_EQ = [
   ['dueno', 'Dueña', 'Ve todo, incluido el dinero. Es quien da los permisos.'],
   ['admin', 'Admin', 'Opera la tienda y el equipo. No ve el dinero salvo que se lo des.'],
-  ['gestora', 'Gestora', 'Solo los pedidos y novedades que tiene asignados.'],
+  ['gestora', 'Gestora', 'Todo lo de las tiendas que le asignes. El dinero no.'],
 ];
 
 const PERMISOS_EXTRA = [
@@ -10220,12 +10155,18 @@ function showSombra(nombre) {
     return norma(x.nombre) === norma(nombre); })[0] || { nombre: nombre };
 
   /**
-   * Lo suyo se cuenta con el MISMO criterio con el que el servidor se
-   * lo enseñaría a ella: nombre o correo en `gestora_asignada`. Si aquí
-   * se contara distinto, la dueña vería un número y la gestora otro.
+   * ── LO QUE HIZO, NO LO QUE LE TOCÓ ──
+   *
+   * Antes esto contaba por `gestora_asignada`: los pedidos que alguien
+   * le había repartido. Desde que se asignan TIENDAS, esa columna ya no
+   * reparte nada y el número salía siempre en cero.
+   *
+   * Lo que tiene sentido preguntar ahora es otra cosa, y mejor: cuánto
+   * trabajo lleva hecho esta persona. Sale de `gestionado_por`, que
+   * Nova anota sola la primera vez que alguien mueve un caso.
    */
   const suyos = (PEDS_REALES || []).filter(function (p) {
-    const v = norma(p.gestora_asignada);
+    const v = norma(p.gestionado_por);
     return v && (v === norma(persona.nombre) ||
                  (persona.correo && v === norma(persona.correo)));
   });
@@ -10249,7 +10190,7 @@ function showSombra(nombre) {
       : 'nunca ha entrado');
 
   document.getElementById('som-stat').innerHTML = [
-    { k: 'Asignados', v: String(suyos.length) },
+    { k: 'Trabajados', v: String(suyos.length) },
     { k: 'Sin cerrar', v: String(abiertos.length) },
     { k: 'Entregados', v: String(entregados.length) },
     /** Sobre los RESUELTOS, no sobre todos: los que van en camino
@@ -10282,11 +10223,11 @@ function showSombra(nombre) {
     : '<div style="font:500 12px/1.5 \'DM Sans\';color:var(--t-mut2);">' +
       (suyos.length
         ? 'No le queda nada abierto.'
-        : 'No tiene ningún pedido asignado todavía. Mientras no se los repartas, ' +
-          'entra y ve la pantalla vacía.') + '</div>';
+        : 'Todavía no ha tocado ningún caso de esta tienda. No es que no tenga ' +
+          'acceso: ve la tienda entera desde que se la asignaste.') + '</div>';
 
   const novs = (NOVS_REALES || []).filter(function (n) {
-    const v = norma(n.gestora);
+    const v = norma(n.gestionado_por);
     return v && (v === norma(persona.nombre) ||
                  (persona.correo && v === norma(persona.correo))) &&
            norma(n.estado) === 'abierta';

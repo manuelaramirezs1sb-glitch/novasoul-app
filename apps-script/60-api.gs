@@ -141,7 +141,7 @@ function manejar(e, metodo) {
       case 'alarmas':   return json(apiAlarmas(s, p));
       case 'parametros':return json(apiParametros(s, p));
       case 'auditoria': return json(apiAuditoria(s, p));
-      case 'asignar':   return json(apiAsignar(s, p));
+      // `asignar` se borró: se asignan tiendas, no pedidos.
       case 'reparto':   return json(apiReparto(s, p));
       case 'auditoria_casos':   return json(apiAuditoriaCasos(s, p));
       case 'auditoria_guardar': return json(apiAuditoriaGuardar(s, p));
@@ -655,35 +655,32 @@ function prioridadEstado(v) {
 }
 
 /**
- * La gestora solo ve lo suyo. Se aplica al leer, no al pintar.
+ * ── SE ASIGNAN TIENDAS, NO PEDIDOS ──
  *
- * ── POR QUÉ SE ACEPTA EL CORREO, NO SOLO EL NOMBRE ──
+ * Aquí había un filtro que le dejaba a la gestora solo los pedidos con
+ * su nombre en `gestora_asignada`. Parecía lo prudente y estaba mal
+ * pensado. Ella lo zanjó en una frase:
  *
- * La columna `gestora_asignada` la llena Nova al repartir, pero TAMBIÉN
- * llega desde las plataformas: Dropi y Effi exportan a quien gestionó, y
- * cada una lo escribe a su manera — unas el nombre, otras el correo.
+ *   «de nada sirve asignar pedidos si ya asignaste la tienda. La
+ *    gestora de la tienda gestiona la tienda que tiene asignada: todo
+ *    lo que son pedidos, novedades y CAS. Porque si la tienda tiene
+ *    pedidos pendientes de confirmar hace más de 3 días, alguien debe
+ *    recibir esa información — y no solo la admin o la dueña».
  *
- * Emparejar solo por nombre exacto significaba que un export con el
- * correo, o con el nombre escrito distinto, dejaba a esa persona con la
- * pantalla vacía. Y una pantalla vacía no se distingue de una rota: no
- * dice «no encontré tu nombre», no dice nada.
+ * Tiene razón, y el filtro viejo producía justo lo contrario de lo que
+ * pretendía: un pedido sin repartir no lo veía NADIE salvo la dueña, y
+ * los que más tiempo llevan quietos son precisamente los que nadie
+ * tomó. El cuidado terminaba escondiendo el trabajo.
  *
- * Así que se acepta cualquiera de los dos. Lo que NO se hace es
- * adivinar por parecido —«Andrea» contra «Andrea Ramírez»—, porque
- * enseñarle a una persona los pedidos de otra es un error mucho peor
- * que enseñarle de menos.
+ * El recorte que sí importa ya estaba y sigue: `apiListar` solo
+ * devuelve filas de las tiendas que esa persona tiene asignadas. Una
+ * gestora de la tienda de Colombia jamás ve un pedido de Guatemala.
+ *
+ * Y dos o más gestoras pueden compartir tienda: es lo normal, y ahora
+ * las dos ven lo mismo.
  */
 function filtrarPorRol(s, entidad, filas, enc) {
-  if (s.rol !== 'gestora') return filas;
-  const cg = enc.indexOf('gestora_asignada') !== -1
-    ? enc.indexOf('gestora_asignada') : enc.indexOf('gestora');
-  if (cg === -1) return filas;
-  const mio = norm(s.nombre);
-  const miCorreo = norm(s.email || '');
-  return filas.filter(function (f) {
-    const v = norm(f[cg]);
-    return v === mio || (miCorreo && v === miCorreo);
-  });
+  return filas;
 }
 
 // ─── LECTURA ─────────────────────────────────────────────────
@@ -1906,18 +1903,35 @@ function apiEscribir(s, p) {
   }
   if (fila === -1) return { ok: false, error: 'No encuentro ' + entidad + ' con id ' + id + '.' };
 
-  // La gestora solo escribe sobre lo suyo
-  if (s.rol === 'gestora') {
-    const cg = enc.indexOf('gestora_asignada') !== -1
-      ? enc.indexOf('gestora_asignada') : enc.indexOf('gestora');
-    if (cg !== -1 && norm(datos[fila][cg]) !== norm(s.nombre)) {
-      return { ok: false, error: 'Ese caso no está asignado a ti.' };
-    }
-  }
-  // Y solo dentro de sus tiendas
+  /**
+   * Aquí se rechazaba escribir sobre un caso que no estuviera asignado
+   * a esa gestora. Con tiendas asignadas en vez de pedidos, eso impedía
+   * justo el trabajo: la gestora de una tienda gestiona TODA su tienda.
+   *
+   * Lo que no cambia —y es lo que de verdad protege— está abajo: solo
+   * dentro de sus tiendas.
+   */
+  // Solo dentro de sus tiendas
   const cT = enc.indexOf('tienda');
   if (cT !== -1 && s.tiendas.indexOf(String(datos[fila][cT]).trim()) === -1) {
     return { ok: false, error: 'Ese registro es de otra tienda.' };
+  }
+
+  /**
+   * ── QUIÉN LO TOCÓ, ANOTADO SOLO ──
+   *
+   * Ya no hay nadie repartiendo pedidos, así que «quién lo hizo» tiene
+   * que salir de quién lo hizo de verdad. La primera persona que mueve
+   * un caso queda anotada; las siguientes no la pisan, porque el
+   * crédito del trabajo es de quien lo resolvió, no de quien lo miró
+   * de último.
+   *
+   * Y solo si viene vacío: lo que trajo el archivo histórico se respeta.
+   */
+  const cHizo = enc.indexOf('gestionado_por');
+  if (cHizo !== -1 && !String(datos[fila][cHizo] || '').trim() &&
+      (entidad === 'Pedidos' || entidad === 'Novedades' || entidad === 'CAS')) {
+    campos.gestionado_por = s.nombre || s.email || '';
   }
 
   /**

@@ -3,21 +3,23 @@
  *
  * ┌─ QUÉ SE ESTÁ COMPROBANDO ──────────────────────────────────┐
  * │                                                            │
- * │ Ella: «le voy a crear el usuario a mi hermana y necesito   │
- * │  que esté lista para que ella lo use sin daños, ni         │
- * │  confusiones o bugs, o cosas que no sirvan».               │
+ * │ «le voy a crear el usuario a mi hermana y necesito que      │
+ * │  esté lista para que ella lo use sin daños, ni              │
+ * │  confusiones o bugs, o cosas que no sirvan».                │
  * │                                                            │
- * │ Lo que se prueba aquí es exactamente eso, en el orden en   │
- * │ que va a pasar:                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ Y POR QUÉ CAMBIÓ ─────────────────────────────────────────┐
  * │                                                            │
- * │   1· La hermana entra sin nada asignado. ¿Qué ve?          │
- * │      Tiene que ver POR QUÉ está vacío — no cuatro ceros    │
- * │      verdes que parecen «todo al día».                     │
+ * │ La primera versión probaba un reparto pedido por pedido.   │
+ * │ Ella lo corrigió: «no se asignan pedidos, se asignan       │
+ * │ tiendas. La gestora de la tienda gestiona la tienda que    │
+ * │ tiene asignada».                                           │
  * │                                                            │
- * │   2· Manuela reparte. ¿Puede, desde dónde, y se entera de  │
- * │      cuántos quedan sin repartir?                          │
- * │                                                            │
- * │   3· La hermana vuelve. ¿Ahora sí ve su trabajo?           │
+ * │ Así que lo que hay que comprobar es otro: que una gestora  │
+ * │ con tienda vea TODO lo de esa tienda desde el primer       │
+ * │ minuto, y que una sin tienda sepa exactamente qué le       │
+ * │ falta — que no es lo mismo.                                │
  * │                                                            │
  * └────────────────────────────────────────────────────────────┘
  */
@@ -45,7 +47,7 @@ let fallas = 0;
 const ok = (n, c, d) => { if (c) console.log('  ok     ' + n);
   else { fallas++; console.log('  FALLA  ' + n + (d !== undefined ? '\n         ' + d : '')); } };
 
-async function abrir(b, rol, pedidos, reparto) {
+async function abrir(b, rol, pedidos, reparto, tiendas) {
   const p = await b.newPage({ viewport: { width: 1280, height: 1200 } });
   const errores = [];
   p.on('pageerror', e => errores.push(e.message));
@@ -60,7 +62,7 @@ async function abrir(b, rol, pedidos, reparto) {
   const enviados = [];
   await p.exposeFunction('__anotar', (x) => { enviados.push(JSON.parse(x)); });
 
-  await p.evaluate(({ rol, pedidos, reparto }) => {
+  await p.evaluate(({ rol, pedidos, reparto, tiendas }) => {
     document.getElementById('login').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     (0, eval)('CONECTADO = true; ST = "ec"; ROL = "' + rol + '";');
@@ -74,7 +76,8 @@ async function abrir(b, rol, pedidos, reparto) {
      */
     (0, eval)('SESION = ' + JSON.stringify({
       nombre: rol === 'gestora' ? 'Andrea Ramírez' : 'Manuela Ramírez',
-      rol: rol, correo: rol === 'gestora' ? 'andrea@nutrea.com' : 'm@nova.com' }));
+      rol: rol, correo: rol === 'gestora' ? 'andrea@nutrea.com' : 'm@nova.com',
+      tiendas: tiendas || ['ec'], permisos: [], modulos: ['empresarial'] }));
     window.api = async (accion, params) => {
       if (accion === 'listar' && params.entidad === 'Pedidos') {
         return { ok: true, filas: JSON.parse(JSON.stringify(pedidos)),
@@ -89,7 +92,7 @@ async function abrir(b, rol, pedidos, reparto) {
       }
       return { ok: true };
     };
-  }, { rol, pedidos, reparto });
+  }, { rol, pedidos, reparto, tiendas });
 
   return { p, enviados, errores };
 }
@@ -98,25 +101,18 @@ async function abrir(b, rol, pedidos, reparto) {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 
   // ══════════════════════════════════════════════════════════
-  console.log('\n══ 1 · SU HERMANA ENTRA Y NO TIENE NADA ASIGNADO ══');
+  console.log('\n══ 1 · SU HERMANA ENTRA SIN TIENDA ASIGNADA ══');
   {
-    /** El servidor filtra por rol: a ella le llegan CERO filas. */
-    const { p, errores } = await abrir(b, 'gestora', [], { ok: false });
+    const { p, errores } = await abrir(b, 'gestora', [], { ok: false }, []);
     await p.evaluate(() => { PEDS_REALES = []; NOVS_REALES = []; pintarPantallasGestora(); });
     await p.waitForTimeout(150);
 
     const hoy = (await p.textContent('#v-g-hoy')).replace(/\s+/g, ' ');
     ok('NO le dice «todo al día» con cuatro ceros', !/0%|MI EFECTIVIDAD/.test(hoy), hoy.slice(0, 200));
-    ok('le dice que no tiene pedidos asignados',
-       /Todav[ií]a no tienes pedidos asignados/.test(hoy), hoy.slice(0, 250));
+    ok('le dice que no tiene ninguna tienda',
+       /no tienes ninguna tienda asignada/i.test(hoy), hoy.slice(0, 250));
     ok('la llama por su nombre', /Andrea/.test(hoy));
-    ok('aclara que NO es que algo falló',
-       /no haya fallado|no es que est[eé] vac[ií]o/i.test(hoy), hoy.slice(0, 300));
-    ok('y dice qué tiene que pasar para que cambie',
-       /Repartir el trabajo/.test(hoy), hoy.slice(0, 350));
-
-    const peds = (await p.textContent('#v-g-pedidos')).replace(/\s+/g, ' ');
-    ok('lo mismo en su pantalla de pedidos', /no tienes pedidos asignados/i.test(peds));
+    ok('y dice a quién pedírselo', /Permisos/.test(hoy), hoy.slice(0, 350));
 
     console.log('\n── Y no ve nada que no le toca ──');
     for (const v of ['pauta', 'dinero', 'permisos', 'config', 'cierre', 'productos']) {
@@ -131,12 +127,47 @@ async function abrir(b, rol, pedidos, reparto) {
     await p.close();
   }
 
-  // ══════════════════════════════════════════════════════════
-  console.log('\n══ 2 · MANUELA REPARTE ══');
+  console.log('\n══ 1b · CON TIENDA, PERO LA TIENDA ESTÁ VACÍA ══');
   {
-    const reparto = { ok: true, tienda: 'ec', gente: GENTE, total: 6, sinAsignar: 6,
-                      aNadieConocido: [], huerfanos: {} };
-    const { p, enviados, errores } = await abrir(b, 'dueno', PEDIDOS, reparto);
+    /**
+     * Es un problema DISTINTO del anterior y por eso el mensaje también:
+     * aquí no falta un permiso, falta importar. Confundirlos manda a la
+     * persona a pedir algo que ya tiene.
+     */
+    const { p, errores } = await abrir(b, 'gestora', [], { ok: false }, ['ec']);
+    await p.evaluate(() => { PEDS_REALES = []; NOVS_REALES = []; pintarPantallasGestora(); });
+    await p.waitForTimeout(150);
+    const hoy = (await p.textContent('#v-g-hoy')).replace(/\s+/g, ' ');
+    ok('no le habla de permisos', !/Permisos/.test(hoy), hoy.slice(0, 250));
+    ok('le dice que la tienda está vacía',
+       /No hay pedidos en/i.test(hoy), hoy.slice(0, 250));
+    ok('y le recuerda que ve la tienda entera',
+       /toda<\/strong> esta tienda|toda esta tienda/i.test(hoy), hoy.slice(0, 300));
+    ok('sin errores de JavaScript', errores.length === 0, errores.join(' | '));
+    await p.close();
+  }
+
+  // ══════════════════════════════════════════════════════════
+  console.log('\n══ 2 · LO QUE VE MANUELA DE SU TIENDA ══');
+  {
+    /**
+     * Aquí había una barra para repartir pedidos, con un selector de
+     * persona y un botón de «asignarle los N de la lista». Se borró:
+     * «de nada sirve asignar pedidos si ya asignaste la tienda».
+     *
+     * Lo que quedó no pide nada — informa. Y es lo que sí sirve todos
+     * los días: quién tiene esta tienda y cuánto lleva hecho cada quien.
+     */
+    const reparto = {
+      ok: true, tienda: 'ec',
+      gente: GENTE,
+      total: 6, sinTocar: 4, aNadieConocido: [], huerfanos: {},
+      etiquetas: [
+        { nombre: 'JAIME', total: 1, abiertos: 1, esUsuario: false },
+        { nombre: 'Andrea Ramírez', total: 1, abiertos: 0, esUsuario: true },
+      ],
+    };
+    const { p, errores } = await abrir(b, 'dueno', PEDIDOS, reparto, ['ec']);
     await p.evaluate(() => cargarPedidosReales());
     await p.waitForTimeout(200);
     await p.evaluate(() => cargarReparto());
@@ -145,62 +176,40 @@ async function abrir(b, rol, pedidos, reparto) {
     await p.waitForTimeout(150);
 
     const rep = (await p.textContent('#ped-reparto')).replace(/\s+/g, ' ');
-    ok('ve cuántos están sin asignar', /6 sin asignar de 6/.test(rep), rep.slice(0, 200));
-    ok('y le explican por qué importa',
-       /nadie m[áa]s|pantalla vac[ií]a/i.test(rep), rep.slice(0, 300));
-    ok('puede elegir a su hermana', /Andrea Ram/.test(rep));
+    ok('dice cuántos no ha tocado nadie', /4 sin tocar de 6/.test(rep), rep.slice(0, 220));
+    ok('y deja claro que no hay que repartir',
+       /No hay que repartir nada/.test(rep), rep.slice(0, 260));
+    ok('nombra a quien tiene la tienda', /Andrea Ram/.test(rep));
 
-    console.log('\n── Repartir en bloque ──');
-    await p.evaluate(() => {
-      document.getElementById('rep-quien').value = 'e2';
-      window.confirm = () => true;
-      return repartirVisibles();
-    });
-    await p.waitForTimeout(300);
-    ok('la petición salió', enviados.length >= 1, 'no salió ninguna');
-    if (enviados.length) {
-      const e = enviados[enviados.length - 1];
-      ok('con los 6 pedidos de la lista', (e.params.ids || []).length === 6,
-         JSON.stringify((e.params.ids || []).length));
-      ok('y a quién', e.params.a === 'e2', e.params.a);
-      ok('y de qué tienda', e.params.tienda === 'ec', e.params.tienda);
-    }
+    console.log('\n── Y no queda ni rastro del reparto viejo ──');
+    ok('no hay selector de persona',
+       (await p.$$('#rep-quien')).length === 0);
+    ok('ni botón de asignar',
+       !/Asignarle los/.test(rep), rep.slice(0, 260));
+    ok('ni selector en el detalle del pedido',
+       await p.evaluate(() => { PED_SEL_ID = 'd0'; pintarPanelPedido();
+                                return document.getElementById('pd-gestora') === null; }));
 
-    console.log('\n── Asignar uno solo, desde su detalle ──');
-    await p.evaluate(() => { PED_SEL_ID = 'd0'; pintarPanelPedido(); });
-    await p.waitForTimeout(120);
-    ok('el detalle trae un selector, no solo texto',
-       (await p.$$('#pd-gestora')).length === 1);
-    const antes = enviados.length;
-    await p.selectOption('#pd-gestora', 'e2');
-    await p.waitForTimeout(300);
-    ok('elegir dispara la asignación', enviados.length > antes);
-    if (enviados.length > antes) {
-      const e = enviados[enviados.length - 1];
-      ok('de ese pedido solo', JSON.stringify(e.params.ids) === '["d0"]',
-         JSON.stringify(e.params.ids));
-    }
+    console.log('\n── Pero sí dice quién lo trabajó ──');
+    const panel = (await p.textContent('#pedpanel')).replace(/\s+/g, ' ');
+    ok('lo pregunta', /LO TRABAJÓ/.test(panel), panel.slice(0, 250));
+    ok('y si nadie, lo dice', /Nadie todav/.test(panel));
 
-    console.log('\n── Un nombre que no es de nadie se DENUNCIA ──');
-    await p.evaluate(() => {
-      REPARTO.aNadieConocido = [{ nombre: 'Karen (la de antes)', pedidos: 12 }];
-      pintarReparto();
-    });
-    await p.waitForTimeout(120);
-    const rep2 = (await p.textContent('#ped-reparto')).replace(/\s+/g, ' ');
-    ok('lo nombra', /Karen \(la de antes\)/.test(rep2), rep2.slice(0, 300));
-    ok('y dice lo que significa', /Nadie los est[áa] viendo/.test(rep2));
+    console.log('\n── Quién hizo el trabajo, aunque no tenga cuenta ──');
+    ok('JAIME aparece', /JAIME/.test(rep), rep.slice(0, 300));
+    ok('marcado como sin cuenta', /sin cuenta/.test(rep));
+    ok('y Andrea no lleva esa marca',
+       rep.indexOf('Andrea Ramírez sin cuenta') === -1);
 
     console.log('\n── Sin equipo todavía, lo explica ──');
     await p.evaluate(() => {
-      ASIGNABLES = [{ id: 'e1', nombre: 'Manuela Ramírez', rol: 'dueno',
-                      total: 0, abiertos: 0 }];
+      REPARTO.gente = [{ id: 'e1', nombre: 'Manuela Ramírez', rol: 'dueno' }];
       pintarReparto();
     });
     await p.waitForTimeout(120);
     const rep3 = (await p.textContent('#ped-reparto')).replace(/\s+/g, ' ');
-    ok('dice que agregue a alguien primero',
-       /Permisos/.test(rep3) && /entra y no ve nada/.test(rep3), rep3.slice(0, 300));
+    ok('dice que agregue a alguien y en qué tiendas',
+       /Permisos/.test(rep3) && /en qué tiendas trabaja/.test(rep3), rep3.slice(0, 300));
 
     ok('sin errores de JavaScript', errores.length === 0, errores.join(' | '));
     await p.close();
@@ -219,6 +228,8 @@ async function abrir(b, rol, pedidos, reparto) {
       pedido(0, 'Andrea Ramírez'), pedido(1, 'Andrea Ramírez'),
       pedido(2, 'Andrea Ramírez'), pedido(3), pedido(4),
     ];
+    // Ahora lo que cuenta es lo que TRABAJÓ, no lo que le asignaron.
+    mezcla.forEach(function (x) { x.gestionado_por = x.gestora_asignada; });
     mezcla[0].estado_canonico = 'entregado';
     mezcla[1].estado_canonico = 'devolucion';
     mezcla[2].estado_canonico = 'novedad';
@@ -244,7 +255,7 @@ async function abrir(b, rol, pedidos, reparto) {
     ok('ni una persona ni un producto inventado', quedan.length === 0,
        'siguen ahí: ' + quedan.join(', '));
 
-    ok('cuenta sus 3 asignados', /Asignados\s*3/.test(som), som.slice(0, 250));
+    ok('cuenta los 3 que trabajó', /Trabajados\s*3/.test(som), som.slice(0, 250));
     /** 1 entregado de 2 resueltos (entregado + devolución) = 50%. */
     ok('y la efectividad sobre los RESUELTOS: 50%', /50%/.test(som), som.slice(0, 250));
     ok('dice cuándo entró', /entr[óo] el 2026-09-25/.test(som), som.slice(0, 250));
@@ -259,10 +270,11 @@ async function abrir(b, rol, pedidos, reparto) {
     });
     await p.waitForTimeout(150);
     const som2 = (await p.textContent('#sombra')).replace(/\s+/g, ' ');
-    ok('dice que no tiene nada asignado',
-       /No tiene ning[úu]n pedido asignado/.test(som2), som2.slice(0, 300));
-    ok('y lo que eso significa para ella',
-       /ve la pantalla vac[ií]a/.test(som2));
+    ok('dice que no ha tocado nada',
+       /no ha tocado ning[úu]n caso/i.test(som2), som2.slice(0, 300));
+    /** Y aclara que NO es falta de acceso: ve la tienda entera. */
+    ok('y aclara que sí tiene acceso',
+       /ve la tienda entera/.test(som2), som2.slice(0, 300));
     ok('y que nunca ha entrado', /nunca ha entrado/.test(som2));
 
     ok('sin errores de JavaScript', errores.length === 0, errores.join(' | '));

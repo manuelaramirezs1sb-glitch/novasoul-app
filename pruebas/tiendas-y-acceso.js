@@ -83,7 +83,7 @@ global.Date = class extends RealDate {
   static UTC(...a) { return RealDate.UTC(...a); }
 };
 
-(0, eval)(src + '\n;globalThis.__F = { apiAsignar, apiReparto, asignablesDe_, apiListar,' +
+(0, eval)(src + '\n;globalThis.__F = { apiReparto, asignablesDe_, apiListar,' +
   ' filtrarPorRol, libroOlvidar_, soulOlvidar_, ESQUEMA_EMPRESARIAL };');
 const F = globalThis.__F;
 const E = F.ESQUEMA_EMPRESARIAL;
@@ -147,151 +147,120 @@ const cuantosVe = (s, entidad) =>
   (F.apiListar(s, { entidad: entidad, tienda: 'ec', limite: 300 }).filas || []).length;
 
 // ══════════════════════════════════════════════════════════════
-console.log('\n── EL PRIMER DÍA DE SU HERMANA, ANTES DE ESTO ──');
+console.log('\n── SE ASIGNAN TIENDAS, NO PEDIDOS ──');
+/**
+ * ┌─ POR QUÉ CAMBIÓ TODO ESTE ARCHIVO ─────────────────────────┐
+ * │                                                            │
+ * │ Empezó probando un reparto pedido por pedido. Funcionaba.  │
+ * │ Ella lo corrigió de raíz:                                  │
+ * │                                                            │
+ * │   «de nada sirve asignar pedidos si ya asignaste la        │
+ * │    tienda. La gestora de la tienda gestiona la tienda que  │
+ * │    tiene asignada: todo lo que son pedidos, novedades y    │
+ * │    CAS. Porque si la tienda tiene pedidos pendientes de    │
+ * │    confirmar hace más de 3 días, alguien debe recibir esa  │
+ * │    información — y no solo la admin o la dueña».           │
+ * │                                                            │
+ * │ El filtro viejo producía lo contrario de lo que pretendía: │
+ * │ un pedido sin repartir no lo veía NADIE salvo la dueña, y  │
+ * │ los que llevan más tiempo quietos son justo los que nadie  │
+ * │ tomó. El cuidado terminaba escondiendo el trabajo.         │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
 sembrar();
 igual('la dueña ve los 10 pedidos', 10, cuantosVe(DUENA, 'Pedidos'));
+/** Sin que nadie le asigne un solo pedido, ve TODA su tienda. */
+igual('la gestora también ve los 10, sin que nadie le asigne nada',
+      10, cuantosVe(HERMANA, 'Pedidos'));
+igual('y las novedades de su tienda', 3, cuantosVe(HERMANA, 'Novedades'));
+
+console.log('\n── Pero solo de SU tienda ──');
+/** El recorte que de verdad protege: la tienda, no el pedido. */
+igual('no ve la tienda de Guatemala', 0,
+      (F.apiListar(HERMANA, { entidad: 'Pedidos', tienda: 'gt', limite: 300 }).filas || []).length);
+const SOLO_GT = { sheetId:'emp', rol:'gestora', email:'gt@nutrea.com', nombre:'Solo de GT',
+                  tiendas:['gt'], permisos:[], modulos:['empresarial'] };
+igual('quien solo tiene GT ve 1', 1,
+      (F.apiListar(SOLO_GT, { entidad: 'Pedidos', limite: 300 }).filas || []).length);
+igual('y no ve ni uno de Ecuador', 0,
+      (F.apiListar(SOLO_GT, { entidad: 'Pedidos', tienda: 'ec', limite: 300 }).filas || []).length);
+
+console.log('\n── Dos gestoras pueden compartir tienda ──');
+sembrar();
+LIBROS.emp.Equipo.push(fila(E.Equipo, { id:'e5', nombre:'Otra Gestora',
+  correo:'otra@nutrea.com', rol:'gestora', tienda:'ec', estado:'activo' }));
+const OTRA = { sheetId:'emp', rol:'gestora', email:'otra@nutrea.com', nombre:'Otra Gestora',
+               tiendas:['ec'], permisos:[], modulos:['empresarial'] };
+igual('las dos ven lo mismo',
+      [cuantosVe(HERMANA, 'Pedidos'), cuantosVe(OTRA, 'Pedidos')], [10, 10]);
+
+console.log('\n── Y una persona puede tener varias tiendas ──');
+const DOS = { sheetId:'emp', rol:'gestora', email:'andrea@nutrea.com',
+              nombre:'Andrea Ramírez', tiendas:['ec','gt'], permisos:[],
+              modulos:['empresarial'] };
+igual('ve las dos juntas cuando no pide una', 11,
+      (F.apiListar(DOS, { entidad: 'Pedidos', limite: 300 }).filas || []).length);
+igual('y una sola cuando la pide', 1,
+      (F.apiListar(DOS, { entidad: 'Pedidos', tienda: 'gt', limite: 300 }).filas || []).length);
+
+console.log('\n── Puede trabajar cualquier caso de su tienda ──');
+sembrar();
+igual('escribe sobre uno que nadie le asignó', true,
+      globalThis.apiEscribir(HERMANA, { entidad: 'Pedidos', id: 'd3',
+                                        campos: { nota: 'llamé yo' } }).ok);
+/** Pero nunca fuera de su tienda. */
+igual('y nunca sobre uno de otra tienda', false,
+      globalThis.apiEscribir(HERMANA, { entidad: 'Pedidos', id: 'gt1',
+                                        campos: { nota: 'no es mía' } }).ok);
+
+console.log('\n── Quién lo tocó queda anotado solo ──');
+sembrar();
+const cHizo = E.Pedidos.indexOf('gestionado_por');
+igual('antes, nadie', '', LIBROS.emp.Pedidos.filter(f => f[0] === 'd0')[0][cHizo]);
+globalThis.apiEscribir(HERMANA, { entidad: 'Pedidos', id: 'd0',
+                                  campos: { estado_nova: 'confirmado' } });
+igual('después, quien lo movió', 'Andrea Ramírez',
+      LIBROS.emp.Pedidos.filter(f => f[0] === 'd0')[0][cHizo]);
 /**
- * Esto es lo que habría pasado: entra, y no hay nada. Ni un pedido, ni
- * una novedad. No porque falle algo, sino porque nadie podía asignarle.
+ * Y la siguiente persona NO lo pisa: el crédito del trabajo es de quien
+ * lo resolvió, no de quien lo miró de último.
  */
-igual('la hermana ve CERO pedidos', 0, cuantosVe(HERMANA, 'Pedidos'));
-igual('y CERO novedades', 0, cuantosVe(HERMANA, 'Novedades'));
+globalThis.apiEscribir(DUENA, { entidad: 'Pedidos', id: 'd0',
+                                campos: { nota: 'revisado' } });
+igual('y quien pase después no lo pisa', 'Andrea Ramírez',
+      LIBROS.emp.Pedidos.filter(f => f[0] === 'd0')[0][cHizo]);
 
-console.log('\n── Y AHORA, DESPUÉS DE ASIGNAR ──');
-let r = F.apiAsignar(DUENA, { ids: ['d0','d1','d2','d3'], a: 'e2', tienda: 'ec' });
-igual('se asignan los cuatro', 4, r.asignados);
-igual('con el nombre de la hoja Equipo', 'Andrea Ramírez', r.a);
-igual('la hermana ya ve sus cuatro', 4, cuantosVe(HERMANA, 'Pedidos'));
-/** Y —lo que se olvida siempre— las novedades se van con el pedido. */
-igual('las novedades se fueron con ellos', 3, r.novedades);
-igual('y las ve', 3, cuantosVe(HERMANA, 'Novedades'));
-igual('la dueña sigue viéndolo todo', 10, cuantosVe(DUENA, 'Pedidos'));
-
-console.log('\n── El nombre se canoniza contra la hoja, siempre ──');
+/** Lo que trajo el archivo histórico también se respeta. */
 sembrar();
-/**
- * Se asigna escribiendo «andrea ramirez» en minúsculas y sin tilde. Lo
- * que se guarda tiene que ser «Andrea Ramírez», el de la hoja: si se
- * guardara lo escrito, un día entraría «Andrea» y otro «Andrea R.» y el
- * filtro dejaría de encontrar la mitad de sus pedidos.
- */
-F.apiAsignar(DUENA, { ids: ['d0'], a: 'andrea ramirez', tienda: 'ec' });
-const cG = E.Pedidos.indexOf('gestora_asignada');
-igual('se guardó el nombre canónico', 'Andrea Ramírez',
-      LIBROS.emp.Pedidos.filter(f => f[0] === 'd0')[0][cG]);
-igual('y por correo también funciona', true,
-      F.apiAsignar(DUENA, { ids: ['d1'], a: 'andrea@nutrea.com', tienda: 'ec' }).ok);
-igual('guardando otra vez el nombre', 'Andrea Ramírez',
-      LIBROS.emp.Pedidos.filter(f => f[0] === 'd1')[0][cG]);
+LIBROS.emp.Pedidos.filter(f => f[0] === 'd1')[0][cHizo] = 'JAIME';
+globalThis.apiEscribir(HERMANA, { entidad: 'Pedidos', id: 'd1', campos: { nota: 'x' } });
+igual('ni al que venía del archivo', 'JAIME',
+      LIBROS.emp.Pedidos.filter(f => f[0] === 'd1')[0][cHizo]);
 
-console.log('\n── Si la plataforma exportó el correo, igual lo ve ──');
+console.log('\n── Quién trabaja la tienda ──');
 sembrar();
-LIBROS.emp.Pedidos.filter(f => f[0] === 'd5')[0][cG] = 'andrea@nutrea.com';
-igual('el filtro acepta el correo, no solo el nombre', 1, cuantosVe(HERMANA, 'Pedidos'));
-/** Pero NO adivina por parecido: enseñar de más es peor que de menos. */
-sembrar();
-LIBROS.emp.Pedidos.filter(f => f[0] === 'd5')[0][cG] = 'Andrea';
-igual('un nombre a medias NO cuenta como suyo', 0, cuantosVe(HERMANA, 'Pedidos'));
+LIBROS.emp.Pedidos.filter(f => f[0] === 'd7')[0][cHizo] = 'JAIME';
+LIBROS.emp.Pedidos.filter(f => f[0] === 'd8')[0][cHizo] = 'JAIME';
+LIBROS.emp.Pedidos.filter(f => f[0] === 'd9')[0][cHizo] = 'Andrea Ramírez';
+let rep = F.apiReparto(DUENA, { tienda: 'ec' });
+igual('10 pedidos', 10, rep.total);
+igual('7 sin tocar', 7, rep.sinTocar);
+/** JAIME no tiene cuenta y cuenta igual: es quien hizo el trabajo. */
+igual('JAIME lleva 2', 2, rep.etiquetas.filter(e => e.nombre === 'JAIME')[0].total);
+igual('y se dice que no tiene cuenta', false,
+      rep.etiquetas.filter(e => e.nombre === 'JAIME')[0].esUsuario);
+igual('Andrea sí la tiene', true,
+      rep.etiquetas.filter(e => e.nombre === 'Andrea Ramírez')[0].esUsuario);
+igual('una gestora no ve el reparto', false, F.apiReparto(HERMANA, { tienda: 'ec' }).ok);
 
-console.log('\n── Desasignar se puede ──');
-sembrar();
-F.apiAsignar(DUENA, { ids: ['d0','d1'], a: 'e2', tienda: 'ec' });
-igual('tiene dos', 2, cuantosVe(HERMANA, 'Pedidos'));
-r = F.apiAsignar(DUENA, { ids: ['d0'], a: '', tienda: 'ec' });
-igual('se quita uno', 1, r.asignados);
-igual('avisa que fue una desasignación', true, r.desasignado);
-igual('y le queda uno', 1, cuantosVe(HERMANA, 'Pedidos'));
-
-console.log('\n── Las tiendas no se cruzan ──');
-sembrar();
-r = F.apiAsignar(DUENA, { ids: ['gt1'], a: 'e2', tienda: 'gt' });
-igual('no se le puede asignar GT a quien solo tiene EC', false, r.ok);
-ok('y se explica', /no tiene acceso a esta tienda/.test(r.error), r.error);
-igual('a quien sí tiene GT, sí', 1,
-      F.apiAsignar(DUENA, { ids: ['gt1'], a: 'e3', tienda: 'gt' }).asignados);
-
-console.log('\n── Quién puede repartir ──');
-sembrar();
-igual('una gestora NO reparte', false,
-      F.apiAsignar(HERMANA, { ids: ['d0'], a: 'e2' }).ok);
-igual('ni ve el reparto', false, F.apiReparto(HERMANA, { tienda: 'ec' }).ok);
-igual('una admin sí', true, F.apiAsignar(ADMIN, { ids: ['d0'], a: 'e2', tienda: 'ec' }).ok);
-
-console.log('\n── A quién se le puede asignar ──');
+console.log('\n── A quién se le puede asignar una tienda ──');
 sembrar();
 const gente = F.asignablesDe_(libroStub('emp'), 'ec');
 igual('solo activos y de esa tienda', ['Manuela Ramírez', 'Andrea Ramírez'],
       gente.map(g => g.nombre));
 ok('la inactiva no está', gente.filter(g => g.nombre === 'Ya no está').length === 0);
 ok('la de GT tampoco', gente.filter(g => g.nombre === 'Solo de GT').length === 0);
-igual('a alguien que no existe, no', false,
-      F.apiAsignar(DUENA, { ids: ['d0'], a: 'Fulana', tienda: 'ec' }).ok);
-igual('ni a alguien inactivo', false,
-      F.apiAsignar(DUENA, { ids: ['d0'], a: 'Ya no está', tienda: 'ec' }).ok);
-
-console.log('\n── El reparto: el número que de verdad importa ──');
-sembrar();
-let rep = F.apiReparto(DUENA, { tienda: 'ec' });
-igual('10 pedidos', 10, rep.total);
-/** Mientras esto sea el total, tener equipo no sirve de nada. */
-igual('los 10 sin asignar', 10, rep.sinAsignar);
-F.apiAsignar(DUENA, { ids: ['d0','d1','d2','d3','d4'], a: 'e2', tienda: 'ec' });
-rep = F.apiReparto(DUENA, { tienda: 'ec' });
-igual('ahora 5 sin asignar', 5, rep.sinAsignar);
-const andrea = rep.gente.filter(g => g.nombre === 'Andrea Ramírez')[0];
-igual('Andrea tiene 5', 5, andrea.total);
-/** d0,d1,d2 son novedad y d3,d4 en tránsito: los 5 están abiertos. */
-igual('y los 5 están abiertos', 5, andrea.abiertos);
-
-console.log('\n── Un nombre que no es de nadie se DENUNCIA ──');
-/**
- * Pasa cuando la plataforma exporta a alguien que ya no está, o escrito
- * distinto. Son pedidos que NADIE ve —su supuesta dueña no puede
- * entrar— y desaparecerían en silencio si no se contaran.
- */
-sembrar();
-LIBROS.emp.Pedidos.filter(f => f[0] === 'd7')[0][cG] = 'Karen (la de antes)';
-LIBROS.emp.Pedidos.filter(f => f[0] === 'd8')[0][cG] = 'Karen (la de antes)';
-rep = F.apiReparto(DUENA, { tienda: 'ec' });
-igual('los cuenta aparte', [{ nombre: 'Karen (la de antes)', pedidos: 2 }],
-      rep.aNadieConocido);
-ok('y no los cuenta como sin asignar', rep.sinAsignar === 8);
-
-console.log('\n── No repite trabajo ni escribe de más ──');
-sembrar();
-F.apiAsignar(DUENA, { ids: ['d0'], a: 'e2', tienda: 'ec' });
-const movs = LIBROS.emp.Movimientos.length;
-r = F.apiAsignar(DUENA, { ids: ['d0'], a: 'e2', tienda: 'ec' });
-igual('asignar lo mismo otra vez no hace nada', 0, r.asignados);
-igual('lo dice', 1, r.iguales);
-igual('y no ensucia el rastro', movs, LIBROS.emp.Movimientos.length);
-
-console.log('\n── El rastro queda ──');
-sembrar();
-F.apiAsignar(DUENA, { ids: ['d0'], a: 'e2', tienda: 'ec' });
-const m = LIBROS.emp.Movimientos.filter(x => x[4] === 'gestora_asignada');
-igual('un movimiento por pedido', 1, m.length);
-igual('con el antes y el después', ['', 'Andrea Ramírez'], [m[0][5], m[0][6]]);
-
-console.log('\n── Muchos de una sola vez ──');
-sembrar();
-r = F.apiAsignar(DUENA, { ids: ['d0','d1','d2','d3','d4','d5','d6','d7','d8','d9'],
-                          a: 'e2', tienda: 'ec' });
-igual('los diez', 10, r.asignados);
-igual('y los ve todos', 10, cuantosVe(HERMANA, 'Pedidos'));
-igual('más de 500 se rechaza', false,
-      F.apiAsignar(DUENA, { ids: new Array(501).fill('x'), a: 'e2' }).ok);
-
-console.log('\n── Una gestora sigue sin poder escribir lo ajeno ──');
-sembrar();
-F.apiAsignar(DUENA, { ids: ['d0'], a: 'e2', tienda: 'ec' });
-/** d1 NO es suyo: no puede tocarlo aunque sepa el id. */
-igual('no puede editar un pedido que no es suyo', false,
-      globalThis.apiEscribir(HERMANA, { entidad: 'Pedidos', id: 'd1',
-                                        campos: { nota: 'mío' } }).ok);
-igual('el suyo sí', true,
-      globalThis.apiEscribir(HERMANA, { entidad: 'Pedidos', id: 'd0',
-                                        campos: { nota: 'llamé' } }).ok);
 
 console.log(fallas ? '\n' + fallas + ' FALLAS\n' : '\nTodo bien.\n');
 process.exit(fallas ? 1 : 0);

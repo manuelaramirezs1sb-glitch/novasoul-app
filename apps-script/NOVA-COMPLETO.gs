@@ -4744,7 +4744,7 @@ function manejar(e, metodo) {
       case 'alarmas':   return json(apiAlarmas(s, p));
       case 'parametros':return json(apiParametros(s, p));
       case 'auditoria': return json(apiAuditoria(s, p));
-      case 'asignar':   return json(apiAsignar(s, p));
+      // `asignar` se borró: se asignan tiendas, no pedidos.
       case 'reparto':   return json(apiReparto(s, p));
       case 'auditoria_casos':   return json(apiAuditoriaCasos(s, p));
       case 'auditoria_guardar': return json(apiAuditoriaGuardar(s, p));
@@ -5258,35 +5258,32 @@ function prioridadEstado(v) {
 }
 
 /**
- * La gestora solo ve lo suyo. Se aplica al leer, no al pintar.
+ * ── SE ASIGNAN TIENDAS, NO PEDIDOS ──
  *
- * ── POR QUÉ SE ACEPTA EL CORREO, NO SOLO EL NOMBRE ──
+ * Aquí había un filtro que le dejaba a la gestora solo los pedidos con
+ * su nombre en `gestora_asignada`. Parecía lo prudente y estaba mal
+ * pensado. Ella lo zanjó en una frase:
  *
- * La columna `gestora_asignada` la llena Nova al repartir, pero TAMBIÉN
- * llega desde las plataformas: Dropi y Effi exportan a quien gestionó, y
- * cada una lo escribe a su manera — unas el nombre, otras el correo.
+ *   «de nada sirve asignar pedidos si ya asignaste la tienda. La
+ *    gestora de la tienda gestiona la tienda que tiene asignada: todo
+ *    lo que son pedidos, novedades y CAS. Porque si la tienda tiene
+ *    pedidos pendientes de confirmar hace más de 3 días, alguien debe
+ *    recibir esa información — y no solo la admin o la dueña».
  *
- * Emparejar solo por nombre exacto significaba que un export con el
- * correo, o con el nombre escrito distinto, dejaba a esa persona con la
- * pantalla vacía. Y una pantalla vacía no se distingue de una rota: no
- * dice «no encontré tu nombre», no dice nada.
+ * Tiene razón, y el filtro viejo producía justo lo contrario de lo que
+ * pretendía: un pedido sin repartir no lo veía NADIE salvo la dueña, y
+ * los que más tiempo llevan quietos son precisamente los que nadie
+ * tomó. El cuidado terminaba escondiendo el trabajo.
  *
- * Así que se acepta cualquiera de los dos. Lo que NO se hace es
- * adivinar por parecido —«Andrea» contra «Andrea Ramírez»—, porque
- * enseñarle a una persona los pedidos de otra es un error mucho peor
- * que enseñarle de menos.
+ * El recorte que sí importa ya estaba y sigue: `apiListar` solo
+ * devuelve filas de las tiendas que esa persona tiene asignadas. Una
+ * gestora de la tienda de Colombia jamás ve un pedido de Guatemala.
+ *
+ * Y dos o más gestoras pueden compartir tienda: es lo normal, y ahora
+ * las dos ven lo mismo.
  */
 function filtrarPorRol(s, entidad, filas, enc) {
-  if (s.rol !== 'gestora') return filas;
-  const cg = enc.indexOf('gestora_asignada') !== -1
-    ? enc.indexOf('gestora_asignada') : enc.indexOf('gestora');
-  if (cg === -1) return filas;
-  const mio = norm(s.nombre);
-  const miCorreo = norm(s.email || '');
-  return filas.filter(function (f) {
-    const v = norm(f[cg]);
-    return v === mio || (miCorreo && v === miCorreo);
-  });
+  return filas;
 }
 
 // ─── LECTURA ─────────────────────────────────────────────────
@@ -6509,18 +6506,35 @@ function apiEscribir(s, p) {
   }
   if (fila === -1) return { ok: false, error: 'No encuentro ' + entidad + ' con id ' + id + '.' };
 
-  // La gestora solo escribe sobre lo suyo
-  if (s.rol === 'gestora') {
-    const cg = enc.indexOf('gestora_asignada') !== -1
-      ? enc.indexOf('gestora_asignada') : enc.indexOf('gestora');
-    if (cg !== -1 && norm(datos[fila][cg]) !== norm(s.nombre)) {
-      return { ok: false, error: 'Ese caso no está asignado a ti.' };
-    }
-  }
-  // Y solo dentro de sus tiendas
+  /**
+   * Aquí se rechazaba escribir sobre un caso que no estuviera asignado
+   * a esa gestora. Con tiendas asignadas en vez de pedidos, eso impedía
+   * justo el trabajo: la gestora de una tienda gestiona TODA su tienda.
+   *
+   * Lo que no cambia —y es lo que de verdad protege— está abajo: solo
+   * dentro de sus tiendas.
+   */
+  // Solo dentro de sus tiendas
   const cT = enc.indexOf('tienda');
   if (cT !== -1 && s.tiendas.indexOf(String(datos[fila][cT]).trim()) === -1) {
     return { ok: false, error: 'Ese registro es de otra tienda.' };
+  }
+
+  /**
+   * ── QUIÉN LO TOCÓ, ANOTADO SOLO ──
+   *
+   * Ya no hay nadie repartiendo pedidos, así que «quién lo hizo» tiene
+   * que salir de quién lo hizo de verdad. La primera persona que mueve
+   * un caso queda anotada; las siguientes no la pisan, porque el
+   * crédito del trabajo es de quien lo resolvió, no de quien lo miró
+   * de último.
+   *
+   * Y solo si viene vacío: lo que trajo el archivo histórico se respeta.
+   */
+  const cHizo = enc.indexOf('gestionado_por');
+  if (cHizo !== -1 && !String(datos[fila][cHizo] || '').trim() &&
+      (entidad === 'Pedidos' || entidad === 'Novedades' || entidad === 'CAS')) {
+    campos.gestionado_por = s.nombre || s.email || '';
   }
 
   /**
@@ -20053,50 +20067,51 @@ function centralHoy(s, p) {
 
 /**
  * ═══════════════════════════════════════════════════════════════
- *  ASIGNAR · repartir los pedidos entre quienes los trabajan
+ *  QUIÉN TRABAJA CADA TIENDA
  * ═══════════════════════════════════════════════════════════════
  *
- * ┌─ POR QUÉ ESTO FALTABA Y NADIE LO NOTÓ ─────────────────────┐
+ * ┌─ SE ASIGNAN TIENDAS, NO PEDIDOS ───────────────────────────┐
  * │                                                            │
- * │ Nova siempre supo filtrar: una gestora ve los pedidos      │
- * │ cuya columna `gestora_asignada` lleva su nombre, y no ve    │
- * │ los de las demás. Eso estaba escrito, probado y bien.      │
+ * │ Este archivo empezó repartiendo pedidos uno por uno. Ella  │
+ * │ lo corrigió de raíz:                                       │
  * │                                                            │
- * │ Lo que no existía era la otra mitad: NO HABÍA NINGUNA      │
- * │ MANERA DE PONER ESE NOMBRE. Ni en la pantalla ni en el     │
- * │ servidor. La columna solo se pintaba —«Sin asignar»— y     │
- * │ nunca se escribía.                                         │
+ * │   «de nada sirve asignar pedidos si ya asignaste la        │
+ * │    tienda. La gestora de la tienda gestiona la tienda que  │
+ * │    tiene asignada: todo lo que son pedidos, novedades y    │
+ * │    CAS. Porque si la tienda tiene pedidos pendientes de    │
+ * │    confirmar hace más de 3 días, alguien debe recibir esa  │
+ * │    información — y no solo la admin o la dueña.            │
+ * │    Y dos gestores o más pueden tener la misma tienda».     │
  * │                                                            │
- * │ Mientras la dueña trabajó sola no se notó: ella lo ve      │
- * │ todo. Se habría notado el primer día que entrara una       │
- * │ gestora, viera cero pedidos y cero novedades, y concluyera │
- * │ —con razón— que la herramienta no sirve.                   │
- * │                                                            │
- * │ Un filtro sin forma de llenar aquello que filtra no es     │
- * │ media función: es una función que hace daño.               │
+ * │ El reparto caso por caso se borró. Lo que queda aquí es    │
+ * │ la otra pregunta, que sí sirve todos los días: QUIÉN ESTÁ  │
+ * │ TRABAJANDO ESTA TIENDA, y cuánto lleva hecho cada quien.   │
  * │                                                            │
  * └────────────────────────────────────────────────────────────┘
  *
- * ┌─ POR QUÉ SE GUARDA EL NOMBRE Y NO EL id ───────────────────┐
+ * ┌─ DOS LISTAS DISTINTAS, Y POR QUÉ ──────────────────────────┐
  * │                                                            │
- * │ `gestora_asignada` es una columna que también llega desde  │
- * │ las plataformas: Dropi y Effi exportan el nombre de quien  │
- * │ gestionó. Si Nova guardara ahí un id suyo, la próxima      │
- * │ importación lo pisaría con un nombre y el filtro dejaría   │
- * │ de encontrar a nadie.                                      │
+ * │ `gente`     quién tiene esta tienda asignada en Nova.      │
+ * │             Entran, ven y trabajan.                        │
  * │                                                            │
- * │ Así que se guarda el NOMBRE CANÓNICO, el de la hoja        │
- * │ Equipo — no el que escriba quien asigna. Y al filtrar se   │
- * │ acepta también el correo, porque alguna plataforma exporta │
- * │ eso. Es la diferencia entre un emparejamiento que aguanta  │
- * │ la realidad y uno que aguanta el ejemplo.                  │
+ * │ `etiquetas` quién aparece como gestor en los datos, venga  │
+ * │             del archivo histórico o de haber tocado un     │
+ * │             caso. JAIME, ZULAY, APOYO… no necesitan tener  │
+ * │             cuenta, y casi nunca la tienen.                │
+ * │                                                            │
+ * │ Separarlas es lo que le permite a una dueña probar Nova    │
+ * │ una semana con su equipo entero sin crear a nadie, y ver   │
+ * │ igual sus números por persona.                             │
  * │                                                            │
  * └────────────────────────────────────────────────────────────┘
  */
 
 /**
- * Quién puede repartir trabajo. Una gestora no se asigna pedidos a sí
- * misma: eso convierte el reparto en una carrera por los fáciles.
+ * Quién puede ver el reparto de la tienda.
+ *
+ * La gestora no: saber cuánto lleva hecho cada compañera es información
+ * de quien dirige, no de quien opera. Ella ve su tienda entera, que es
+ * lo que necesita para trabajar.
  */
 function puedeAsignar_(s) {
   return s && (s.rol === 'dueno' || s.rol === 'admin');
@@ -20145,7 +20160,7 @@ function asignablesDe_(ss, tienda) {
  * total, tener equipo no sirve de nada.
  */
 function apiReparto(s, p) {
-  if (!puedeAsignar_(s)) return { ok: false, error: 'Tu rol no reparte trabajo.' };
+  if (!puedeAsignar_(s)) return { ok: false, error: 'Tu rol no ve el reparto.' };
   const tienda = String(p.tienda || s.tiendas[0] || '').trim();
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
@@ -20161,8 +20176,14 @@ function apiReparto(s, p) {
   });
 
   const sh = ss.getSheetByName('Pedidos');
+  /**
+   * `sinTocar` ya NO quiere decir «nadie lo ve»: desde que se asignan
+   * tiendas, todo lo de esta tienda lo ven todas sus gestoras. Quiere
+   * decir «nadie le ha puesto la mano todavía», que es una pregunta
+   * distinta y sigue siendo útil.
+   */
   const out = { ok: true, tienda: tienda, gente: gente,
-                total: 0, sinAsignar: 0, aNadieConocido: [], huerfanos: {} };
+                total: 0, sinTocar: 0, aNadieConocido: [], huerfanos: {} };
   if (!sh || sh.getLastRow() < 2) return out;
 
   const d = sh.getDataRange().getValues();
@@ -20196,6 +20217,10 @@ function apiReparto(s, p) {
 
     if (cEt !== -1) {
       const et = String(d[i][cEt] || '').trim();
+      // Nadie le ha puesto la mano todavía. Se cuenta por ESTA columna,
+      // no por la de acceso: desde que se asignan tiendas, «asignado» y
+      // «trabajado» dejaron de ser lo mismo.
+      if (!et) out.sinTocar++;
       if (et) {
         if (!porEtiqueta[et]) porEtiqueta[et] = { nombre: et, total: 0, abiertos: 0,
                                                   esUsuario: !!porNombre[norm(et)] };
@@ -20206,7 +20231,7 @@ function apiReparto(s, p) {
     }
 
     const quien = String(d[i][cG] || '').trim();
-    if (!quien) { out.sinAsignar++; continue; }
+    if (!quien) continue;
 
     const g = porNombre[norm(quien)];
     if (!g) {
@@ -20241,158 +20266,25 @@ function apiReparto(s, p) {
 }
 
 /**
- * Asignar pedidos a una persona. Uno o muchos, en una sola escritura.
+ * ── AQUÍ VIVÍA `apiAsignar`, Y SE BORRÓ ──
  *
- * `a` vacío DESASIGNA — y eso es a propósito, no un descuido: repartir
- * mal y no poder deshacerlo es peor que no repartir.
+ * Repartía pedidos uno por uno o en bloque. Funcionaba, estaba probado,
+ * y sobraba. Ella:
+ *
+ *   «de nada sirve asignar pedidos si ya asignaste la tienda. No se
+ *    asignan pedidos, se asignan tiendas. Y dos gestores o más pueden
+ *    tener la misma tienda asignada».
+ *
+ * Con eso, repartir caso por caso no es una comodidad de menos: es una
+ * tarea diaria inventada, y además dejaba huérfano lo que nadie tomaba
+ * — que es justo lo que lleva más tiempo quieto.
+ *
+ * Se borró entero en vez de dejarlo apagado. Código muerto que todavía
+ * funciona es una invitación a volver a engancharlo «mientras tanto»,
+ * y de ahí no sale más.
+ *
+ * Las tiendas de cada persona se asignan en Permisos, con casillas.
  */
-function apiAsignar(s, p) {
-  if (!puedeAsignar_(s)) return { ok: false, error: 'Tu rol no reparte trabajo.' };
-
-  const ids = (Array.isArray(p.ids) ? p.ids : [p.id])
-    .map(function (x) { return String(x || '').trim(); })
-    .filter(function (x) { return x; });
-  if (!ids.length) return { ok: false, error: 'No me dijiste qué pedidos asignar.' };
-  if (ids.length > 500) {
-    return { ok: false, error: 'Son demasiados de una. Máximo 500 por vez.' };
-  }
-
-  const ss = libro_(s.sheetId);
-  const quien = String(p.a || '').trim();
-
-  /**
-   * El nombre se canoniza contra la hoja Equipo, SIEMPRE.
-   *
-   * Si se guardara lo que venga de la pantalla, un día entraría
-   * «Andrea» y otro «Andrea R.» y el filtro dejaría de encontrar la
-   * mitad de sus pedidos sin que nadie entienda por qué.
-   */
-  let persona = null;
-  if (quien) {
-    const gente = asignablesDe_(ss, String(p.tienda || '').trim());
-    persona = gente.filter(function (g) {
-      return g.id === quien || norm(g.nombre) === norm(quien) ||
-             (g.correo && norm(g.correo) === norm(quien));
-    })[0];
-    if (!persona) {
-      return { ok: false, error: 'No encuentro a esa persona activa en tu equipo, ' +
-                                 'o no tiene acceso a esta tienda.' };
-    }
-  }
-
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(20000)) return { ok: false, error: 'Hay otro cambio guardándose.' };
-  try {
-    const sh = ss.getSheetByName('Pedidos');
-    if (!sh || sh.getLastRow() < 2) return { ok: false, error: 'No hay pedidos.' };
-
-    const d = sh.getDataRange().getValues();
-    const e = d[0].map(norm);
-    const c = function (n) { return e.indexOf(n); };
-    const cG = c('gestora_asignada'), cId = c('id'), cT = c('tienda');
-    if (cG === -1) {
-      return { ok: false, error: 'La hoja Pedidos no tiene columna gestora_asignada. ' +
-                                 'Corre bootstrapTodo() una vez.' };
-    }
-
-    const buscar = {};
-    ids.forEach(function (x) { buscar[x] = 1; });
-
-    const valor = persona ? persona.nombre : '';
-    const tocados = [], pedidosTocados = [];
-    let deOtraTienda = 0, iguales = 0;
-
-    for (let i = 1; i < d.length; i++) {
-      const id = String(d[i][cId] || '').trim();
-      if (!buscar[id]) continue;
-      // Nunca fuera de las tiendas de quien asigna.
-      if (cT !== -1 && s.tiendas.indexOf(String(d[i][cT] || '').trim()) === -1) {
-        deOtraTienda++; continue;
-      }
-      const antes = String(d[i][cG] || '').trim();
-      if (norm(antes) === norm(valor)) { iguales++; continue; }
-      tocados.push({ fila: i + 1, antes: antes });
-      pedidosTocados.push(id);
-      d[i][cG] = valor;
-    }
-
-    if (!tocados.length) {
-      return { ok: true, asignados: 0, iguales: iguales, deOtraTienda: deOtraTienda,
-               a: valor, porque: iguales
-                 ? 'Ya estaban así.'
-                 : (deOtraTienda ? 'Todos eran de otra tienda.' : 'No encontré esos pedidos.') };
-    }
-
-    /**
-     * Se escribe la COLUMNA entera de una vez, no celda por celda.
-     *
-     * Trescientas escrituras sueltas son trescientas idas y vueltas a
-     * Google y varios minutos; un solo `setValues` de una columna es
-     * una. Y como solo se toca esa columna, ninguna otra se puede
-     * pisar por accidente.
-     */
-    const columna = d.slice(1).map(function (f) { return [f[cG]]; });
-    sh.getRange(2, cG + 1, columna.length, 1).setValues(columna);
-
-    tocados.forEach(function (t) {
-      registrarMovimiento(s, 'Pedidos', String(d[t.fila - 1][cId] || ''),
-                          'gestora_asignada', t.antes, valor);
-    });
-
-    /**
-     * Las novedades de esos pedidos van con ellos.
-     *
-     * Si no, la gestora vería el pedido y no la novedad que hay que
-     * resolver — que es precisamente el trabajo. Son dos hojas y dos
-     * columnas con nombres distintos (`gestora_asignada` y `gestora`),
-     * y por eso esto se olvida tan fácil.
-     */
-    let novedades = 0;
-    try { novedades = asignarNovedadesDe_(ss, pedidosTocados, valor, s); }
-    catch (err) { /* el pedido ya quedó asignado; la novedad se reintenta */ }
-
-    return { ok: true, asignados: tocados.length, iguales: iguales,
-             deOtraTienda: deOtraTienda, novedades: novedades,
-             a: valor, desasignado: !valor };
-  } catch (e) {
-    return { ok: false, error: e.message };
-  } finally { lock.releaseLock(); }
-}
-
-/** Mueve la columna `gestora` de las novedades de esos pedidos. */
-function asignarNovedadesDe_(ss, pedidoIds, valor, s) {
-  const sh = ss.getSheetByName('Novedades');
-  if (!sh || sh.getLastRow() < 2) return 0;
-
-  const d = sh.getDataRange().getValues();
-  const e = d[0].map(norm);
-  const cG = e.indexOf('gestora');
-  const cP = e.indexOf('pedido_id');
-  const cId = e.indexOf('id');
-  if (cG === -1 || cP === -1) return 0;
-
-  const buscar = {};
-  pedidoIds.forEach(function (x) { buscar[x] = 1; });
-
-  let n = 0;
-  const cambios = [];
-  for (let i = 1; i < d.length; i++) {
-    if (!buscar[String(d[i][cP] || '').trim()]) continue;
-    const antes = String(d[i][cG] || '').trim();
-    if (norm(antes) === norm(valor)) continue;
-    cambios.push({ id: cId === -1 ? '' : String(d[i][cId] || ''), antes: antes });
-    d[i][cG] = valor;
-    n++;
-  }
-  if (!n) return 0;
-
-  const columna = d.slice(1).map(function (f) { return [f[cG]]; });
-  sh.getRange(2, cG + 1, columna.length, 1).setValues(columna);
-  cambios.forEach(function (x) {
-    registrarMovimiento(s, 'Novedades', x.id, 'gestora', x.antes, valor);
-  });
-  return n;
-}
 
 
 /* ═══════════════════════════════════════════════════════════════
