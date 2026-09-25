@@ -143,6 +143,15 @@ function manejar(e, metodo) {
       case 'auditoria': return json(apiAuditoria(s, p));
       // `asignar` se borró: se asignan tiendas, no pedidos.
       case 'reparto':   return json(apiReparto(s, p));
+      // El chat del equipo. Dentro de Nova, no un botón que manda afuera.
+      case 'chat':         return json(apiChat(s, p));
+      case 'chat_enviar':  return json(apiChatEnviar(s, p));
+      case 'chat_visto':   return json(apiChatVisto(s, p));
+      case 'chat_borrar':  return json(apiChatBorrar(s, p));
+      // Los accesos van aparte de `parametros` a propósito: la contraseña
+      // no puede pasar por la bitácora ni viajar en cada carga. Ver 97.
+      case 'accesos':          return json(apiAccesos(s, p));
+      case 'accesos_guardar':  return json(apiAccesosGuardar(s, p));
       case 'auditoria_casos':   return json(apiAuditoriaCasos(s, p));
       case 'auditoria_guardar': return json(apiAuditoriaGuardar(s, p));
       case 'estados':   return json(apiEstados(s, p));

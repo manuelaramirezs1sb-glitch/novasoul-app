@@ -458,6 +458,49 @@ const ESQUEMA_EMPRESARIAL = {
                'nota','senales','auditor','creada_en'],
 
   /**
+   * El chat del equipo, dentro de Nova.
+   *
+   * Una sola hoja para los dos tipos de conversación, y la diferencia la
+   * marca `para`:
+   *   vacío  · es del grupo de `tienda` — lo lee quien tenga esa tienda
+   *   correo · es privado entre `de` y `para`, y no lo lee nadie más
+   *
+   * `de_nombre` se guarda junto al correo a propósito, aunque esté en
+   * Equipo. Un mensaje tiene que seguir diciendo quién lo escribió cuando
+   * esa persona ya no esté en el equipo; si el nombre se buscara al
+   * pintar, el historial se quedaría sin autores al primer cambio de
+   * personal — y un chat de trabajo sirve justamente para eso.
+   *
+   * `leido_por` son correos separados por comas. `borrado` marca el
+   * mensaje sin quitar la fila: queda la constancia de que hubo algo ahí.
+   */
+  Mensajes: ['id','tienda','de','de_nombre','para','texto','creado_en',
+             'leido_por','borrado'],
+
+  /**
+   * Las dos puertas que una gestora abre cada mañana. Una fila por tienda.
+   *
+   *   url/usuario/clave  la PLATAFORMA donde se gestiona (Dropi, Shopify)
+   *   correo_codigo      a dónde llega el código de verificación
+   *   canal_*            el canal donde la tienda habla con SUS COMPRADORES
+   *                      (Chat Center, WhatsApp) — no el chat del equipo,
+   *                      que vive dentro de Nova en la hoja Mensajes
+   *
+   * `clave` guarda la contraseña, y eso es deliberado. Ella lo explicó:
+   * es una subcuenta creada dentro de la plataforma que solo confirma y
+   * gestiona —no puede sacar dinero— y además pide un código que llega a
+   * `correo_codigo`, así que sin ese buzón no entra nadie.
+   *
+   * Hoja aparte y NO un Parámetro más, por dos razones que no dependen de
+   * que nadie se acuerde: `apiParametros` registra cada cambio en
+   * Movimientos con el valor viejo y el nuevo (la contraseña quedaría en
+   * texto plano para siempre), y `ajustes` viaja a la pantalla en cada
+   * carga del día. Ver 97-accesos.gs.
+   */
+  Accesos: ['tienda','plataforma','url','usuario','clave','correo_codigo',
+            'canal_nombre','canal_url','nota','actualizado_en','actualizado_por'],
+
+  /**
    * Los estados que cada plataforma inventa, y qué significan aquí.
    *
    * Existe para que agregar un estado nuevo NO exija publicar una versión

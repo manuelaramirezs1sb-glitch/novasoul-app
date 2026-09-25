@@ -13,7 +13,18 @@ node pruebas/semaforo-pantalla.js     # el semáforo en Hoy y en Pauta
 node pruebas/meta-traer.js            # la lectura de Meta, con Meta remedado
 node pruebas/meta-tarjeta.js          # la tarjeta de conexión
 node pruebas/contar-llamadas.js       # cuántas llamadas le hace Nova a Meta
+node pruebas/chat.js                  # el chat del equipo: quién lee qué
+node pruebas/chat-pantalla.js         # el chat en la pantalla, en Chromium
+node pruebas/accesos.js               # los accesos, y la contraseña fuera de la bitácora
+node pruebas/accesos-pantalla.js      # los accesos donde van, y tapados
 ```
+
+`accesos.js` tiene una aserción que sostiene una decisión y no un detalle:
+que la contraseña de la plataforma NO aparezca en ninguna celda de
+Movimientos. Es la razón entera de que los accesos tengan su propia hoja
+en vez de ser un parámetro más — `apiParametros` registra cada cambio con
+el valor viejo y el nuevo. Rompí el enmascarado a propósito para
+comprobar que la prueba lo nota, y lo nota.
 
 Las de navegador usan el Chromium de este entorno. En otro, se apunta con
 `PLAYWRIGHT=/ruta/a/playwright` y, si hace falta, cambiando `executablePath`.

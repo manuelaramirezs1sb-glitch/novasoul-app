@@ -50,6 +50,8 @@ ORDEN = [
     ('93-central-hoy.gs',  '30 · CENTRAL · HOY, LEYENDO LA RED'),
     ('94-asignar.gs',      '31 · ASIGNAR · REPARTIR EL TRABAJO'),
     ('95-propio.gs',       '32 · EL CONTROL DIARIO · NOVEDADES Y CAS'),
+    ('96-chat.gs',         '33 · EL CHAT DEL EQUIPO, DENTRO DE NOVA'),
+    ('97-accesos.gs',      '34 · LOS ACCESOS DE LA TIENDA'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

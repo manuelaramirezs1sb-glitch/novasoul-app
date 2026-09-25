@@ -613,18 +613,82 @@ input.li:focus{border-color:var(--acc-d);}
 .bot-qs{padding:0 12px 10px;display:flex;flex-wrap:wrap;gap:6px;}
 .bot-q{background:var(--s-dark);border:1px solid var(--s-line);border-radius:16px;padding:6px 12px;font:500 11px/1 'DM Sans';color:var(--t-mut2);cursor:pointer;}
 .bot-q:hover{border-color:var(--acc-d);color:var(--acc-d);}
-/* Nova Chat */
-/* Nova Chat no es un chat: es la puerta al que el equipo ya usa */
-.nc-canal{flex:1;overflow-y:auto;padding:22px 18px;display:flex;flex-direction:column;gap:14px;justify-content:center;text-align:center;}
-.nc-ttl{font:600 15px/1.3 'DM Sans';color:var(--t-ink);}
-.nc-exp{font:500 12.5px/1.65 'DM Sans';color:var(--t-mut);}
-.nc-abrir{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--acc-d);color:#f1f4e8;font:600 13px/1 'DM Sans';padding:14px 20px;border-radius:13px;cursor:pointer;text-decoration:none;align-self:center;}
-.nc-abrir:hover{filter:brightness(1.07);}
+/* Campos de formulario: los usa el formulario de Accesos. Lo que vivía
+   aquí —la puerta al grupo externo— se fue a su sitio: el chat del
+   equipo está dentro de Nova y el canal externo, en Accesos. */
 .nc-campo{display:flex;flex-direction:column;gap:6px;text-align:left;}
 .nc-lbl{font:600 10px/1 'DM Sans';letter-spacing:1.1px;color:var(--t-mut2);}
 .nc-inp{background:var(--s-bg);border:1px solid var(--s-line);border-radius:10px;padding:10px 13px;font:500 12.5px/1 'DM Sans';color:var(--t-ink);outline:none;width:100%;box-sizing:border-box;}
 .nc-inp:focus{border-color:var(--acc-d);}
 .nc-pie{font:500 11px/1.5 'DM Sans';color:var(--t-mut2);}
+/* ─── EL CHAT DEL EQUIPO · dentro de Nova ──────────────
+   Dos pantallas en el mismo panel: la lista de conversaciones y la
+   conversación abierta. En 360px de ancho no caben las dos a la vez, y
+   partirlas es peor que alternarlas. */
+.nch-wrap{flex:1;min-height:0;display:flex;flex-direction:column;}
+.nch-lista{overflow-y:auto;padding:8px 0;}
+.nch-sec{font:600 10px/1 'DM Sans';letter-spacing:1.1px;color:var(--t-mut2);padding:12px 16px 7px;}
+.nch-fila{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;}
+.nch-fila:hover{background:var(--s-dark);}
+.nch-av{width:32px;height:32px;border-radius:50%;background:var(--s-dark);color:var(--t-mut);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  font:600 12px/1 'DM Sans';border:1px solid var(--s-line);}
+.nch-av.grupo{background:var(--acc-d);color:#f1f4e8;border-color:transparent;}
+.nch-txt{flex:1;min-width:0;}
+.nch-nom{font:600 12.5px/1.3 'DM Sans';color:var(--t-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nch-prev{font:500 11.5px/1.4 'DM Sans';color:var(--t-mut2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nch-n{background:var(--acc-d);color:#f1f4e8;font:600 10px/1 'DM Sans';min-width:18px;height:18px;
+  border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px;flex-shrink:0;}
+.nch-head{display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid var(--s-line2);flex-shrink:0;}
+.nch-atras{font:600 17px/1 'DM Sans';color:var(--t-mut);cursor:pointer;padding:0 3px;}
+.nch-atras:hover{color:var(--acc-d);}
+.nch-head strong{display:block;font:600 12.5px/1.3 'DM Sans';color:var(--t-ink);}
+.nch-head small{display:block;font:500 10.5px/1.3 'DM Sans';color:var(--t-mut2);}
+.nch-msgs{flex:1;overflow-y:auto;padding:14px 14px 8px;display:flex;flex-direction:column;gap:9px;}
+.nch-m{max-width:84%;padding:8px 12px;border-radius:14px;align-self:flex-start;
+  background:var(--s-dark);color:var(--t-ink2);border-bottom-left-radius:4px;}
+.nch-m.mio{align-self:flex-end;background:var(--acc-d);color:#f1f4e8;
+  border-bottom-left-radius:14px;border-bottom-right-radius:4px;}
+.nch-m-de{font:600 10px/1 'DM Sans';letter-spacing:.8px;color:var(--acc-d);margin-bottom:4px;}
+.nch-m.mio .nch-m-de{display:none;}
+.nch-m-txt{font:500 12.5px/1.55 'DM Sans';white-space:pre-wrap;word-break:break-word;}
+.nch-m-pie{display:flex;align-items:center;gap:7px;margin-top:4px;opacity:.7;}
+.nch-m-h{font:500 10px/1 'DM Sans';}
+.nch-m-x{font:500 10px/1 'DM Sans';cursor:pointer;text-decoration:underline;}
+.nch-m.ido .nch-m-txt{font-style:italic;opacity:.65;}
+.nch-foot{padding:9px 11px;border-top:1px solid var(--s-line2);display:flex;gap:8px;align-items:flex-end;flex-shrink:0;}
+.nch-inp{flex:1;background:var(--s-bg);border:1px solid var(--s-line);border-radius:16px;
+  padding:9px 13px;font:500 12.5px/1.45 'DM Sans';color:var(--t-ink);outline:none;
+  resize:none;max-height:96px;font-family:'DM Sans',sans-serif;}
+.nch-inp:focus{border-color:var(--acc-d);}
+.nch-send{background:var(--acc-d);color:#f1f4e8;border-radius:50%;width:34px;height:34px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.nch-vacio{padding:26px 20px;text-align:center;font:500 12.5px/1.65 'DM Sans';color:var(--t-mut2);}
+/* El punto rojo del botón flotante. Un chat que no avisa es un chat que
+   nadie abre, y entonces el equipo vuelve a WhatsApp. */
+.chat-fab-n{position:absolute;top:-2px;right:-2px;min-width:19px;height:19px;border-radius:10px;
+  background:#c0392b;color:#fff;font:600 10.5px/1 'DM Sans';display:none;
+  align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--s-bg);}
+.chat-fab-n.on{display:flex;}
+/* ─── ACCESOS · las dos puertas de la tienda ───────────── */
+.acc-abrir{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--acc-d);color:#f1f4e8;font:600 13px/1 'DM Sans';padding:13px 19px;
+  border-radius:12px;cursor:pointer;text-decoration:none;align-self:flex-start;}
+.acc-abrir:hover{filter:brightness(1.07);}
+.acc-abrir.acc-chico{font:600 12px/1 'DM Sans';padding:10px 15px;}
+.acc-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.acc-lbl{font:600 10px/1 'DM Sans';letter-spacing:1.1px;color:var(--t-mut2);
+  min-width:96px;flex:0 0 auto;}
+.acc-val{font:500 12.5px/1 'DM Sans';color:var(--t-ink);background:var(--s-bg);
+  border:1px solid var(--s-line);border-radius:10px;padding:10px 13px;flex:1;min-width:150px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* Tapada usa tabular-nums para que los puntos no bailen al destaparse. */
+.acc-val.tapado{letter-spacing:2px;font-variant-numeric:tabular-nums;color:var(--t-mut);}
+.acc-mini{font:600 11px/1 'DM Sans';color:var(--acc-d);cursor:pointer;
+  text-decoration:underline;flex:0 0 auto;}
+.acc-aviso{font:500 12px/1.6 'DM Sans';color:var(--t-ink2);background:var(--s-dark);
+  border-radius:11px;padding:11px 14px;max-width:70ch;}
+.acc-nota{font:500 12px/1.6 'DM Sans';color:var(--t-mut);max-width:70ch;}
 .cfg-probar{font:600 12px/1 'DM Sans';color:var(--acc-d);text-decoration:none;}
 .cfg-probar:hover{text-decoration:underline;}
 /* ─── ROL: visibilidad por panel ─────────────────────── */
@@ -1297,6 +1361,13 @@ input.li:focus{border-color:var(--acc-d);}
         <div class="ni ro-admin" data-v="inventario" onclick="go('inventario',this)">Inventario</div>
         <div class="ni v-gestora" data-v="g-pedidos" onclick="go('g-pedidos',this)">Mis pedidos</div>
         <div class="ni v-gestora" data-v="g-novedades" onclick="go('g-novedades',this)">Mis novedades</div>
+        <!--
+          ACCESOS lo ven los tres roles: es la puerta por la que se entra
+          a trabajar. Ella pidió expresamente que la gestora tuviera «el
+          link directo para entrar a la parte de accesos», y un atajo que
+          solo existe en el panel de la dueña no es un atajo.
+        -->
+        <div class="ni" data-v="accesos" onclick="go('accesos',this)">Accesos</div>
       </div>
       <div class="navg ro-dueno">
         <div class="navg-lbl">DINERO</div>
@@ -1315,7 +1386,12 @@ input.li:focus{border-color:var(--acc-d);}
       </div>
       <div class="navg ro-dueno">
         <div class="navg-lbl">NOVA</div>
-        <div class="ni ni-soon" style="opacity:.5;cursor:default;" title="Próximamente">NovaChat</div>
+        <!--
+          Aquí estaba «NovaChat · Próximamente» en gris. Ya no es una
+          promesa ni una entrada de menú: es el panel del botón flotante,
+          con su punto rojo, disponible desde cualquier pantalla. Un chat
+          al que hay que navegar no se usa.
+        -->
         <div class="ni" data-v="config" onclick="go('config',this)">Configuración</div>
       </div>
     </div>
@@ -1888,18 +1964,22 @@ input.li:focus{border-color:var(--acc-d);}
           <div class="um-tabla" id="umbrales"></div>
         </div>
 
-        <div class="card">
-          <div class="card-h"><span class="ct">Canal del equipo</span>
-            <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">
-              Lo abre Nova Chat</span></div>
-          <p style="font:500 12.5px/1.6 'DM Sans';color:var(--t-mut);margin:0;max-width:74ch;">
-            Nova no va a reemplazar el grupo donde ya hablan. Quien gestiona
-            tiene el celular abierto todo el día y no se va a mudar a otro
-            chat porque una app se lo pida. Pega aquí el enlace del grupo que
-            usan —WhatsApp, Telegram, el que sea— y queda a un clic desde
-            cualquier pantalla.</p>
-          <div style="display:flex;flex-direction:column;gap:11px;" id="cfg-canal"></div>
-        </div>
+        <!--
+          AQUÍ ESTABA «CANAL DEL EQUIPO», Y SE MUDÓ.
+
+          Era un enlace a un grupo de WhatsApp, puesto como si fuera el
+          chat del equipo. Ella corrigió las dos cosas a la vez:
+
+            «el dueño, la admin y las gestoras deben tener un mismo chat
+             en Nova, no es un canal que ellos peguen (…) ese chat es el
+             que tiene un link: el canal que use el cliente para
+             comunicarse con los COMPRADORES de su tienda».
+
+          Así que el chat del equipo ahora es de verdad y vive dentro de
+          Nova, y este enlace se fue a Accesos, al lado de la plataforma
+          y su contraseña, que es lo que de verdad es: una herramienta de
+          trabajo de la tienda.
+        -->
 
         <div class="card">
           <div class="card-h"><span class="ct">Lo que siempre preguntan</span>
@@ -1967,6 +2047,17 @@ input.li:focus{border-color:var(--acc-d);}
           <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Esto es lo que tienes pendiente en tu jornada de hoy.</p>
         </div>
         <div class="kgrid" id="g-kpi"></div>
+        <!--
+          LAS PUERTAS, EN LA PANTALLA DONDE YA ESTÁ PARADA.
+
+          «tener el link directo para entrar a la parte de accesos».
+          Va arriba, antes de los pendientes, porque es lo primero que se
+          hace a las ocho de la mañana: abrir la plataforma y el chat.
+        -->
+        <div>
+          <div class="slbl" style="margin-bottom:9px;">PARA EMPEZAR</div>
+          <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;" id="g-accesos"></div>
+        </div>
         <div>
           <div class="slbl" style="margin-bottom:9px;">MIS PENDIENTES URGENTES</div>
           <div style="display:flex;flex-direction:column;gap:8px;" id="g-urgentes"></div>
@@ -1999,7 +2090,28 @@ input.li:focus{border-color:var(--acc-d);}
         <div style="display:flex;flex-direction:column;gap:9px;" id="g-novlist"></div>
       </div>
 
-
+      <!-- ════ ACCESOS ════
+           «los links de acceso, colocarlos en los lugares donde van».
+           Las dos puertas que se abren cada mañana: la plataforma donde
+           se gestiona, y el canal por donde la tienda habla con sus
+           compradores. Lo ven los tres roles porque los tres trabajan
+           con ellas; solo la dueña las cambia. -->
+      <div class="view" id="v-accesos">
+        <div>
+          <div style="font:600 21px/1 'Fraunces',serif;color:var(--t-ink);margin-bottom:6px;">Accesos</div>
+          <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);max-width:74ch;">
+            Las puertas de esta tienda: la plataforma donde se gestionan los
+            pedidos y el canal por donde se habla con las compradoras. Aquí, no
+            en un archivo que hay que buscar.</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:13px;" id="acc-cards"></div>
+        <div class="card ro-dueno" id="acc-editar-card">
+          <div class="card-h"><span class="ct">Cambiar los accesos</span>
+            <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);">
+              Solo tú los cambias</span></div>
+          <div style="display:flex;flex-direction:column;gap:11px;" id="acc-form"></div>
+        </div>
+      </div>
 
     </div><!-- /content -->
   </div><!-- /main -->
@@ -2009,12 +2121,13 @@ input.li:focus{border-color:var(--acc-d);}
 <!-- ══════════════════ NOVA CHAT / BOT ══════════════════ -->
 <button class="chat-fab" onclick="toggleChat()" id="chat-fab" title="Nova Chat · Nova Bot" style="display:none;">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <span class="chat-fab-n" id="chat-fab-n"></span>
 </button>
 <div class="chat-panel" id="chat-panel">
   <div class="chat-head">
     <div class="chat-tabs">
       <div class="chat-tab on" onclick="chatTab('bot',this)">Nova Bot</div>
-      <div class="chat-tab" onclick="chatTab('chat',this)">Nova Chat</div>
+      <div class="chat-tab" onclick="chatTab('chat',this)">Mi equipo<span id="chat-tab-n"></span></div>
     </div>
     <div class="chat-close" onclick="toggleChat()">×</div>
   </div>
@@ -2032,9 +2145,33 @@ input.li:focus{border-color:var(--acc-d);}
         </div>
       </div>
     </div>
-    <!-- CHAT PANE -->
+    <!-- ════ EL CHAT DEL EQUIPO ════
+         Aquí había un BOTÓN que abría un grupo de WhatsApp. Ella:
+         «el dueño, la admin y las gestoras deben tener un mismo chat en
+          Nova (…) dentro de Nova, no por fuera».
+         El enlace del canal externo no desapareció: se fue a Accesos,
+         que es lo que de verdad es — el canal por donde la tienda habla
+         con SUS COMPRADORES, junto a la plataforma y su contraseña. -->
     <div class="chat-pane" id="cp-chat">
-      <div class="nc-canal" id="nc-canal"></div>
+      <div class="nch-wrap nch-lista" id="nch-lista"></div>
+      <div class="nch-wrap" id="nch-hilo" style="display:none;">
+        <div class="nch-head">
+          <span class="nch-atras" onclick="nchVolver()" title="Volver">&larr;</span>
+          <div class="nch-av" id="nch-hav">·</div>
+          <div style="flex:1;min-width:0;">
+            <strong id="nch-htitulo"></strong>
+            <small id="nch-hsub"></small>
+          </div>
+        </div>
+        <div class="nch-msgs" id="nch-msgs"></div>
+        <div class="nch-foot">
+          <textarea class="nch-inp" id="nch-inp" rows="1" placeholder="Escribe…"
+                    onkeydown="nchTecla(event)" oninput="nchCrecer(this)"></textarea>
+          <div class="nch-send" onclick="nchEnviar()" title="Enviar">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -3222,13 +3359,18 @@ function initChat(){
   document.getElementById('bot-qs').innerHTML = temas.map(function (x) {
     return '<div class="bot-q" onclick="askBot(\'' + x[0] + '\')">' + x[1] + '</div>';
   }).join('');
-  pintarCanal();
-  pintarNavCanal();
+  // El chat del equipo se pide al entrar, no al abrir el panel: el punto
+  // rojo tiene que estar ahí antes de que a nadie se le ocurra abrirlo.
+  cargarChat('');
+  nchLatir(true);
 }
 function toggleChat(){
   chatOpen=!chatOpen;
   document.getElementById('chat-panel').classList.toggle('on',chatOpen);
-  if(chatOpen){const b=document.getElementById('bot-msgs');if(b)b.scrollTop=b.scrollHeight;}
+  if(chatOpen){
+    const b=document.getElementById('bot-msgs');if(b)b.scrollTop=b.scrollHeight;
+    if(chatActiveTab==='chat') cargarChat(CHAT_CON);
+  }
 }
 function chatTab(tab,el){
   chatActiveTab=tab;
@@ -3236,6 +3378,552 @@ function chatTab(tab,el){
   el.classList.add('on');
   document.querySelectorAll('.chat-pane').forEach(p=>p.classList.remove('on'));
   document.getElementById('cp-'+tab).classList.add('on');
+  if (tab === 'chat') cargarChat(CHAT_CON);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EL CHAT DEL EQUIPO · dentro de Nova
+   ═══════════════════════════════════════════════════════════════
+
+   «el dueño, la admin y las gestoras deben tener un mismo chat en Nova
+    (…) que pueda hablar con su equipo completo o solo dejarle un mensaje
+    al admin o gestor en privado, dentro de Nova, no por fuera».
+
+   Dos tipos de conversación, y la lista las muestra juntas porque así se
+   usan:
+
+     · el grupo de una tienda  — lo lee quien tenga esa tienda asignada
+     · un privado con alguien  — solo esas dos personas, aunque sea la
+                                 dueña la que pregunte
+
+   El grupo es POR TIENDA porque el acceso ya es por tienda: una gestora
+   de Colombia no ve los pedidos de Guatemala, y tampoco tiene por qué
+   leer lo que se habla de esa tienda. Una dueña con tres tiendas tiene
+   tres grupos, que es lo correcto: son tres equipos hablando de cosas
+   distintas.
+   ─────────────────────────────────────────────────────────────── */
+
+let CHAT = null;        // lo último que respondió el servidor
+let CHAT_CON = '';      // la conversación abierta, '' = la lista
+let CHAT_LATE = null;   // el refresco mientras el panel está abierto
+
+/**
+ * Traer el chat.
+ *
+ * `con` vacío trae solo la lista y los sin leer. Con `con` trae además
+ * los mensajes de ese hilo — en la misma petición, porque abrir una
+ * conversación y contar los pendientes salen de la misma lectura de la
+ * hoja y separarlos serían dos llamadas para lo mismo.
+ */
+async function cargarChat(con) {
+  if (!CONECTADO) {
+    /**
+     * Sin sesión —la demo suelta, o el archivo abierto a doble clic— no
+     * hay conversaciones que traer. Decirlo es mejor que dejar el panel
+     * en blanco, que se lee como «se rompió».
+     */
+    const c = document.getElementById('nch-lista');
+    if (c && !c.innerHTML) {
+      c.innerHTML = '<div class="nch-vacio">El chat del equipo necesita tu sesión ' +
+        'de Nova. Entra con tu correo y aquí aparecen tu grupo y tus privados.</div>';
+    }
+    return false;
+  }
+  let r;
+  try { r = await api('chat', con ? { con: con } : {}); }
+  catch (e) { return false; }
+  if (!r || !r.ok) return false;
+
+  CHAT = r;
+  /**
+   * Si se pidió una conversación y el servidor no la devolvió abierta,
+   * es que esta persona no tiene derecho a ella — se vuelve a la lista.
+   * Pedir sin `con` es pedir solo la lista, y entonces no se toca cuál
+   * está abierta.
+   */
+  if (con) CHAT_CON = r.con || '';
+  pintarChatBadge();
+  pintarChatLista();
+  if (CHAT_CON) pintarChatHilo(); else mostrarChatLista();
+  return true;
+}
+
+/** El punto rojo. Sin esto nadie abre el panel y el equipo vuelve a WhatsApp. */
+function pintarChatBadge() {
+  const n = (CHAT && CHAT.sinLeer) || 0;
+  const fab = document.getElementById('chat-fab-n');
+  if (fab) { fab.textContent = n > 9 ? '9+' : String(n); fab.classList.toggle('on', n > 0); }
+  const tab = document.getElementById('chat-tab-n');
+  if (tab) tab.textContent = n > 0 ? ' · ' + (n > 9 ? '9+' : n) : '';
+}
+
+/** Iniciales para el círculo. Dos palabras como mucho: "Ana María R." no cabe. */
+function nchIni(nombre) {
+  const p = String(nombre || '?').trim().split(/\s+/);
+  return ((p[0] || '?')[0] + (p.length > 1 ? p[1][0] : '')).toUpperCase();
+}
+
+/**
+ * La hora de un mensaje.
+ *
+ * Hoy solo la hora; otro día, el día y la hora. Poner la fecha completa
+ * en un chat que se lee al minuto obliga a leer nueve caracteres para
+ * saber algo que ya se sabía.
+ */
+const NCH_MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function nchHora(v) {
+  const s = String(v || '');
+  if (s.length < 16) return s;
+  const h = new Date();
+  const hoy = h.getFullYear() + '-' + String(h.getMonth() + 1).padStart(2, '0') +
+              '-' + String(h.getDate()).padStart(2, '0');
+  const f = s.slice(0, 10);
+  if (f === hoy) return s.slice(11, 16);
+  return Number(f.slice(8, 10)) + ' ' + (NCH_MES[Number(f.slice(5, 7)) - 1] || '') +
+         ' ' + s.slice(11, 16);
+}
+
+/**
+ * La lista de conversaciones.
+ *
+ * Primero los grupos, después la gente. Y dentro de la gente, quien ya
+ * tiene conversación antes que quien no: buscar a alguien con quien ya
+ * se está hablando es lo que se hace veinte veces al día; empezar una
+ * conversación nueva, una vez por semana.
+ */
+function pintarChatLista() {
+  const cont = document.getElementById('nch-lista');
+  if (!cont || !CHAT) return;
+
+  const hilos = CHAT.hilos || {};
+  const fila = function (id, nombre, sub, grupo, ini) {
+    const h = hilos[id];
+    const prev = h && h.ultimo
+      ? (h.ultimo.mio ? 'Tú: ' : (grupo ? h.ultimo.de + ': ' : '')) + h.ultimo.texto
+      : sub;
+    return '<div class="nch-fila" onclick="nchAbrir(\'' + esc(id).replace(/'/g, '') + '\')">' +
+      '<div class="nch-av' + (grupo ? ' grupo' : '') + '">' + esc(ini) + '</div>' +
+      '<div class="nch-txt"><div class="nch-nom">' + esc(nombre) + '</div>' +
+      '<div class="nch-prev">' + esc(prev) + '</div></div>' +
+      (h && h.sinLeer ? '<div class="nch-n">' + h.sinLeer + '</div>' : '') +
+      (h && h.ultimo ? '<div class="nch-prev" style="flex:0 0 auto;">' +
+        esc(nchHora(h.ultimo.cuando)) + '</div>' : '') +
+      '</div>';
+  };
+
+  let h = '';
+  const grupos = CHAT.grupos || [];
+  if (grupos.length) {
+    h += '<div class="nch-sec">' + (grupos.length > 1 ? 'GRUPOS POR TIENDA' : 'EL GRUPO') + '</div>';
+    h += grupos.map(function (g) {
+      return fila(g.id, 'Equipo · ' + g.nombre, 'Todo el equipo de esta tienda', true,
+                  nchIni(g.nombre));
+    }).join('');
+  }
+
+  const gente = (CHAT.gente || []).slice().sort(function (a, b) {
+    const ha = hilos[a.correo], hb = hilos[b.correo];
+    const ta = ha && ha.ultimo ? ha.ultimo.cuando : '';
+    const tb = hb && hb.ultimo ? hb.ultimo.cuando : '';
+    if (ta !== tb) return ta > tb ? -1 : 1;
+    return a.nombre.localeCompare(b.nombre);
+  });
+  if (gente.length) {
+    h += '<div class="nch-sec">EN PRIVADO</div>';
+    h += gente.map(function (g) {
+      return fila(g.correo, g.nombre, ROL_ES[g.rol] || g.rol, false, nchIni(g.nombre));
+    }).join('');
+  }
+
+  if (!grupos.length && !gente.length) {
+    h = '<div class="nch-vacio">Todavía estás sola en Nova. Cuando agregues a ' +
+        'alguien a tu equipo aparece aquí y pueden escribirse sin salir de la app.</div>';
+  }
+  cont.innerHTML = h;
+}
+
+/** Cómo se llama cada rol cuando se lo lee una persona. */
+const ROL_ES = { dueno: 'Dueña', admin: 'Administradora', gestora: 'Gestora' };
+
+function mostrarChatLista() {
+  const l = document.getElementById('nch-lista'), t = document.getElementById('nch-hilo');
+  if (l) l.style.display = 'flex';
+  if (t) t.style.display = 'none';
+}
+
+/** Abrir una conversación. Al abrirla se marca leída: para eso se abrió. */
+async function nchAbrir(con) {
+  CHAT_CON = con;
+  const l = document.getElementById('nch-lista'), t = document.getElementById('nch-hilo');
+  if (l) l.style.display = 'none';
+  if (t) t.style.display = 'flex';
+  pintarChatHilo();
+  await cargarChat(con);
+  const inp = document.getElementById('nch-inp');
+  if (inp) inp.focus();
+  if (CHAT && CHAT.hilos && (CHAT.hilos[con] || {}).sinLeer) {
+    try { await api('chat_visto', { con: con }); } catch (e) { /* se marca la próxima */ }
+    if (CHAT.hilos[con]) {
+      CHAT.sinLeer -= CHAT.hilos[con].sinLeer;
+      CHAT.hilos[con].sinLeer = 0;
+    }
+    pintarChatBadge();
+    pintarChatLista();
+  }
+}
+
+function nchVolver() { CHAT_CON = ''; mostrarChatLista(); }
+
+/** Cómo se llama el hilo abierto, para la cabecera. */
+function nchNombreDe(con) {
+  if (!CHAT) return con;
+  if (String(con).indexOf('g:') === 0) {
+    const g = (CHAT.grupos || []).filter(function (x) { return x.id === con; })[0];
+    return g ? 'Equipo · ' + g.nombre : 'El grupo';
+  }
+  const p = (CHAT.gente || []).filter(function (x) { return x.correo === con; })[0];
+  return p ? p.nombre : con;
+}
+function nchSubDe(con) {
+  if (String(con).indexOf('g:') === 0) return 'Lo lee todo el equipo de esta tienda';
+  const p = CHAT && (CHAT.gente || []).filter(function (x) { return x.correo === con; })[0];
+  return (p ? (ROL_ES[p.rol] || p.rol) + ' · ' : '') + 'Solo ustedes dos';
+}
+
+function pintarChatHilo() {
+  const cont = document.getElementById('nch-msgs');
+  if (!cont) return;
+  const grupo = String(CHAT_CON).indexOf('g:') === 0;
+
+  const ttl = document.getElementById('nch-htitulo');
+  if (ttl) ttl.textContent = nchNombreDe(CHAT_CON);
+  const sub = document.getElementById('nch-hsub');
+  if (sub) sub.textContent = nchSubDe(CHAT_CON);
+  const av = document.getElementById('nch-hav');
+  if (av) {
+    av.textContent = nchIni(nchNombreDe(CHAT_CON).replace('Equipo · ', ''));
+    av.classList.toggle('grupo', grupo);
+  }
+
+  const ms = (CHAT && CHAT.con === CHAT_CON ? CHAT.mensajes : null) || [];
+  if (!ms.length) {
+    cont.innerHTML = '<div class="nch-vacio">' + (grupo
+      ? 'Nadie ha escrito en este grupo todavía. Lo que pongas aquí lo lee todo el ' +
+        'equipo de esta tienda.'
+      : 'Sin mensajes todavía. Lo que escribas aquí solo lo ven ustedes dos.') + '</div>';
+    return;
+  }
+
+  cont.innerHTML = ms.map(function (m) {
+    if (m.borrado) {
+      return '<div class="nch-m ido' + (m.mio ? ' mio' : '') + '">' +
+        (m.mio ? '' : '<div class="nch-m-de">' + esc(m.deNombre) + '</div>') +
+        '<div class="nch-m-txt">mensaje borrado</div>' +
+        '<div class="nch-m-pie"><span class="nch-m-h">' + esc(nchHora(m.cuando)) + '</span></div></div>';
+    }
+    return '<div class="nch-m' + (m.mio ? ' mio' : '') + '">' +
+      (m.mio ? '' : '<div class="nch-m-de">' + esc(m.deNombre) + '</div>') +
+      '<div class="nch-m-txt">' + esc(m.texto) + '</div>' +
+      '<div class="nch-m-pie"><span class="nch-m-h">' + esc(nchHora(m.cuando)) + '</span>' +
+      (m.mio ? '<span class="nch-m-x" onclick="nchBorrar(\'' + esc(m.id).replace(/'/g, '') +
+               '\')">borrar</span>' : '') +
+      '</div></div>';
+  }).join('');
+  cont.scrollTop = cont.scrollHeight;
+}
+
+/** Enter manda, Shift+Enter hace párrafo. Es lo que ya hacen las manos. */
+function nchTecla(ev) {
+  if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); nchEnviar(); }
+}
+function nchCrecer(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 96) + 'px';
+}
+
+async function nchEnviar() {
+  const inp = document.getElementById('nch-inp');
+  if (!inp) return;
+  const texto = String(inp.value || '').trim();
+  if (!texto) return;
+  if (!CHAT_CON || !CHAT) { showToast('Abre una conversación primero'); return; }
+
+  /**
+   * El mensaje se pinta ANTES de que el servidor conteste, y se quita si
+   * falla. Apps Script tarda un par de segundos: sin esto, quien escribe
+   * ve la caja vaciarse y nada aparecer, y vuelve a escribirlo.
+   */
+  inp.value = ''; nchCrecer(inp);
+  const provisional = { id: '', de: CHAT.yo, deNombre: CHAT.yoNombre, texto: texto,
+                        cuando: '', mio: true, borrado: false };
+  if (CHAT.con === CHAT_CON) { CHAT.mensajes.push(provisional); pintarChatHilo(); }
+
+  let r;
+  try { r = await api('chat_enviar', { con: CHAT_CON, texto: texto }); }
+  catch (e) { r = { ok: false, error: 'Sin conexión: no se envió' }; }
+
+  if (!r.ok) {
+    if (CHAT.con === CHAT_CON) {
+      CHAT.mensajes = CHAT.mensajes.filter(function (m) { return m !== provisional; });
+      pintarChatHilo();
+    }
+    inp.value = texto; nchCrecer(inp);   // no se pierde lo escrito
+    showToast(r.error || 'No se envió');
+    return;
+  }
+  await cargarChat(CHAT_CON);
+}
+
+async function nchBorrar(id) {
+  if (!id) return;
+  if (!confirm('¿Borrar este mensaje? Queda la marca de que escribiste algo — ' +
+               'en un chat de trabajo eso no se puede hacer desaparecer.')) return;
+  let r;
+  try { r = await api('chat_borrar', { id: id }); }
+  catch (e) { showToast('Sin conexión'); return; }
+  if (!r.ok) { showToast(r.error || 'No se borró'); return; }
+  await cargarChat(CHAT_CON);
+}
+
+/**
+ * Refrescar mientras el panel está abierto, y solo entonces.
+ *
+ * Un chat que no se actualiza mientras se lo mira no sirve para contestar
+ * nada. Y uno que consulta cada diez segundos con el panel cerrado se
+ * come la cuota de Apps Script del día para nada.
+ */
+function nchLatir(encender) {
+  if (CHAT_LATE) { clearInterval(CHAT_LATE); CHAT_LATE = null; }
+  if (!encender) return;
+  CHAT_LATE = setInterval(function () {
+    if (!chatOpen || chatActiveTab !== 'chat') return;
+    cargarChat(CHAT_CON);
+  }, 45000);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+     LOS ACCESOS DE LA TIENDA
+   ═══════════════════════════════════════════════════════════════
+
+   «los links de acceso, colocarlos en los lugares donde van».
+
+   Son dos puertas distintas y por eso son dos tarjetas:
+
+     · LA PLATAFORMA donde se gestionan los pedidos (Dropi, Shopify),
+       con su usuario y su contraseña.
+     · EL CANAL por donde la tienda habla con SUS COMPRADORAS
+       (Chat Center, WhatsApp).
+
+   La contraseña se guarda porque ella lo decidió con argumentos: es una
+   subcuenta que solo confirma y gestiona, no puede sacar dinero, y
+   además pide un código que llega a un correo que no es el de la
+   gestora. Lo que Nova hace con eso es lo mínimo decente: no la muestra
+   hasta que alguien la pide, no la manda a la bitácora, y no la trae en
+   ninguna otra pantalla.
+   ─────────────────────────────────────────────────────────────── */
+
+let ACC = null;         // lo que respondió el servidor, con su tienda dentro
+let ACC_VER = false;    // si la contraseña está a la vista ahora mismo
+
+async function cargarAccesos() {
+  const cont = document.getElementById('acc-cards');
+  if (!CONECTADO) return false;
+  if (ACC && ACC.tienda === ST) { pintarAccesos(); return true; }
+  if (cont) cont.innerHTML = '<div class="nch-vacio">Cargando…</div>';
+
+  let r;
+  try { r = await api('accesos', { tienda: ST }); }
+  catch (e) {
+    if (cont) cont.innerHTML = '<div class="nch-vacio">Sin conexión: no se pudieron traer.</div>';
+    return false;
+  }
+  if (!r || !r.ok) {
+    if (cont) cont.innerHTML = '<div class="nch-vacio">' + esc(r && r.error || 'No se pudieron traer.') + '</div>';
+    return false;
+  }
+  ACC = r; ACC_VER = false;
+  pintarAccesos();
+  return true;
+}
+
+/** Una fila «etiqueta · valor · copiar». */
+function accFila(lbl, valor, opts) {
+  opts = opts || {};
+  if (!valor) return '';
+  return '<div class="acc-row"><div class="acc-lbl">' + esc(lbl) + '</div>' +
+    '<div class="acc-val' + (opts.secreto && !ACC_VER ? ' tapado' : '') + '">' +
+      esc(opts.secreto && !ACC_VER ? '••••••••••' : valor) + '</div>' +
+    (opts.secreto
+      ? '<div class="acc-mini" onclick="accVerClave()">' + (ACC_VER ? 'ocultar' : 'ver') + '</div>'
+      : '') +
+    '<div class="acc-mini" onclick="accCopiar(\'' + opts.campo + '\')">copiar</div></div>';
+}
+
+function pintarAccesos() {
+  const cont = document.getElementById('acc-cards');
+  if (!cont || !ACC) return;
+  const a = ACC.accesos || {};
+  let h = '';
+
+  // ── La plataforma ──
+  if (a.url || a.usuario || a.clave) {
+    h += '<div class="card"><div class="card-h">' +
+      '<span class="ct">' + esc(a.plataforma || 'La plataforma') + '</span>' +
+      '<span style="font:500 11px/1 \'DM Sans\';color:var(--t-mut2);">Donde gestionas</span></div>';
+    if (a.url) {
+      h += '<a class="acc-abrir" href="' + esc(a.url) + '" target="_blank" rel="noopener noreferrer">' +
+        'Abrir ' + esc(a.plataforma || 'la plataforma') +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>' +
+        '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>';
+    }
+    h += accFila('USUARIO', a.usuario, { campo: 'usuario' });
+    h += accFila('CONTRASEÑA', a.clave, { campo: 'clave', secreto: true });
+    /**
+     * El aviso del código va SIEMPRE que haya plataforma, con correo o
+     * sin él. Quien se topa con la pantalla del código sin saber que
+     * existe cree que la contraseña está mal, la cambia, y deja a todo
+     * el equipo afuera. Es el error más caro que se puede cometer aquí.
+     */
+    h += '<div class="acc-aviso"><strong>Va a pedirte un código.</strong> ' +
+      (a.correo_codigo
+        ? 'Le llega a <b>' + esc(a.correo_codigo) + '</b>. Si no tienes ese correo, ' +
+          'pídeselo a quien lo tenga: sin el código no entras.'
+        : 'Llega a un correo que no es el tuyo. Pídeselo a tu dueña — sin el ' +
+          'código no entras, y la contraseña no está mal.') +
+      ' No la cambies para intentar arreglarlo: dejarías a todo el equipo afuera.</div>';
+    if (a.nota) h += '<div class="acc-nota">' + esc(a.nota) + '</div>';
+    h += '</div>';
+  }
+
+  // ── El canal con las compradoras ──
+  if (a.canal_url) {
+    h += '<div class="card"><div class="card-h">' +
+      '<span class="ct">' + esc(a.canal_nombre || 'El canal de la tienda') + '</span>' +
+      '<span style="font:500 11px/1 \'DM Sans\';color:var(--t-mut2);">Donde hablas con las compradoras</span></div>' +
+      '<p style="font:500 12.5px/1.6 \'DM Sans\';color:var(--t-mut);margin:0;max-width:70ch;">' +
+      'Este es el chat de la tienda con sus clientas. El de tu equipo está ' +
+      'dentro de Nova, en el botón de abajo a la derecha.</p>' +
+      '<a class="acc-abrir" href="' + esc(a.canal_url) + '" target="_blank" rel="noopener noreferrer">' +
+      'Abrir ' + esc(a.canal_nombre || 'el canal') +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>' +
+      '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></div>';
+  }
+
+  if (!h) {
+    /**
+     * Vacío no es lo mismo para las dos. La dueña puede resolverlo ahora;
+     * la gestora solo puede pedirlo, y necesita saber a quién.
+     */
+    h = '<div class="nch-vacio">' + (ACC.puedeEditar
+      ? 'Todavía no has puesto los accesos de ' + esc(ACC.nombreTienda || ST) +
+        '. Llénalos abajo y tu equipo entra desde aquí, sin tener que buscar ' +
+        'el archivo donde estaban.'
+      : 'Tu dueña todavía no ha puesto los accesos de esta tienda. Cuando lo ' +
+        'haga, la plataforma y el chat quedan a un clic desde esta pantalla.') +
+      '</div>';
+  }
+  cont.innerHTML = h;
+  pintarAccesosForm();
+  pintarAccesoAtajo();
+}
+
+function accVerClave() { ACC_VER = !ACC_VER; pintarAccesos(); }
+
+/**
+ * Copiar sin mostrar.
+ *
+ * La contraseña se pega en la plataforma, no se lee en voz alta. Poder
+ * copiarla sin destaparla es lo que hace que nadie tenga que dejarla a
+ * la vista en una pantalla compartida.
+ */
+async function accCopiar(campo) {
+  const v = String((ACC && ACC.accesos || {})[campo] || '');
+  if (!v) return;
+  try { await navigator.clipboard.writeText(v); showToast('Copiado'); }
+  catch (e) { showToast('Tu navegador no deja copiar: tócalo y cópialo a mano'); }
+}
+
+/** El formulario de la dueña. Los demás roles no lo ven ni por CSS ni por JS. */
+function pintarAccesosForm() {
+  const cont = document.getElementById('acc-form');
+  if (!cont) return;
+  if (!ACC || !ACC.puedeEditar) { cont.innerHTML = ''; return; }
+  const a = ACC.accesos || {};
+  const campo = function (id, lbl, val, ph, tipo) {
+    return '<div class="nc-campo"><div class="nc-lbl">' + esc(lbl) + '</div>' +
+      '<input class="nc-inp" id="acc-' + id + '" type="' + (tipo || 'text') + '" ' +
+      'placeholder="' + esc(ph) + '" value="' + esc(val || '') + '"></div>';
+  };
+  cont.innerHTML =
+    campo('plataforma', 'CÓMO SE LLAMA LA PLATAFORMA', a.plataforma, 'Dropi') +
+    campo('url', 'ENLACE PARA ENTRAR', a.url, 'https://app.dropi.co/dashboard/home') +
+    campo('usuario', 'USUARIO O CORREO', a.usuario, 'gestion@tutienda.com') +
+    campo('clave', 'CONTRASEÑA', a.clave, '') +
+    campo('correo_codigo', 'CORREO AL QUE LLEGA EL CÓDIGO', a.correo_codigo,
+          'elcorreoquetucontrolas@gmail.com') +
+    campo('canal_nombre', 'CANAL CON TUS COMPRADORAS', a.canal_nombre, 'Chat Center') +
+    campo('canal_url', 'ENLACE DEL CANAL', a.canal_url, 'https://chateapro.app/login') +
+    campo('nota', 'ALGO QUE TU EQUIPO DEBA SABER', a.nota,
+          'La subcuenta solo confirma y gestiona novedades') +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+      '<div class="nsavebtn" onclick="guardarAccesos()">Guardar accesos</div>' +
+      '<span style="font:500 11px/1.5 \'DM Sans\';color:var(--t-mut2);">' +
+        'Solo lo ve quien tenga esta tienda asignada. La contraseña no queda ' +
+        'escrita en la bitácora.</span></div>' +
+    (a.actualizado_en
+      ? '<div class="nc-pie">Último cambio: ' + esc(a.actualizado_en) +
+        (a.actualizado_por ? ' · ' + esc(a.actualizado_por) : '') + '</div>'
+      : '');
+}
+
+async function guardarAccesos() {
+  const v = function (id) {
+    const el = document.getElementById('acc-' + id);
+    return el ? String(el.value || '').trim() : '';
+  };
+  const cambios = {};
+  ['plataforma', 'url', 'usuario', 'clave', 'correo_codigo',
+   'canal_nombre', 'canal_url', 'nota'].forEach(function (k) { cambios[k] = v(k); });
+
+  let r;
+  try { r = await api('accesos_guardar', { tienda: ST, cambios: cambios }); }
+  catch (e) { showToast('Sin conexión: no se guardó'); return; }
+  if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
+
+  ACC.accesos = r.accesos || ACC.accesos;
+  ACC_VER = false;
+  pintarAccesos();
+  showToast('Accesos guardados');
+}
+
+/**
+ * El atajo en el panel de la gestora.
+ *
+ * «tener el link directo para entrar a la parte de accesos». Un menú al
+ * que hay que acordarse de entrar no es un link directo: esto es un botón
+ * en la pantalla donde ya está parada a las ocho de la mañana.
+ */
+function pintarAccesoAtajo() {
+  const cont = document.getElementById('g-accesos');
+  if (!cont) return;
+  const a = (ACC && ACC.accesos) || {};
+  if (!a.url && !a.canal_url) {
+    cont.innerHTML = '<div class="nch-vacio" style="padding:14px 0;text-align:left;">' +
+      'Tu dueña todavía no ha puesto los accesos de esta tienda.</div>';
+    return;
+  }
+  const btn = function (url, txt) {
+    return '<a class="acc-abrir acc-chico" href="' + esc(url) + '" target="_blank" ' +
+      'rel="noopener noreferrer">' + esc(txt) + '</a>';
+  };
+  cont.innerHTML =
+    (a.url ? btn(a.url, 'Abrir ' + (a.plataforma || 'la plataforma')) : '') +
+    (a.canal_url ? btn(a.canal_url, 'Abrir ' + (a.canal_nombre || 'el canal')) : '') +
+    '<div class="acc-mini" onclick="go(\'accesos\',null)">Usuario y contraseña →</div>';
 }
 function askBot(q){
   // Lo que se pinta como pregunta es la etiqueta, no la clave interna:
@@ -3268,6 +3956,7 @@ const TITLES = {
   gestoras:'Gestoras',auditoria:'Auditoría',pauta:'Pauta y gastos',inventario:'Inventario',
   dinero:'Dinero',calc:'Calculadoras',permisos:'Permisos',cierre:'Cierre de mes',productos:'Productos',config:'Configuración',
   'g-hoy':'Mis pedidos de hoy','g-pedidos':'Mis pedidos','g-novedades':'Mis novedades',
+  accesos:'Accesos',
 };
 function go(view, el) {
   // Gestora: redirigir vistas estándar a las propias
@@ -3284,6 +3973,14 @@ function go(view, el) {
   else { const m=document.querySelector('[data-v="'+view+'"]'); if(m) m.classList.add('on'); }
   document.getElementById('ptitle').textContent = TITLES[view]||view;
   if (view === 'cierre') buildCierre();
+  /**
+   * Los accesos se piden UNA vez por sesión y por tienda, no en cada
+   * pintada. Es la única respuesta que lleva una contraseña dentro, y va
+   * solo a quien tenga esa tienda asignada — el mismo filtro que ya
+   * decide sus pedidos. `cargarAccesos` devuelve lo que ya tiene si la
+   * tienda no cambió.
+   */
+  if (view === 'accesos') cargarAccesos();
   closeSb();
 }
 
@@ -3384,8 +4081,13 @@ async function cambiarTienda(t) {
   // enseña los pedidos de la otra tienda como si fueran de esta.
   PEDS_REALES = []; NOVS_REALES = []; PEDS_VISTA = [];
   REPARTO = null;
+  // Los accesos son de la tienda, no de la persona: los de Ecuador no
+  // sirven para entrar a Guatemala, y dejarlos en pantalla es peor que
+  // no tenerlos.
+  ACC = null;
   buildAll();
   await cargarReales();
+  cargarAccesos();
   showToast('Ahora estás en ' + ((STORES[t] || {}).name || t));
 }
 
@@ -3423,7 +4125,9 @@ function switchSt(s){
   updateSub(); buildAll();
   montarImportadores();
   // La tienda cambió: los datos de la anterior no pueden quedarse en pantalla
+  ACC = null;
   cargarReales();
+  cargarAccesos();
 }
 
 // ─── TEMA / MODO ──────────────────────────────────────
@@ -5465,6 +6169,7 @@ function enterApp(forceRol){
   // Mostrar chat FAB
   document.getElementById('chat-fab').style.display='flex';
   initChat();
+  cargarAccesos();
 
 }
 function logout(){
@@ -5475,6 +6180,9 @@ function logout(){
   document.getElementById('login').style.display='flex';
   document.getElementById('chat-fab').style.display='none';
   document.getElementById('chat-panel').classList.remove('on');
+  // El chat se apaga al salir: ni el latido ni los mensajes de la sesión
+  // anterior tienen nada que hacer en la pantalla de entrada.
+  nchLatir(false); CHAT=null; CHAT_CON=''; chatOpen=false; pintarChatBadge();
   step(1);
 }
 
@@ -6104,7 +6812,6 @@ async function buildCierre(){
 function pintarConfig() {
   const cuenta = document.getElementById('cfg-cuenta');
   const tiendas = document.getElementById('cfg-tiendas');
-  pintarConfigCanal();
   pintarFormatoFecha();
   pintarPreguntas();
 
@@ -7082,92 +7789,27 @@ function irAFicha(i) {
 }
 
 /**
- * Nova Chat no es un chat.
+ * ── AQUÍ VIVÍA EL «CANAL DEL EQUIPO», Y SE PARTIÓ EN DOS ──
  *
- * Aquí había una conversación de ejemplo entre Daniela, Camila y Manuela,
- * con hora y todo, y una caja para escribir que no mandaba el mensaje a
- * ninguna parte: se pintaba en pantalla y se perdía al recargar. Peor que
- * no tener chat es tener uno que parece funcionar.
+ * Había una pestaña «Nova Chat» que era un BOTÓN a un grupo de WhatsApp,
+ * y antes de eso una conversación de ejemplo entre Daniela, Camila y
+ * Manuela, con hora y todo, y una caja para escribir que no mandaba el
+ * mensaje a ninguna parte.
  *
- * Y construir el chat de verdad tampoco era la respuesta. Quien gestiona
- * ya tiene un grupo abierto en el celular todo el día y no se va a mudar
- * porque una app se lo pida; un chat propio se queda vacío y el equipo
- * sigue hablando donde siempre. Lo útil es lo contrario: que Nova tenga
- * ese grupo a un clic desde la pantalla donde se está trabajando.
+ * Ella separó las dos cosas que estaban confundidas:
+ *
+ *   «el dueño, la admin y las gestoras deben tener un mismo chat en
+ *    Nova, no es un canal que ellos peguen (…) ese chat es el que tiene
+ *    un link: el canal que use el cliente para comunicarse con los
+ *    COMPRADORES de su tienda».
+ *
+ * El chat del equipo es ahora un chat de verdad, dentro de Nova, en el
+ * panel del botón flotante. Y el enlace del canal se fue a Accesos, al
+ * lado de la plataforma y su contraseña — que es lo que siempre fue.
+ *
+ * `AJUSTES` se llamaba `CANAL` cuando lo único que llevaba era eso.
  */
-let CANAL = { canal_nombre: '', canal_url: '' };
-
-function pintarCanal() {
-  const cont = document.getElementById('nc-canal');
-  if (!cont) return;
-
-  const url = String(CANAL.canal_url || '').trim();
-  const nombre = String(CANAL.canal_nombre || '').trim() || 'el canal del equipo';
-
-  if (url) {
-    cont.innerHTML =
-      '<div class="nc-ttl">' + esc(nombre) + '</div>' +
-      '<p class="nc-exp">Aquí hablan entre ustedes. Nova no se mete en esa ' +
-        'conversación: solo te la deja a un clic.</p>' +
-      '<a class="nc-abrir" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' +
-        'Abrir ' + esc(nombre) +
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
-        'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
-        '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>' +
-        '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>' +
-      (ROL === 'dueno'
-        ? '<div class="nc-pie">Lo cambias en Configuración → Canal del equipo.</div>'
-        : '');
-    return;
-  }
-
-  // Sin canal puesto, cada rol necesita saber algo distinto
-  cont.innerHTML = ROL === 'dueno'
-    ? '<div class="nc-ttl">Todavía no has puesto el canal</div>' +
-      '<p class="nc-exp">Pega el enlace del grupo donde ya habla tu equipo ' +
-        '—WhatsApp, Telegram, el que sea— y aparece aquí como botón, para ti ' +
-        'y para todas.</p>' +
-      '<div class="nc-campo"><div class="nc-lbl">CÓMO LO LLAMAN</div>' +
-        '<input class="nc-inp" id="nc-nombre" placeholder="Grupo de pedidos" ' +
-        'value="' + esc(CANAL.canal_nombre || '') + '"></div>' +
-      '<div class="nc-campo"><div class="nc-lbl">ENLACE</div>' +
-        '<input class="nc-inp" id="nc-url" placeholder="https://chat.whatsapp.com/…" ' +
-        'value=""></div>' +
-      '<div class="nc-abrir" onclick="guardarCanalDesdeChat()">Guardar canal</div>'
-    : '<div class="nc-ttl">Sin canal todavía</div>' +
-      '<p class="nc-exp">Tu dueña todavía no ha puesto el enlace del grupo del ' +
-        'equipo. Cuando lo haga, aparece aquí y lo abres desde cualquier pantalla.</p>';
-}
-
-/** El mismo guardado, desde el panel de chat en vez de Configuración. */
-async function guardarCanalDesdeChat() {
-  const nombre = (document.getElementById('nc-nombre') || {}).value || '';
-  const url = (document.getElementById('nc-url') || {}).value || '';
-  await guardarCanal(String(nombre).trim(), String(url).trim());
-}
-
-/**
- * Guardar el canal.
- *
- * El enlace lo valida el servidor, no la pantalla: un `javascript:` en
- * ese campo correría código en la sesión de cualquiera del equipo que le
- * diera clic, con su token al lado. Validar solo aquí dejaría la puerta
- * abierta a quien llame la API de frente.
- */
-async function guardarCanal(nombre, url) {
-  try {
-    const r = await api('parametros', { tienda: ST,
-      cambios: { canal_nombre: nombre, canal_url: url } });
-    if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return false; }
-    CANAL = r.ajustes || CANAL;
-    pintarCanal();
-    pintarConfigCanal();
-    pintarNavCanal();
-    pintarFormatoFecha();
-    showToast(url ? 'Canal guardado' : 'Canal quitado');
-    return true;
-  } catch (e) { showToast('Sin conexión: no se guardó'); return false; }
-}
+let AJUSTES = { formato_fecha: 'dia_primero' };
 
 /**
  * Cómo se leen las fechas de los archivos.
@@ -7183,7 +7825,7 @@ function pintarFormatoFecha() {
     cont.innerHTML = '<div class="eq-vacio">Solo la dueña cambia esto.</div>';
     return;
   }
-  const actual = CANAL.formato_fecha === 'mes_primero' ? 'mes_primero' : 'dia_primero';
+  const actual = AJUSTES.formato_fecha === 'mes_primero' ? 'mes_primero' : 'dia_primero';
   const ops = [
     ['dia_primero', 'Día primero', '05-07-2026 es el 5 de julio',
      'Lo normal en América Latina'],
@@ -7205,7 +7847,7 @@ async function guardarFormatoFecha(valor) {
   try {
     const r = await api('parametros', { tienda: ST, cambios: { formato_fecha: valor } });
     if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
-    CANAL = r.ajustes || CANAL;
+    AJUSTES = r.ajustes || AJUSTES;
     pintarFormatoFecha();
     showToast(valor === 'dia_primero'
       ? 'Las fechas se leerán con el día primero'
@@ -7256,73 +7898,6 @@ async function guardarPreguntas() {
     if (PRODS.length) pintarInventario();
     showToast('Preguntas guardadas');
   } catch (e) { showToast('Sin conexión: no se guardó'); }
-}
-
-/** La tarjeta de Configuración: el mismo dato, editable con calma. */
-function pintarConfigCanal() {
-  const cont = document.getElementById('cfg-canal');
-  if (!cont) return;
-  if (ROL !== 'dueno') {
-    cont.innerHTML = '<div class="eq-vacio">Solo la dueña cambia el canal del equipo.</div>';
-    return;
-  }
-  const url = String(CANAL.canal_url || '').trim();
-  cont.innerHTML =
-    '<div class="nc-campo"><div class="nc-lbl">CÓMO LO LLAMAN</div>' +
-      '<input class="nc-inp" id="cfg-canal-nombre" placeholder="Grupo de pedidos" ' +
-      'value="' + esc(CANAL.canal_nombre || '') + '"></div>' +
-    '<div class="nc-campo"><div class="nc-lbl">ENLACE</div>' +
-      '<input class="nc-inp" id="cfg-canal-url" placeholder="https://chat.whatsapp.com/…" ' +
-      'value="' + esc(url) + '"></div>' +
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
-      '<div class="nsavebtn" onclick="guardarCanalDesdeConfig()">Guardar canal</div>' +
-      (url
-        ? '<div class="nsavebtn" style="background:var(--s-dark);color:#b8322f;" ' +
-          'onclick="quitarCanal()">Quitar</div>' +
-          '<a class="cfg-probar" href="' + esc(url) + '" target="_blank" ' +
-          'rel="noopener noreferrer">Probar el enlace →</a>'
-        : '') +
-    '</div>';
-}
-
-async function guardarCanalDesdeConfig() {
-  const nombre = (document.getElementById('cfg-canal-nombre') || {}).value || '';
-  const url = (document.getElementById('cfg-canal-url') || {}).value || '';
-  await guardarCanal(String(nombre).trim(), String(url).trim());
-}
-
-async function quitarCanal() {
-  if (!confirm('¿Quitar el canal?\n\nNova Chat deja de tener a dónde llevar. ' +
-               'El grupo sigue existiendo, solo se va el atajo.')) return;
-  await guardarCanal('', '');
-}
-
-/**
- * NovaChat en el menú.
- *
- * Estaba como "Próximamente" en gris desde el primer día. Con un canal
- * puesto deja de ser una promesa y se vuelve el atajo que es.
- */
-function pintarNavCanal() {
-  const ni = document.querySelector('.ni-soon');
-  if (!ni) return;
-  const url = String(CANAL.canal_url || '').trim();
-  const nombre = String(CANAL.canal_nombre || '').trim() || 'NovaChat';
-  if (url) {
-    ni.textContent = nombre;
-    ni.style.opacity = '';
-    ni.style.cursor = 'pointer';
-    ni.title = 'Abrir ' + nombre;
-    ni.onclick = function () { window.open(url, '_blank', 'noopener'); };
-  } else {
-    ni.textContent = 'NovaChat';
-    ni.style.opacity = '.5';
-    ni.style.cursor = 'default';
-    ni.title = ROL === 'dueno'
-      ? 'Pega el enlace de tu canal en Configuración'
-      : 'Tu dueña todavía no ha puesto el canal del equipo';
-    ni.onclick = null;
-  }
 }
 
 /**
@@ -7821,7 +8396,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-25 · caba';
+const VERSION_PANTALLA = '2026-09-25 · 2542';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -9682,12 +10257,9 @@ async function cargarAlarmas() {
   ALARMAS_HOY = r.alarmas || [];
   UMBRALES = r.umbrales;
   CATALOGO_ALARMAS = r.catalogo || [];
-  CANAL = r.ajustes || CANAL;
+  AJUSTES = r.ajustes || AJUSTES;
   pintarAlarmas();
   pintarUmbrales();
-  pintarCanal();
-  pintarConfigCanal();
-  pintarNavCanal();
   pintarFormatoFecha();
   pintarPreguntas();
   return true;
@@ -10352,6 +10924,7 @@ function entrarConSesion(ses) {
   cargarReales();
   document.getElementById('chat-fab').style.display = 'flex';
   initChat();
+  cargarAccesos();
   vigilarSesion();
   ROL_REAL = ROL;
   pintarSelectorVista();

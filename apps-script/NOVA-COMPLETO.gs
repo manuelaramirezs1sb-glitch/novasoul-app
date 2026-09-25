@@ -462,6 +462,49 @@ const ESQUEMA_EMPRESARIAL = {
                'nota','senales','auditor','creada_en'],
 
   /**
+   * El chat del equipo, dentro de Nova.
+   *
+   * Una sola hoja para los dos tipos de conversación, y la diferencia la
+   * marca `para`:
+   *   vacío  · es del grupo de `tienda` — lo lee quien tenga esa tienda
+   *   correo · es privado entre `de` y `para`, y no lo lee nadie más
+   *
+   * `de_nombre` se guarda junto al correo a propósito, aunque esté en
+   * Equipo. Un mensaje tiene que seguir diciendo quién lo escribió cuando
+   * esa persona ya no esté en el equipo; si el nombre se buscara al
+   * pintar, el historial se quedaría sin autores al primer cambio de
+   * personal — y un chat de trabajo sirve justamente para eso.
+   *
+   * `leido_por` son correos separados por comas. `borrado` marca el
+   * mensaje sin quitar la fila: queda la constancia de que hubo algo ahí.
+   */
+  Mensajes: ['id','tienda','de','de_nombre','para','texto','creado_en',
+             'leido_por','borrado'],
+
+  /**
+   * Las dos puertas que una gestora abre cada mañana. Una fila por tienda.
+   *
+   *   url/usuario/clave  la PLATAFORMA donde se gestiona (Dropi, Shopify)
+   *   correo_codigo      a dónde llega el código de verificación
+   *   canal_*            el canal donde la tienda habla con SUS COMPRADORES
+   *                      (Chat Center, WhatsApp) — no el chat del equipo,
+   *                      que vive dentro de Nova en la hoja Mensajes
+   *
+   * `clave` guarda la contraseña, y eso es deliberado. Ella lo explicó:
+   * es una subcuenta creada dentro de la plataforma que solo confirma y
+   * gestiona —no puede sacar dinero— y además pide un código que llega a
+   * `correo_codigo`, así que sin ese buzón no entra nadie.
+   *
+   * Hoja aparte y NO un Parámetro más, por dos razones que no dependen de
+   * que nadie se acuerde: `apiParametros` registra cada cambio en
+   * Movimientos con el valor viejo y el nuevo (la contraseña quedaría en
+   * texto plano para siempre), y `ajustes` viaja a la pantalla en cada
+   * carga del día. Ver 97-accesos.gs.
+   */
+  Accesos: ['tienda','plataforma','url','usuario','clave','correo_codigo',
+            'canal_nombre','canal_url','nota','actualizado_en','actualizado_por'],
+
+  /**
    * Los estados que cada plataforma inventa, y qué significan aquí.
    *
    * Existe para que agregar un estado nuevo NO exija publicar una versión
@@ -4746,6 +4789,15 @@ function manejar(e, metodo) {
       case 'auditoria': return json(apiAuditoria(s, p));
       // `asignar` se borró: se asignan tiendas, no pedidos.
       case 'reparto':   return json(apiReparto(s, p));
+      // El chat del equipo. Dentro de Nova, no un botón que manda afuera.
+      case 'chat':         return json(apiChat(s, p));
+      case 'chat_enviar':  return json(apiChatEnviar(s, p));
+      case 'chat_visto':   return json(apiChatVisto(s, p));
+      case 'chat_borrar':  return json(apiChatBorrar(s, p));
+      // Los accesos van aparte de `parametros` a propósito: la contraseña
+      // no puede pasar por la bitácora ni viajar en cada carga. Ver 97.
+      case 'accesos':          return json(apiAccesos(s, p));
+      case 'accesos_guardar':  return json(apiAccesosGuardar(s, p));
       case 'auditoria_casos':   return json(apiAuditoriaCasos(s, p));
       case 'auditoria_guardar': return json(apiAuditoriaGuardar(s, p));
       case 'estados':   return json(apiEstados(s, p));
@@ -20491,4 +20543,586 @@ function pedidosPorExterno_(ss) {
     if (ext) out[ext.toLowerCase()] = String(d[i][cId] || '');
   }
   return out;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   33 · EL CHAT DEL EQUIPO, DENTRO DE NOVA
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  EL CHAT DEL EQUIPO · dentro de Nova
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ QUÉ PIDIÓ ───────────────────────────────────────────────┐
+ * │                                                            │
+ * │ «el dueño, la admin y las gestoras deben tener un mismo    │
+ * │  chat en Nova (…) que pueda hablar con su equipo completo  │
+ * │  o solo dejarle un mensaje al admin o gestor en privado,   │
+ * │  dentro de Nova, no por fuera».                            │
+ * │                                                            │
+ * │ Hasta hoy la pestaña «Nova Chat» era un BOTÓN que abría    │
+ * │ un grupo de WhatsApp. Eso es lo contrario de lo que pidió: │
+ * │ mandaba la conversación afuera, donde Nova no sabe de qué  │
+ * │ se habló ni quién quedó de hacer qué.                      │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ EL GRUPO ES POR TIENDA ───────────────────────────┐
+ * │                                                            │
+ * │ Porque el acceso ya es por tienda. Una gestora de Colombia │
+ * │ no ve los pedidos de Guatemala; tampoco tiene por qué leer │
+ * │ lo que se habla de esa tienda.                             │
+ * │                                                            │
+ * │ Una dueña con tres tiendas tiene tres grupos, y eso no es  │
+ * │ un inconveniente: es que son tres equipos distintos que    │
+ * │ hablan de cosas distintas.                                 │
+ * │                                                            │
+ * │ El privado es aparte: va entre dos personas del mismo      │
+ * │ cliente, sin importar la tienda. Un mensaje a alguien es   │
+ * │ para esa persona, no para el sitio donde trabaja.          │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ LO QUE NOVA NO HACE AQUÍ ─────────────────────────────────┐
+ * │                                                            │
+ * │ No edita ni borra mensajes de nadie, ni los de uno mismo.  │
+ * │ Un chat de trabajo donde se puede reescribir lo dicho no   │
+ * │ sirve para lo único que sirve un chat de trabajo: saber    │
+ * │ qué se acordó.                                             │
+ * │                                                            │
+ * │ Se pueden ocultar los propios —queda la marca de que       │
+ * │ hubo un mensaje y quién lo borró—, y eso es todo.          │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+
+/** Cuánto texto cabe en un mensaje. Un pegote de mil líneas no es un chat. */
+const CHAT_LARGO = 2000;
+
+/** Cuántos mensajes trae una conversación de una vez. */
+const CHAT_PAGINA = 80;
+
+/**
+ * Con quién se puede hablar: el equipo del mismo cliente.
+ *
+ * Se incluye a las personas de OTRAS tiendas a propósito. La admin
+ * coordina varias, y poder escribirle a la gestora de Guatemala sin
+ * tener que estar parada en Guatemala es justamente para lo que sirve
+ * un privado.
+ */
+function chatGente_(ss, yo) {
+  const sh = ss.getSheetByName('Equipo');
+  if (!sh || sh.getLastRow() < 2) return [];
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+
+  const out = [];
+  for (let i = 1; i < d.length; i++) {
+    const correo = String(d[i][c('correo')] || '').toLowerCase().trim();
+    const nombre = String(d[i][c('nombre')] || '').trim();
+    if (!correo || !nombre) continue;
+    if (norm(d[i][c('estado')]) === 'inactivo') continue;
+    if (correo === norm(yo)) continue;          // no se habla solo
+    out.push({
+      correo: correo, nombre: nombre,
+      rol: rolCanonico(d[i][c('rol')]) || String(d[i][c('rol')] || ''),
+      tiendas: String(d[i][c('tienda')] || '*').trim(),
+    });
+  }
+  return out;
+}
+
+/**
+ * Si esta persona puede leer esta conversación.
+ *
+ * Se comprueba al LEER y al ESCRIBIR, no solo al pintar la lista. Una
+ * pantalla que no ofrece una conversación no impide pedirla: basta
+ * cambiar un valor en la consola del navegador.
+ */
+function chatPuedeVer_(s, con) {
+  const quien = String(con || '').trim();
+  if (!quien) return false;
+
+  // Grupo de una tienda: «g:ec»
+  if (quien.indexOf('g:') === 0) {
+    const t = quien.slice(2);
+    return !!t && (s.tiendas || []).indexOf(t) !== -1;
+  }
+  // Privado: el correo de la otra persona.
+  return quien.indexOf('@') !== -1;
+}
+
+/** El id de conversación en el que cae un mensaje, visto desde `yo`. */
+function chatHiloDe_(m, yo) {
+  if (!String(m.para || '').trim()) return 'g:' + String(m.tienda || '');
+  const de = norm(m.de), para = norm(m.para);
+  return de === norm(yo) ? para : de;
+}
+
+/**
+ * Las conversaciones de esta persona, con lo último de cada una.
+ *
+ * Una sola lectura de la hoja para todo: la lista, los sin leer y el
+ * último mensaje de cada hilo. Tres recorridos de la misma hoja para
+ * tres números que salen del mismo sitio es lo que vuelve lento algo
+ * que se abre veinte veces al día.
+ */
+function apiChat(s, p) {
+  const yo = String(s.email || '').toLowerCase().trim();
+  const ss = libro_(s.sheetId);
+  const gente = chatGente_(ss, yo);
+
+  const out = {
+    ok: true, yo: yo, yoNombre: s.nombre || yo,
+    gente: gente,
+    grupos: (s.tiendas || []).map(function (t) {
+      return { id: 'g:' + t, tienda: t, nombre: nombreTienda(ss, t) || t };
+    }),
+    hilos: {}, mensajes: [], con: '', sinLeer: 0,
+  };
+
+  const sh = ss.getSheetByName('Mensajes');
+  if (!sh || sh.getLastRow() < 2) {
+    out.con = String(p.con || out.grupos[0] && out.grupos[0].id || '');
+    return out;
+  }
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+
+  const mios = [];
+  for (let i = 1; i < d.length; i++) {
+    const m = {
+      id: String(d[i][c('id')] || ''),
+      tienda: String(d[i][c('tienda')] || '').trim(),
+      de: String(d[i][c('de')] || '').toLowerCase().trim(),
+      deNombre: String(d[i][c('de_nombre')] || ''),
+      para: String(d[i][c('para')] || '').toLowerCase().trim(),
+      texto: String(d[i][c('texto')] || ''),
+      cuando: String(d[i][c('creado_en')] || ''),
+      leidoPor: String(d[i][c('leido_por')] || ''),
+      borrado: norm(d[i][c('borrado')]) === 'si',
+    };
+    if (!m.id) continue;
+
+    /**
+     * Qué le toca a esta persona:
+     *  · un privado en el que es una de las dos puntas;
+     *  · o un mensaje de grupo de una tienda suya.
+     * Cualquier otra cosa no se le manda — ni para contarla.
+     */
+    const esPrivado = !!m.para;
+    if (esPrivado) {
+      if (m.de !== yo && m.para !== yo) continue;
+    } else {
+      if ((s.tiendas || []).indexOf(m.tienda) === -1) continue;
+    }
+    mios.push(m);
+  }
+
+  mios.sort(function (a, b) { return a.cuando < b.cuando ? -1 : 1; });
+
+  const leido = function (m) {
+    return m.de === yo ||
+           (',' + m.leidoPor.toLowerCase() + ',').indexOf(',' + yo + ',') !== -1;
+  };
+
+  mios.forEach(function (m) {
+    const hilo = chatHiloDe_(m, yo);
+    if (!out.hilos[hilo]) out.hilos[hilo] = { id: hilo, sinLeer: 0, ultimo: null };
+    out.hilos[hilo].ultimo = {
+      de: m.deNombre || m.de, texto: m.borrado ? '(mensaje borrado)' : m.texto,
+      cuando: m.cuando, mio: m.de === yo,
+    };
+    if (!leido(m)) { out.hilos[hilo].sinLeer++; out.sinLeer++; }
+  });
+
+  /** La conversación abierta. Por defecto, el grupo de la tienda activa. */
+  const con = String(p.con || '').trim() ||
+              (out.grupos[0] ? out.grupos[0].id : '');
+  if (con && chatPuedeVer_(s, con)) {
+    out.con = con;
+    out.mensajes = mios.filter(function (m) { return chatHiloDe_(m, yo) === con; })
+      .slice(-CHAT_PAGINA)
+      .map(function (m) {
+        return { id: m.id, de: m.de, deNombre: m.deNombre || m.de,
+                 texto: m.borrado ? '' : m.texto, borrado: m.borrado,
+                 cuando: m.cuando, mio: m.de === yo };
+      });
+  }
+  return out;
+}
+
+/**
+ * Escribir. Al grupo de una tienda, o a una persona.
+ *
+ * `para` vacío significa grupo, y entonces la tienda es obligatoria: un
+ * mensaje de grupo sin tienda no lo podría leer nadie, porque el filtro
+ * de lectura pregunta justamente por eso.
+ */
+function apiChatEnviar(s, p) {
+  const yo = String(s.email || '').toLowerCase().trim();
+  const texto = String(p.texto || '').trim();
+  if (!texto) return { ok: false, error: 'El mensaje está vacío.' };
+  if (texto.length > CHAT_LARGO) {
+    return { ok: false, error: 'El mensaje es muy largo. Máximo ' + CHAT_LARGO +
+                               ' caracteres — para lo demás, mejor una nota en el caso.' };
+  }
+
+  const con = String(p.con || '').trim();
+  if (!chatPuedeVer_(s, con)) {
+    return { ok: false, error: 'No puedes escribir en esa conversación.' };
+  }
+
+  const ss = libro_(s.sheetId);
+  let tienda = '', para = '';
+
+  if (con.indexOf('g:') === 0) {
+    tienda = con.slice(2);
+  } else {
+    para = con.toLowerCase();
+    // Solo a alguien que existe y está activo en este cliente.
+    const gente = chatGente_(ss, yo);
+    if (!gente.filter(function (g) { return g.correo === para; }).length) {
+      return { ok: false, error: 'Esa persona no está en tu equipo.' };
+    }
+  }
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) return { ok: false, error: 'Hay otro mensaje guardándose.' };
+  try {
+    const sh = ss.getSheetByName('Mensajes');
+    if (!sh) {
+      return { ok: false, error: 'Falta la hoja Mensajes. Corre bootstrapTodo() una vez.' };
+    }
+    const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
+    const fila = {
+      id: 'm' + Utilities.getUuid().slice(0, 10),
+      tienda: tienda, de: yo, de_nombre: s.nombre || yo, para: para,
+      texto: texto, creado_en: ahoraISO(),
+      // Quien escribe ya lo leyó. Sin esto, todo mensaje propio contaría
+      // como pendiente para uno mismo.
+      leido_por: yo, borrado: '',
+    };
+    sh.appendRow(enc.map(function (c) { return fila[c] !== undefined ? fila[c] : ''; }));
+    return { ok: true, id: fila.id, cuando: fila.creado_en };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  } finally { lock.releaseLock(); }
+}
+
+/**
+ * Marcar como leída una conversación.
+ *
+ * Se escribe la columna entera de una vez. Marcar mensaje por mensaje
+ * serían ochenta escrituras cada vez que alguien abre el chat, y el
+ * chat se abre veinte veces al día.
+ */
+function apiChatVisto(s, p) {
+  const yo = String(s.email || '').toLowerCase().trim();
+  const con = String(p.con || '').trim();
+  if (!chatPuedeVer_(s, con)) return { ok: false, error: 'Esa conversación no es tuya.' };
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) return { ok: true, marcados: 0 };
+  try {
+    const ss = libro_(s.sheetId);
+    const sh = ss.getSheetByName('Mensajes');
+    if (!sh || sh.getLastRow() < 2) return { ok: true, marcados: 0 };
+
+    const d = sh.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const cL = e.indexOf('leido_por');
+    if (cL === -1) return { ok: true, marcados: 0 };
+    const cDe = e.indexOf('de'), cPara = e.indexOf('para'), cT = e.indexOf('tienda');
+
+    let n = 0;
+    for (let i = 1; i < d.length; i++) {
+      const m = { de: String(d[i][cDe] || '').toLowerCase().trim(),
+                  para: String(d[i][cPara] || '').toLowerCase().trim(),
+                  tienda: String(d[i][cT] || '').trim() };
+      if (chatHiloDe_(m, yo) !== con) continue;
+      if (m.de === yo) continue;
+      const leidos = String(d[i][cL] || '').toLowerCase();
+      if ((',' + leidos + ',').indexOf(',' + yo + ',') !== -1) continue;
+      d[i][cL] = leidos ? leidos + ',' + yo : yo;
+      n++;
+    }
+    if (!n) return { ok: true, marcados: 0 };
+
+    const columna = d.slice(1).map(function (f) { return [f[cL]]; });
+    sh.getRange(2, cL + 1, columna.length, 1).setValues(columna);
+    return { ok: true, marcados: n };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  } finally { lock.releaseLock(); }
+}
+
+/**
+ * Borrar un mensaje PROPIO.
+ *
+ * No se borra la fila: se marca. Queda constancia de que hubo un
+ * mensaje ahí y de quién lo quitó. En un chat de trabajo, poder hacer
+ * desaparecer lo dicho sin rastro es exactamente lo que impide usarlo
+ * para saber qué se acordó.
+ */
+function apiChatBorrar(s, p) {
+  const yo = String(s.email || '').toLowerCase().trim();
+  const id = String(p.id || '').trim();
+  if (!id) return { ok: false, error: 'No sé qué mensaje.' };
+
+  try {
+    const ss = libro_(s.sheetId);
+    const sh = ss.getSheetByName('Mensajes');
+    if (!sh || sh.getLastRow() < 2) return { ok: false, error: 'No hay mensajes.' };
+    const d = sh.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const cId = e.indexOf('id'), cDe = e.indexOf('de'), cB = e.indexOf('borrado');
+    if (cB === -1) return { ok: false, error: 'Falta la columna borrado. Corre bootstrapTodo().' };
+
+    for (let i = 1; i < d.length; i++) {
+      if (String(d[i][cId] || '').trim() !== id) continue;
+      if (String(d[i][cDe] || '').toLowerCase().trim() !== yo) {
+        return { ok: false, error: 'Solo puedes borrar tus propios mensajes.' };
+      }
+      sh.getRange(i + 1, cB + 1).setValue('si');
+      return { ok: true };
+    }
+    return { ok: false, error: 'No encuentro ese mensaje.' };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   34 · LOS ACCESOS DE LA TIENDA
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  LOS ACCESOS DE LA TIENDA
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ QUÉ PIDIÓ ────────────────────────────────────────────────┐
+ * │                                                            │
+ * │ «los links de acceso, colocarlos en los lugares donde van   │
+ * │  automáticamente».                                          │
+ * │                                                            │
+ * │ Y antes, explicando cuáles son:                            │
+ * │                                                            │
+ * │ «ahí está el link de la plataforma, la contraseña y correo, │
+ * │  está el link de chat center o wpp: el canal que use el     │
+ * │  cliente para comunicarse con los compradores de su         │
+ * │  tienda».                                                   │
+ * │                                                            │
+ * │ Son las dos puertas que una gestora abre cada mañana, y     │
+ * │ hasta hoy vivían en una hoja de Excel que hay que buscar.   │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ LA CONTRASEÑA SE GUARDA ──────────────────────────┐
+ * │                                                            │
+ * │ Levanté la mano por esto y ella lo resolvió con hechos:    │
+ * │                                                            │
+ * │ «el link que viste es el permitido para que la gestora      │
+ * │  entre a hacer su trabajo y la contraseña pues debe de      │
+ * │  estar para que la gestora entre sin problema. Ahora, la    │
+ * │  persona que entre a la plataforma deberá colocar un        │
+ * │  código que le llega al correo que aparece en pantalla: si  │
+ * │  no tiene acceso a ese correo no entra aunque quiera. Y el  │
+ * │  link que tiene ahí es uno que se crea dentro de Dropi, no  │
+ * │  tiene permitido sacar dinero ni nada, solo confirmar y     │
+ * │  gestionar novedades y pedidos».                           │
+ * │                                                            │
+ * │ Entonces sí se guarda, y con tres condiciones que este     │
+ * │ archivo cumple y no depende de que nadie se acuerde:       │
+ * │                                                            │
+ * │  1. NO PASA POR LA BITÁCORA. `apiParametros` registra cada │
+ * │     cambio con el valor anterior y el nuevo, así que meter │
+ * │     la contraseña ahí la dejaría en texto plano en         │
+ * │     Movimientos para siempre. Por eso los accesos tienen   │
+ * │     su propia hoja y su propio guardado, y lo que se       │
+ * │     registra es «cambió la contraseña», nunca cuál.        │
+ * │                                                            │
+ * │  2. SOLO LA VE QUIEN TIENE ESA TIENDA. Es el mismo filtro  │
+ * │     que ya decide los pedidos; no hay un permiso nuevo que │
+ * │     alguien pueda olvidar de marcar.                       │
+ * │                                                            │
+ * │  3. NO VIAJA DONDE NO HACE FALTA. `apiResumen` y las       │
+ * │     alarmas mandan `ajustes` a la pantalla en cada carga.  │
+ * │     Si los accesos fueran un ajuste más, la contraseña     │
+ * │     iría en cada respuesta del día. Se piden aparte y      │
+ * │     solo cuando se abre la pantalla de accesos.            │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ DOS PUERTAS DISTINTAS, NO UNA ────────────────────────────┐
+ * │                                                            │
+ * │ `url/usuario/clave`  la PLATAFORMA donde se gestiona:      │
+ * │                      Dropi, Shopify, Mastershop.          │
+ * │                                                            │
+ * │ `canal_url`          el canal donde la tienda habla con    │
+ * │                      SUS COMPRADORES: Chat Center, WhatsApp│
+ * │                                                            │
+ * │ Estuvieron juntos un tiempo: el canal vivía en la pestaña  │
+ * │ «Nova Chat» como si fuera el chat del equipo. No lo es —   │
+ * │ el chat del equipo ahora está dentro de Nova (96-chat.gs), │
+ * │ y este canal es una herramienta de trabajo más, al lado de │
+ * │ la plataforma. Ella lo dijo exactamente así: «no es un     │
+ * │ canal que ellos peguen».                                   │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+
+/** Lo que Nova guarda de cada puerta. Uno por tienda. */
+const ACCESOS_CAMPOS = ['plataforma', 'url', 'usuario', 'clave', 'correo_codigo',
+                        'canal_nombre', 'canal_url', 'nota'];
+
+/**
+ * Los campos que son un enlace, y por tanto se validan y se completan.
+ *
+ * Un `javascript:` en cualquiera de los dos correría código en la sesión
+ * de quien le diera clic, con su token al lado. Se valida en el servidor
+ * porque validar solo en la pantalla deja la puerta abierta a quien llame
+ * la API de frente.
+ */
+const ACCESOS_ENLACES = ['url', 'canal_url'];
+
+/** Los accesos de una tienda, tal como están en la hoja. */
+function accesosDe_(ss, tienda) {
+  const out = { tienda: tienda };
+  ACCESOS_CAMPOS.forEach(function (k) { out[k] = ''; });
+  out.actualizado_en = ''; out.actualizado_por = '';
+
+  const sh = ss.getSheetByName('Accesos');
+  if (!sh || sh.getLastRow() < 2) return out;
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const cT = e.indexOf('tienda');
+  for (let i = 1; i < d.length; i++) {
+    if (String(d[i][cT] || '').trim() !== tienda) continue;
+    e.forEach(function (k, j) {
+      if (k && k !== 'tienda') out[k] = String(d[i][j] == null ? '' : d[i][j]).trim();
+    });
+    break;
+  }
+  return out;
+}
+
+/**
+ * Los accesos de una tienda, para la pantalla.
+ *
+ * `puedeEditar` decide quién ve los campos y quién solo los botones. Lo
+ * cambia la dueña: la contraseña de la plataforma es suya y una gestora
+ * que la reescriba deja a todo el equipo afuera sin querer.
+ */
+function apiAccesos(s, p) {
+  const tienda = String(p.tienda || s.tiendas[0] || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  const ss = libro_(s.sheetId);
+  const a = accesosDe_(ss, tienda);
+
+  /**
+   * El aviso del código por correo va SIEMPRE, no solo si el correo está
+   * puesto. Quien intenta entrar y se topa con la pantalla del código sin
+   * saber que existe cree que la contraseña está mal, la cambia, y deja a
+   * las demás afuera. Es el error más caro que puede cometer aquí.
+   */
+  return {
+    ok: true, tienda: tienda,
+    nombreTienda: nombreTienda(ss, tienda),
+    accesos: a,
+    puedeEditar: s.rol === 'dueno',
+    hay: !!(a.url || a.canal_url),
+  };
+}
+
+/**
+ * Guardar los accesos. Solo la dueña.
+ *
+ * La bitácora dice QUÉ cambió y no CUÁL era: escribir la contraseña en
+ * Movimientos la dejaría ahí en texto plano para siempre, y la bitácora
+ * la puede leer cualquiera que abra la hoja.
+ */
+function apiAccesosGuardar(s, p) {
+  const tienda = String(p.tienda || s.tiendas[0] || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  if (s.rol !== 'dueno') {
+    return { ok: false, error: 'Solo la dueña cambia los accesos de la tienda.' };
+  }
+  const cambios = p.cambios || {};
+
+  // Los dos enlaces se validan ANTES de tocar la hoja. Guardar la mitad
+  // deja un botón con etiqueta y sin destino, que es peor que no tenerlo.
+  for (let i = 0; i < ACCESOS_ENLACES.length; i++) {
+    const k = ACCESOS_ENLACES[i];
+    if (cambios[k] === undefined) continue;
+    const err = validarCanal(cambios[k]);
+    if (err) return { ok: false, error: err };
+  }
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) return { ok: false, error: 'Hay otro guardado en curso.' };
+  try {
+    const ss = libro_(s.sheetId);
+    const sh = ss.getSheetByName('Accesos');
+    if (!sh) return { ok: false, error: 'Falta la hoja Accesos. Corre bootstrapTodo() una vez.' };
+
+    const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
+    const antes = accesosDe_(ss, tienda);
+
+    const nuevo = {};
+    enc.forEach(function (k) { nuevo[k] = antes[k] !== undefined ? antes[k] : ''; });
+    nuevo.tienda = tienda;
+    ACCESOS_CAMPOS.forEach(function (k) {
+      if (cambios[k] === undefined) return;
+      nuevo[k] = ACCESOS_ENLACES.indexOf(k) !== -1
+        ? normalizarEnlace(cambios[k])
+        : String(cambios[k] == null ? '' : cambios[k]).trim();
+    });
+    nuevo.actualizado_en = ahoraISO();
+    nuevo.actualizado_por = s.email;
+
+    // Buscar la fila de esta tienda; si no existe, se agrega.
+    const d = sh.getLastRow() > 1 ? sh.getDataRange().getValues() : [enc];
+    const cT = enc.indexOf('tienda');
+    let fila = -1;
+    for (let i = 1; i < d.length; i++) {
+      if (String(d[i][cT] || '').trim() === tienda) { fila = i + 1; break; }
+    }
+    const valores = enc.map(function (k) { return nuevo[k] !== undefined ? nuevo[k] : ''; });
+    if (fila === -1) sh.appendRow(valores);
+    else sh.getRange(fila, 1, 1, enc.length).setValues([valores]);
+
+    /**
+     * La bitácora, sin el secreto dentro.
+     *
+     * De la contraseña se anota que cambió y ya. De lo demás sí se anota
+     * el valor, porque un enlace equivocado hay que poder rastrearlo — y
+     * un enlace no es una llave.
+     */
+    ACCESOS_CAMPOS.forEach(function (k) {
+      if (cambios[k] === undefined) return;
+      if (String(antes[k] || '') === String(nuevo[k] || '')) return;
+      const secreto = (k === 'clave');
+      registrarMovimiento(s, 'Accesos', tienda, k,
+        secreto ? (antes[k] ? '(había una)' : '(vacía)') : antes[k],
+        secreto ? (nuevo[k] ? '(cambiada)' : '(borrada)') : nuevo[k]);
+    });
+
+    SpreadsheetApp.flush();
+    libroOlvidar_();
+    return { ok: true, accesos: accesosDe_(libro_(s.sheetId), tienda) };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  } finally { lock.releaseLock(); }
 }
