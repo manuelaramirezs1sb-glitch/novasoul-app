@@ -710,7 +710,28 @@ const ESQUEMA_SOUL = {
            *                  con nombre propio y la pantalla las
            *                  mostraba como una sola línea «Deudas».
            */
-          'flujo','tipo_pago','cuotas_total','cuotas_pagadas','cuota_desde','acreedor'],
+          'flujo','tipo_pago','cuotas_total','cuotas_pagadas','cuota_desde','acreedor',
+          /**
+           * `deuda_total` es lo que se debe EN TOTAL, no la cuota.
+           *
+           * Ella lo pidió así: «debes pedir la deuda total, el tiempo
+           * de meses, y dar la oportunidad de cambiar el aporte cada
+           * que vaya a subir un pago si pagué más o menos».
+           *
+           * Sin este número, lo único que se podía hacer era multiplicar
+           * la cuota por las cuotas — que solo es verdad si paga
+           * exactamente lo mismo todos los meses. Y ella dice que no.
+           */
+          'deuda_total'],
+  /**
+   * Cada abono a una deuda, con LO QUE DE VERDAD PAGÓ ese mes.
+   *
+   * Va en su propia hoja y no en una columna de Fijos porque son
+   * muchos por deuda y cambian de monto. Con esto, «cuánto llevas
+   * pagado» deja de ser una multiplicación optimista y pasa a ser una
+   * suma de hechos.
+   */
+  Pagos: ['id','usuario_id','fijo_id','fecha','monto','moneda','nota'],
   Dias: ['usuario_id','fecha','comidas_marcadas','movimiento_hecho','puntos',
          'cerrado','cerrado_en','perdonado'],
   Recompensas: ['id','usuario_id','nombre','costo_puntos','canjeada','canjeada_en'],
@@ -4627,6 +4648,8 @@ function manejar(e, metodo) {
       case 'alarmas':   return json(apiAlarmas(s, p));
       case 'parametros':return json(apiParametros(s, p));
       case 'auditoria': return json(apiAuditoria(s, p));
+      case 'asignar':   return json(apiAsignar(s, p));
+      case 'reparto':   return json(apiReparto(s, p));
       case 'auditoria_casos':   return json(apiAuditoriaCasos(s, p));
       case 'auditoria_guardar': return json(apiAuditoriaGuardar(s, p));
       case 'estados':   return json(apiEstados(s, p));
@@ -5138,14 +5161,36 @@ function prioridadEstado(v) {
   return p === undefined ? 3 : p;
 }
 
-/** La gestora solo ve lo suyo. Se aplica al leer, no al pintar. */
+/**
+ * La gestora solo ve lo suyo. Se aplica al leer, no al pintar.
+ *
+ * ── POR QUÉ SE ACEPTA EL CORREO, NO SOLO EL NOMBRE ──
+ *
+ * La columna `gestora_asignada` la llena Nova al repartir, pero TAMBIÉN
+ * llega desde las plataformas: Dropi y Effi exportan a quien gestionó, y
+ * cada una lo escribe a su manera — unas el nombre, otras el correo.
+ *
+ * Emparejar solo por nombre exacto significaba que un export con el
+ * correo, o con el nombre escrito distinto, dejaba a esa persona con la
+ * pantalla vacía. Y una pantalla vacía no se distingue de una rota: no
+ * dice «no encontré tu nombre», no dice nada.
+ *
+ * Así que se acepta cualquiera de los dos. Lo que NO se hace es
+ * adivinar por parecido —«Andrea» contra «Andrea Ramírez»—, porque
+ * enseñarle a una persona los pedidos de otra es un error mucho peor
+ * que enseñarle de menos.
+ */
 function filtrarPorRol(s, entidad, filas, enc) {
   if (s.rol !== 'gestora') return filas;
   const cg = enc.indexOf('gestora_asignada') !== -1
     ? enc.indexOf('gestora_asignada') : enc.indexOf('gestora');
   if (cg === -1) return filas;
   const mio = norm(s.nombre);
-  return filas.filter(function (f) { return norm(f[cg]) === mio; });
+  const miCorreo = norm(s.email || '');
+  return filas.filter(function (f) {
+    const v = norm(f[cg]);
+    return v === mio || (miCorreo && v === miCorreo);
+  });
 }
 
 // ─── LECTURA ─────────────────────────────────────────────────
@@ -8168,6 +8213,8 @@ function manejarCentral(accion, p) {
     case 'nc_soul_finanzas':   return soulFinanzas(s, p);
     case 'nc_soul_fijo':       return soulFijoGuardar(s, p);
     case 'nc_soul_fijo_borrar':return soulFijoBorrar(s, p);
+    case 'nc_soul_pago':       return soulPagoGuardar(s, p);
+    case 'nc_soul_pago_borrar':return soulPagoBorrar(s, p);
     case 'nc_soul_family':     return soulFamily(s, p);
     case 'nc_soul_materias':       return soulMaterias(s, p);
     case 'nc_soul_materia':        return soulMateriaGuardar(s, p);
@@ -11861,7 +11908,8 @@ const SOUL_HOJAS = {
   Fijos:      ['id','usuario_id','categoria','concepto','monto','moneda',
                'dia_del_mes','activo','nota',
                'flujo','tipo_pago','cuotas_total','cuotas_pagadas',
-               'cuota_desde','acreedor'],
+               'cuota_desde','acreedor','deuda_total'],
+  Pagos:      ['id','usuario_id','fijo_id','fecha','monto','moneda','nota'],
   Rutina:     ['id','usuario_id','tipo','nombre','dia_semana','hora_inicio','hora_fin',
                'lugar','trabajo_id','materia_id','paga_fija','moneda','desde','hasta',
                'activo','nota'],
@@ -12885,6 +12933,7 @@ function soulFijoGuardar(s, p) {
       cuota_desde: d.cuotaDesde !== undefined
         ? String(d.cuotaDesde).slice(0, 7) : undefined,
       acreedor: d.acreedor !== undefined ? String(d.acreedor).trim() : undefined,
+      deuda_total: d.deudaTotal !== undefined ? num(d.deudaTotal) : undefined,
     }, soulUsuario_(s));
     return { ok: true };
   } catch (e) {
@@ -18671,7 +18720,7 @@ const PLATA_BLOQUES = [
  * en febrero» es justamente el dato a medias que no sirve para
  * decidir nada.
  */
-function plataLinea_(f, mesISO) {
+function plataLinea_(f, mesISO, pagos) {
   const tipo = PLATA_TIPOS[norm(f.tipo_pago)] ? norm(f.tipo_pago) : '';
   const flujo = norm(f.flujo) === 'ingreso' ? 'ingreso' : 'gasto';
   const categoria = norm(f.categoria) || 'varios';
@@ -18702,6 +18751,7 @@ function plataLinea_(f, mesISO) {
   };
 
   if (o.tipo === 'cuotas') {
+    o.deudaTotal = num(f.deuda_total) || null;
     const total = num(f.cuotas_total);
     const desde = String(f.cuota_desde || '').slice(0, 7);
     let pagadas = num(f.cuotas_pagadas);
@@ -18721,20 +18771,71 @@ function plataLinea_(f, mesISO) {
       pagadas = contadas;
     }
 
+    /**
+     * ── LOS PAGOS DE VERDAD MANDAN SOBRE LA CUENTA ──
+     *
+     * Ella: «dar la oportunidad de cambiar el aporte cada que vaya a
+     * subir un pago si pagué más o menos».
+     *
+     * Así que si hay abonos registrados, «cuánto llevas pagado» es la
+     * SUMA DE ESOS ABONOS, no la cuota multiplicada por los meses. Un
+     * mes que abonó el doble adelanta de verdad, y uno que abonó la
+     * mitad no cuenta como uno completo.
+     *
+     * Si no hay ninguno registrado todavía, se cae al cálculo de antes
+     * —meses transcurridos × cuota— y se DICE que es un estimado. Esa
+     * distinción importa: un número calculado y uno contado se ven
+     * iguales en pantalla, y solo uno de los dos aguanta una
+     * discusión con el banco.
+     */
+    const abonos = (pagos || []).filter(function (x) { return x.fijoId === o.id; });
+    const pagado = abonos.reduce(function (a, x) { return a + x.monto; }, 0);
+    const porAbonos = abonos.length > 0;
+
+    if (porAbonos) pagadas = abonos.length;
     const faltan = total ? Math.max(0, total - pagadas) : null;
+
+    /**
+     * Lo que falta por pagar. Con la deuda total es una resta exacta;
+     * sin ella hay que estimar con la cuota, y se avisa.
+     */
+    let faltaPagar = null, exacto = false;
+    if (o.deudaTotal) { faltaPagar = Math.max(0, o.deudaTotal - pagado); exacto = true; }
+    else if (faltan !== null) { faltaPagar = faltan * o.monto; }
+
     o.cuotas = {
       total: total || null,
       pagadas: pagadas || 0,
       faltan: faltan,
-      contadasSolas: contadas !== null,
+      contadasSolas: contadas !== null && !porAbonos,
+      porAbonos: porAbonos,
+      abonos: abonos.length,
+      pagado: pagado,
+      deudaTotal: o.deudaTotal,
       desde: desde || '',
       // El dato que convierte una deuda en algo que se acaba.
       termina: (total && /^\d{4}-\d{2}$/.test(desde))
         ? plataMasMeses_(desde, total - 1) : '',
-      faltaPagar: faltan !== null ? faltan * o.monto : null,
+      faltaPagar: faltaPagar,
+      exacto: exacto,
+      /**
+       * Y el mes en que se acaba de verdad, al ritmo al que va pagando.
+       * Puede ser antes de lo planeado si abonó de más — que es
+       * exactamente el premio por haberlo hecho, y no verlo desanima.
+       */
+      terminaAlRitmo: (function () {
+        if (!o.deudaTotal || !porAbonos || !o.monto) return '';
+        const queda = Math.max(0, o.deudaTotal - pagado);
+        const meses = Math.ceil(queda / (pagado / abonos.length));
+        return plataMasMeses_(mesISO, meses);
+      })(),
       porque: total ? '' :
         'Sin saber cuántas cuotas son no puedo decirte cuándo se acaba. ' +
         'Es el dato que convierte una deuda en algo con fecha de salida.',
+      porqueEstimado: (!o.deudaTotal && total)
+        ? 'Esto es un estimado: multiplico la cuota por lo que falta. ' +
+          'Si pones la deuda total, la resta es exacta.'
+        : '',
     };
   }
 
@@ -18766,8 +18867,20 @@ function plataSumar_(lineas) {
  * intentaba.
  */
 function plataOrdenada_(uid, mes, hoyISO) {
+  /**
+   * Los abonos se leen UNA vez y se pasan a cada línea. Leerlos dentro
+   * de `plataLinea_` sería volver a abrir la hoja por cada gasto fijo.
+   */
+  const pagos = soulLeerSuave_('Pagos', uid, []).map(function (x) {
+    return { id: String(x.id || ''), fijoId: String(x.fijo_id || ''),
+             fecha: aISO(x.fecha, 'UTC') || '', monto: num(x.monto),
+             moneda: String(x.moneda || 'COP').toUpperCase(),
+             nota: String(x.nota || '') };
+  }).filter(function (x) { return x.fijoId; })
+    .sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; });
+
   const fijos = soulLeerSuave_('Fijos', uid, []).map(function (f) {
-    return plataLinea_(f, mes);
+    return plataLinea_(f, mes, pagos);
   }).filter(function (l) { return l.activo; });
 
   const del = function (tipo, flujo) {
@@ -18872,6 +18985,9 @@ function plataOrdenada_(uid, mes, hoyISO) {
 
   return {
     mes: mes,
+    // Los abonos viajan para que la pantalla pueda listarlos y quitarlos
+    // sin pedirlos otra vez.
+    pagos: pagos,
     bloquesOrden: PLATA_BLOQUES,
     tipos: PLATA_TIPOS,
     bloques: bloques,
@@ -18911,6 +19027,73 @@ function soulPlataOrdenada(s, p) {
   base.orden = plataOrdenada_(uid, mes, hoy);
   base.flujos = PLATA_FLUJOS;
   return base;
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  LOS ABONOS · lo que de verdad pagó este mes
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * «dar la oportunidad de cambiar el aporte cada que vaya a subir un
+ *  pago si pagué más o menos».
+ *
+ * La cuota del plan dice lo que debería pagar; el abono dice lo que
+ * pagó. Cuando son distintos, el que manda es el segundo — y sin esta
+ * hoja no había forma de decirlo: el plan se hacía pasar por hecho.
+ */
+function soulPagoGuardar(s, p) {
+  if (!soulPuede_(s)) return { ok: false, error: 'NovaSoul es de Manuela.' };
+  const uid = soulUsuario_(s);
+  const d = p.datos || {};
+
+  const fijoId = String(d.fijoId || d.fijo_id || '').trim();
+  if (!fijoId) return { ok: false, error: 'No sé a qué deuda es este abono.' };
+
+  /**
+   * El abono tiene que ir contra una deuda SUYA y que esté a plazos.
+   * Sin esto se podrían acumular abonos contra el arriendo, y la
+   * pantalla mostraría una deuda que se acaba donde no hay ninguna.
+   */
+  const suyo = soulLeerSuave_('Fijos', uid, []).filter(function (f) {
+    return String(f.id || '').trim() === fijoId;
+  })[0];
+  if (!suyo) return { ok: false, error: 'No encuentro esa deuda entre tus gastos fijos.' };
+
+  const monto = num(d.monto);
+  if (!(monto > 0)) {
+    return { ok: false, error: 'Un abono de cero no es un abono. ' +
+                               'Si este mes no pagaste, simplemente no lo registres.' };
+  }
+  const fecha = String(d.fecha || '').trim() || ahoraISO().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    return { ok: false, error: 'La fecha del abono no se entiende.' };
+  }
+
+  try {
+    soulGuardar_('Pagos', {
+      id: String(d.id || ''),
+      fijo_id: fijoId,
+      fecha: fecha,
+      monto: monto,
+      // La moneda la manda la deuda, no la pantalla: un abono en otra
+      // moneda que la deuda no se puede restar de nada.
+      moneda: String(suyo.moneda || 'COP').toUpperCase(),
+      nota: String(d.nota || '').trim(),
+    }, uid);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+function soulPagoBorrar(s, p) {
+  if (!soulPuede_(s)) return { ok: false, error: 'NovaSoul es de Manuela.' };
+  try {
+    const fue = soulBorrar_('Pagos', p.id, soulUsuario_(s));
+    return { ok: fue, error: fue ? '' : 'No encuentro ese abono.' };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
 }
 
 
@@ -19681,4 +19864,317 @@ function centralHoy(s, p) {
   }
 
   return out;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   31 · ASIGNAR · REPARTIR EL TRABAJO
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  ASIGNAR · repartir los pedidos entre quienes los trabajan
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ POR QUÉ ESTO FALTABA Y NADIE LO NOTÓ ─────────────────────┐
+ * │                                                            │
+ * │ Nova siempre supo filtrar: una gestora ve los pedidos      │
+ * │ cuya columna `gestora_asignada` lleva su nombre, y no ve    │
+ * │ los de las demás. Eso estaba escrito, probado y bien.      │
+ * │                                                            │
+ * │ Lo que no existía era la otra mitad: NO HABÍA NINGUNA      │
+ * │ MANERA DE PONER ESE NOMBRE. Ni en la pantalla ni en el     │
+ * │ servidor. La columna solo se pintaba —«Sin asignar»— y     │
+ * │ nunca se escribía.                                         │
+ * │                                                            │
+ * │ Mientras la dueña trabajó sola no se notó: ella lo ve      │
+ * │ todo. Se habría notado el primer día que entrara una       │
+ * │ gestora, viera cero pedidos y cero novedades, y concluyera │
+ * │ —con razón— que la herramienta no sirve.                   │
+ * │                                                            │
+ * │ Un filtro sin forma de llenar aquello que filtra no es     │
+ * │ media función: es una función que hace daño.               │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ SE GUARDA EL NOMBRE Y NO EL id ───────────────────┐
+ * │                                                            │
+ * │ `gestora_asignada` es una columna que también llega desde  │
+ * │ las plataformas: Dropi y Effi exportan el nombre de quien  │
+ * │ gestionó. Si Nova guardara ahí un id suyo, la próxima      │
+ * │ importación lo pisaría con un nombre y el filtro dejaría   │
+ * │ de encontrar a nadie.                                      │
+ * │                                                            │
+ * │ Así que se guarda el NOMBRE CANÓNICO, el de la hoja        │
+ * │ Equipo — no el que escriba quien asigna. Y al filtrar se   │
+ * │ acepta también el correo, porque alguna plataforma exporta │
+ * │ eso. Es la diferencia entre un emparejamiento que aguanta  │
+ * │ la realidad y uno que aguanta el ejemplo.                  │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+
+/**
+ * Quién puede repartir trabajo. Una gestora no se asigna pedidos a sí
+ * misma: eso convierte el reparto en una carrera por los fáciles.
+ */
+function puedeAsignar_(s) {
+  return s && (s.rol === 'dueno' || s.rol === 'admin');
+}
+
+/**
+ * Las personas a las que se les puede asignar algo en una tienda.
+ *
+ * Solo activas, y solo las que cubren esa tienda. Asignarle un pedido
+ * de Guatemala a alguien que solo tiene Ecuador crea una fila que esa
+ * persona no puede ni ver ni tocar — y el pedido queda en un limbo
+ * peor que «sin asignar», porque parece que alguien lo está mirando.
+ */
+function asignablesDe_(ss, tienda) {
+  const sh = ss.getSheetByName('Equipo');
+  if (!sh || sh.getLastRow() < 2) return [];
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+
+  const out = [];
+  for (let i = 1; i < d.length; i++) {
+    const nombre = String(d[i][c('nombre')] || '').trim();
+    if (!nombre) continue;
+    if (norm(d[i][c('estado')]) === 'inactivo') continue;
+    const suya = String(d[i][c('tienda')] || '').trim();
+    if (tienda && suya && suya !== '*' &&
+        suya.split(/[,;]/).map(function (x) { return x.trim(); }).indexOf(tienda) === -1) {
+      continue;
+    }
+    out.push({
+      id: String(d[i][c('id')] || ''),
+      nombre: nombre,
+      correo: String(d[i][c('correo')] || '').toLowerCase().trim(),
+      rol: rolCanonico(d[i][c('rol')]) || String(d[i][c('rol')] || ''),
+    });
+  }
+  return out;
+}
+
+/**
+ * Cómo está repartido el trabajo hoy.
+ *
+ * El número que de verdad importa es `sinAsignar`: son los pedidos que
+ * NADIE está mirando salvo la dueña. Mientras ese número sea todo el
+ * total, tener equipo no sirve de nada.
+ */
+function apiReparto(s, p) {
+  if (!puedeAsignar_(s)) return { ok: false, error: 'Tu rol no reparte trabajo.' };
+  const tienda = String(p.tienda || s.tiendas[0] || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+
+  const ss = libro_(s.sheetId);
+  const gente = asignablesDe_(ss, tienda);
+  const porNombre = {};
+  gente.forEach(function (g) {
+    porNombre[norm(g.nombre)] = g;
+    if (g.correo) porNombre[norm(g.correo)] = g;
+    g.total = 0; g.abiertos = 0;
+  });
+
+  const sh = ss.getSheetByName('Pedidos');
+  const out = { ok: true, tienda: tienda, gente: gente,
+                total: 0, sinAsignar: 0, aNadieConocido: [], huerfanos: {} };
+  if (!sh || sh.getLastRow() < 2) return out;
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+  const cG = c('gestora_asignada');
+  if (cG === -1) {
+    out.error = 'La hoja Pedidos no tiene columna gestora_asignada. ' +
+                'Corre bootstrapTodo() una vez.';
+    return out;
+  }
+
+  const cerrados = ['entregado', 'devolucion', 'cancelado'];
+  for (let i = 1; i < d.length; i++) {
+    if (String(d[i][c('tienda')] || '').trim() !== tienda) continue;
+    out.total++;
+    const quien = String(d[i][cG] || '').trim();
+    if (!quien) { out.sinAsignar++; continue; }
+
+    const g = porNombre[norm(quien)];
+    if (!g) {
+      /**
+       * Un nombre que no corresponde a nadie de Equipo. Pasa cuando la
+       * plataforma exporta a alguien que ya no está, o escrito distinto.
+       * Se cuenta y se nombra: son pedidos que NADIE ve, porque su
+       * supuesta dueña no puede entrar.
+       */
+      out.huerfanos[quien] = (out.huerfanos[quien] || 0) + 1;
+      continue;
+    }
+    g.total++;
+    const est = norm(d[i][c('estado_nova')] || d[i][c('estado_canonico')] || d[i][c('estado')]);
+    if (cerrados.indexOf(est) === -1) g.abiertos++;
+  }
+
+  out.aNadieConocido = Object.keys(out.huerfanos).map(function (k) {
+    return { nombre: k, pedidos: out.huerfanos[k] };
+  }).sort(function (a, b) { return b.pedidos - a.pedidos; });
+
+  return out;
+}
+
+/**
+ * Asignar pedidos a una persona. Uno o muchos, en una sola escritura.
+ *
+ * `a` vacío DESASIGNA — y eso es a propósito, no un descuido: repartir
+ * mal y no poder deshacerlo es peor que no repartir.
+ */
+function apiAsignar(s, p) {
+  if (!puedeAsignar_(s)) return { ok: false, error: 'Tu rol no reparte trabajo.' };
+
+  const ids = (Array.isArray(p.ids) ? p.ids : [p.id])
+    .map(function (x) { return String(x || '').trim(); })
+    .filter(function (x) { return x; });
+  if (!ids.length) return { ok: false, error: 'No me dijiste qué pedidos asignar.' };
+  if (ids.length > 500) {
+    return { ok: false, error: 'Son demasiados de una. Máximo 500 por vez.' };
+  }
+
+  const ss = libro_(s.sheetId);
+  const quien = String(p.a || '').trim();
+
+  /**
+   * El nombre se canoniza contra la hoja Equipo, SIEMPRE.
+   *
+   * Si se guardara lo que venga de la pantalla, un día entraría
+   * «Andrea» y otro «Andrea R.» y el filtro dejaría de encontrar la
+   * mitad de sus pedidos sin que nadie entienda por qué.
+   */
+  let persona = null;
+  if (quien) {
+    const gente = asignablesDe_(ss, String(p.tienda || '').trim());
+    persona = gente.filter(function (g) {
+      return g.id === quien || norm(g.nombre) === norm(quien) ||
+             (g.correo && norm(g.correo) === norm(quien));
+    })[0];
+    if (!persona) {
+      return { ok: false, error: 'No encuentro a esa persona activa en tu equipo, ' +
+                                 'o no tiene acceso a esta tienda.' };
+    }
+  }
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { ok: false, error: 'Hay otro cambio guardándose.' };
+  try {
+    const sh = ss.getSheetByName('Pedidos');
+    if (!sh || sh.getLastRow() < 2) return { ok: false, error: 'No hay pedidos.' };
+
+    const d = sh.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    const cG = c('gestora_asignada'), cId = c('id'), cT = c('tienda');
+    if (cG === -1) {
+      return { ok: false, error: 'La hoja Pedidos no tiene columna gestora_asignada. ' +
+                                 'Corre bootstrapTodo() una vez.' };
+    }
+
+    const buscar = {};
+    ids.forEach(function (x) { buscar[x] = 1; });
+
+    const valor = persona ? persona.nombre : '';
+    const tocados = [], pedidosTocados = [];
+    let deOtraTienda = 0, iguales = 0;
+
+    for (let i = 1; i < d.length; i++) {
+      const id = String(d[i][cId] || '').trim();
+      if (!buscar[id]) continue;
+      // Nunca fuera de las tiendas de quien asigna.
+      if (cT !== -1 && s.tiendas.indexOf(String(d[i][cT] || '').trim()) === -1) {
+        deOtraTienda++; continue;
+      }
+      const antes = String(d[i][cG] || '').trim();
+      if (norm(antes) === norm(valor)) { iguales++; continue; }
+      tocados.push({ fila: i + 1, antes: antes });
+      pedidosTocados.push(id);
+      d[i][cG] = valor;
+    }
+
+    if (!tocados.length) {
+      return { ok: true, asignados: 0, iguales: iguales, deOtraTienda: deOtraTienda,
+               a: valor, porque: iguales
+                 ? 'Ya estaban así.'
+                 : (deOtraTienda ? 'Todos eran de otra tienda.' : 'No encontré esos pedidos.') };
+    }
+
+    /**
+     * Se escribe la COLUMNA entera de una vez, no celda por celda.
+     *
+     * Trescientas escrituras sueltas son trescientas idas y vueltas a
+     * Google y varios minutos; un solo `setValues` de una columna es
+     * una. Y como solo se toca esa columna, ninguna otra se puede
+     * pisar por accidente.
+     */
+    const columna = d.slice(1).map(function (f) { return [f[cG]]; });
+    sh.getRange(2, cG + 1, columna.length, 1).setValues(columna);
+
+    tocados.forEach(function (t) {
+      registrarMovimiento(s, 'Pedidos', String(d[t.fila - 1][cId] || ''),
+                          'gestora_asignada', t.antes, valor);
+    });
+
+    /**
+     * Las novedades de esos pedidos van con ellos.
+     *
+     * Si no, la gestora vería el pedido y no la novedad que hay que
+     * resolver — que es precisamente el trabajo. Son dos hojas y dos
+     * columnas con nombres distintos (`gestora_asignada` y `gestora`),
+     * y por eso esto se olvida tan fácil.
+     */
+    let novedades = 0;
+    try { novedades = asignarNovedadesDe_(ss, pedidosTocados, valor, s); }
+    catch (err) { /* el pedido ya quedó asignado; la novedad se reintenta */ }
+
+    return { ok: true, asignados: tocados.length, iguales: iguales,
+             deOtraTienda: deOtraTienda, novedades: novedades,
+             a: valor, desasignado: !valor };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  } finally { lock.releaseLock(); }
+}
+
+/** Mueve la columna `gestora` de las novedades de esos pedidos. */
+function asignarNovedadesDe_(ss, pedidoIds, valor, s) {
+  const sh = ss.getSheetByName('Novedades');
+  if (!sh || sh.getLastRow() < 2) return 0;
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const cG = e.indexOf('gestora');
+  const cP = e.indexOf('pedido_id');
+  const cId = e.indexOf('id');
+  if (cG === -1 || cP === -1) return 0;
+
+  const buscar = {};
+  pedidoIds.forEach(function (x) { buscar[x] = 1; });
+
+  let n = 0;
+  const cambios = [];
+  for (let i = 1; i < d.length; i++) {
+    if (!buscar[String(d[i][cP] || '').trim()]) continue;
+    const antes = String(d[i][cG] || '').trim();
+    if (norm(antes) === norm(valor)) continue;
+    cambios.push({ id: cId === -1 ? '' : String(d[i][cId] || ''), antes: antes });
+    d[i][cG] = valor;
+    n++;
+  }
+  if (!n) return 0;
+
+  const columna = d.slice(1).map(function (f) { return [f[cG]]; });
+  sh.getRange(2, cG + 1, columna.length, 1).setValues(columna);
+  cambios.forEach(function (x) {
+    registrarMovimiento(s, 'Novedades', x.id, 'gestora', x.antes, valor);
+  });
+  return n;
 }

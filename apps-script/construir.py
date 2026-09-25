@@ -48,6 +48,7 @@ ORDEN = [
     ('91-arranque-soul.gs','28 · NOVASOUL EN UNA SOLA PETICIÓN'),
     ('92-auditoria.gs',    '29 · AUDITORÍA · CASOS REALES'),
     ('93-central-hoy.gs',  '30 · CENTRAL · HOY, LEYENDO LA RED'),
+    ('94-asignar.gs',      '31 · ASIGNAR · REPARTIR EL TRABAJO'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

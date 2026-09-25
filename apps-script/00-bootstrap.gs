@@ -706,7 +706,28 @@ const ESQUEMA_SOUL = {
            *                  con nombre propio y la pantalla las
            *                  mostraba como una sola línea «Deudas».
            */
-          'flujo','tipo_pago','cuotas_total','cuotas_pagadas','cuota_desde','acreedor'],
+          'flujo','tipo_pago','cuotas_total','cuotas_pagadas','cuota_desde','acreedor',
+          /**
+           * `deuda_total` es lo que se debe EN TOTAL, no la cuota.
+           *
+           * Ella lo pidió así: «debes pedir la deuda total, el tiempo
+           * de meses, y dar la oportunidad de cambiar el aporte cada
+           * que vaya a subir un pago si pagué más o menos».
+           *
+           * Sin este número, lo único que se podía hacer era multiplicar
+           * la cuota por las cuotas — que solo es verdad si paga
+           * exactamente lo mismo todos los meses. Y ella dice que no.
+           */
+          'deuda_total'],
+  /**
+   * Cada abono a una deuda, con LO QUE DE VERDAD PAGÓ ese mes.
+   *
+   * Va en su propia hoja y no en una columna de Fijos porque son
+   * muchos por deuda y cambian de monto. Con esto, «cuánto llevas
+   * pagado» deja de ser una multiplicación optimista y pasa a ser una
+   * suma de hechos.
+   */
+  Pagos: ['id','usuario_id','fijo_id','fecha','monto','moneda','nota'],
   Dias: ['usuario_id','fecha','comidas_marcadas','movimiento_hecho','puntos',
          'cerrado','cerrado_en','perdonado'],
   Recompensas: ['id','usuario_id','nombre','costo_puntos','canjeada','canjeada_en'],

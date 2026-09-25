@@ -102,7 +102,7 @@ const PLATA_BLOQUES = [
  * en febrero» es justamente el dato a medias que no sirve para
  * decidir nada.
  */
-function plataLinea_(f, mesISO) {
+function plataLinea_(f, mesISO, pagos) {
   const tipo = PLATA_TIPOS[norm(f.tipo_pago)] ? norm(f.tipo_pago) : '';
   const flujo = norm(f.flujo) === 'ingreso' ? 'ingreso' : 'gasto';
   const categoria = norm(f.categoria) || 'varios';
@@ -133,6 +133,7 @@ function plataLinea_(f, mesISO) {
   };
 
   if (o.tipo === 'cuotas') {
+    o.deudaTotal = num(f.deuda_total) || null;
     const total = num(f.cuotas_total);
     const desde = String(f.cuota_desde || '').slice(0, 7);
     let pagadas = num(f.cuotas_pagadas);
@@ -152,20 +153,71 @@ function plataLinea_(f, mesISO) {
       pagadas = contadas;
     }
 
+    /**
+     * ── LOS PAGOS DE VERDAD MANDAN SOBRE LA CUENTA ──
+     *
+     * Ella: «dar la oportunidad de cambiar el aporte cada que vaya a
+     * subir un pago si pagué más o menos».
+     *
+     * Así que si hay abonos registrados, «cuánto llevas pagado» es la
+     * SUMA DE ESOS ABONOS, no la cuota multiplicada por los meses. Un
+     * mes que abonó el doble adelanta de verdad, y uno que abonó la
+     * mitad no cuenta como uno completo.
+     *
+     * Si no hay ninguno registrado todavía, se cae al cálculo de antes
+     * —meses transcurridos × cuota— y se DICE que es un estimado. Esa
+     * distinción importa: un número calculado y uno contado se ven
+     * iguales en pantalla, y solo uno de los dos aguanta una
+     * discusión con el banco.
+     */
+    const abonos = (pagos || []).filter(function (x) { return x.fijoId === o.id; });
+    const pagado = abonos.reduce(function (a, x) { return a + x.monto; }, 0);
+    const porAbonos = abonos.length > 0;
+
+    if (porAbonos) pagadas = abonos.length;
     const faltan = total ? Math.max(0, total - pagadas) : null;
+
+    /**
+     * Lo que falta por pagar. Con la deuda total es una resta exacta;
+     * sin ella hay que estimar con la cuota, y se avisa.
+     */
+    let faltaPagar = null, exacto = false;
+    if (o.deudaTotal) { faltaPagar = Math.max(0, o.deudaTotal - pagado); exacto = true; }
+    else if (faltan !== null) { faltaPagar = faltan * o.monto; }
+
     o.cuotas = {
       total: total || null,
       pagadas: pagadas || 0,
       faltan: faltan,
-      contadasSolas: contadas !== null,
+      contadasSolas: contadas !== null && !porAbonos,
+      porAbonos: porAbonos,
+      abonos: abonos.length,
+      pagado: pagado,
+      deudaTotal: o.deudaTotal,
       desde: desde || '',
       // El dato que convierte una deuda en algo que se acaba.
       termina: (total && /^\d{4}-\d{2}$/.test(desde))
         ? plataMasMeses_(desde, total - 1) : '',
-      faltaPagar: faltan !== null ? faltan * o.monto : null,
+      faltaPagar: faltaPagar,
+      exacto: exacto,
+      /**
+       * Y el mes en que se acaba de verdad, al ritmo al que va pagando.
+       * Puede ser antes de lo planeado si abonó de más — que es
+       * exactamente el premio por haberlo hecho, y no verlo desanima.
+       */
+      terminaAlRitmo: (function () {
+        if (!o.deudaTotal || !porAbonos || !o.monto) return '';
+        const queda = Math.max(0, o.deudaTotal - pagado);
+        const meses = Math.ceil(queda / (pagado / abonos.length));
+        return plataMasMeses_(mesISO, meses);
+      })(),
       porque: total ? '' :
         'Sin saber cuántas cuotas son no puedo decirte cuándo se acaba. ' +
         'Es el dato que convierte una deuda en algo con fecha de salida.',
+      porqueEstimado: (!o.deudaTotal && total)
+        ? 'Esto es un estimado: multiplico la cuota por lo que falta. ' +
+          'Si pones la deuda total, la resta es exacta.'
+        : '',
     };
   }
 
@@ -197,8 +249,20 @@ function plataSumar_(lineas) {
  * intentaba.
  */
 function plataOrdenada_(uid, mes, hoyISO) {
+  /**
+   * Los abonos se leen UNA vez y se pasan a cada línea. Leerlos dentro
+   * de `plataLinea_` sería volver a abrir la hoja por cada gasto fijo.
+   */
+  const pagos = soulLeerSuave_('Pagos', uid, []).map(function (x) {
+    return { id: String(x.id || ''), fijoId: String(x.fijo_id || ''),
+             fecha: aISO(x.fecha, 'UTC') || '', monto: num(x.monto),
+             moneda: String(x.moneda || 'COP').toUpperCase(),
+             nota: String(x.nota || '') };
+  }).filter(function (x) { return x.fijoId; })
+    .sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; });
+
   const fijos = soulLeerSuave_('Fijos', uid, []).map(function (f) {
-    return plataLinea_(f, mes);
+    return plataLinea_(f, mes, pagos);
   }).filter(function (l) { return l.activo; });
 
   const del = function (tipo, flujo) {
@@ -303,6 +367,9 @@ function plataOrdenada_(uid, mes, hoyISO) {
 
   return {
     mes: mes,
+    // Los abonos viajan para que la pantalla pueda listarlos y quitarlos
+    // sin pedirlos otra vez.
+    pagos: pagos,
     bloquesOrden: PLATA_BLOQUES,
     tipos: PLATA_TIPOS,
     bloques: bloques,
@@ -342,4 +409,71 @@ function soulPlataOrdenada(s, p) {
   base.orden = plataOrdenada_(uid, mes, hoy);
   base.flujos = PLATA_FLUJOS;
   return base;
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  LOS ABONOS · lo que de verdad pagó este mes
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * «dar la oportunidad de cambiar el aporte cada que vaya a subir un
+ *  pago si pagué más o menos».
+ *
+ * La cuota del plan dice lo que debería pagar; el abono dice lo que
+ * pagó. Cuando son distintos, el que manda es el segundo — y sin esta
+ * hoja no había forma de decirlo: el plan se hacía pasar por hecho.
+ */
+function soulPagoGuardar(s, p) {
+  if (!soulPuede_(s)) return { ok: false, error: 'NovaSoul es de Manuela.' };
+  const uid = soulUsuario_(s);
+  const d = p.datos || {};
+
+  const fijoId = String(d.fijoId || d.fijo_id || '').trim();
+  if (!fijoId) return { ok: false, error: 'No sé a qué deuda es este abono.' };
+
+  /**
+   * El abono tiene que ir contra una deuda SUYA y que esté a plazos.
+   * Sin esto se podrían acumular abonos contra el arriendo, y la
+   * pantalla mostraría una deuda que se acaba donde no hay ninguna.
+   */
+  const suyo = soulLeerSuave_('Fijos', uid, []).filter(function (f) {
+    return String(f.id || '').trim() === fijoId;
+  })[0];
+  if (!suyo) return { ok: false, error: 'No encuentro esa deuda entre tus gastos fijos.' };
+
+  const monto = num(d.monto);
+  if (!(monto > 0)) {
+    return { ok: false, error: 'Un abono de cero no es un abono. ' +
+                               'Si este mes no pagaste, simplemente no lo registres.' };
+  }
+  const fecha = String(d.fecha || '').trim() || ahoraISO().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    return { ok: false, error: 'La fecha del abono no se entiende.' };
+  }
+
+  try {
+    soulGuardar_('Pagos', {
+      id: String(d.id || ''),
+      fijo_id: fijoId,
+      fecha: fecha,
+      monto: monto,
+      // La moneda la manda la deuda, no la pantalla: un abono en otra
+      // moneda que la deuda no se puede restar de nada.
+      moneda: String(suyo.moneda || 'COP').toUpperCase(),
+      nota: String(d.nota || '').trim(),
+    }, uid);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+function soulPagoBorrar(s, p) {
+  if (!soulPuede_(s)) return { ok: false, error: 'NovaSoul es de Manuela.' };
+  try {
+    const fue = soulBorrar_('Pagos', p.id, soulUsuario_(s));
+    return { ok: fue, error: fue ? '' : 'No encuentro ese abono.' };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
 }

@@ -118,6 +118,8 @@ function manejarCentral(accion, p) {
     case 'nc_soul_finanzas':   return soulFinanzas(s, p);
     case 'nc_soul_fijo':       return soulFijoGuardar(s, p);
     case 'nc_soul_fijo_borrar':return soulFijoBorrar(s, p);
+    case 'nc_soul_pago':       return soulPagoGuardar(s, p);
+    case 'nc_soul_pago_borrar':return soulPagoBorrar(s, p);
     case 'nc_soul_family':     return soulFamily(s, p);
     case 'nc_soul_materias':       return soulMaterias(s, p);
     case 'nc_soul_materia':        return soulMateriaGuardar(s, p);

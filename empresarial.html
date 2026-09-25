@@ -1457,6 +1457,13 @@ input.li:focus{border-color:var(--acc-d);}
       <div class="view" id="v-pedidos">
         <p style="font:500 12.5px/1.5 'DM Sans';color:var(--t-mut);">Los pedidos del día en esta tienda. Ves quién los tiene y en qué van.</p>
         <div class="imp-slot" data-tipo="pedidos"></div>
+        <!--
+          REPARTIR. Va ARRIBA de la tabla y no escondido entre las
+          estadísticas del equipo, porque mientras «sin asignar» sea
+          todo el total, tener equipo no sirve de nada — y eso hay que
+          verlo sin buscarlo.
+        -->
+        <div id="ped-reparto"></div>
         <div id="pedfiltros" style="display:none;flex-wrap:wrap;gap:6px;margin:2px 0 4px;"></div>
         <div class="tsplit">
           <div class="tbl" id="pedlist"></div>
@@ -3638,7 +3645,7 @@ async function cargarReales() {
     // cuándo la pantalla terminó de ponerse al día.
     await Promise.all([cargarPedidosReales(), cargarNovedadesReales(),
                        cargarEquipo(), cargarAuditoria(), cargarAuditoriaCasos(),
-                       cargarAlarmas(),
+                       cargarReparto(), cargarAlarmas(),
                        cargarRecuento(), cargarProductos(), cargarAyer(),
                        cargarHistorial(), cargarCas(), cargarEstados(),
                        cargarMeta(), cargarSemaforo()]);
@@ -4082,6 +4089,14 @@ function pintarPedidosReales(todas, total) {
       ' Mostrando ' + filas.length + ' de ' + todas.length +
       (total > todas.length ? ' (los ' + todas.length + ' más urgentes de ' + total + ')' : '') + '.';
   }
+
+  /**
+   * La barra de reparto dice «asignarle los N de la lista», y ese N
+   * tiene que ser el de AHORA. Si se quedara con el de la carga
+   * inicial, cambiar un filtro dejaría un botón que promete repartir
+   * doscientos y reparte doce — o al revés.
+   */
+  pintarReparto();
 }
 
 /** Escapar es obligatorio: estos textos vienen de un archivo externo. */
@@ -4123,6 +4138,179 @@ function abrirPedido(i) {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+     REPARTIR EL TRABAJO
+   ═══════════════════════════════════════════════════════════════
+
+   ┌─ LO QUE FALTABA, Y POR QUÉ SE NOTA TAN TARDE ──────────────┐
+   │                                                            │
+   │ Nova siempre supo FILTRAR: una gestora ve los pedidos con  │
+   │ su nombre en `gestora_asignada`. Estaba escrito y probado. │
+   │                                                            │
+   │ Lo que no existía era la otra mitad: no había ninguna      │
+   │ manera de poner ese nombre. La columna solo se pintaba.    │
+   │                                                            │
+   │ Con la dueña trabajando sola no se nota —ella lo ve todo—. │
+   │ Se nota el primer día que entra una gestora, ve cero       │
+   │ pedidos y concluye, con razón, que la herramienta no       │
+   │ sirve. Un filtro sin forma de llenar lo que filtra no es   │
+   │ media función: es una función que hace daño.               │
+   │                                                            │
+   └────────────────────────────────────────────────────────────┘ */
+
+let ASIGNABLES = [];
+let REPARTO = null;
+
+/** Comparar nombres sin que una tilde o una mayúscula decidan. */
+function norma(v) {
+  return String(v == null ? '' : v).toLowerCase().trim()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+/** Una gestora no se reparte trabajo a sí misma. */
+function PUEDE_ASIGNAR() {
+  return ROL === 'dueno' || ROL === 'admin';
+}
+
+async function cargarReparto() {
+  if (!CONECTADO || !PUEDE_ASIGNAR()) return false;
+  let r;
+  try { r = await api('reparto', { tienda: ST }); }
+  catch (e) { return false; }
+  if (!r || !r.ok) return false;
+  REPARTO = r;
+  ASIGNABLES = r.gente || [];
+  pintarReparto();
+  return true;
+}
+
+/**
+ * La barra de reparto, arriba de la tabla de pedidos.
+ *
+ * El número que manda es «sin asignar»: mientras sea todo el total,
+ * tener equipo no sirve de nada. Por eso va primero y en grande, y no
+ * escondido entre estadísticas del equipo.
+ */
+function pintarReparto() {
+  const caja = document.getElementById('ped-reparto');
+  if (!caja) return;
+  if (!PUEDE_ASIGNAR() || !REPARTO) { caja.innerHTML = ''; return; }
+  const R = REPARTO;
+
+  if (!ASIGNABLES.filter(function (g) { return g.rol === 'gestora' || g.rol === 'admin'; }).length) {
+    caja.innerHTML = '<div class="eq-vacio">Todavía no tienes a nadie más en el equipo. ' +
+      'Cuando agregues a alguien en <strong>Permisos</strong>, aquí vas a poder repartirle ' +
+      'pedidos — y hasta que no se los repartas, esa persona entra y no ve nada.</div>';
+    return;
+  }
+
+  const chip = function (g) {
+    return '<span class="bd ' + (g.abiertos ? 'bd-a' : 'bd-g') + '">' +
+      esc(g.nombre.split(' ')[0]) + ' · ' + g.abiertos + ' abiertos</span>';
+  };
+
+  caja.innerHTML = '<div class="card">' +
+    '<div class="card-h"><span class="ct">Repartir el trabajo</span>' +
+      '<span class="bd ' + (R.sinAsignar ? 'bd-w' : 'bd-g') + '">' +
+      R.sinAsignar + ' sin asignar de ' + R.total + '</span></div>' +
+    (R.sinAsignar
+      ? '<p style="font:500 12.5px/1.6 \'DM Sans\';color:var(--t-mut);margin:0 0 10px;">' +
+        'Lo que nadie tiene asignado lo sigues viendo tú, pero <strong>nadie más</strong>. ' +
+        'Una gestora que no tiene pedidos asignados entra y ve la pantalla vacía.</p>'
+      : '') +
+    '<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;">' +
+      ASIGNABLES.map(chip).join('') + '</div>' +
+    (R.aNadieConocido && R.aNadieConocido.length
+      ? '<div class="eq-vacio" style="margin-bottom:12px;">Hay pedidos asignados a ' +
+        R.aNadieConocido.map(function (x) {
+          return '<strong>' + esc(x.nombre) + '</strong> (' + x.pedidos + ')';
+        }).join(', ') + ', que no está en tu equipo. <strong>Nadie los está viendo.</strong> ' +
+        'Reasígnalos o agrega a esa persona en Permisos.</div>'
+      : '') +
+    '<div class="row-btns" style="align-items:center;flex-wrap:wrap;">' +
+      '<select class="cm-sel" id="rep-quien" style="max-width:220px;">' +
+        '<option value="">— elige a quién —</option>' +
+        ASIGNABLES.map(function (g) {
+          return '<option value="' + esc(g.id) + '">' + esc(g.nombre) + '</option>';
+        }).join('') + '</select>' +
+      '<button class="btn" onclick="repartirVisibles()">Asignarle los ' +
+        (PEDS_VISTA || []).length + ' de la lista</button>' +
+      '<button class="btn-ghost" onclick="repartirVisibles(true)">Quitarles asignación</button>' +
+    '</div>' +
+    '<p style="font:500 11.5px/1.55 \'DM Sans\';color:var(--t-mut2);margin:9px 0 0;">' +
+      'Se aplica a los pedidos que ves en la tabla ahora mismo, con los filtros que ' +
+      'tengas puestos. Filtra primero, reparte después.</p>' +
+    '<div id="rep-msg" class="mt-msg" style="display:none"></div>' +
+  '</div>';
+}
+
+/** Asignar UN pedido, desde su panel de detalle. */
+async function asignarPedido() {
+  const sel = document.getElementById('pd-gestora');
+  if (!sel || !PED_SEL_ID) return;
+  const antes = sel.value;
+  sel.disabled = true;
+  try {
+    const r = await api('asignar', { ids: [PED_SEL_ID], a: antes, tienda: ST });
+    if (!r || !r.ok) { showToast((r && r.error) || 'No se pudo asignar'); return; }
+    /**
+     * Se recarga la lista en vez de escribir el nombre a mano en la
+     * memoria del navegador. Lo que vale es lo que quedó en la hoja —
+     * pintar un cambio que no se guardó es el peor error posible aquí,
+     * porque se ve idéntico a que sí se guardó.
+     */
+    await cargarPedidosReales();
+    await cargarReparto();
+    showToast(r.desasignado ? 'Quedó sin asignar'
+                            : 'Asignado a ' + r.a +
+                              (r.novedades ? ' · y sus ' + r.novedades + ' novedades' : ''));
+  } catch (e) { showToast('Sin conexión: no se asignó'); }
+  finally { sel.disabled = false; }
+}
+
+/** Asignar TODO lo que está a la vista, con los filtros puestos. */
+async function repartirVisibles(quitar) {
+  const sel = document.getElementById('rep-quien');
+  const msg = document.getElementById('rep-msg');
+  const decir = function (t, mal) {
+    if (!msg) return;
+    msg.style.display = 'block';
+    msg.textContent = t;
+    msg.style.color = mal ? '#b8322f' : '';
+  };
+
+  const quien = quitar ? '' : (sel ? sel.value : '');
+  if (!quitar && !quien) { decir('Primero elige a quién.', true); return; }
+
+  const ids = (PEDS_VISTA || []).map(function (p) { return p.id; });
+  if (!ids.length) { decir('No hay pedidos en la lista.', true); return; }
+  if (ids.length > 500) {
+    decir('Son ' + ids.length + ', demasiados de una vez. Filtra un poco más ' +
+          '—por estado o por fecha— y repártelos por tandas de 500.', true);
+    return;
+  }
+
+  const nombre = quitar ? '' :
+    (ASIGNABLES.filter(function (g) { return g.id === quien; })[0] || {}).nombre || '';
+  if (!confirm(quitar
+      ? '¿Quitarle la asignación a los ' + ids.length + ' pedidos de la lista?'
+      : '¿Asignarle los ' + ids.length + ' pedidos de la lista a ' + nombre + '?\n\n' +
+        'Sus novedades se van con ellos.')) return;
+
+  decir('Repartiendo…');
+  try {
+    const r = await api('asignar', { ids: ids, a: quien, tienda: ST });
+    if (!r || !r.ok) { decir((r && r.error) || 'No se pudo.', true); return; }
+    await cargarPedidosReales();
+    await cargarNovedadesReales();
+    await cargarReparto();
+    decir(r.asignados + (r.asignados === 1 ? ' pedido' : ' pedidos') +
+      (quitar ? ' sin asignar' : ' para ' + r.a) +
+      (r.novedades ? ' · ' + r.novedades + ' novedades también' : '') +
+      (r.iguales ? ' · ' + r.iguales + ' ya estaban así' : ''));
+  } catch (e) { decir('Sin conexión: no se repartió.', true); }
+}
+
 function pintarPanelPedido() {
   const cont = document.getElementById('pedpanel');
   if (!cont) return;
@@ -4159,8 +4347,42 @@ function pintarPanelPedido() {
       '<div style="grid-column:1/-1"><div class="dlbl">DIRECCIÓN</div><div class="dtxt">' +
         esc(p.direccion || '—') + (p.ciudad ? ' · ' + esc(p.ciudad) : '') + '</div></div>' +
       '<div><div class="dlbl">PRODUCTO</div><div class="dtxt">' + esc(p.producto || '—') + '</div></div>' +
-      '<div><div class="dlbl">GESTIONA</div><div class="dtxt">' +
-        esc(p.gestora_asignada || 'Sin asignar') + '</div></div>' +
+      /**
+       * ── ESTO ERA SOLO TEXTO ──
+       *
+       * Decía «Sin asignar» y no se podía hacer nada al respecto: no
+       * había ninguna forma, en toda Nova, de poner un nombre en esta
+       * columna. Y una gestora solo ve lo que tiene asignado — o sea
+       * que entraba y no veía NADA.
+       *
+       * Ahora es un selector. Quien no puede repartir sigue viendo el
+       * texto, porque una gestora eligiendo sus propios pedidos
+       * convierte el reparto en una carrera por los fáciles.
+       */
+      '<div><div class="dlbl">GESTIONA</div>' +
+        (PUEDE_ASIGNAR()
+          ? '<select class="cm-sel" id="pd-gestora" style="width:100%;margin-top:3px;" ' +
+              'onchange="asignarPedido()">' +
+              '<option value="">— sin asignar —</option>' +
+              (ASIGNABLES || []).map(function (g) {
+                return '<option value="' + esc(g.id) + '"' +
+                  (norma(g.nombre) === norma(p.gestora_asignada) ? ' selected' : '') +
+                  '>' + esc(g.nombre) + '</option>';
+              }).join('') +
+            '</select>' +
+            /**
+             * Si la columna trae un nombre que no es de nadie del
+             * equipo, el selector no lo puede mostrar y quedaría en
+             * «sin asignar» — que es mentira. Se dice.
+             */
+            (p.gestora_asignada && !(ASIGNABLES || []).filter(function (g) {
+              return norma(g.nombre) === norma(p.gestora_asignada); }).length
+              ? '<div style="font:500 11px/1.4 \'DM Sans\';color:#b8322f;margin-top:4px;">' +
+                'Dice «' + esc(p.gestora_asignada) + '», que no es nadie de tu equipo. ' +
+                'Nadie lo está viendo.</div>'
+              : '')
+          : '<div class="dtxt">' + esc(p.gestora_asignada || 'Sin asignar') + '</div>') +
+      '</div>' +
       '<div><div class="dlbl">TRANSPORTADORA</div><div class="dtxt">' +
         esc(p.transportadora || '—') + (p.guia ? '<br>' + esc(p.guia) : '') + '</div></div>' +
       '<div><div class="dlbl">ESTADO EN LA PLATAFORMA</div><div class="dtxt">' +
@@ -5837,6 +6059,43 @@ function pintarPantallasGestora() {
   }
 
   const mios = PEDS_REALES || [];
+
+  /**
+   * ── CERO PEDIDOS NO ES «TODO AL DÍA» ──
+   *
+   * Cuando a una gestora todavía no le han asignado nada, todas las
+   * cuentas de abajo dan cero y la pantalla queda igual que si hubiera
+   * terminado su día: cuatro ceros verdes y ninguna fila.
+   *
+   * Eso es el peor mensaje posible para alguien que acaba de entrar por
+   * primera vez: no sabe si la herramienta está rota, si hizo algo mal,
+   * o si de verdad no hay trabajo. Y va a preguntar — o peor, no va a
+   * preguntar.
+   *
+   * Así que se dice, con nombre propio y con lo que tiene que pasar
+   * para que cambie. Se corta aquí: pintar cuatro ceros debajo de este
+   * mensaje solo lo contradice.
+   */
+  if (!mios.length) {
+    const nombre = ((SESION && SESION.nombre) || '').split(' ')[0];
+    const aviso = '<div class="eq-vacio" style="padding:20px;">' +
+      '<strong>Todavía no tienes pedidos asignados' + (nombre ? ', ' + esc(nombre) : '') +
+      '.</strong><br><br>' +
+      'No es que esté vacío el día ni que algo haya fallado: en Nova cada quien ve ' +
+      'solo los pedidos que le asignaron, y a ti todavía no te han asignado ninguno.' +
+      '<br><br>Quien administra la tienda te los reparte desde <strong>Pedidos → ' +
+      'Repartir el trabajo</strong>. En cuanto lo haga, aparecen aquí solos.</div>';
+    ['g-kpi', 'g-pedkpi'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '';
+    });
+    ['g-urgentes', 'g-pedlist', 'g-novlist'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = aviso;
+    });
+    return;
+  }
+
   const abierto = function (p) {
     return ['entregado','devolucion','cancelado']
       .indexOf(estadoDe(p)) === -1;
@@ -7444,7 +7703,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-24 · 9c00';
+const VERSION_PANTALLA = '2026-09-25 · 3f6f';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -9489,6 +9748,14 @@ function pintarEquipo() {
         '<span>entrega</span></div>' +
       '<div class="eq-num' + (x.sinMover ? ' mal' : '') + '">' + x.sinMover +
         '<span>sin mover</span></div>' +
+      /**
+       * «Ver su pantalla» es lo que hace falta la semana que entra
+       * alguien nuevo: saber si de verdad le llegó trabajo. No cuesta
+       * una petición: se cuenta con los pedidos que ya están cargados.
+       */
+      '<div class="eq-acc"><button class="eq-btn" onclick="showSombra(' +
+        JSON.stringify(esc(x.nombre)).replace(/"/g, '&quot;') +
+        ')">Ver lo que ve</button></div>' +
       (PUEDE_EDITAR_EQUIPO
         ? '<div class="eq-acc">' +
             '<button class="eq-btn" onclick="editarPersona(' + i + ')">Editar</button>' +
@@ -9676,30 +9943,115 @@ function openSb(){document.getElementById('sidebar').classList.add('open');docum
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('soblay').classList.remove('open');}
 
 // ─── VISTA SOMBRA ─────────────────────────────────────
-const SOMBRA_DATA = {
-  'Camila Restrepo':   {av:'CR', info:'Gestora · Nutrea Ecuador · 6h 12m activa', stat:[{k:'Pedidos',v:'18'},{k:'Entregados',v:'12'},{k:'Novedades',v:'3'},{k:'Efectividad',v:'91%'}]},
-  'Valentina Ospina':  {av:'VO', info:'Gestora · Nutrea Ecuador · 4h 30m activa', stat:[{k:'Pedidos',v:'14'},{k:'Entregados',v:'9'}, {k:'Novedades',v:'1'},{k:'Efectividad',v:'86%'}]},
-  'Daniela Ríos':      {av:'DR', info:'Admin · Nutrea · sin conexión hoy',         stat:[{k:'Pedidos',v:'—'}, {k:'Entregados',v:'—'},{k:'Novedades',v:'—'},{k:'Efectividad',v:'—'}]},
-};
+/* ═══════════════════════════════════════════════════════════════
+     VER LA PANTALLA DE ALGUIEN DEL EQUIPO
+   ═══════════════════════════════════════════════════════════════
+
+   ┌─ LO QUE HABÍA ────────────────────────────────────────────┐
+   │                                                            │
+   │ Tres personas inventadas —Camila Restrepo, Valentina       │
+   │ Ospina, Daniela Ríos— con sus números y sus pedidos        │
+   │ falsos, y encima NADIE LLAMABA a esta función. Era código  │
+   │ muerto cargando gente que no existe.                       │
+   │                                                            │
+   │ Se podía borrar entero. Pero «ver lo que ve mi gestora» es │
+   │ justo lo que hace falta la semana que entra alguien nuevo: │
+   │ saber si le llegó trabajo, y cuánto. Así que en vez de     │
+   │ borrarlo se conectó — y no cuesta una petición más, porque │
+   │ la dueña ya tiene todos los pedidos en memoria.            │
+   │                                                            │
+   └────────────────────────────────────────────────────────────┘ */
+
 function showSombra(nombre) {
-  const d = SOMBRA_DATA[nombre] || {av:nombre[0], info:'Gestora', stat:[]};
-  document.getElementById('som-av').textContent = d.av;
-  document.getElementById('som-nombre').textContent = nombre;
-  document.getElementById('som-info').textContent = d.info;
-  document.getElementById('som-stat').innerHTML = d.stat.map(s=>`<div class="som-kc"><div class="kk">${s.k}</div><div class="vv">${s.v}</div></div>`).join('');
-  document.getElementById('som-peds').innerHTML = [
-    {nm:'Carlos Mendoza · #PE-2041', sub:'Proteína Vainilla · En tránsito', cl:'a'},
-    {nm:'Ana Ruiz · #PE-2038',       sub:'Colágeno · Novedad',             cl:'r'},
-    {nm:'María Salazar · #PE-2031',  sub:'Multivitamínico · En tránsito',  cl:'a'},
-  ].map(p=>`<div class="som-ped">
-    <div class="som-ped-h"><span class="som-ped-nm">${p.nm}</span><span class="bd bd-${p.cl}">${p.sub.split('·')[1].trim()}</span></div>
-    <span class="som-ped-sub">${p.sub.split('·')[0].trim()}</span>
-  </div>`).join('');
-  document.getElementById('som-novs').innerHTML = nombre === 'Camila Restrepo' ? [
-    {nm:'Ana Ruiz · Dirección incorrecta', cl:'r'},
-    {nm:'Pedro Soto · No había nadie', cl:'w'},
-  ].map(n=>`<div class="som-ped"><div class="som-ped-nm">${n.nm}</div></div>`).join('')
-  : '<div style="font:500 12px/1.4 \'DM Sans\';color:var(--t-mut2);">Sin novedades abiertas.</div>';
+  const persona = (MI_EQUIPO || []).filter(function (x) {
+    return norma(x.nombre) === norma(nombre); })[0] || { nombre: nombre };
+
+  /**
+   * Lo suyo se cuenta con el MISMO criterio con el que el servidor se
+   * lo enseñaría a ella: nombre o correo en `gestora_asignada`. Si aquí
+   * se contara distinto, la dueña vería un número y la gestora otro.
+   */
+  const suyos = (PEDS_REALES || []).filter(function (p) {
+    const v = norma(p.gestora_asignada);
+    return v && (v === norma(persona.nombre) ||
+                 (persona.correo && v === norma(persona.correo)));
+  });
+  const cerrado = function (p) {
+    return ['entregado', 'devolucion', 'cancelado'].indexOf(estadoDe(p)) !== -1;
+  };
+  const entregados = suyos.filter(function (p) { return estadoDe(p) === 'entregado'; });
+  const resueltos = suyos.filter(cerrado);
+  const abiertos = suyos.filter(function (p) { return !cerrado(p); });
+  const enNovedad = suyos.filter(function (p) { return estadoDe(p) === 'novedad'; });
+
+  const ini = String(persona.nombre || '?').split(/\s+/)
+    .map(function (x) { return x[0]; }).slice(0, 2).join('').toUpperCase();
+  document.getElementById('som-av').textContent = ini;
+  document.getElementById('som-nombre').textContent = persona.nombre;
+  document.getElementById('som-info').textContent =
+    (persona.rol ? persona.rol + ' · ' : '') +
+    ((STORES[ST] || {}).name || ST) + ' · ' +
+    (persona.ultima_conexion
+      ? 'entró el ' + String(persona.ultima_conexion).slice(0, 10)
+      : 'nunca ha entrado');
+
+  document.getElementById('som-stat').innerHTML = [
+    { k: 'Asignados', v: String(suyos.length) },
+    { k: 'Sin cerrar', v: String(abiertos.length) },
+    { k: 'Entregados', v: String(entregados.length) },
+    /** Sobre los RESUELTOS, no sobre todos: los que van en camino
+        todavía no son ni un acierto ni un fallo de nadie. */
+    { k: 'Efectividad', v: resueltos.length
+        ? Math.round(entregados.length / resueltos.length * 100) + '%' : '—' },
+  ].map(function (x) {
+    return '<div class="som-kc"><div class="kk">' + esc(x.k) + '</div>' +
+      '<div class="vv">' + esc(x.v) + '</div></div>';
+  }).join('');
+
+  /** Lo que lleva más tiempo quieto: es lo que ella tendría que tocar. */
+  const quietos = abiertos.map(function (p) {
+    const d = fechaDe(p.ultimo_movimiento || p.fecha);
+    return { p: p, dias: d ? Math.floor((Date.now() - d.getTime()) / 86400000) : 0 };
+  }).sort(function (a, b) { return b.dias - a.dias; }).slice(0, 6);
+
+  document.getElementById('som-peds').innerHTML = quietos.length
+    ? quietos.map(function (x) {
+        const e = fichaEstado(x.p);
+        return '<div class="som-ped">' +
+          '<div class="som-ped-h"><span class="som-ped-nm">' +
+            esc(x.p.cliente || 'Sin nombre') + ' · #' + esc(x.p.id_externo || x.p.id) +
+            '</span><span class="bd" style="color:' + e[0] + ';background:' + e[1] + ';">' +
+            esc(e[2]) + '</span></div>' +
+          '<span class="som-ped-sub">' + esc(x.p.producto || '—') +
+            (x.dias ? ' · ' + x.dias + (x.dias === 1 ? ' día' : ' días') + ' sin moverse' : '') +
+          '</span></div>';
+      }).join('')
+    : '<div style="font:500 12px/1.5 \'DM Sans\';color:var(--t-mut2);">' +
+      (suyos.length
+        ? 'No le queda nada abierto.'
+        : 'No tiene ningún pedido asignado todavía. Mientras no se los repartas, ' +
+          'entra y ve la pantalla vacía.') + '</div>';
+
+  const novs = (NOVS_REALES || []).filter(function (n) {
+    const v = norma(n.gestora);
+    return v && (v === norma(persona.nombre) ||
+                 (persona.correo && v === norma(persona.correo))) &&
+           norma(n.estado) === 'abierta';
+  });
+  document.getElementById('som-novs').innerHTML = novs.length
+    ? novs.slice(0, 8).map(function (n) {
+        /**
+         * El nombre de la clienta vive en el PEDIDO, no en la novedad.
+         * `pedidoDeNovedad` es la que ya cruza las dos hojas — la misma
+         * que usa la bandeja, para que aquí no diga otra cosa.
+         */
+        const ped = pedidoDeNovedad(n);
+        return '<div class="som-ped"><div class="som-ped-nm">' +
+          esc((ped && ped.cliente) || 'Sin nombre') + ' · ' +
+          esc(n.motivo || 'sin motivo') + '</div></div>';
+      }).join('')
+    : '<div style="font:500 12px/1.4 \'DM Sans\';color:var(--t-mut2);">Sin novedades abiertas.</div>';
+
   document.getElementById('sombra').classList.add('on');
 }
 function closeSombra(){document.getElementById('sombra').classList.remove('on');}

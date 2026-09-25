@@ -899,6 +899,30 @@ textarea,input,select,button{font-family:inherit;}
   </div>
 </div>
 
+<!--
+  REGISTRAR UN PAGO. Lo que ella pidió: «dar la oportunidad de cambiar
+  el aporte cada que vaya a subir un pago si pagué más o menos».
+  La cuota del plan dice lo que debería pagar; esto dice lo que pagó.
+-->
+<div class="modal" id="m-abono" onclick="if(event.target===this)cerrarModal('m-abono')">
+  <div class="modal-box">
+    <div class="card-h" style="margin:0;"><span class="card-h3" id="ma-titulo">Registrar un pago</span><span class="link" onclick="cerrarModal('m-abono')">CERRAR ✕</span></div>
+    <div class="aviso mal" id="ma-err"></div>
+    <p class="card-p" id="ma-que"></p>
+    <div class="f-row">
+      <div class="f"><label>CUÁNTO PAGASTE</label><input type="number" id="ma-monto" min="0" step="1000">
+        <small id="ma-cuota"></small></div>
+      <div class="f"><label>CUÁNDO</label><input type="date" id="ma-fecha"></div>
+    </div>
+    <div class="f"><label>NOTA</label><input id="ma-nota" placeholder="Opcional · «aproveché la prima», «mes flojo»…"></div>
+    <div id="ma-lista"></div>
+    <div class="f-btns">
+      <button class="card-cta" onclick="guardarAbono()">Guardar el pago</button>
+      <button class="card-ghost" onclick="cerrarModal('m-abono')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="m-fijo" onclick="if(event.target===this)cerrarModal('m-fijo')">
   <div class="modal-box">
     <div class="card-h" style="margin:0;"><span class="card-h3" id="mf-titulo">Gasto fijo</span><span class="link" onclick="cerrarModal('m-fijo')">CERRAR ✕</span></div>
@@ -940,6 +964,10 @@ textarea,input,select,button{font-family:inherit;}
         <div class="f"><label>CUÁNTAS CUOTAS SON</label><input type="number" id="mf-cuotas-total" min="1" max="120" placeholder="12">
           <small>Sin esto no puedo decirte cuándo terminas de pagar.</small></div>
       </div>
+      <div class="f"><label>LA DEUDA TOTAL</label><input type="number" id="mf-deuda-total" min="0" step="1000" placeholder="4140000">
+        <small>Todo lo que debes, no la cuota. Con esto, «cuánto falta» es una resta
+          exacta; sin esto tengo que multiplicar la cuota, que solo es verdad si
+          pagas lo mismo todos los meses.</small></div>
       <div class="f"><label>MES DE LA PRIMERA CUOTA</label><input type="month" id="mf-cuota-desde">
         <small>Con esto cuento sola cuántas llevas, y no hay que actualizarlo cada mes.</small></div>
     </div>
@@ -965,7 +993,7 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-24 · 128d';
+const VERSION_PANTALLA = '2026-09-25 · bb93';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
@@ -1976,7 +2004,17 @@ function pintarOrden() {
            * en algo que se acaba: ver el trozo que ya no debes es
            * distinto de leer el mismo número todos los meses.
            */
-          const pct = c.total ? Math.round((c.pagadas / c.total) * 100) : 0;
+          /**
+           * La barra mide PLATA, no cuotas, cuando hay deuda total.
+           *
+           * Es la diferencia que ella pidió ver: si un mes abonó el
+           * doble, la barra tiene que moverse el doble. Medirla en
+           * cuotas hace que pagar de más no se note — y entonces, ¿para
+           * qué pagar de más?
+           */
+          const pct = (c.deudaTotal && c.pagado !== undefined)
+            ? Math.round(Math.min(100, (c.pagado / c.deudaTotal) * 100))
+            : (c.total ? Math.round((c.pagadas / c.total) * 100) : 0);
           return '<div style="border-bottom:1px solid var(--soft2);padding:11px 0;">' +
             '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
               '<span style="flex:1;min-width:150px;font:600 14px/1.3 \'DM Sans\';color:var(--ink);">' +
@@ -1989,13 +2027,39 @@ function pintarOrden() {
                   '<div style="flex:1;height:6px;border-radius:3px;background:var(--soft2);' +
                     'overflow:hidden;"><div style="height:100%;width:' + pct + '%;' +
                     'background:var(--sage-d, #6f8f6a);"></div></div>' +
-                  '<span class="kpi-s">van ' + c.pagadas + ' de ' + c.total + '</span>' +
+                  '<span class="kpi-s">van ' + c.pagadas + ' de ' + c.total +
+                    (c.porAbonos ? '' : ' (calculado)') + '</span>' +
                 '</div>' +
                 '<div class="kcard-m" style="margin-top:7px;">' +
-                  (c.termina ? '<span class="chip hoy">se acaba en ' + esc(fmes(c.termina)) +
+                  (c.faltaPagar !== null ? '<span class="chip' + (c.exacto ? ' proy' : '') +
+                    '">falta ' + esc(l.moneda) + ' ' + nfmt(c.faltaPagar) +
+                    (c.exacto ? '' : ' aprox.') + '</span>' : '') +
+                  (c.termina ? '<span class="chip">plan: ' + esc(fmes(c.termina)) +
                     '</span>' : '') +
-                  (c.faltaPagar !== null ? '<span class="chip">falta ' + esc(l.moneda) + ' ' +
-                    nfmt(c.faltaPagar) + '</span>' : '') +
+                  /**
+                   * Cuando va más rápido que el plan, se dice con el mes
+                   * real. Ver que pagar de más adelanta la salida es la
+                   * única razón por la que alguien paga de más.
+                   */
+                  (c.terminaAlRitmo && c.terminaAlRitmo < c.termina
+                    ? '<span class="chip hoy">a este ritmo: ' + esc(fmes(c.terminaAlRitmo)) +
+                      '</span>'
+                    : (c.terminaAlRitmo ? '<span class="chip">a este ritmo: ' +
+                       esc(fmes(c.terminaAlRitmo)) + '</span>' : '')) +
+                '</div>' +
+                (c.porqueEstimado
+                  ? '<p class="card-p" style="margin-top:6px;font-size:12px;color:var(--mut3);">' +
+                    esc(c.porqueEstimado) + '</p>'
+                  : '') +
+                /**
+                 * Y el botón que ella pidió: registrar lo que de verdad
+                 * pagó este mes, que puede no ser la cuota.
+                 */
+                '<div class="row-btns" style="margin-top:9px;">' +
+                  '<button class="card-ghost" style="padding:5px 11px;font-size:11.5px;" ' +
+                    'onclick="abrirAbono(\'' + l.id + '\')">+ Registrar un pago</button>' +
+                  (c.abonos ? '<span class="chip">' + c.abonos +
+                    (c.abonos === 1 ? ' pago anotado' : ' pagos anotados') + '</span>' : '') +
                 '</div>'
               : '<p class="card-p" style="margin-top:7px;color:var(--mut3);font-size:12px;">' +
                 esc(c.porque || '') +
@@ -2245,6 +2309,7 @@ function nuevoFijo(cat) {
   document.getElementById('mf-acreedor').value = '';
   document.getElementById('mf-cuotas-total').value = '';
   document.getElementById('mf-cuota-desde').value = '';
+  document.getElementById('mf-deuda-total').value = '';
   mostrarCuotas();
   document.getElementById('mf-borrar').style.display = 'none';
   errModal('mf-err', '');
@@ -2305,6 +2370,7 @@ function editarFijo(id) {
     (linea.cuotas && linea.cuotas.total) || '';
   document.getElementById('mf-cuota-desde').value =
     (linea.cuotas && linea.cuotas.desde) || '';
+  document.getElementById('mf-deuda-total').value = linea.deudaTotal || '';
   mostrarCuotas();
   document.getElementById('mf-borrar').style.display = 'block';
   errModal('mf-err', '');
@@ -2324,11 +2390,85 @@ async function guardarFijo() {
     acreedor: document.getElementById('mf-acreedor').value,
     cuotasTotal: document.getElementById('mf-cuotas-total').value || 0,
     cuotaDesde: document.getElementById('mf-cuota-desde').value || '',
+    deudaTotal: document.getElementById('mf-deuda-total').value || 0,
   } });
   if (!r || !r.ok) { errModal('mf-err', r && r.error || 'No se pudo guardar.'); return; }
   cerrarModal('m-fijo');
   await cargarPlata();
 }
+/* ─── LOS ABONOS ─── */
+let ABONO_FIJO = '';
+
+function abrirAbono(id) {
+  const L = buscarFijo(id);
+  if (!L) { avisoGlobal('No encuentro esa deuda.'); return; }
+  ABONO_FIJO = id;
+  const c = L.cuotas || {};
+
+  document.getElementById('ma-titulo').textContent =
+    'Pago de ' + (L.concepto || L.categoriaNombre);
+  document.getElementById('ma-que').textContent =
+    c.deudaTotal
+      ? 'Debes ' + L.moneda + ' ' + nfmt(c.deudaTotal) + ' en total. Llevas pagados ' +
+        L.moneda + ' ' + nfmt(c.pagado || 0) + '.'
+      : 'Todavía no me has dicho la deuda total, así que solo puedo contar los pagos. ' +
+        'Ponla en «Cambiar el gasto fijo» y te digo cuánto falta exacto.';
+  document.getElementById('ma-cuota').textContent =
+    'La cuota del plan es ' + L.moneda + ' ' + nfmt(L.monto) +
+    '. Si pagaste más o menos, escribe lo que pagaste de verdad.';
+  document.getElementById('ma-monto').value = L.monto || '';
+  document.getElementById('ma-fecha').value = (PLATA && PLATA.hoy) || '';
+  document.getElementById('ma-nota').value = '';
+
+  /** Lo ya anotado, para no registrar el mismo pago dos veces. */
+  const mios = ((PLATA && PLATA.orden && PLATA.orden.pagos) || [])
+    .filter(function (x) { return x.fijoId === id; });
+  document.getElementById('ma-lista').innerHTML = mios.length
+    ? '<div class="card-lbl" style="margin:12px 0 4px;">LO QUE YA ANOTASTE</div>' +
+      mios.map(function (x) {
+        return '<div class="fila"><span class="fila-t">' + esc(fcorta(x.fecha)) +
+          (x.nota ? ' · <span style="color:var(--mut3);">' + esc(x.nota) + '</span>' : '') +
+          '</span><span class="fila-m">' + esc(x.moneda) + ' ' + nfmt(x.monto) + '</span>' +
+          '<span class="link" onclick="borrarAbono(\'' + x.id + '\')">QUITAR</span></div>';
+      }).join('')
+    : '';
+
+  errModal('ma-err', '');
+  document.getElementById('m-abono').classList.add('on');
+}
+
+/** Buscar una línea fija en cualquiera de los bloques. */
+function buscarFijo(id) {
+  if (!PLATA || !PLATA.orden) return null;
+  let out = null;
+  ['entra', 'fijo', 'cuotas', 'unico', 'ahorro'].forEach(function (b) {
+    (PLATA.orden.bloques[b].lineas || []).forEach(function (l) {
+      if (l.id === id) out = l;
+    });
+  });
+  return out;
+}
+
+async function guardarAbono() {
+  const r = await nc('nc_soul_pago', { datos: {
+    fijoId: ABONO_FIJO,
+    monto: document.getElementById('ma-monto').value || 0,
+    fecha: document.getElementById('ma-fecha').value || '',
+    nota: document.getElementById('ma-nota').value,
+  } });
+  if (!r || !r.ok) { errModal('ma-err', (r && r.error) || 'No se pudo guardar.'); return; }
+  cerrarModal('m-abono');
+  await cargarPlata();
+  avisoGlobal('Pago anotado.', true);
+}
+
+async function borrarAbono(id) {
+  const r = await nc('nc_soul_pago_borrar', { id: id });
+  if (!r || !r.ok) { errModal('ma-err', (r && r.error) || 'No se pudo borrar.'); return; }
+  cerrarModal('m-abono');
+  await cargarPlata();
+}
+
 async function borrarFijo() {
   if (!FIJO) return;
   if (!confirm('¿Borrar esta línea del plan? Los movimientos de Nova Central no se tocan.')) return;

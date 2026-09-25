@@ -90,7 +90,8 @@ global.Date = class extends RealDate {
 };
 
 (0, eval)(src + '\n;globalThis.__F = { plataOrdenada_, plataLinea_, plataMasMeses_,' +
-  ' soulPlataOrdenada, soulFijoGuardar, PLATA_TIPOS, PLATA_BLOQUES, SOUL_HOJAS };');
+  ' soulPlataOrdenada, soulFijoGuardar, soulPagoGuardar, soulPagoBorrar,' +
+  ' PLATA_TIPOS, PLATA_BLOQUES, SOUL_HOJAS };');
 const F = globalThis.__F;
 
 let fallas = 0;
@@ -126,6 +127,7 @@ function sembrar() {
                  Trabajos: [['id','nombre','tipo','estado']], Cobros: [['id']], Metas: [['id']] };
   LIBROS.s = {
     Fijos: [C_FIJ.slice()],
+    Pagos: [F.SOUL_HOJAS.Pagos.slice()],
     Rutina: [['id','usuario_id','tipo','nombre','dia_semana','hora_inicio','hora_fin','lugar',
               'trabajo_id','materia_id','paga_fija','moneda','desde','hasta','activo','nota']],
     Turnos: [['id','usuario_id','rutina_id','fecha','paga','propinas','moneda','estado',
@@ -260,6 +262,89 @@ igual('2026-09 + 5 = 2027-02', '2027-02', F.plataMasMeses_('2026-09', 5));
 igual('2026-12 + 1 = 2027-01', '2027-01', F.plataMasMeses_('2026-12', 1));
 igual('2026-01 + 0 = 2026-01', '2026-01', F.plataMasMeses_('2026-01', 0));
 igual('2026-01 + 23 = 2027-12', '2027-12', F.plataMasMeses_('2026-01', 23));
+
+console.log('\n── LOS ABONOS: lo que de verdad pagó ──');
+/**
+ * «dar la oportunidad de cambiar el aporte cada que vaya a subir un
+ *  pago si pagué más o menos».
+ *
+ * Sistecrédito: 6 cuotas de 690.000 desde agosto. Si en agosto abonó
+ * 1.000.000 y en septiembre 500.000, lleva 1.500.000 pagados — no
+ * 1.380.000, que es lo que daría multiplicar la cuota por dos.
+ */
+sembrar();
+LIBROS.s.Fijos = LIBROS.s.Fijos.map(function (f) {
+  if (f[0] === 'f6') f[C_FIJ.indexOf('deuda_total')] = 4140000;   // 6 × 690.000
+  return f;
+});
+igual('el abono se guarda', true,
+  F.soulPagoGuardar(SOCIA, { datos: { fijoId: 'f6', fecha: '2026-08-25',
+    monto: 1000000, nota: 'aproveché la prima' } }).ok);
+igual('y el segundo', true,
+  F.soulPagoGuardar(SOCIA, { datos: { fijoId: 'f6', fecha: '2026-09-25',
+    monto: 500000, nota: 'mes flojo' } }).ok);
+
+o = F.plataOrdenada_(YO, '2026-09', '2026-09-24');
+const sis2 = o.bloques.cuotas.lineas.filter(l => l.id === 'f6')[0];
+igual('cuenta los abonos, no los meses', 2, sis2.cuotas.abonos);
+igual('y suma lo que de verdad pagó', 1500000, sis2.cuotas.pagado);
+igual('lo dice: viene de abonos, no de un cálculo', true, sis2.cuotas.porAbonos);
+/** 4.140.000 − 1.500.000 = 2.640.000. Resta exacta, no multiplicación. */
+igual('lo que falta es una resta exacta', 2640000, sis2.cuotas.faltaPagar);
+igual('y se marca como exacto', true, sis2.cuotas.exacto);
+
+console.log('\n── Sin deuda total, estima y lo dice ──');
+sembrar();
+F.soulPagoGuardar(SOCIA, { datos: { fijoId: 'f6', fecha: '2026-09-25', monto: 690000 } });
+o = F.plataOrdenada_(YO, '2026-09', '2026-09-24');
+const sinTotal = o.bloques.cuotas.lineas.filter(l => l.id === 'f6')[0];
+igual('no dice que sea exacto', false, sinTotal.cuotas.exacto);
+ok('y explica qué falta para que lo sea',
+   /pones la deuda total/.test(sinTotal.cuotas.porqueEstimado), sinTotal.cuotas.porqueEstimado);
+
+console.log('\n── Pagar de más adelanta la fecha, y se ve ──');
+sembrar();
+LIBROS.s.Fijos = LIBROS.s.Fijos.map(function (f) {
+  if (f[0] === 'f6') f[C_FIJ.indexOf('deuda_total')] = 4140000;
+  return f;
+});
+// Dos abonos de 2.000.000: al ritmo, queda uno solo.
+F.soulPagoGuardar(SOCIA, { datos: { fijoId: 'f6', fecha: '2026-08-25', monto: 2000000 } });
+F.soulPagoGuardar(SOCIA, { datos: { fijoId: 'f6', fecha: '2026-09-25', monto: 2000000 } });
+o = F.plataOrdenada_(YO, '2026-09', '2026-09-24');
+const rapido = o.bloques.cuotas.lineas.filter(l => l.id === 'f6')[0];
+igual('faltan 140.000', 140000, rapido.cuotas.faltaPagar);
+/** Al ritmo de 2.000.000 por abono, lo que queda cabe en uno más. */
+igual('al ritmo, se acaba el mes que viene', '2026-10', rapido.cuotas.terminaAlRitmo);
+/** Y el plan original decía enero: ver la diferencia es el premio. */
+igual('aunque el plan decía enero', '2027-01', rapido.cuotas.termina);
+
+console.log('\n── Un abono no se puede inventar ──');
+sembrar();
+igual('no contra una deuda que no existe', false,
+      F.soulPagoGuardar(SOCIA, { datos: { fijoId: 'noexiste', monto: 100 } }).ok);
+igual('ni de cero', false,
+      F.soulPagoGuardar(SOCIA, { datos: { fijoId: 'f6', monto: 0 } }).ok);
+ok('y se explica por qué cero no sirve',
+   /no lo registres/.test(F.soulPagoGuardar(SOCIA,
+     { datos: { fijoId: 'f6', monto: 0 } }).error));
+igual('ni con una fecha rara', false,
+      F.soulPagoGuardar(SOCIA, { datos: { fijoId: 'f6', monto: 100, fecha: 'ayer' } }).ok);
+/** La moneda la pone la deuda: un abono en otra no se puede restar. */
+F.soulPagoGuardar(SOCIA, { datos: { fijoId: 'f6', monto: 100, moneda: 'USD' } });
+igual('la moneda la manda la deuda, no la pantalla', 'COP',
+      LIBROS.s.Pagos[1][F.SOUL_HOJAS.Pagos.indexOf('moneda')]);
+igual('una operadora no registra abonos', false,
+      F.soulPagoGuardar({ correo: 'k@n.com', rol: 'operadora' }, { datos: {} }).ok);
+
+console.log('\n── Borrar un abono lo deshace ──');
+sembrar();
+F.soulPagoGuardar(SOCIA, { datos: { fijoId: 'f6', monto: 690000 } });
+const idPago = LIBROS.s.Pagos[1][0];
+igual('se borra', true, F.soulPagoBorrar(SOCIA, { id: idPago }).ok);
+o = F.plataOrdenada_(YO, '2026-09', '2026-09-24');
+igual('y vuelve a contar por meses', false,
+      o.bloques.cuotas.lineas.filter(l => l.id === 'f6')[0].cuotas.porAbonos);
 
 console.log('\n── La llamada de la pantalla ──');
 sembrar();

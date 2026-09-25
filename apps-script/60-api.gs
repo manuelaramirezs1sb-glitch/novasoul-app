@@ -141,6 +141,8 @@ function manejar(e, metodo) {
       case 'alarmas':   return json(apiAlarmas(s, p));
       case 'parametros':return json(apiParametros(s, p));
       case 'auditoria': return json(apiAuditoria(s, p));
+      case 'asignar':   return json(apiAsignar(s, p));
+      case 'reparto':   return json(apiReparto(s, p));
       case 'auditoria_casos':   return json(apiAuditoriaCasos(s, p));
       case 'auditoria_guardar': return json(apiAuditoriaGuardar(s, p));
       case 'estados':   return json(apiEstados(s, p));
@@ -652,14 +654,36 @@ function prioridadEstado(v) {
   return p === undefined ? 3 : p;
 }
 
-/** La gestora solo ve lo suyo. Se aplica al leer, no al pintar. */
+/**
+ * La gestora solo ve lo suyo. Se aplica al leer, no al pintar.
+ *
+ * ── POR QUÉ SE ACEPTA EL CORREO, NO SOLO EL NOMBRE ──
+ *
+ * La columna `gestora_asignada` la llena Nova al repartir, pero TAMBIÉN
+ * llega desde las plataformas: Dropi y Effi exportan a quien gestionó, y
+ * cada una lo escribe a su manera — unas el nombre, otras el correo.
+ *
+ * Emparejar solo por nombre exacto significaba que un export con el
+ * correo, o con el nombre escrito distinto, dejaba a esa persona con la
+ * pantalla vacía. Y una pantalla vacía no se distingue de una rota: no
+ * dice «no encontré tu nombre», no dice nada.
+ *
+ * Así que se acepta cualquiera de los dos. Lo que NO se hace es
+ * adivinar por parecido —«Andrea» contra «Andrea Ramírez»—, porque
+ * enseñarle a una persona los pedidos de otra es un error mucho peor
+ * que enseñarle de menos.
+ */
 function filtrarPorRol(s, entidad, filas, enc) {
   if (s.rol !== 'gestora') return filas;
   const cg = enc.indexOf('gestora_asignada') !== -1
     ? enc.indexOf('gestora_asignada') : enc.indexOf('gestora');
   if (cg === -1) return filas;
   const mio = norm(s.nombre);
-  return filas.filter(function (f) { return norm(f[cg]) === mio; });
+  const miCorreo = norm(s.email || '');
+  return filas.filter(function (f) {
+    const v = norm(f[cg]);
+    return v === mio || (miCorreo && v === miCorreo);
+  });
 }
 
 // ─── LECTURA ─────────────────────────────────────────────────

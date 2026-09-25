@@ -43,7 +43,8 @@ const SOUL_HOJAS = {
   Fijos:      ['id','usuario_id','categoria','concepto','monto','moneda',
                'dia_del_mes','activo','nota',
                'flujo','tipo_pago','cuotas_total','cuotas_pagadas',
-               'cuota_desde','acreedor'],
+               'cuota_desde','acreedor','deuda_total'],
+  Pagos:      ['id','usuario_id','fijo_id','fecha','monto','moneda','nota'],
   Rutina:     ['id','usuario_id','tipo','nombre','dia_semana','hora_inicio','hora_fin',
                'lugar','trabajo_id','materia_id','paga_fija','moneda','desde','hasta',
                'activo','nota'],
@@ -1067,6 +1068,7 @@ function soulFijoGuardar(s, p) {
       cuota_desde: d.cuotaDesde !== undefined
         ? String(d.cuotaDesde).slice(0, 7) : undefined,
       acreedor: d.acreedor !== undefined ? String(d.acreedor).trim() : undefined,
+      deuda_total: d.deudaTotal !== undefined ? num(d.deudaTotal) : undefined,
     }, soulUsuario_(s));
     return { ok: true };
   } catch (e) {
