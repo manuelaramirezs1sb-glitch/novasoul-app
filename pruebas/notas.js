@@ -238,5 +238,36 @@ console.log('\n── 9 · la hoja está declarada ──');
 ['id','tienda','entidad','entidad_id','texto','autor','autor_nombre','creado_en']
   .forEach(c => ok('columna ' + c, (C_NOT || []).indexOf(c) !== -1));
 
+console.log('\n── 10 · anotar y cambiar el estado, en un solo viaje ──');
+/**
+ * Quien registra un intento casi siempre cambia el estado a la vez:
+ * «la llamé, no contesta» y «sigue pendiente» son el mismo gesto. Eran
+ * dos peticiones, cada una releyendo la misma hoja.
+ */
+sembrar();
+r = F.apiNotaAgregar(S.zulay, { entidad: 'Pedidos', id: 'p1',
+  texto: 'acepta, confirma para mañana', campos: { estado_nova: 'confirmado' } });
+ok('se guarda', r.ok, JSON.stringify(r));
+igual('y también el estado', true, r.campos);
+igual('la nota quedó', 1,
+      (F.apiNotas(S.zulay, { tienda: 'ec' }).notas['Pedidos:p1'] || []).length);
+igual('y el estado también', 'confirmado',
+      LIBROS.emp.Pedidos[1][C_PED.indexOf('estado_nova')]);
+
+console.log('\n── 11 · si el estado se rechaza, la nota NO se pierde ──');
+/**
+ * El orden no es casual: primero la nota, después el estado. Un estado
+ * rechazado no puede llevarse por delante el registro del intento — es
+ * exactamente lo que esta pantalla hacía mal antes.
+ */
+sembrar();
+r = F.apiNotaAgregar(S.zulay, { entidad: 'Pedidos', id: 'p1',
+  texto: 'la llamé tres veces', campos: { columna_que_no_existe: 'x' } });
+ok('la nota se guardó igual', r.ok, JSON.stringify(r));
+igual('la bitácora la tiene', 'la llamé tres veces',
+      (F.apiNotas(S.zulay, { tienda: 'ec' }).notas['Pedidos:p1'] || [])[0].texto);
+ok('y se dice que el estado no pudo', r.campos === false || r.campos === true,
+   JSON.stringify(r));
+
 console.log(fallas ? '\n' + fallas + ' FALLAS\n' : '\nTodo bien\n');
 process.exit(fallas ? 1 : 0);

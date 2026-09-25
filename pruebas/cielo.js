@@ -68,7 +68,7 @@ global.Date = class extends RealDate {
   static UTC(...a) { return RealDate.UTC(...a); }
 };
 
-(0, eval)(src + '\n;globalThis.__F = { faseLunar_, revolucionVentana_, cartaLeer_,'
+(0, eval)(src + '\n;globalThis.__F = { libroOlvidar_, soulOlvidar_, faseLunar_, revolucionVentana_, cartaLeer_,'
   + ' revolucionLectura_, pensumProponer_, soulPensumDesdeTransitos, CIELO_CASAS,' +
   ' soulCielo, soulCartaLeer, soulCartaGuardar, soulNacimientoGuardar,' +
   ' soulPensumGuardar, soulTransitoGuardar, soulRevolucionGuardar, cieloMedir_,' +
@@ -472,6 +472,12 @@ const tarea = (id, fecha, hecha) => {
 };
 LIBROS.s.Pendientes.push(tarea('a1', '2026-08-03', true));
 LIBROS.s.Pendientes.push(tarea('a2', '2026-08-04', false));
+// El mundo cambió por debajo. `libro_()` guarda lo leído mientras dura
+// la ejecución (es lo que bajó el arranque de 75 lecturas a 8), así que
+// hay que decírselo. En producción no hace falta: ahí solo se escribe
+// por la API, y escribir tira lo guardado solo.
+F.libroOlvidar_(); F.soulOlvidar_();
+
 cielo = F.soulCielo(SOCIA, {});
 igual('con dos tareas no dice nada', null, cielo.medicion.promedio === null ? null : cielo.medicion.fases.filter(f => f.pct !== null).length || null);
 ok('y explica qué falta para poder hablar',
@@ -494,6 +500,16 @@ for (let i = 0; i < 12; i++) {
  * petición nueva.
  */
 soulOlvidar_();
+/**
+ * Y el libro también. Desde que `libro_()` guarda lo leído —lo que bajó
+ * el arranque de Empresarial de 75 lecturas de pestaña a 8— una edición
+ * hecha POR FUERA de la app hay que anunciarla en los dos sitios.
+ *
+ * En producción no hace falta ninguno de los dos aquí: escribir por la
+ * API ya tira lo guardado solo. Esto existe porque la prueba está
+ * simulando a alguien abriendo el Google Sheet a mano.
+ */
+F.libroOlvidar_();
 
 cielo = F.soulCielo(SOCIA, {});
 ok('con muestra sí aparece un porcentaje',

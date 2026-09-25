@@ -250,6 +250,37 @@ igual('lo que leyó una no lo marca para la otra', 1, F.apiChat(S.jaime, {}).sin
 r = F.apiChatVisto(S.jaime, { con: 'g:ec' });
 ok('no se marca como leída una conversación ajena', r.ok === false, JSON.stringify(r));
 
+console.log('\n── 4b · abrir y marcar, en un solo viaje ──');
+/**
+ * «cuenta todos los llamados que necesita Nova Empresarial para
+ *  funcionar y no ser lenta».
+ *
+ * Abrir una conversación eran DOS peticiones —traer y marcar— para un
+ * solo gesto, y la segunda releía la hoja entera que la primera acababa
+ * de leer. Con `marcar` es una.
+ */
+sembrar();
+F.apiChatEnviar(S.duena, { con: 'g:ec', texto: 'uno' });
+F.apiChatEnviar(S.admin, { con: 'g:ec', texto: 'dos' });
+v = F.apiChat(S.zulay, { con: 'g:ec', marcar: true });
+igual('trae los mensajes', 2, v.mensajes.length);
+igual('y de paso los marca', 2, v.marcados);
+igual('y ya lo dice en el mismo vuelo', 0, v.hilos['g:ec'].sinLeer);
+igual('y en el total', 0, v.sinLeer);
+igual('al volver a preguntar sigue en cero', 0, F.apiChat(S.zulay, {}).sinLeer);
+
+// Sin `marcar` no se marca nada: leer la lista no es abrir el hilo.
+sembrar();
+F.apiChatEnviar(S.duena, { con: 'g:ec', texto: 'uno' });
+v = F.apiChat(S.zulay, { con: 'g:ec' });
+igual('sin pedirlo, no marca', undefined, v.marcados);
+igual('y sigue contando sin leer', 1, F.apiChat(S.zulay, {}).sinLeer);
+
+// Y no se puede marcar una conversación ajena pidiéndola a mano.
+r = F.apiChat(S.jaime, { con: 'g:ec', marcar: true });
+igual('pedir a mano el grupo ajeno no lo abre', '', r.con);
+igual('ni lo marca', 1, F.apiChat(S.zulay, {}).sinLeer);
+
 console.log('\n── 5 · borrar deja marca, no hueco ──');
 sembrar();
 const m1 = F.apiChatEnviar(S.duena, { con: 'g:ec', texto: 'me equivoqué de tienda' });

@@ -57,7 +57,7 @@ global.Utilities = { sleep: () => {}, getUuid: () => 'u',
     return iso;
   } };
 
-(0, eval)(src + '\n;globalThis.__F = { semaforoSemanal, semaforoTexto, lunesDe_, semanaCerrada_,' +
+(0, eval)(src + '\n;globalThis.__F = { libroOlvidar_, semaforoSemanal, semaforoTexto, lunesDe_, semanaCerrada_,' +
   ' masDias_, puedeVerSemaforo, numerosSemana_, TRABAJOS };');
 const F = globalThis.__F;
 
@@ -100,6 +100,19 @@ function gasto(fecha, monto, moneda) {
 
 function montar(pedidos, pauta, tasas, params) {
   Object.keys(HOJAS).forEach(k => delete HOJAS[k]);
+  /**
+   * El mundo cambió: hay que decírselo al libro.
+   *
+   * `libro_()` guarda el manejador Y lo leído mientras dura la ejecución
+   * —es lo que bajó el arranque de 75 lecturas de pestaña a 8—. Esta
+   * función reemplaza las pestañas enteras por debajo, que es algo que
+   * en producción no pasa nunca: ahí solo se escribe por la API, y
+   * escribir ya tira lo guardado solo.
+   *
+   * Sin esta línea la prueba seguiría leyendo el mundo anterior.
+   */
+  F.libroOlvidar_();
+
   HOJAS.Parametros = [['tienda','clave','valor','actualizado_en','actualizado_por'],
                       ['', 'moneda_reporte', 'GTQ', '', '']]
     .concat((params || []).map(p => ['gt', p[0], p[1], '', '']));

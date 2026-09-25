@@ -94,6 +94,12 @@ const ARRANQUE_EMP = [
   ['auditoria_casos',  function (s, p) { return apiAuditoriaCasos(s, p); }],
   ['reparto',          function (s, p) { return apiReparto(s, p); }],
   ['meta_estado',      function (s, p) { return apiMetaEstado(s, p); }],
+  /**
+   * El chat entra porque su punto rojo tiene que estar puesto ANTES de
+   * que a nadie se le ocurra abrir el panel. Sin él aquí, entrar a Nova
+   * costaba dos viajes: el arranque y el chat.
+   */
+  ['chat',             function (s, p) { return apiChat(s, { con: '' }); }],
 ];
 
 /**

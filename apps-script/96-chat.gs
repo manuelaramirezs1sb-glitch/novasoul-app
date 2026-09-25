@@ -194,6 +194,28 @@ function apiChat(s, p) {
               (out.grupos[0] ? out.grupos[0].id : '');
   if (con && chatPuedeVer_(s, con)) {
     out.con = con;
+
+    /**
+     * ── ABRIR UNA CONVERSACIÓN ES LEERLA ──
+     *
+     * Con `marcar`, esto mismo la marca como vista. Antes eran dos
+     * peticiones seguidas —traer y marcar— para un solo gesto, y la
+     * segunda volvía a leer la hoja entera que la primera acababa de
+     * leer. Un gesto, un viaje.
+     *
+     * Va DESPUÉS de comprobar `chatPuedeVer_`: marcar como leída una
+     * conversación ajena no debe poder pedirse ni con un id a mano.
+     */
+    if (p.marcar) {
+      try {
+        const m = apiChatVisto(s, { con: con });
+        out.marcados = m.marcados || 0;
+        if (out.marcados && out.hilos[con]) {
+          out.sinLeer -= out.hilos[con].sinLeer;
+          out.hilos[con].sinLeer = 0;
+        }
+      } catch (e) { /* que no se marque no puede impedir leer */ }
+    }
     out.mensajes = mios.filter(function (m) { return chatHiloDe_(m, yo) === con; })
       .slice(-CHAT_PAGINA)
       .map(function (m) {

@@ -79,14 +79,189 @@ function IDS_() {
  */
 var LIBROS_ABIERTOS_ = {};
 
-/** Soltar los manejadores. Se llama al empezar cada petición. */
-function libroOlvidar_() { LIBROS_ABIERTOS_ = {}; }
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   Y CADA PESTAÑA, LEÍDA UNA SOLA VEZ POR PETICIÓN
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ LO QUE SE MIDIÓ ──────────────────────────────────────────┐
+ * │                                                            │
+ * │ Juntar la pantalla en una sola petición bajó los viajes de  │
+ * │ diecinueve a uno. Pero ese único viaje, por dentro, hacía:  │
+ * │                                                            │
+ * │     75 lecturas de pestaña · 175.541 celdas                │
+ * │     Pedidos leída 12 veces (155.316 celdas de las 175.541) │
+ * │     Tiendas leída 24 veces                                 │
+ * │                                                            │
+ * │ Un viaje menos no sirve de nada si ese viaje relee doce     │
+ * │ veces lo mismo: cada `getValues()` es una ida y vuelta a    │
+ * │ los servidores de Google, igual de cara venga de una        │
+ * │ función o de otra.                                          │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ SE ENVUELVE EL LIBRO Y NO SE TOCAN LOS LECTORES ──┐
+ * │                                                            │
+ * │ Hay unas cuarenta funciones que hacen                      │
+ * │ `ss.getSheetByName('X').getDataRange().getValues()`. En     │
+ * │ NovaSoul el arreglo fue meter un `soulCrudo_` y hacer que   │
+ * │ todos pasaran por ahí; aquí serían cuarenta cambios y, lo   │
+ * │ que es peor, la función número cuarenta y uno que alguien   │
+ * │ escriba mañana no pasaría por él y nadie se enteraría.      │
+ * │                                                            │
+ * │ Envolviendo el libro, el ahorro no se puede olvidar: todo   │
+ * │ el código ya pide sus hojas por aquí, y el que venga        │
+ * │ después también.                                            │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ LAS TRES COSAS QUE LO HARÍAN PELIGROSO ───────────────────┐
+ * │                                                            │
+ * │ 1· ESCRIBIR TIENE QUE TIRAR LO GUARDADO. Si no, guardar y   │
+ * │    volver a leer devolvería lo de antes, y eso se ve en     │
+ * │    pantalla como «no se guardó» — el peor síntoma, porque   │
+ * │    invita a guardar otra vez.                               │
+ * │                                                            │
+ * │    La regla no es una lista de métodos que escriben, sino   │
+ * │    al revés: una lista corta de los que se sabe que SOLO    │
+ * │    leen. Cualquier otro —incluido uno que no existe hoy—    │
+ * │    tira el caché antes de correr. Equivocarse por ese lado  │
+ * │    cuesta una lectura de más; por el otro, corrompe datos.  │
+ * │                                                            │
+ * │ 2· SE DEVUELVE UNA COPIA, NO EL ARREGLO GUARDADO. Hay       │
+ * │    código que escribe sobre lo que le devolvió `getValues`  │
+ * │    antes de mandarlo de vuelta (`apiChatVisto` hace justo   │
+ * │    eso). Sin copiar, esa escritura en memoria contaminaría  │
+ * │    al siguiente que leyera la misma hoja en la misma        │
+ * │    petición. Copiar doce mil celdas son microsegundos; una  │
+ * │    ida a Google, cientos de milisegundos.                   │
+ * │                                                            │
+ * │ 3· NO SE GUARDA NADA ENTRE PETICIONES. El caché vive y      │
+ * │    muere con la ejecución, igual que los manejadores. Dos   │
+ * │    personas guardando a la vez siguen viendo cada una lo    │
+ * │    que hay en la hoja cuando le toca.                       │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+var HOJAS_LEIDAS_ = {};
+
+/** Soltar los manejadores y lo leído. Se llama al empezar cada petición. */
+function libroOlvidar_() { LIBROS_ABIERTOS_ = {}; HOJAS_LEIDAS_ = {}; }
+
+/** Los de un rango que SOLO leen. */
+const RANGO_SOLO_LEE_ = ['getValues', 'getValue', 'getDisplayValues', 'getA1Notation',
+                         'getNumRows', 'getNumColumns', 'getRow', 'getColumn'];
 
 function libro_(id) {
   const k = String(id || '');
   if (!k) throw new Error('Me pidieron abrir un libro sin decirme cuál.');
-  if (!LIBROS_ABIERTOS_[k]) LIBROS_ABIERTOS_[k] = SpreadsheetApp.openById(k);
+  if (!LIBROS_ABIERTOS_[k]) {
+    LIBROS_ABIERTOS_[k] = envolverLibro_(SpreadsheetApp.openById(k), k);
+  }
   return LIBROS_ABIERTOS_[k];
+}
+
+/** El libro, con sus hojas envueltas. */
+function envolverLibro_(ss, id) {
+  let hojas = {};
+  const todoFuera = function () {
+    Object.keys(HOJAS_LEIDAS_).forEach(function (c) {
+      if (c.indexOf(id + '|') === 0) delete HOJAS_LEIDAS_[c];
+    });
+  };
+  const envoltura = {
+    /** El objeto de Google, para lo que esto no cubra. Lo tira todo. */
+    real: function () { todoFuera(); return ss; },
+    getId: function () { return ss.getId(); },
+    getSheetByName: function (nombre) {
+      if (hojas[nombre]) return hojas[nombre];
+      /**
+       * Una hoja que NO existe no se guarda como «no existe».
+       *
+       * Guardar el `null` ahorraría una consulta barata y a cambio haría
+       * que una hoja creada más tarde en la misma ejecución siguiera
+       * pareciendo inexistente — que es justo lo que hace bootstrapTodo
+       * cuando agrega una pestaña nueva. No vale la pena.
+       */
+      const sh = ss.getSheetByName(nombre);
+      if (!sh) return null;
+      hojas[nombre] = envolverHoja_(sh, id + '|' + nombre);
+      return hojas[nombre];
+    },
+    getSheets: function () {
+      // Las hojas que salen de aquí van sin envolver: lo que se les haga
+      // no pasa por el caché, así que se tira entero por si acaso.
+      todoFuera();
+      return ss.getSheets();
+    },
+    insertSheet: function (nombre) {
+      todoFuera();
+      const sh = ss.insertSheet(nombre);
+      hojas[nombre] = envolverHoja_(sh, id + '|' + nombre);
+      return hojas[nombre];
+    },
+    deleteSheet: function (sh) {
+      todoFuera();
+      hojas = {};
+      return ss.deleteSheet(sh && sh.real ? sh.real() : sh);
+    },
+  };
+  return envoltura;
+}
+
+/** Una hoja que se lee una vez, y que se olvida en cuanto alguien escribe. */
+function envolverHoja_(sh, clave) {
+  const olvidar = function () { delete HOJAS_LEIDAS_[clave]; };
+
+  const leerTodo = function () {
+    if (HOJAS_LEIDAS_[clave] === undefined) {
+      HOJAS_LEIDAS_[clave] = sh.getLastRow() < 1 ? [] : sh.getDataRange().getValues();
+    }
+    // COPIA. Hay código que escribe sobre lo que le devolvieron.
+    return HOJAS_LEIDAS_[clave].map(function (f) { return f.slice(); });
+  };
+
+  const env = {
+    real: function () { olvidar(); return sh; },
+    getDataRange: function () { return { getValues: leerTodo }; },
+    getRange: function () {
+      const r = sh.getRange.apply(sh, arguments);
+      return envolverRango_(r, olvidar);
+    },
+  };
+
+  // Lo que solo lee, pasa derecho. Lo demás olvida y después corre.
+  ['getLastRow', 'getLastColumn', 'getMaxColumns', 'getName', 'getParent',
+   'getSheetId', 'getIndex'].forEach(function (m) {
+    env[m] = function () { return sh[m].apply(sh, arguments); };
+  });
+  ['appendRow', 'deleteRow', 'deleteRows', 'deleteColumns', 'insertColumnsAfter',
+   'insertRowAfter', 'clear', 'clearContents', 'autoResizeColumns', 'setFrozenRows',
+   'setTabColor', 'hideSheet', 'showSheet', 'sort', 'setName'].forEach(function (m) {
+    env[m] = function () { olvidar(); return sh[m].apply(sh, arguments); };
+  });
+  return env;
+}
+
+/**
+ * Un rango. Leer no invalida; cualquier otra cosa sí.
+ *
+ * Lo que devuelven los métodos que escriben es el objeto REAL de Google,
+ * no otra envoltura: así `setValue(x).setFontColor(y)` sigue encadenando
+ * como siempre, y ya da igual, porque el caché de esa hoja ya se tiró.
+ */
+function envolverRango_(r, olvidar) {
+  const env = {};
+  RANGO_SOLO_LEE_.forEach(function (m) {
+    env[m] = function () { return r[m].apply(r, arguments); };
+  });
+  ['setValue', 'setValues', 'setFormula', 'setFormulas', 'setNumberFormat',
+   'setNumberFormats', 'setFontColor', 'setFontWeight', 'setBackground',
+   'setHorizontalAlignment', 'setWrap', 'clear', 'clearContent',
+   'insertCheckboxes', 'setDataValidation', 'setNote'].forEach(function (m) {
+    env[m] = function () { olvidar(); return r[m].apply(r, arguments); };
+  });
+  return env;
 }
 
 /** En qué cuenta de Google está corriendo esto. */
@@ -20939,6 +21114,28 @@ function apiChat(s, p) {
               (out.grupos[0] ? out.grupos[0].id : '');
   if (con && chatPuedeVer_(s, con)) {
     out.con = con;
+
+    /**
+     * ── ABRIR UNA CONVERSACIÓN ES LEERLA ──
+     *
+     * Con `marcar`, esto mismo la marca como vista. Antes eran dos
+     * peticiones seguidas —traer y marcar— para un solo gesto, y la
+     * segunda volvía a leer la hoja entera que la primera acababa de
+     * leer. Un gesto, un viaje.
+     *
+     * Va DESPUÉS de comprobar `chatPuedeVer_`: marcar como leída una
+     * conversación ajena no debe poder pedirse ni con un id a mano.
+     */
+    if (p.marcar) {
+      try {
+        const m = apiChatVisto(s, { con: con });
+        out.marcados = m.marcados || 0;
+        if (out.marcados && out.hilos[con]) {
+          out.sinLeer -= out.hilos[con].sinLeer;
+          out.hilos[con].sinLeer = 0;
+        }
+      } catch (e) { /* que no se marque no puede impedir leer */ }
+    }
     out.mensajes = mios.filter(function (m) { return chatHiloDe_(m, yo) === con; })
       .slice(-CHAT_PAGINA)
       .map(function (m) {
@@ -21511,10 +21708,33 @@ function apiNotaAgregar(s, p) {
       shE.getRange(fila + 1, cHizo + 1).setValue(s.nombre || s.email || '');
     }
 
-    return { ok: true, nota: { texto: texto, autor: nueva.autor_nombre,
-                               cuando: nueva.creado_en },
-             gestionadoPor: cHizo !== -1
-               ? String(d[fila][cHizo] || '').trim() || (s.nombre || s.email || '') : '' };
+    const out = { ok: true, nota: { texto: texto, autor: nueva.autor_nombre,
+                                    cuando: nueva.creado_en },
+                  gestionadoPor: cHizo !== -1
+                    ? String(d[fila][cHizo] || '').trim() || (s.nombre || s.email || '') : '' };
+
+    /**
+     * ── ANOTAR Y CAMBIAR EL ESTADO SON UN SOLO GESTO ──
+     *
+     * Quien registra un intento casi siempre cambia también el estado
+     * —«no contesta» → sigue pendiente, «acepta» → confirmado— y eran
+     * dos peticiones seguidas, cada una releyendo la misma hoja.
+     *
+     * El ORDEN importa y no es casual: primero la nota, después el
+     * estado. Si el cambio de estado se rechaza, la nota ya quedó
+     * guardada. Al revés, un estado rechazado se llevaría por delante
+     * el registro del intento, que es justamente lo que no se puede
+     * perder — es el error que tenía esta pantalla antes.
+     *
+     * Se pasa por `apiEscribir` y no se escribe aquí a mano para no
+     * saltarse sus permisos ni sus validaciones.
+     */
+    if (p.campos && Object.keys(p.campos).length) {
+      const w = apiEscribir(s, { entidad: entidad, id: id, campos: p.campos });
+      out.campos = w.ok;
+      if (!w.ok) out.errorCampos = w.error;
+    }
+    return out;
   } catch (e) {
     return { ok: false, error: e.message };
   } finally { lock.releaseLock(); }
@@ -21633,6 +21853,12 @@ const ARRANQUE_EMP = [
   ['auditoria_casos',  function (s, p) { return apiAuditoriaCasos(s, p); }],
   ['reparto',          function (s, p) { return apiReparto(s, p); }],
   ['meta_estado',      function (s, p) { return apiMetaEstado(s, p); }],
+  /**
+   * El chat entra porque su punto rojo tiene que estar puesto ANTES de
+   * que a nadie se le ocurra abrir el panel. Sin él aquí, entrar a Nova
+   * costaba dos viajes: el arranque y el chat.
+   */
+  ['chat',             function (s, p) { return apiChat(s, { con: '' }); }],
 ];
 
 /**

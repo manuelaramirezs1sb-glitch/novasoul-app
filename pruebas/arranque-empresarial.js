@@ -43,10 +43,19 @@ const igual = (n, esp, real) => ok(n, JSON.stringify(esp) === JSON.stringify(rea
 const VACIO = { ok:true, tienda:'ec', datos:{}, filas:[], total:0, notas:{},
                 accesos:{}, sesion:{}, personas:[], alarmas:[], productos:[],
                 casos:[], configuradas:[], umbrales:{}, ajustes:{} };
-/** Las mismas que ARRANQUE_EMP en 99-arranque-emp.gs. */
-const PARTES = ['resumen','pedidos','novedades','notas','accesos','equipo','alarmas',
-  'productos','cas','estados','historial','fuentes','recuento','reporte_dia',
-  'semaforo','auditoria','auditoria_casos','reparto','meta_estado'];
+/**
+ * Las secciones NO se escriben a mano aquí: se sacan del servidor.
+ *
+ * Las tenía copiadas y se me quedó el chat fuera al agregarlo, así que
+ * la prueba «medía» un arranque que no traía el chat y contaba un viaje
+ * de más que no existía. Una lista duplicada es una lista que se
+ * desincroniza; ésta se lee de ARRANQUE_EMP y no puede.
+ */
+const fs = require('fs');
+const GS = fs.readFileSync(__dirname + '/../apps-script/NOVA-COMPLETO.gs', 'utf8');
+const bloque = GS.slice(GS.indexOf('const ARRANQUE_EMP = ['));
+const PARTES = (bloque.slice(0, bloque.indexOf('\n];'))
+  .match(/^\s*\['([a-z_]+)'/gm) || []).map(l => l.replace(/^\s*\['/, '').replace("'", ''));
 
 async function abrir(b, conArranque) {
   const p = await b.newPage({ viewport: { width: 1280, height: 1000 } });
@@ -82,13 +91,38 @@ async function abrir(b, conArranque) {
   }, { VACIO, PARTES, conArranque });
 
   // `cargarAccesos` ya va dentro de `cargarReales`, en el mismo lote.
-  await p.evaluate(() => cargarReales());
+  await p.evaluate(() => { cargarReales(); initChat(); });
   await p.waitForTimeout(1200);
   return { p, acciones, errores };
 }
 
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+
+  console.log('\n══ 0 · LAS DOS LISTAS DICEN LO MISMO ══');
+  /**
+   * El servidor decide QUÉ trae el arranque (ARRANQUE_EMP) y la pantalla
+   * decide QUÉ sabe servir de la despensa (claveArranque). Si una tiene
+   * algo que la otra no, esa sección se trae y se vuelve a pedir: un
+   * viaje de más, invisible, por cada vez que alguien entra.
+   */
+  ok('el servidor declara sus secciones', PARTES.length > 15,
+     PARTES.length + ': ' + PARTES.join(' '));
+  {
+    const p0 = await b.newPage();
+    await p0.goto('file:///home/claude/repo/empresarial.html');
+    await p0.waitForLoadState('load');
+    const huerfanas = await p0.evaluate((PARTES) => {
+      return PARTES.filter(function (k) {
+        // `pedidos` y `novedades` llegan por `listar`, no por su nombre.
+        if (k === 'pedidos') return claveArranque('listar', { entidad: 'Pedidos' }) !== k;
+        if (k === 'novedades') return claveArranque('listar', { entidad: 'Novedades' }) !== k;
+        return claveArranque(k, {}) !== k;
+      });
+    }, PARTES);
+    igual('la pantalla sabe servir todas', [], huerfanas);
+    await p0.close();
+  }
 
   console.log('\n══ 1 · CON EL ARRANQUE: UN SOLO VIAJE ══');
   {

@@ -179,10 +179,33 @@ function apiNotaAgregar(s, p) {
       shE.getRange(fila + 1, cHizo + 1).setValue(s.nombre || s.email || '');
     }
 
-    return { ok: true, nota: { texto: texto, autor: nueva.autor_nombre,
-                               cuando: nueva.creado_en },
-             gestionadoPor: cHizo !== -1
-               ? String(d[fila][cHizo] || '').trim() || (s.nombre || s.email || '') : '' };
+    const out = { ok: true, nota: { texto: texto, autor: nueva.autor_nombre,
+                                    cuando: nueva.creado_en },
+                  gestionadoPor: cHizo !== -1
+                    ? String(d[fila][cHizo] || '').trim() || (s.nombre || s.email || '') : '' };
+
+    /**
+     * ── ANOTAR Y CAMBIAR EL ESTADO SON UN SOLO GESTO ──
+     *
+     * Quien registra un intento casi siempre cambia también el estado
+     * —«no contesta» → sigue pendiente, «acepta» → confirmado— y eran
+     * dos peticiones seguidas, cada una releyendo la misma hoja.
+     *
+     * El ORDEN importa y no es casual: primero la nota, después el
+     * estado. Si el cambio de estado se rechaza, la nota ya quedó
+     * guardada. Al revés, un estado rechazado se llevaría por delante
+     * el registro del intento, que es justamente lo que no se puede
+     * perder — es el error que tenía esta pantalla antes.
+     *
+     * Se pasa por `apiEscribir` y no se escribe aquí a mano para no
+     * saltarse sus permisos ni sus validaciones.
+     */
+    if (p.campos && Object.keys(p.campos).length) {
+      const w = apiEscribir(s, { entidad: entidad, id: id, campos: p.campos });
+      out.campos = w.ok;
+      if (!w.ok) out.errorCampos = w.error;
+    }
+    return out;
   } catch (e) {
     return { ok: false, error: e.message };
   } finally { lock.releaseLock(); }

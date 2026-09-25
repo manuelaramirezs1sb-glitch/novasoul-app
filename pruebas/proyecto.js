@@ -67,7 +67,7 @@ global.Date = class extends RealDate {
   static UTC(...a) { return RealDate.UTC(...a); }
 };
 
-(0, eval)(src + '\n;globalThis.__F = { utilidadMes_, parteDelMes_, centralProyecto,' +
+(0, eval)(src + '\n;globalThis.__F = { libroOlvidar_, soulOlvidar_, utilidadMes_, parteDelMes_, centralProyecto,' +
   ' centralFuenteGuardar, centralFuenteBorrar, centralProyectoLeer,' +
   ' centralProyectoGuardarTareas, centralMio, proyRol_, proyModalidad_,' +
   ' proyConfidencial_, tiendasParaProyecto_, PROY_BASES };');
@@ -249,11 +249,23 @@ igual('y no inventa una parte', 0, t.parte.parte);
 console.log('\n── Lo que falta para poder calcularlo ──');
 sembrarHojas(50);
 LIBROS.cen.Trabajos[1][19] = '';          // sin tienda enlazada
+// El mundo cambió por debajo. `libro_()` guarda lo leído mientras dura
+// la ejecución (es lo que bajó el arranque de 75 lecturas a 8), así que
+// hay que decírselo. En producción no hace falta: ahí solo se escribe
+// por la API, y escribir tira lo guardado solo.
+F.libroOlvidar_(); F.soulOlvidar_();
+
 t = F.centralProyecto(SOCIA, { id: 't1', mes: '2026-09' });
 ok('sin tienda enlazada lo dice, no calcula',
    t.parte.hay === false && /no está enlazado/.test(t.parte.porque), JSON.stringify(t.parte));
 sembrarHojas(50);
 LIBROS.cen.Trabajos[1][16] = 0;           // sin porcentaje
+// El mundo cambió por debajo. `libro_()` guarda lo leído mientras dura
+// la ejecución (es lo que bajó el arranque de 75 lecturas a 8), así que
+// hay que decírselo. En producción no hace falta: ahí solo se escribe
+// por la API, y escribir tira lo guardado solo.
+F.libroOlvidar_(); F.soulOlvidar_();
+
 t = F.centralProyecto(SOCIA, { id: 't1', mes: '2026-09' });
 ok('sin porcentaje, tampoco',
    t.parte.hay === false && /qué porcentaje/.test(t.parte.porque));
@@ -280,6 +292,12 @@ ok('y el texto no aparece por ningún lado',
    JSON.stringify(phh).indexOf('secreto') === -1);
 
 LIBROS.cen.Trabajos[2][20] = 'no';
+// El mundo cambió por debajo. `libro_()` guarda lo leído mientras dura
+// la ejecución (es lo que bajó el arranque de 75 lecturas a 8), así que
+// hay que decírselo. En producción no hace falta: ahí solo se escribe
+// por la API, y escribir tira lo guardado solo.
+F.libroOlvidar_(); F.soulOlvidar_();
+
 const phh2 = F.centralProyecto(SOCIA, { id: 't2', mes: '2026-09' });
 ok('si ella lo apaga a propósito, entonces sí sube',
    phh2.tareas.length === 1 && /secreto/.test(phh2.tareas[0].texto));
@@ -295,6 +313,12 @@ igual('falta la mitad del valor acordado', 1600000, t.plata.falta);
 igual('el movimiento del proyecto está ahí', 1, t.movimientos.length);
 
 LIBROS.cen.Trabajos[3][6] = 0;
+// El mundo cambió por debajo. `libro_()` guarda lo leído mientras dura
+// la ejecución (es lo que bajó el arranque de 75 lecturas a 8), así que
+// hay que decírselo. En producción no hace falta: ahí solo se escribe
+// por la API, y escribir tira lo guardado solo.
+F.libroOlvidar_(); F.soulOlvidar_();
+
 t = F.centralProyecto(SOCIA, { id: 't3', mes: '2026-09' });
 igual('sin valor acordado, «falta» se deja vacío en vez de inventar', null, t.plata.falta);
 

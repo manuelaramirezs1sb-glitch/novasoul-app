@@ -80,7 +80,7 @@ global.Date = class extends RealDate {
   static UTC(...a) { return RealDate.UTC(...a); }
 };
 
-(0, eval)(src + '\n;globalThis.__F = { sociasPlataforma_, soulLunes, soulLunesTexto,' +
+(0, eval)(src + '\n;globalThis.__F = { libroOlvidar_, sociasPlataforma_, soulLunes, soulLunesTexto,' +
   ' soulLunesHayAlgo_, centralDiario, centralDiarioArmar, centralDiarioTexto,' +
   ' soulHoy, centralMio, TRABAJOS, estadoAutomatico, autoFecha_ };');
 const F = globalThis.__F;
@@ -312,6 +312,16 @@ delete LIBROS.s.Carta;
  * petición nueva.
  */
 soulOlvidar_();
+/**
+ * Y el libro también. Desde que `libro_()` guarda lo leído —lo que bajó
+ * el arranque de Empresarial de 75 lecturas de pestaña a 8— una edición
+ * hecha POR FUERA de la app hay que anunciarla en los dos sitios.
+ *
+ * En producción no hace falta ninguno de los dos aquí: escribir por la
+ * API ya tira lo guardado solo. Esto existe porque la prueba está
+ * simulando a alguien abriendo el Google Sheet a mano.
+ */
+F.libroOlvidar_();
 F.soulLunes();
 igual('y sin carta el correo sale igual', 1, BUZON.length);
 ok('con lo que importa, que es la semana', /TU SEMANA/.test(BUZON[0].body));

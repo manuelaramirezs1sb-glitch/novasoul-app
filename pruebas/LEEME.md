@@ -21,7 +21,21 @@ node pruebas/equilibrio.js            # el punto de equilibrio y su invariante
 node pruebas/notas.js                 # que una nota no borre a la otra
 node pruebas/pauta-semana.js          # el gasto por semana, y qué se reparte
 node pruebas/arranque-empresarial.js  # cuántas peticiones cuesta abrir la pantalla
+node pruebas/caches.js                # que guardar y volver a leer nunca dé lo viejo
 ```
+
+`caches.js` es la contraparte de la velocidad. Desde que `libro_()`
+guarda lo leído mientras dura la petición —lo que bajó el arranque de 75
+lecturas de pestaña a 8— hay un error posible que antes no existía:
+guardar algo y que la siguiente lectura devuelva lo de antes. En pantalla
+eso se ve como «no se guardó», que es el peor síntoma porque invita a
+guardar otra vez encima. Cada caso del archivo escribe de verdad por la
+API y vuelve a leer por la API, en la misma ejecución.
+
+Si una prueba cambia las pestañas POR DEBAJO (reemplazando los arreglos
+del arnés en vez de escribir por la API), tiene que llamar a
+`libroOlvidar_()`: está simulando a alguien editando el Google Sheet a
+mano, que es algo que entre dos peticiones sí puede pasar.
 
 `equilibrio.js` afirma una propiedad, no un número:
 

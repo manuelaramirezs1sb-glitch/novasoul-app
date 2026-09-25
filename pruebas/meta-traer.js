@@ -78,7 +78,7 @@ global.UrlFetchApp = {
   },
 };
 
-(0, eval)(src + '\n;globalThis.__F = { metaLeerTienda_, metaAccion_, metaPedir_, TRABAJOS, estadoAutomatico };');
+(0, eval)(src + '\n;globalThis.__F = { libroOlvidar_, metaLeerTienda_, metaAccion_, metaPedir_, TRABAJOS, estadoAutomatico };');
 const F = globalThis.__F;
 
 let fallas = 0;
@@ -93,6 +93,19 @@ const PAUTA_ENC = ['id','fecha','fecha_fin','tienda','plataforma','cuenta','camp
 
 function montar(pautaExtra) {
   Object.keys(HOJAS).forEach(k => delete HOJAS[k]);
+  /**
+   * El mundo cambió: hay que decírselo al libro.
+   *
+   * `libro_()` guarda el manejador Y lo leído mientras dura la ejecución
+   * —es lo que bajó el arranque de 75 lecturas de pestaña a 8—. Esta
+   * función reemplaza las pestañas enteras por debajo, que es algo que
+   * en producción no pasa nunca: ahí solo se escribe por la API, y
+   * escribir ya tira lo guardado solo.
+   *
+   * Sin esta línea la prueba seguiría leyendo el mundo anterior.
+   */
+  F.libroOlvidar_();
+
   HOJAS.Parametros = [['tienda','clave','valor','actualizado_en','actualizado_por'],
                       ['', 'moneda_reporte', 'COP', '', ''],
                       ['gt', 'meta_cuenta', '123456789', '', '']];

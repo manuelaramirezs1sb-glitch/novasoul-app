@@ -35,7 +35,7 @@ const igual = (n, esp, real) => ok(n, JSON.stringify(esp) === JSON.stringify(rea
   'esperaba ' + JSON.stringify(esp) + ', obtuve ' + JSON.stringify(real));
 
 /** Lo que devolvería el servidor de verdad, con la forma exacta de apiChat. */
-function respuesta(quien, con) {
+function respuesta(quien, con, marcar) {
   const YO = {
     duena: { correo: 'm@nova.com', nombre: 'Manuela Ramírez', tiendas: ['ec', 'gt'] },
     gestora: { correo: 'andrea@nutrea.com', nombre: 'Andrea Ramírez', tiendas: ['ec'] },
@@ -79,14 +79,20 @@ function respuesta(quien, con) {
       ultimo: { de: 'Katherin Ortiz', texto: '(mensaje borrado)',
                 cuando: '2026-09-25 08:41:00', mio: false } };
   }
-  const sinLeer = Object.keys(hilos).reduce((a, k) => a + hilos[k].sinLeer, 0);
+  let sinLeerTotal = Object.keys(hilos).reduce((a, k) => a + hilos[k].sinLeer, 0);
 
   const abierta = con && (con.indexOf('g:') !== 0 || YO.tiendas.indexOf(con.slice(2)) !== -1)
     ? con : '';
+  // Como el servidor de verdad: si se pide `marcar`, ese hilo queda en
+  // cero y el total baja con él.
+  if (abierta && marcar && hilos[abierta]) {
+    sinLeerTotal -= hilos[abierta].sinLeer;
+    hilos[abierta] = Object.assign({}, hilos[abierta], { sinLeer: 0 });
+  }
   return {
     ok: true, yo: YO.correo, yoNombre: YO.nombre, gente: GENTE,
     grupos: YO.tiendas.map(t => ({ id: 'g:' + t, tienda: t, nombre: TIE[t] })),
-    hilos: hilos, sinLeer: sinLeer,
+    hilos: hilos, sinLeer: sinLeerTotal,
     con: abierta || (con ? '' : 'g:' + YO.tiendas[0]),
     mensajes: abierta ? (MSG[abierta] || []) : [],
   };
@@ -106,7 +112,7 @@ async function abrir(b, rol) {
 
   const enviados = [];
   await p.exposeFunction('__anotar', (x) => { enviados.push(JSON.parse(x)); });
-  await p.exposeFunction('__resp', (quien, con) => respuesta(quien, con || ''));
+  await p.exposeFunction('__resp', (quien, con, marcar) => respuesta(quien, con || '', marcar));
 
   await p.evaluate(async ({ rol }) => {
     document.getElementById('login').style.display = 'none';
@@ -124,7 +130,9 @@ async function abrir(b, rol) {
     const quien = rol === 'gestora' ? 'gestora' : 'duena';
     window.api = async (accion, params) => {
       window.__anotar(JSON.stringify({ accion: accion, params: params || {} }));
-      if (accion === 'chat') return await window.__resp(quien, (params || {}).con || '');
+      if (accion === 'chat') {
+        return await window.__resp(quien, (params || {}).con || '', !!(params || {}).marcar);
+      }
       return { ok: true };
     };
   }, { rol });
@@ -238,12 +246,18 @@ async function abrir(b, rol) {
     ok('el borrado dice que se borró, no desaparece',
        ms[2].ido && /borrado/.test(ms[2].txt), JSON.stringify(ms[2]));
 
-    console.log('\n── Abrir es leer ──');
-    const visto = enviados.filter(x => x.accion === 'chat_visto');
-    igual('se marca leída al abrirla', 1, visto.length);
-    igual('la conversación correcta', 'g:ec', visto[0] && visto[0].params.con);
-    igual('el punto rojo baja a lo que queda sin leer', '1',
-          await p.textContent('#chat-fab-n'));
+    console.log('\n── Abrir es leer, y en un solo viaje ──');
+    /**
+     * Eran DOS peticiones seguidas para un solo gesto: `chat` para traer
+     * y `chat_visto` para marcar, y la segunda releía la hoja entera que
+     * la primera acababa de leer. Ahora abrir pide una vez, con
+     * `marcar`, y el servidor hace las dos cosas.
+     */
+    const abre = enviados.filter(x => x.accion === 'chat' && x.params.con === 'g:ec');
+    igual('abrir la conversación es UNA petición', 1, abre.length);
+    igual('y pide que se marque en el mismo viaje', true, abre[0] && abre[0].params.marcar);
+    igual('ya no hay una segunda petición para marcar', 0,
+          enviados.filter(x => x.accion === 'chat_visto').length);
 
     console.log('\n── Y se puede volver ──');
     await p.click('.nch-atras');

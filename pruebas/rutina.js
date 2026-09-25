@@ -69,7 +69,7 @@ global.Date = class extends RealDate {
   static UTC(...a) { return RealDate.UTC(...a); }
 };
 
-(0, eval)(src + '\n;globalThis.__F = { duracionHoras_, horaNum_, rutinaCorre_, rutinaDe_,' +
+(0, eval)(src + '\n;globalThis.__F = { libroOlvidar_, soulOlvidar_, duracionHoras_, horaNum_, rutinaCorre_, rutinaDe_,' +
   ' diasDeRutina_,' +
   ' soulRutina, soulRutinaGuardar, soulRutinaBorrar, soulTurnoGuardar, turnosPendientes_,' +
   ' soulHormigaGuardar, soulPlata, soulHoy, soulHorasGuardar, soulMes_, SOUL_HORMIGA };');
@@ -299,6 +299,12 @@ igual('el total hormiga del mes', { COP: 97900 }, plata.resumen.hormiga);
  * pagado: se mueve al día 28 y reaparece.
  */
 LIBROS.s.Fijos[1][6] = 28;
+// El mundo cambió por debajo. `libro_()` guarda lo leído mientras dura
+// la ejecución (es lo que bajó el arranque de 75 lecturas a 8), así que
+// hay que decírselo. En producción no hace falta: ahí solo se escribe
+// por la API, y escribir tira lo guardado solo.
+F.libroOlvidar_(); F.soulOlvidar_();
+
 /**
  * Tocar la hoja por debajo es simular una edición FUERA de la app —
  * ella abriendo el Google Sheet a mano. Eso, en la vida real, pasa
@@ -396,6 +402,12 @@ console.log('\n── Y las horas se cuentan en TODOS sus días ──');
 sembrarHojas();
 // Solo el encabezado: se mide el gimnasio, no lo que ya hubiera sembrado.
 LIBROS.s.Rutina = [LIBROS.s.Rutina[0]];
+// El mundo cambió por debajo. `libro_()` guarda lo leído mientras dura
+// la ejecución (es lo que bajó el arranque de 75 lecturas a 8), así que
+// hay que decírselo. En producción no hace falta: ahí solo se escribe
+// por la API, y escribir tira lo guardado solo.
+F.libroOlvidar_(); F.soulOlvidar_();
+
 LIBROS.s.Rutina.push(['g1', YO, 'otro', 'Gimnasio', '1-6', '06:00', '07:00',
                       'Smart Fit', '', '', '', '', '', '', 'si', '']);
 const rr = F.soulRutina(SOCIA, {});
