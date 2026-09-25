@@ -235,6 +235,30 @@ const ESQUEMA_EMPRESARIAL = {
              * pescar un segundo teléfono— y la botaba.
              */
             'observacion',
+            /**
+             * ── QUIÉN LO HIZO ≠ QUIÉN LO VE ──
+             *
+             * `gestora_asignada` hace DOS trabajos que no son el mismo:
+             * dice quién atendió el pedido, y decide quién puede verlo.
+             * Mientras el equipo esté todo en Nova eso funciona.
+             *
+             * Deja de funcionar en cuanto llega un histórico. En el
+             * archivo de una tienda real la columna GESTIONA trae JAIME
+             * (399 pedidos), APOYO (68), ZULAY (48)… gente que no tiene
+             * cuenta, y «APOYO» que ni siquiera es una persona. Si eso
+             * cae en `gestora_asignada`, esos pedidos quedan asignados a
+             * nadie que pueda entrar: NO LOS VE NINGUNA PERSONA.
+             *
+             * Así que se parten en dos. `gestionado_por` es una
+             * etiqueta: texto libre, sin cuenta, para el registro y las
+             * estadísticas por agente. `gestora_asignada` sigue siendo
+             * control de acceso y solo acepta a alguien del Equipo.
+             *
+             * Se puede importar la historia entera sin crear una sola
+             * cuenta, y el día que se creen, enlazar una etiqueta con
+             * una persona no rompe nada de lo ya importado.
+             */
+            'gestionado_por',
             'ultimo_movimiento',
             // Lo de oficina: el estado lo dice la transportadora, pero el
             // acuerdo con la clienta y el adelanto los pone el equipo.
@@ -271,7 +295,7 @@ const ESQUEMA_EMPRESARIAL = {
   Novedades: ['id','fuente','id_externo','pedido_id','fecha','tipo','motivo','grupo',
               'estado','solucionada','fecha_solucion','desenlace',
               'gestora','solucion','nota','intentos','resuelta_en',
-              'solucion_plataforma','aclaracion',
+              'solucion_plataforma','aclaracion','gestionado_por',
               'actualizado_en','actualizado_por'],
 
   // IRIS no es una plataforma de pedidos — es la central telefónica.
@@ -369,9 +393,19 @@ const ESQUEMA_EMPRESARIAL = {
    *
    * `estado`: abierto · respondido · resuelto · sin_respuesta
    */
+  /**
+   * Las cinco últimas columnas se agregaron al leer el control real de
+   * una tienda: su hoja de CAS trae CLIENTE, TELEFONO, la FECHA DE
+   * ENVIO del pedido, lo que se hizo (GESTION) y quién lo hizo.
+   *
+   * `cliente` y `telefono` parecen redundantes —están en el pedido—
+   * pero no lo son: un CAS puede llegar de un pedido que nunca se
+   * importó, y sin el nombre ese reclamo no se puede ni buscar.
+   */
   CAS: ['id','tienda','pedido_id','id_externo','guia','transportadora',
         'abierto_en','abierto_por','ticket','estado','dias_quieto',
-        'ultima_gestion','respuesta','cerrado_en','nota'],
+        'ultima_gestion','respuesta','cerrado_en','nota',
+        'cliente','telefono','fecha_envio','gestion','gestionado_por'],
 
   /**
    * `id` para poder editar una fila desde la app, y `origen` para saber
@@ -2085,6 +2119,25 @@ const FUENTES = {
     alias: {},
   },
 
+  /**
+   * Las otras dos hojas del mismo control diario.
+   *
+   * Van como fuentes aparte y no como «una hoja más» de `propio`
+   * porque cada importación lee UNA pestaña: son tres archivos
+   * distintos aunque vivan en el mismo Excel, y cada uno va a una hoja
+   * distinta de Nova.
+   */
+  propio_novedades: {
+    tipo: 'novedades',
+    propio: true,
+    alias: {},
+  },
+  propio_cas: {
+    tipo: 'cas',
+    propio: true,
+    alias: {},
+  },
+
   // IRIS NO es una plataforma de pedidos: es la central telefónica.
   // VERIFICADO contra IRIS (1).csv — 2.782 llamadas salientes.
   // Se usa en TODAS las tiendas, no solo en una.
@@ -2746,8 +2799,24 @@ const SINONIMOS_PEDIDOS = {
                  'estado del pedido','en que va'],
   guia:         ['guia','numero guia','no guia','tracking','rastreo','guia transportadora'],
   transportadora:['transportadora','courier','operador','empresa envio','mensajeria'],
-  gestora_asignada:['gestora','asesora','vendedora','responsable','encargada','atendido por',
-                 'asignado a','quien atiende'],
+  /**
+   * ── ESTO APUNTABA A `gestora_asignada`, Y ERA UN ERROR ──
+   *
+   * Un archivo histórico trae NOMBRES, no cuentas. En el control de una
+   * tienda real esta columna dice JAIME, APOYO, ZULAY — gente que no
+   * tiene usuario en Nova, y «APOYO» que ni siquiera es una persona.
+   *
+   * Cayendo en `gestora_asignada` —que es control de acceso— esos
+   * pedidos quedaban asignados a alguien que no puede entrar: NADIE los
+   * veía. Ni la gestora, que no existe, ni las demás, porque están
+   * asignados.
+   *
+   * Ahora cae en `gestionado_por`, que es solo la etiqueta de quién lo
+   * hizo. El acceso se reparte aparte, desde Nova, y a personas de
+   * verdad.
+   */
+  gestionado_por:['gestora','asesora','vendedora','responsable','encargada','atendido por',
+                 'asignado a','quien atiende','gestiona','agente','quien gestiona'],
   nota:         ['nota','notas','observacion','observaciones','comentario','comentarios',
                  'detalle','anotacion'],
   metodo_pago:  ['pago','metodo pago','forma de pago','medio de pago','payment'],
@@ -2772,7 +2841,7 @@ const FORMAS_PEDIDOS = {
   estado:       'texto_repetido',
   guia:         'texto',
   transportadora:'texto_repetido',
-  gestora_asignada:'texto_repetido',
+  gestionado_por:'texto_repetido',
   nota:         'texto',
   metodo_pago:  'texto_repetido',
 };
@@ -7395,7 +7464,9 @@ function apiImportarArchivo(s, p) {
     } else {
       let an;
       try {
-        an = analizarFilas(filas, SINONIMOS_PEDIDOS, FORMAS_PEDIDOS);
+        // El diccionario que toca: pedidos, novedades o CAS.
+        const dic = diccionarioDe_(cfg.tipo);
+        an = analizarFilas(filas, dic.dicc, dic.formas);
       } catch (err) {
         return { ok: false, error: err.message, archivado: nomTab };
       }
@@ -7403,7 +7474,8 @@ function apiImportarArchivo(s, p) {
                filas: an.filas, encabezados: an.encabezados,
                propuestas: an.propuestas, sinResolver: an.sinResolver,
                muestra: an.muestra,
-               campos: Object.keys(SINONIMOS_PEDIDOS) };
+               tipo: cfg.tipo,
+               campos: Object.keys(diccionarioDe_(cfg.tipo).dicc) };
     }
   }
 
@@ -9188,6 +9260,13 @@ function centralMioCobrar(s, p) {
  */
 
 // Columnas que escribe la app y el importador jamás toca.
+/**
+ * Lo que escribe el equipo DENTRO de Nova y ninguna importación pisa.
+ *
+ * `gestora_asignada` está aquí porque es control de acceso y lo reparte
+ * Nova. `gestionado_por` NO está: es la etiqueta que viene del archivo
+ * y tiene que poder actualizarse cuando el archivo cambia.
+ */
 const COLUMNAS_DEL_EQUIPO = [
   'estado_nova', 'nota', 'solucion', 'gestora_asignada', 'fecha_promesa',
   'intentos', 'resuelta_en', 'telefono_2', 'telefono_2_norm',
@@ -9225,6 +9304,7 @@ function importarConFormato(ss, fuenteId, tienda) {
   const destino = { pedidos: 'Pedidos', novedades: 'Novedades',
                     llamadas: 'Llamadas', pauta: 'Pauta',
                     facturacion: 'Facturacion', cartera: 'Cartera',
+                    cas: 'CAS',
                     pedidos_secundario: 'Pedidos' }[r.tipo];
   if (!destino) throw new Error('No sé dónde guardar una fuente de tipo ' + r.tipo);
 
@@ -9241,8 +9321,20 @@ function importarConFormato(ss, fuenteId, tienda) {
   const aprendidos = estadosAprendidos(ss);
   const vistos = {};
 
+  /**
+   * Los pedidos indexados por su id externo, UNA vez.
+   *
+   * Las novedades y los CAS hablan de un pedido que ya está en Nova, y
+   * el único hilo entre los dos es ese id. Buscarlo fila por fila
+   * serían ciento sesenta recorridos de la hoja de Pedidos; así es uno.
+   * Solo se arma cuando hace falta.
+   */
+  const porExterno = (r.tipo === 'novedades' || r.tipo === 'cas')
+    ? pedidosPorExterno_(ss) : null;
+
   const preparadas = r.filas.map(function (f) {
-    return prepararFila(f, r.tipo, fuenteId, tienda, pais, ss, aprendidos, vistos);
+    return prepararFila(f, r.tipo, fuenteId, tienda, pais, ss, aprendidos, vistos,
+                        porExterno);
   });
 
   // Lo que se vio queda anotado, se entendiera o no
@@ -9391,7 +9483,8 @@ const CAMPOS_FECHA = ['fecha', 'fecha_entrega', 'fecha_promesa', 'fecha_ingreso'
                       'fecha_solucion', 'fecha_fin', 'ultimo_movimiento',
                       'actualizado', 'creado_en', 'ultimo_conteo'];
 
-function prepararFila(f, tipo, fuenteId, tienda, pais, ss, aprendidos, vistos) {
+function prepararFila(f, tipo, fuenteId, tienda, pais, ss, aprendidos, vistos,
+                      porExterno) {
   const o = Object.assign({}, f);
   o.fuente = fuenteId;
   o.tienda = tienda;
@@ -9450,8 +9543,28 @@ function prepararFila(f, tipo, fuenteId, tienda, pais, ss, aprendidos, vistos) {
       vistos[k].n++;
     }
   }
+  if (tipo === 'cas') {
+    normalizarCas_(o, fuenteId, tienda, porExterno);
+  }
   if (tipo === 'novedades') {
     o.grupo = grupoNovedad(o.motivo, o.codigo);
+    /**
+     * Amarrar la novedad a su pedido. Sin esto, la bandeja muestra el
+     * motivo pero no sabe de qué clienta habla — y el nombre vive en el
+     * pedido, no en la novedad.
+     */
+    if (!o.pedido_id && o.id_externo && porExterno) {
+      o.pedido_id = porExterno[String(o.id_externo).trim().toLowerCase()] || '';
+    }
+    /**
+     * Lo mismo que en pedidos: quien viene escrito en el archivo es una
+     * ETIQUETA, no una cuenta. `gestora` es control de acceso y solo la
+     * reparte Nova.
+     */
+    if (o.gestora !== undefined) {
+      if (!o.gestionado_por) o.gestionado_por = o.gestora;
+      delete o.gestora;
+    }
     /**
      * ── LO DEL ARCHIVO NO SE MEZCLA CON LO DEL EQUIPO ──
      *
@@ -9726,6 +9839,8 @@ function derivarNovedades(pedidos, fuenteId, tienda) {
          */
         solucion_plataforma: String(p.solucion || '').trim(),
         aclaracion: String(p.aclaracion || '').trim(),
+        // Quién la atendió según el archivo. Etiqueta, no cuenta.
+        gestionado_por: String(p.gestionado_por || '').trim(),
       };
     });
 }
@@ -20060,10 +20175,36 @@ function apiReparto(s, p) {
     return out;
   }
 
+  /**
+   * ── LAS ETIQUETAS, QUE NO SON CUENTAS ──
+   *
+   * `gestionado_por` dice quién atendió el pedido según el archivo que
+   * se importó: JAIME, ZULAY, APOYO. No hace falta que existan como
+   * usuarios, y casi nunca existen.
+   *
+   * Se cuentan aparte para que la dueña tenga sus números por agente
+   * desde el primer día, sin crear una sola cuenta. Es lo que le
+   * permite probar Nova una semana con su equipo entero sin montarlo.
+   */
+  const cEt = c('gestionado_por');
+  const porEtiqueta = {};
+
   const cerrados = ['entregado', 'devolucion', 'cancelado'];
   for (let i = 1; i < d.length; i++) {
     if (String(d[i][c('tienda')] || '').trim() !== tienda) continue;
     out.total++;
+
+    if (cEt !== -1) {
+      const et = String(d[i][cEt] || '').trim();
+      if (et) {
+        if (!porEtiqueta[et]) porEtiqueta[et] = { nombre: et, total: 0, abiertos: 0,
+                                                  esUsuario: !!porNombre[norm(et)] };
+        porEtiqueta[et].total++;
+        const e2 = norm(d[i][c('estado_nova')] || d[i][c('estado_canonico')] || d[i][c('estado')]);
+        if (cerrados.indexOf(e2) === -1) porEtiqueta[et].abiertos++;
+      }
+    }
+
     const quien = String(d[i][cG] || '').trim();
     if (!quien) { out.sinAsignar++; continue; }
 
@@ -20086,6 +20227,15 @@ function apiReparto(s, p) {
   out.aNadieConocido = Object.keys(out.huerfanos).map(function (k) {
     return { nombre: k, pedidos: out.huerfanos[k] };
   }).sort(function (a, b) { return b.pedidos - a.pedidos; });
+
+  /**
+   * Quién trabajó, según el archivo. Ordenado por volumen, y diciendo
+   * de cada uno si además tiene cuenta en Nova — que es lo que separa
+   * «esta persona ve sus pedidos» de «este nombre solo está anotado».
+   */
+  out.etiquetas = Object.keys(porEtiqueta).map(function (k) { return porEtiqueta[k]; })
+    .sort(function (a, b) { return b.total - a.total; });
+  out.sinEtiqueta = cEt === -1;
 
   return out;
 }
@@ -20242,4 +20392,211 @@ function asignarNovedadesDe_(ss, pedidoIds, valor, s) {
     registrarMovimiento(s, 'Novedades', x.id, 'gestora', x.antes, valor);
   });
   return n;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   32 · EL CONTROL DIARIO · NOVEDADES Y CAS
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  EL CONTROL DIARIO DE UNA TIENDA · novedades y CAS
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ DE DÓNDE SALEN ESTOS DICCIONARIOS ────────────────────────┐
+ * │                                                            │
+ * │ No de imaginarse cómo escribiría alguien una columna: de    │
+ * │ un archivo REAL de gestión logística de una tienda —        │
+ * │ diecisiete hojas, dos mil setecientas filas— que se leyó    │
+ * │ entero antes de escribir una línea de esto.                 │
+ * │                                                            │
+ * │ Sus encabezados, tal cual:                                 │
+ * │                                                            │
+ * │   NOVEDADES  FECHA DE GESTION · ID · FECHA NOVEDAD ·       │
+ * │              CLIENTE · SOLUCION · SOLUCIONADA ·             │
+ * │              GESTIONA · NOTAS                              │
+ * │                                                            │
+ * │   CAS        FECHA RADICACION · ID · FECHA DE ENVIO ORDEN ·│
+ * │              CLIENTE · TELEFONO · NUMERO DE GUIA ·         │
+ * │              ESTATUS · TRANSPORTADORA ·                    │
+ * │              FECHA DE ULTIMO MOVIMIENTO · GESTION ·        │
+ * │              RESPUESTA · NOTAS                             │
+ * │                                                            │
+ * │ Los sinónimos cubren esos y sus variantes. Pero, igual que │
+ * │ con los pedidos, NADA se importa a ciegas: Nova propone lo │
+ * │ que entendió, la persona corrige, y solo entonces se       │
+ * │ escribe. Un histórico mal leído es peor que no cargarlo.   │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ «GESTIONA» NO ES QUIEN LO VE ─────────────────────┐
+ * │                                                            │
+ * │ En ese archivo la columna GESTIONA dice JAIME (399 filas), │
+ * │ APOYO (68), ZULAY (48), GERALD (15), RUBEN (3). Gente sin  │
+ * │ cuenta en Nova, y «APOYO», que ni siquiera es una persona. │
+ * │                                                            │
+ * │ Por eso cae en `gestionado_por` —una etiqueta— y nunca en  │
+ * │ `gestora_asignada`, que es control de acceso. Así la       │
+ * │ dueña importa su historia entera y tiene sus números por   │
+ * │ agente desde el primer día, sin crear una sola cuenta.     │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+
+const SINONIMOS_NOVEDADES = {
+  id_externo:   ['id','id pedido','no orden','numero orden','orden','pedido',
+                 'id de la orden','no. orden','referencia'],
+  fecha:        ['fecha novedad','fecha de la novedad','fecha','dia','fecha reporte'],
+  fecha_solucion:['fecha de gestion','fecha gestion','fecha de solucion','fecha solucion',
+                 'fecha de cierre','gestionada el'],
+  cliente:      ['cliente','clienta','destinatario','nombre cliente','nombre'],
+  motivo:       ['novedad','motivo','motivo novedad','tipo de novedad','causa',
+                 'razon','descripcion novedad'],
+  solucion:     ['solucion','soluciones','historico de soluciones','que se hizo',
+                 'gestion realizada','accion'],
+  solucionada:  ['solucionada','fue solucionada','fue solucionada la novedad',
+                 'resuelta','cerrada','se soluciono'],
+  gestionado_por:['gestiona','gestor','gestora','agente','asesor','asesora',
+                 'responsable','atendido por','quien gestiona','encargada'],
+  nota:         ['notas','nota','observacion','observaciones','comentario',
+                 'comentarios','detalle'],
+  guia:         ['guia','numero guia','no guia','tracking','guia novedad'],
+  estado:       ['estado','estatus','status','situacion'],
+};
+
+const FORMAS_NOVEDADES = {
+  id_externo:    'texto',
+  fecha:         'fecha',
+  fecha_solucion:'fecha',
+  cliente:       'texto',
+  motivo:        'texto_repetido',
+  solucion:      'texto',
+  solucionada:   'texto_constante',
+  gestionado_por:'texto_repetido',
+  nota:          'texto',
+  guia:          'texto',
+  estado:        'texto_repetido',
+};
+
+/**
+ * El CAS: el reclamo que se le radica a la transportadora.
+ *
+ * Es la parte del trabajo que más se pierde cuando alguien cambia de
+ * herramienta, porque vive en un Excel aparte y nadie la migra. Son
+ * ciento sesenta reclamos con su respuesta — meses de gestión.
+ */
+const SINONIMOS_CAS = {
+  id_externo:   ['id','id pedido','orden','no orden','numero orden','pedido'],
+  abierto_en:   ['fecha radicacion','fecha de radicacion','radicado el','fecha',
+                 'fecha caso','fecha del caso'],
+  fecha_envio:  ['fecha de envio orden','fecha envio','fecha de envio','despachado'],
+  cliente:      ['cliente','clienta','destinatario','nombre cliente'],
+  telefono:     ['telefono','celular','tel','contacto','numero'],
+  guia:         ['numero de guia','numero guia','no guia','guia','tracking'],
+  estado:       ['estatus','estado','status','situacion','estado del caso'],
+  transportadora:['transportadora','courier','operador','empresa envio','mensajeria'],
+  ultima_gestion:['fecha de ultimo movimiento','ultimo movimiento','ultima gestion',
+                 'ultima actualizacion','fecha ultimo movimiento'],
+  gestion:      ['gestion','que se hizo','accion','gestion realizada','seguimiento'],
+  respuesta:    ['respuesta','respuesta transportadora','resultado','desenlace'],
+  ticket:       ['ticket','radicado','numero de caso','caso','pqr','numero pqr'],
+  nota:         ['notas','nota','observacion','observaciones','comentario','detalle'],
+  gestionado_por:['gestiona','gestor','gestora','agente','asesor','responsable',
+                 'atendido por','radicado por'],
+};
+
+const FORMAS_CAS = {
+  id_externo:    'texto',
+  abierto_en:    'fecha',
+  fecha_envio:   'fecha',
+  cliente:       'texto',
+  telefono:      'texto',
+  guia:          'texto',
+  estado:        'texto_repetido',
+  transportadora:'texto_repetido',
+  ultima_gestion:'fecha',
+  gestion:       'texto',
+  respuesta:     'texto',
+  ticket:        'texto',
+  nota:          'texto',
+  gestionado_por:'texto_repetido',
+};
+
+/**
+ * Qué diccionario usar según lo que se esté subiendo.
+ *
+ * Existe para que `apiSubirArchivo` deje de tener «pedidos» escrito a
+ * mano. Cuando se agregó la tercera cosa importable, esa constante
+ * enterrada en una llamada era justo lo que había que encontrar y
+ * nadie sabía que estaba ahí.
+ */
+function diccionarioDe_(tipo) {
+  if (tipo === 'novedades') {
+    return { dicc: SINONIMOS_NOVEDADES, formas: FORMAS_NOVEDADES };
+  }
+  if (tipo === 'cas') {
+    return { dicc: SINONIMOS_CAS, formas: FORMAS_CAS };
+  }
+  return { dicc: SINONIMOS_PEDIDOS, formas: FORMAS_PEDIDOS };
+}
+
+/**
+ * Normaliza una fila de CAS recién leída del archivo.
+ *
+ * Lo único que no puede salir del archivo es `pedido_id`: el CAS habla
+ * del mismo pedido que ya está en Nova, y la única forma de amarrarlos
+ * es por el id externo. Si no calza, el caso entra igual y se dice —
+ * un reclamo sin pedido sigue siendo un reclamo, y esconderlo sería
+ * perder la gestión que costó hacerlo.
+ */
+function normalizarCas_(o, fuenteId, tienda, porExterno) {
+  const ext = String(o.id_externo || '').trim();
+  o.id = fuenteId + '-cas-' + (ext || Utilities.getUuid().slice(0, 8));
+  o.tienda = tienda;
+  o.pedido_id = (ext && porExterno && porExterno[ext.toLowerCase()]) || '';
+
+  /**
+   * «Días quieto» no se importa: se calcula. Un número copiado de un
+   * archivo de hace dos meses dice «3 días» para siempre, y eso es
+   * peor que no decir nada — parece fresco y no lo está.
+   */
+  const ult = String(o.ultima_gestion || o.abierto_en || '').slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(ult)) {
+    o.dias_quieto = Math.max(0, Math.round(
+      (new Date(ahoraISO().slice(0, 10) + 'T00:00:00Z') -
+       new Date(ult + 'T00:00:00Z')) / 86400000));
+  }
+
+  /**
+   * Si trae respuesta, el caso ya se cerró. Es lo que permite que los
+   * ciento sesenta reclamos viejos no aparezcan todos como abiertos el
+   * primer día — que es exactamente lo que haría que nadie vuelva a
+   * mirar esta pantalla.
+   */
+  if (String(o.respuesta || '').trim() && !o.cerrado_en) {
+    o.cerrado_en = String(o.ultima_gestion || o.abierto_en || '').slice(0, 10);
+  }
+  return o;
+}
+
+/**
+ * Los pedidos ya importados, indexados por su id externo.
+ *
+ * Sirve para amarrar novedades y CAS al pedido del que hablan sin
+ * recorrer la hoja de Pedidos una vez por fila.
+ */
+function pedidosPorExterno_(ss) {
+  const sh = ss.getSheetByName('Pedidos');
+  if (!sh || sh.getLastRow() < 2) return {};
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const cId = e.indexOf('id'), cExt = e.indexOf('id_externo');
+  if (cId === -1) return {};
+  const out = {};
+  for (let i = 1; i < d.length; i++) {
+    const ext = cExt === -1 ? '' : String(d[i][cExt] || '').trim();
+    if (ext) out[ext.toLowerCase()] = String(d[i][cId] || '');
+  }
+  return out;
 }

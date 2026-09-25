@@ -231,6 +231,30 @@ const ESQUEMA_EMPRESARIAL = {
              * pescar un segundo teléfono— y la botaba.
              */
             'observacion',
+            /**
+             * ── QUIÉN LO HIZO ≠ QUIÉN LO VE ──
+             *
+             * `gestora_asignada` hace DOS trabajos que no son el mismo:
+             * dice quién atendió el pedido, y decide quién puede verlo.
+             * Mientras el equipo esté todo en Nova eso funciona.
+             *
+             * Deja de funcionar en cuanto llega un histórico. En el
+             * archivo de una tienda real la columna GESTIONA trae JAIME
+             * (399 pedidos), APOYO (68), ZULAY (48)… gente que no tiene
+             * cuenta, y «APOYO» que ni siquiera es una persona. Si eso
+             * cae en `gestora_asignada`, esos pedidos quedan asignados a
+             * nadie que pueda entrar: NO LOS VE NINGUNA PERSONA.
+             *
+             * Así que se parten en dos. `gestionado_por` es una
+             * etiqueta: texto libre, sin cuenta, para el registro y las
+             * estadísticas por agente. `gestora_asignada` sigue siendo
+             * control de acceso y solo acepta a alguien del Equipo.
+             *
+             * Se puede importar la historia entera sin crear una sola
+             * cuenta, y el día que se creen, enlazar una etiqueta con
+             * una persona no rompe nada de lo ya importado.
+             */
+            'gestionado_por',
             'ultimo_movimiento',
             // Lo de oficina: el estado lo dice la transportadora, pero el
             // acuerdo con la clienta y el adelanto los pone el equipo.
@@ -267,7 +291,7 @@ const ESQUEMA_EMPRESARIAL = {
   Novedades: ['id','fuente','id_externo','pedido_id','fecha','tipo','motivo','grupo',
               'estado','solucionada','fecha_solucion','desenlace',
               'gestora','solucion','nota','intentos','resuelta_en',
-              'solucion_plataforma','aclaracion',
+              'solucion_plataforma','aclaracion','gestionado_por',
               'actualizado_en','actualizado_por'],
 
   // IRIS no es una plataforma de pedidos — es la central telefónica.
@@ -365,9 +389,19 @@ const ESQUEMA_EMPRESARIAL = {
    *
    * `estado`: abierto · respondido · resuelto · sin_respuesta
    */
+  /**
+   * Las cinco últimas columnas se agregaron al leer el control real de
+   * una tienda: su hoja de CAS trae CLIENTE, TELEFONO, la FECHA DE
+   * ENVIO del pedido, lo que se hizo (GESTION) y quién lo hizo.
+   *
+   * `cliente` y `telefono` parecen redundantes —están en el pedido—
+   * pero no lo son: un CAS puede llegar de un pedido que nunca se
+   * importó, y sin el nombre ese reclamo no se puede ni buscar.
+   */
   CAS: ['id','tienda','pedido_id','id_externo','guia','transportadora',
         'abierto_en','abierto_por','ticket','estado','dias_quieto',
-        'ultima_gestion','respuesta','cerrado_en','nota'],
+        'ultima_gestion','respuesta','cerrado_en','nota',
+        'cliente','telefono','fecha_envio','gestion','gestionado_por'],
 
   /**
    * `id` para poder editar una fila desde la app, y `origen` para saber

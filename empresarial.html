@@ -1336,6 +1336,13 @@ input.li:focus{border-color:var(--acc-d);}
         <div class="psub" id="psub"></div>
       </div>
       <div class="tbar-r">
+        <!--
+          EN QUÉ TIENDA ESTOY. Nova muestra una tienda a la vez, y hasta
+          hoy no había forma de cambiarla dentro de la app: el login
+          decía «puedes cambiarla en el menú lateral» y ese menú no
+          existía. Quien tuviera dos tiendas se quedaba en la primera.
+        -->
+        <div id="tienda-sel" class="vsel"></div>
         <div id="vista-sel" class="vsel"></div>
         <span class="uchip" id="toprol">Manuela · dueña</span>
         <div class="mtoggle">
@@ -3280,6 +3287,105 @@ function go(view, el) {
 
 // ─── STORE SWITCH ─────────────────────────────────────
 function setStore(s){ST=s;localStorage.setItem('ne_store',s);}
+
+/* ═══════════════════════════════════════════════════════════════
+     EN QUÉ TIENDA ESTOY
+   ═══════════════════════════════════════════════════════════════
+
+   ┌─ POR QUÉ HACÍA FALTA ──────────────────────────────────────┐
+   │                                                            │
+   │ «el dueño o admin son los que ubican a las gestoras por     │
+   │  tiendas, entonces puede tener dos tiendas la gestora o     │
+   │  tres, y debe de diferenciarse en cuál está trabajando».    │
+   │                                                            │
+   │ Nova muestra UNA tienda a la vez — es la regla de toda la  │
+   │ app y está bien: dos tiendas en la misma pantalla invitan  │
+   │ a compararlas, y son negocios distintos en países          │
+   │ distintos con monedas distintas.                           │
+   │                                                            │
+   │ Pero no había forma de cambiar de tienda estando adentro.  │
+   │ El paso 3 del login lo prometía —«puedes cambiarla en el   │
+   │ menú lateral»— y ese menú no existía. Quien tuviera dos     │
+   │ tiendas se quedaba en la primera para siempre, y quien     │
+   │ tuviera tres ni siquiera sabía en cuál estaba parada.      │
+   │                                                            │
+   └────────────────────────────────────────────────────────────┘
+
+   Con una sola tienda NO es un botón: es una etiqueta. Un selector
+   que no selecciona nada enseña a tocarlo en vano. */
+
+function pintarSelectorTienda() {
+  const cont = document.getElementById('tienda-sel');
+  if (!cont) return;
+
+  const mias = (SESION && SESION.tiendas ? SESION.tiendas : [])
+    .map(function (t) { return typeof t === 'string' ? t : t.id; })
+    .filter(function (t) { return t; });
+
+  if (!mias.length) { cont.innerHTML = ''; return; }
+
+  const nombre = function (id) { return (STORES[id] || {}).name || id.toUpperCase(); };
+
+  if (mias.length === 1) {
+    // Con una sola tienda no es un selector: es una etiqueta. Un botón
+    // que no lleva a ningún lado enseña a tocarlo en vano.
+    cont.innerHTML = '<span class="vchip on" style="cursor:default;" ' +
+      'title="Esta cuenta tiene una sola tienda">' + esc(nombre(mias[0])) + '</span>';
+    return;
+  }
+
+  /**
+   * ── UN DESPLEGABLE, NO UNA FILA DE BOTONES ──
+   *
+   * La primera versión pintaba un botón por tienda. Con dos se ve
+   * bien; con las diez que puede llegar a tener una clienta, la barra
+   * de arriba se parte y el resto de los controles se caen de la
+   * pantalla.
+   *
+   * Sus palabras: «si Sara quiere subir sus 10 tiendas hoy con las 8
+   * gestoras, lo pueda hacer sin que se dañe el panel ni Nova».
+   *
+   * Un desplegable ocupa lo mismo con dos que con cincuenta.
+   */
+  cont.innerHTML =
+    '<select class="cm-sel" id="sel-tienda" style="max-width:210px;" ' +
+      'title="Nova muestra una tienda a la vez" ' +
+      'onchange="cambiarTienda(this.value)">' +
+    mias.map(function (t) {
+      const m = (STORES[t] || {}).moneda || '';
+      return '<option value="' + esc(t) + '"' + (t === ST ? ' selected' : '') + '>' +
+        esc(nombre(t)) + (m ? ' · ' + esc(m) : '') + '</option>';
+    }).join('') +
+    '</select>';
+}
+
+/**
+ * Cambiar de tienda es volver a pedirlo TODO.
+ *
+ * No basta con mover la variable y repintar: los pedidos, las
+ * novedades, el equipo, las alarmas y el reparto que hay en memoria son
+ * de la tienda anterior. Repintar sin volver a pedir dejaría los
+ * números de Guatemala bajo el nombre de Ecuador, que es la peor clase
+ * de error: se ve bien y está mal.
+ */
+async function cambiarTienda(t) {
+  if (!t || t === ST) return;
+  const mias = (SESION && SESION.tiendas ? SESION.tiendas : [])
+    .map(function (x) { return typeof x === 'string' ? x : x.id; });
+  if (mias.indexOf(t) === -1) { showToast('Esa tienda no es tuya.'); return; }
+
+  setStore(t);
+  pintarSelectorTienda();
+  updateSub();
+  // Se vacía lo de la tienda anterior antes de pedir lo nuevo: si la
+  // petición tarda, mejor una pantalla que dice «cargando» que una que
+  // enseña los pedidos de la otra tienda como si fueran de esta.
+  PEDS_REALES = []; NOVS_REALES = []; PEDS_VISTA = [];
+  REPARTO = null;
+  buildAll();
+  await cargarReales();
+  showToast('Ahora estás en ' + ((STORES[t] || {}).name || t));
+}
 
 /**
  * Los nombres de la barra salen de la sesión, no del HTML.
@@ -7780,7 +7886,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-25 · c6bb';
+const VERSION_PANTALLA = '2026-09-25 · ee65';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -9893,10 +9999,43 @@ function pintarGestoras() {
 /** Alta y edición comparten formulario: es la misma información. */
 function formularioPersona(x) {
   const v = x || { nombre:'', correo:'', rol:'gestora', tienda:'*', permisos:'', estado:'activo' };
-  const tiendas = Object.keys(STORES).map(function (k) {
-    return '<option value="' + k + '"' + (v.tienda === k ? ' selected' : '') + '>' +
-      esc(STORES[k].name) + '</option>';
-  }).join('');
+
+  /**
+   * ── UNA PERSONA PUEDE ESTAR EN VARIAS TIENDAS ──
+   *
+   * Esto era un `select` de una sola opción, así que una gestora solo
+   * podía cubrir UNA tienda o TODAS. No había término medio: con diez
+   * tiendas, darle tres era imposible.
+   *
+   * El servidor siempre lo aceptó —lee la celda partiendo por comas— y
+   * era la pantalla la que no dejaba escribirlo. Ella: «el dueño o
+   * admin son los que ubican a las gestoras por tiendas, entonces puede
+   * tener dos tiendas la gestora o tres».
+   *
+   * Con casillas, y en una caja con scroll para que diez tiendas no
+   * estiren el formulario hasta romperlo.
+   */
+  const suyas = String(v.tienda || '').trim() === '*'
+    ? '*'
+    : String(v.tienda || '').split(/[,;]/).map(function (t) { return t.trim(); })
+        .filter(function (t) { return t; });
+  const todas = suyas === '*';
+
+  const tiendas = '<label class="perm-tog" style="padding:8px 11px;">' +
+      '<input type="checkbox" id="ep-t-todas"' + (todas ? ' checked' : '') +
+      ' onchange="tiendasTodas(this.checked)">' +
+      '<span class="perm-tog-lbl"><strong>Todas las tiendas</strong>' +
+      '<span>También las que crees después.</span></span></label>' +
+    '<div id="ep-tiendas-lista" style="max-height:150px;overflow-y:auto;' +
+      'display:flex;flex-direction:column;gap:5px;margin-top:6px;' +
+      (todas ? 'opacity:.4;pointer-events:none;' : '') + '">' +
+    Object.keys(STORES).map(function (k) {
+      return '<label style="display:flex;align-items:center;gap:8px;' +
+        'font:500 12.5px/1.3 \'DM Sans\';color:var(--t-ink);">' +
+        '<input type="checkbox" class="ep-t" value="' + esc(k) + '"' +
+        (!todas && suyas.indexOf(k) !== -1 ? ' checked' : '') + '>' +
+        esc(STORES[k].name) + '</label>';
+    }).join('') + '</div>';
 
   return '<div class="eq-form">' +
     '<div class="eq-campos">' +
@@ -9908,9 +10047,8 @@ function formularioPersona(x) {
           return '<option value="' + r[0] + '"' + (v.rol === r[0] ? ' selected' : '') + '>' +
             r[1] + '</option>';
         }).join('') + '</select></label>' +
-      '<label>Tienda<select class="cm-sel" id="ep-tienda">' +
-        '<option value="*"' + (v.tienda === '*' ? ' selected' : '') + '>Todas</option>' +
-        tiendas + '</select></label>' +
+      '<div style="grid-column:1/-1;"><label style="display:block;">En qué tiendas trabaja' +
+        tiendas + '</label></div>' +
     '</div>' +
     '<div class="eq-perms">' +
       PERMISOS_EXTRA.map(function (p) {
@@ -9941,12 +10079,37 @@ function errPersona(msg) {
   if (el) { el.textContent = msg || ''; el.style.display = msg ? 'block' : 'none'; }
 }
 
+/** Apagar la lista cuando se marca «todas»: elegir dentro de «todas» no
+ *  significa nada, y dejarla activa invita a creer que sí. */
+function tiendasTodas(on) {
+  const lista = document.getElementById('ep-tiendas-lista');
+  if (!lista) return;
+  lista.style.opacity = on ? '.4' : '';
+  lista.style.pointerEvents = on ? 'none' : '';
+}
+
+/**
+ * Las tiendas marcadas, como las guarda la hoja: «col,per» o «*».
+ *
+ * Si no marcó ninguna se devuelve '*' en vez de vacío. Una fila con la
+ * tienda en blanco le da acceso a TODAS por la regla del servidor, así
+ * que guardar vacío sería dar más de lo que se quiso sin decirlo.
+ */
+function tiendasElegidas() {
+  const todas = document.getElementById('ep-t-todas');
+  if (todas && todas.checked) return '*';
+  const marcadas = Array.from(document.querySelectorAll('.ep-t'))
+    .filter(function (c) { return c.checked; })
+    .map(function (c) { return c.value; });
+  return marcadas.length ? marcadas.join(',') : '*';
+}
+
 async function guardarPersona(id) {
   const datos = {
     nombre:  document.getElementById('ep-nm').value.trim(),
     correo:  document.getElementById('ep-mail').value.trim().toLowerCase(),
     rol:     document.getElementById('ep-rol').value,
-    tienda:  document.getElementById('ep-tienda').value,
+    tienda:  tiendasElegidas(),
     estado:  'activo',
     permisos: PERMISOS_EXTRA.filter(function (p) {
       const c = document.getElementById('ep-' + p[0]);
@@ -10206,6 +10369,7 @@ async function reanudarSesion() {
   CONECTADO = true;
   SESION = r.sesion;
   pintarTiendasPermitidas(r.sesion.tiendas);
+  pintarSelectorTienda();
   aplicarPermisos();
   entrarConSesion(r.sesion);
   return true;
@@ -10229,6 +10393,7 @@ function entrarConSesion(ses) {
   document.getElementById('login').style.display = 'none';
   document.getElementById('app').classList.add('on');
   pintarIdentidad();
+  pintarSelectorTienda();
 
   /**
    * Abrir en la sección que le corresponde a quien entró.

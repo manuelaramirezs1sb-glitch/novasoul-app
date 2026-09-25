@@ -201,8 +201,24 @@ const SINONIMOS_PEDIDOS = {
                  'estado del pedido','en que va'],
   guia:         ['guia','numero guia','no guia','tracking','rastreo','guia transportadora'],
   transportadora:['transportadora','courier','operador','empresa envio','mensajeria'],
-  gestora_asignada:['gestora','asesora','vendedora','responsable','encargada','atendido por',
-                 'asignado a','quien atiende'],
+  /**
+   * ── ESTO APUNTABA A `gestora_asignada`, Y ERA UN ERROR ──
+   *
+   * Un archivo histórico trae NOMBRES, no cuentas. En el control de una
+   * tienda real esta columna dice JAIME, APOYO, ZULAY — gente que no
+   * tiene usuario en Nova, y «APOYO» que ni siquiera es una persona.
+   *
+   * Cayendo en `gestora_asignada` —que es control de acceso— esos
+   * pedidos quedaban asignados a alguien que no puede entrar: NADIE los
+   * veía. Ni la gestora, que no existe, ni las demás, porque están
+   * asignados.
+   *
+   * Ahora cae en `gestionado_por`, que es solo la etiqueta de quién lo
+   * hizo. El acceso se reparte aparte, desde Nova, y a personas de
+   * verdad.
+   */
+  gestionado_por:['gestora','asesora','vendedora','responsable','encargada','atendido por',
+                 'asignado a','quien atiende','gestiona','agente','quien gestiona'],
   nota:         ['nota','notas','observacion','observaciones','comentario','comentarios',
                  'detalle','anotacion'],
   metodo_pago:  ['pago','metodo pago','forma de pago','medio de pago','payment'],
@@ -227,7 +243,7 @@ const FORMAS_PEDIDOS = {
   estado:       'texto_repetido',
   guia:         'texto',
   transportadora:'texto_repetido',
-  gestora_asignada:'texto_repetido',
+  gestionado_por:'texto_repetido',
   nota:         'texto',
   metodo_pago:  'texto_repetido',
 };

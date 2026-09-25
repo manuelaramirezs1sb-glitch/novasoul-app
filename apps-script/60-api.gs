@@ -2861,7 +2861,9 @@ function apiImportarArchivo(s, p) {
     } else {
       let an;
       try {
-        an = analizarFilas(filas, SINONIMOS_PEDIDOS, FORMAS_PEDIDOS);
+        // El diccionario que toca: pedidos, novedades o CAS.
+        const dic = diccionarioDe_(cfg.tipo);
+        an = analizarFilas(filas, dic.dicc, dic.formas);
       } catch (err) {
         return { ok: false, error: err.message, archivado: nomTab };
       }
@@ -2869,7 +2871,8 @@ function apiImportarArchivo(s, p) {
                filas: an.filas, encabezados: an.encabezados,
                propuestas: an.propuestas, sinResolver: an.sinResolver,
                muestra: an.muestra,
-               campos: Object.keys(SINONIMOS_PEDIDOS) };
+               tipo: cfg.tipo,
+               campos: Object.keys(diccionarioDe_(cfg.tipo).dicc) };
     }
   }
 

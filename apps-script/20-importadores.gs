@@ -198,6 +198,25 @@ const FUENTES = {
     alias: {},
   },
 
+  /**
+   * Las otras dos hojas del mismo control diario.
+   *
+   * Van como fuentes aparte y no como «una hoja más» de `propio`
+   * porque cada importación lee UNA pestaña: son tres archivos
+   * distintos aunque vivan en el mismo Excel, y cada uno va a una hoja
+   * distinta de Nova.
+   */
+  propio_novedades: {
+    tipo: 'novedades',
+    propio: true,
+    alias: {},
+  },
+  propio_cas: {
+    tipo: 'cas',
+    propio: true,
+    alias: {},
+  },
+
   // IRIS NO es una plataforma de pedidos: es la central telefónica.
   // VERIFICADO contra IRIS (1).csv — 2.782 llamadas salientes.
   // Se usa en TODAS las tiendas, no solo en una.

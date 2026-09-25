@@ -115,7 +115,11 @@ global.Date = class extends RealDate {
 };
 
 (0, eval)(src + '\n;globalThis.__F = { importar, FUENTES, COLUMNAS_DEL_EQUIPO,' +
-  ' libroOlvidar_, soulOlvidar_, ESQUEMA_EMPRESARIAL };');
+  ' libroOlvidar_, soulOlvidar_, ESQUEMA_EMPRESARIAL };' +
+  '\n;globalThis.diccionarioDe_ = diccionarioDe_;' +
+  '\n;globalThis.analizarFilas = analizarFilas;' +
+  '\n;globalThis.normalizarCas_ = normalizarCas_;' +
+  '\n;globalThis.FUENTES = FUENTES;');
 const F = globalThis.__F;
 const E = F.ESQUEMA_EMPRESARIAL;
 
@@ -276,6 +280,113 @@ console.log('\n── Las columnas del equipo, listadas ──');
   ok(c + ' NO lo está: es espejo del archivo y debe actualizarse',
      F.COLUMNAS_DEL_EQUIPO.indexOf(c) === -1);
 });
+
+
+// ══════════════════════════════════════════════════════════════
+console.log('\n══ EL CONTROL DIARIO DE UNA TIENDA · sus otras dos hojas ══');
+/**
+ * Los encabezados son los REALES de un archivo de gestión logística que
+ * ella mandó: diecisiete hojas, dos mil setecientas filas. No inventados.
+ *
+ *   NOVEDADES  FECHA DE GESTION · ID · FECHA NOVEDAD · CLIENTE ·
+ *              SOLUCION · SOLUCIONADA · GESTIONA · NOTAS
+ *
+ *   CAS        FECHA RADICACION · ID · FECHA DE ENVIO ORDEN · CLIENTE ·
+ *              TELEFONO · NUMERO DE GUIA · ESTATUS · TRANSPORTADORA ·
+ *              FECHA DE ULTIMO MOVIMIENTO · GESTION · RESPUESTA · NOTAS
+ */
+const CRUDO_NOV = [
+  ['FECHA DE GESTION','ID','FECHA NOVEDAD','CLIENTE','SOLUCION','SOLUCIONADA',
+   'GESTIONA','NOTAS'],
+  ['2026-07-31','81459518','2026-07-28','Jorge Luis Gutiérrez',
+   'SE LLAMA, DICE QUE HACE DOS MESES SE MUDÓ. SE ACTUALIZA DIRECCIÓN.','SI',
+   'ZULAY','CHAT'],
+  ['2026-08-03','83958327','2026-07-31','Carlos Gallego',
+   'Cll 40 Sur # 25 A-40, se corrige','','JAIME','CHAT - va para reenvío'],
+];
+const CRUDO_CAS = [
+  ['FECHA RADICACION','ID','FECHA DE ENVIO ORDEN','CLIENTE','TELEFONO',
+   'NUMERO DE GUIA','ESTATUS','TRANSPORTADORA','FECHA DE ULTIMO MOVIMIENTO',
+   'GESTION','RESPUESTA','NOTAS'],
+  ['2026-08-14','85675923','2026-08-12','Yoleisi Estacio','3228303763',
+   '616297259','EN TRASLADO NACIONAL','TRANSPORTADORA','2026-08-12',
+   'NO SE PUEDE RADICAR','','pendiente'],
+  ['2026-08-14','85543990','2026-08-11','Yisela Carvajal','3143404365',
+   '240058888893','PREPARADO PARA TRANSPORTADORA','TCC','2026-08-13',
+   'SE RADICA PQR','Reponen el producto','cerrado'],
+];
+
+function analizar(tipo, crudo) {
+  const dic = globalThis.diccionarioDe_(tipo);
+  return globalThis.analizarFilas(crudo, dic.dicc, dic.formas);
+}
+
+console.log('\n── Nova entiende la hoja de NOVEDADES ──');
+let an = analizar('novedades', CRUDO_NOV);
+const puestos = {};
+// El campo se llama `columna`, no `encabezado`. (Mi primera versión usó
+// el nombre equivocado y las doce aserciones dieron `undefined` — que se
+// lee igual que «no lo entendió» y no lo era.)
+an.propuestas.forEach(function (x) { puestos[x.columna] = x.campo; });
+igual('FECHA NOVEDAD → fecha', 'fecha', puestos['FECHA NOVEDAD']);
+igual('SOLUCION → solucion', 'solucion', puestos['SOLUCION']);
+igual('SOLUCIONADA → solucionada', 'solucionada', puestos['SOLUCIONADA']);
+igual('NOTAS → nota', 'nota', puestos['NOTAS']);
+/**
+ * Y la que importa: GESTIONA es una ETIQUETA, no una cuenta. En su
+ * archivo esa columna dice JAIME, ZULAY, APOYO — gente sin usuario en
+ * Nova. Si cayera en `gestora_asignada`, que es control de acceso,
+ * esos pedidos quedarían asignados a alguien que no puede entrar y no
+ * los vería NADIE.
+ */
+igual('GESTIONA → gestionado_por, NO gestora_asignada',
+      'gestionado_por', puestos['GESTIONA']);
+ok('y ningún campo apunta al control de acceso',
+   an.propuestas.filter(x => x.campo === 'gestora_asignada').length === 0,
+   JSON.stringify(an.propuestas.map(x => x.campo)));
+
+console.log('\n── Y la hoja de CAS ──');
+an = analizar('cas', CRUDO_CAS);
+const pc = {};
+an.propuestas.forEach(function (x) { pc[x.columna] = x.campo; });
+igual('FECHA RADICACION → abierto_en', 'abierto_en', pc['FECHA RADICACION']);
+igual('NUMERO DE GUIA → guia', 'guia', pc['NUMERO DE GUIA']);
+igual('ESTATUS → estado', 'estado', pc['ESTATUS']);
+igual('RESPUESTA → respuesta', 'respuesta', pc['RESPUESTA']);
+igual('FECHA DE ULTIMO MOVIMIENTO → ultima_gestion',
+      'ultima_gestion', pc['FECHA DE ULTIMO MOVIMIENTO']);
+igual('GESTION → gestion', 'gestion', pc['GESTION']);
+
+console.log('\n── Un CAS con respuesta llega CERRADO ──');
+/**
+ * Sin esto, sus ciento sesenta reclamos viejos aparecerían todos
+ * abiertos el primer día — y nadie vuelve a mirar una pantalla que
+ * abre con ciento sesenta alarmas falsas.
+ */
+const caso = globalThis.normalizarCas_({
+  id_externo: '85543990', abierto_en: '2026-08-14',
+  ultima_gestion: '2026-08-13', respuesta: 'Reponen el producto',
+}, 'propio_cas', 'col', { '85543990': 'dropi-85543990' });
+ok('se cierra solo', !!caso.cerrado_en, JSON.stringify(caso.cerrado_en));
+igual('y queda amarrado a su pedido', 'dropi-85543990', caso.pedido_id);
+
+const abierto = globalThis.normalizarCas_({
+  id_externo: '85675923', abierto_en: '2026-08-14', ultima_gestion: '2026-08-12',
+  respuesta: '',
+}, 'propio_cas', 'col', {});
+ok('el que no tiene respuesta sigue abierto', !abierto.cerrado_en,
+   JSON.stringify(abierto.cerrado_en));
+ok('y los días quietos se CALCULAN, no se copian', abierto.dias_quieto > 0,
+   'dias_quieto = ' + abierto.dias_quieto);
+igual('un caso sin pedido entra igual, no se pierde', '', abierto.pedido_id);
+
+console.log('\n── Las tres hojas van a tres sitios distintos ──');
+igual('pedidos', 'pedidos', globalThis.FUENTES.propio.tipo);
+igual('novedades', 'novedades', globalThis.FUENTES.propio_novedades.tipo);
+igual('cas', 'cas', globalThis.FUENTES.propio_cas.tipo);
+ok('y las tres piden confirmación antes de escribir',
+   ['propio','propio_novedades','propio_cas']
+     .every(function (f) { return globalThis.FUENTES[f].propio === true; }));
 
 console.log(fallas ? '\n' + fallas + ' FALLAS\n' : '\nTodo bien.\n');
 process.exit(fallas ? 1 : 0);

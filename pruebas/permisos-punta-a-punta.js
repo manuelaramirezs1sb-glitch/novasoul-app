@@ -340,10 +340,17 @@ const SECCIONES = ['hoy','g-hoy','pedidos','g-pedidos','novedades','g-novedades'
   ok('sí ve novedades', ve['admin'].vistas.indexOf('novedades') !== -1);
   ok('sí ve al equipo', ve['admin'].vistas.indexOf('gestoras') !== -1);
 
-  console.log('\n── La dueña lo ve todo ──');
-  SECCIONES.forEach(function (v) {
-    ok('ve ' + v, ve['dueña'].vistas.indexOf(v) !== -1);
-  });
+  console.log('\n── La dueña lo ve todo… menos lo que no es suyo ──');
+  /**
+   * Las `g-*` son las pantallas PROPIAS de la gestora, y la dueña no
+   * las ve: tiene las suyas, que muestran los pedidos de todo el mundo.
+   * Al meterlas en la lista, esta comprobación empezó a exigir que la
+   * dueña viera también las de la gestora — y a fallar con razón.
+   */
+  SECCIONES.filter(function (v) { return v.indexOf('g-') !== 0; })
+    .forEach(function (v) {
+      ok('ve ' + v, ve['dueña'].vistas.indexOf(v) !== -1);
+    });
 
   // ════════════════════════════════════════════════════════════
   console.log('\n══ 4 · EL PERMISO DE PAUTA, AHORA CONECTADO ══');
@@ -368,7 +375,132 @@ const SECCIONES = ['hoy','g-hoy','pedidos','g-pedidos','novedades','g-novedades'
   ok('SIN permiso, tampoco la sección',
      ve['admin-sin'].vistas.indexOf('pauta') === -1);
 
-  console.log('\n══ 5 · EL DINERO ES SOLO DE LA DUEÑA ══');
+  console.log('\n══ 5 · VARIAS TIENDAS, Y SABER EN CUÁL ESTOY ══');
+  /**
+   * «el dueño o admin son los que ubican a las gestoras por tiendas,
+   *  entonces puede tener dos tiendas la gestora o tres, y debe de
+   *  diferenciarse en cuál está trabajando».
+   *
+   * Y: «que la parte de tiendas sea de selección, no que aparezcan
+   *  todas en el menú; si Sara quiere subir sus 10 tiendas hoy con las
+   *  8 gestoras, que lo pueda hacer sin que se dañe el panel».
+   */
+  {
+    const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
+    const errores = [];
+    p.on('pageerror', e => errores.push(e.message));
+    await p.goto('file:///home/claude/repo/empresarial.html');
+    await p.waitForLoadState('load');
+
+    // Diez tiendas, que es lo que ella dijo que puede traer una clienta.
+    const diez = [];
+    for (let i = 1; i <= 10; i++) diez.push('t' + i);
+
+    const r = await p.evaluate((ids) => {
+      document.getElementById('login').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      (0, eval)('CONECTADO = true; ROL = "gestora";');
+      document.getElementById('app').setAttribute('data-rol', 'gestora');
+      ids.forEach(function (t, i) {
+        STORES[t] = { name: 'Tienda ' + (i + 1), moneda: 'COP', sym: '$', f: 1 };
+      });
+      (0, eval)('ST = "t3"; SESION = ' + JSON.stringify({
+        rol: 'gestora', nombre: 'Zulay', email: 'z@v.com', tiendas: ids,
+        permisos: [], modulos: ['empresarial'] }) + ';');
+      pintarSelectorTienda();
+
+      const caja = document.getElementById('tienda-sel');
+      const sel = document.getElementById('sel-tienda');
+      return {
+        hayDesplegable: !!sel,
+        opciones: sel ? sel.options.length : 0,
+        activa: sel ? sel.value : '',
+        botones: caja.querySelectorAll('button').length,
+        ancho: Math.round(caja.getBoundingClientRect().width),
+      };
+    }, diez);
+
+    ok('con diez tiendas es UN desplegable, no diez botones',
+       r.hayDesplegable && r.botones === 0,
+       JSON.stringify(r));
+    ok('con las diez adentro', r.opciones === 10, r.opciones + ' opciones');
+    ok('y marca en cuál está parada', r.activa === 't3', r.activa);
+    ok('sin reventar la barra de arriba', r.ancho < 260, r.ancho + 'px');
+
+    console.log('\n── Con una sola tienda no es un botón: es una etiqueta ──');
+    const uno = await p.evaluate(() => {
+      (0, eval)('ST = "t1"; SESION = ' + JSON.stringify({
+        rol: 'gestora', nombre: 'Zulay', email: 'z@v.com', tiendas: ['t1'],
+        permisos: [], modulos: ['empresarial'] }) + ';');
+      pintarSelectorTienda();
+      const caja = document.getElementById('tienda-sel');
+      return { sel: !!document.getElementById('sel-tienda'),
+               texto: caja.textContent.trim() };
+    });
+    ok('no hay desplegable', !uno.sel);
+    ok('pero sí dice en cuál está', /Tienda 1/.test(uno.texto), uno.texto);
+
+    console.log('\n── Y no se puede saltar a una tienda que no es suya ──');
+    const ajena = await p.evaluate(async () => {
+      (0, eval)('ST = "t1"; SESION = ' + JSON.stringify({
+        rol: 'gestora', nombre: 'Zulay', email: 'z@v.com', tiendas: ['t1'],
+        permisos: [], modulos: ['empresarial'] }) + ';');
+      window.showToast = function (m) { window.__ultimo = m; };
+      await cambiarTienda('t9');
+      return { st: ST, aviso: window.__ultimo || '' };
+    });
+    ok('se queda donde estaba', ajena.st === 't1', ajena.st);
+    ok('y se lo dice', /no es tuya/.test(ajena.aviso), ajena.aviso);
+
+    ok('sin errores de JavaScript', errores.length === 0, errores.join(' | '));
+    await p.close();
+  }
+
+  console.log('\n══ 6 · UNA PERSONA EN VARIAS TIENDAS ══');
+  {
+    const p = await b.newPage({ viewport: { width: 1280, height: 1000 } });
+    const errores = [];
+    p.on('pageerror', e => errores.push(e.message));
+    await p.goto('file:///home/claude/repo/empresarial.html');
+    await p.waitForLoadState('load');
+
+    const r = await p.evaluate(() => {
+      document.getElementById('login').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      (0, eval)('CONECTADO = true; ROL = "dueno"; PUEDE_EDITAR_EQUIPO = true;');
+      document.getElementById('app').setAttribute('data-rol', 'dueno');
+      for (let i = 1; i <= 10; i++) {
+        STORES['t' + i] = { name: 'Tienda ' + i, moneda: 'COP', sym: '$', f: 1 };
+      }
+      // Alguien que ya cubre tres de las diez.
+      document.getElementById('eq-form').innerHTML = formularioPersona({
+        nombre: 'Zulay', correo: 'z@v.com', rol: 'gestora',
+        tienda: 't2,t5,t7', permisos: '', estado: 'activo' });
+      const marcadas = Array.from(document.querySelectorAll('.ep-t'))
+        .filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
+      return { marcadas: marcadas, todas: document.getElementById('ep-t-todas').checked,
+               guarda: tiendasElegidas() };
+    });
+    ok('se pueden marcar varias', JSON.stringify(r.marcadas) === '["t2","t5","t7"]',
+       JSON.stringify(r.marcadas));
+    ok('sin que «todas» quede marcada', r.todas === false);
+    ok('y se guardan como las lee la hoja', r.guarda === 't2,t5,t7', r.guarda);
+
+    /** Sin marcar nada se guarda «*», no vacío: una celda en blanco da
+        acceso a TODAS por la regla del servidor, y eso sería dar más de
+        lo que se quiso sin decirlo. */
+    const vacio = await p.evaluate(() => {
+      document.querySelectorAll('.ep-t').forEach(function (c) { c.checked = false; });
+      document.getElementById('ep-t-todas').checked = false;
+      return tiendasElegidas();
+    });
+    ok('sin marcar nada NO guarda vacío', vacio === '*', JSON.stringify(vacio));
+
+    ok('sin errores de JavaScript', errores.length === 0, errores.join(' | '));
+    await p.close();
+  }
+
+  console.log('\n══ 7 · EL DINERO ES SOLO DE LA DUEÑA ══');
   /**
    * «que solo lo vea la dueña, y que cambie de nombre, que refleje lo
    * que de verdad se muestra en la pantalla».

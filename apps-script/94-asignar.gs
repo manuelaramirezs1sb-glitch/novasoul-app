@@ -122,10 +122,36 @@ function apiReparto(s, p) {
     return out;
   }
 
+  /**
+   * ── LAS ETIQUETAS, QUE NO SON CUENTAS ──
+   *
+   * `gestionado_por` dice quién atendió el pedido según el archivo que
+   * se importó: JAIME, ZULAY, APOYO. No hace falta que existan como
+   * usuarios, y casi nunca existen.
+   *
+   * Se cuentan aparte para que la dueña tenga sus números por agente
+   * desde el primer día, sin crear una sola cuenta. Es lo que le
+   * permite probar Nova una semana con su equipo entero sin montarlo.
+   */
+  const cEt = c('gestionado_por');
+  const porEtiqueta = {};
+
   const cerrados = ['entregado', 'devolucion', 'cancelado'];
   for (let i = 1; i < d.length; i++) {
     if (String(d[i][c('tienda')] || '').trim() !== tienda) continue;
     out.total++;
+
+    if (cEt !== -1) {
+      const et = String(d[i][cEt] || '').trim();
+      if (et) {
+        if (!porEtiqueta[et]) porEtiqueta[et] = { nombre: et, total: 0, abiertos: 0,
+                                                  esUsuario: !!porNombre[norm(et)] };
+        porEtiqueta[et].total++;
+        const e2 = norm(d[i][c('estado_nova')] || d[i][c('estado_canonico')] || d[i][c('estado')]);
+        if (cerrados.indexOf(e2) === -1) porEtiqueta[et].abiertos++;
+      }
+    }
+
     const quien = String(d[i][cG] || '').trim();
     if (!quien) { out.sinAsignar++; continue; }
 
@@ -148,6 +174,15 @@ function apiReparto(s, p) {
   out.aNadieConocido = Object.keys(out.huerfanos).map(function (k) {
     return { nombre: k, pedidos: out.huerfanos[k] };
   }).sort(function (a, b) { return b.pedidos - a.pedidos; });
+
+  /**
+   * Quién trabajó, según el archivo. Ordenado por volumen, y diciendo
+   * de cada uno si además tiene cuenta en Nova — que es lo que separa
+   * «esta persona ve sus pedidos» de «este nombre solo está anotado».
+   */
+  out.etiquetas = Object.keys(porEtiqueta).map(function (k) { return porEtiqueta[k]; })
+    .sort(function (a, b) { return b.total - a.total; });
+  out.sinEtiqueta = cEt === -1;
 
   return out;
 }

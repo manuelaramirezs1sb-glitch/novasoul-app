@@ -49,6 +49,7 @@ ORDEN = [
     ('92-auditoria.gs',    '29 · AUDITORÍA · CASOS REALES'),
     ('93-central-hoy.gs',  '30 · CENTRAL · HOY, LEYENDO LA RED'),
     ('94-asignar.gs',      '31 · ASIGNAR · REPARTIR EL TRABAJO'),
+    ('95-propio.gs',       '32 · EL CONTROL DIARIO · NOVEDADES Y CAS'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

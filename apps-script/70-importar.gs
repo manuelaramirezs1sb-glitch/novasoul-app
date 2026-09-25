@@ -24,6 +24,13 @@
  */
 
 // Columnas que escribe la app y el importador jamás toca.
+/**
+ * Lo que escribe el equipo DENTRO de Nova y ninguna importación pisa.
+ *
+ * `gestora_asignada` está aquí porque es control de acceso y lo reparte
+ * Nova. `gestionado_por` NO está: es la etiqueta que viene del archivo
+ * y tiene que poder actualizarse cuando el archivo cambia.
+ */
 const COLUMNAS_DEL_EQUIPO = [
   'estado_nova', 'nota', 'solucion', 'gestora_asignada', 'fecha_promesa',
   'intentos', 'resuelta_en', 'telefono_2', 'telefono_2_norm',
@@ -61,6 +68,7 @@ function importarConFormato(ss, fuenteId, tienda) {
   const destino = { pedidos: 'Pedidos', novedades: 'Novedades',
                     llamadas: 'Llamadas', pauta: 'Pauta',
                     facturacion: 'Facturacion', cartera: 'Cartera',
+                    cas: 'CAS',
                     pedidos_secundario: 'Pedidos' }[r.tipo];
   if (!destino) throw new Error('No sé dónde guardar una fuente de tipo ' + r.tipo);
 
@@ -77,8 +85,20 @@ function importarConFormato(ss, fuenteId, tienda) {
   const aprendidos = estadosAprendidos(ss);
   const vistos = {};
 
+  /**
+   * Los pedidos indexados por su id externo, UNA vez.
+   *
+   * Las novedades y los CAS hablan de un pedido que ya está en Nova, y
+   * el único hilo entre los dos es ese id. Buscarlo fila por fila
+   * serían ciento sesenta recorridos de la hoja de Pedidos; así es uno.
+   * Solo se arma cuando hace falta.
+   */
+  const porExterno = (r.tipo === 'novedades' || r.tipo === 'cas')
+    ? pedidosPorExterno_(ss) : null;
+
   const preparadas = r.filas.map(function (f) {
-    return prepararFila(f, r.tipo, fuenteId, tienda, pais, ss, aprendidos, vistos);
+    return prepararFila(f, r.tipo, fuenteId, tienda, pais, ss, aprendidos, vistos,
+                        porExterno);
   });
 
   // Lo que se vio queda anotado, se entendiera o no
@@ -227,7 +247,8 @@ const CAMPOS_FECHA = ['fecha', 'fecha_entrega', 'fecha_promesa', 'fecha_ingreso'
                       'fecha_solucion', 'fecha_fin', 'ultimo_movimiento',
                       'actualizado', 'creado_en', 'ultimo_conteo'];
 
-function prepararFila(f, tipo, fuenteId, tienda, pais, ss, aprendidos, vistos) {
+function prepararFila(f, tipo, fuenteId, tienda, pais, ss, aprendidos, vistos,
+                      porExterno) {
   const o = Object.assign({}, f);
   o.fuente = fuenteId;
   o.tienda = tienda;
@@ -286,8 +307,28 @@ function prepararFila(f, tipo, fuenteId, tienda, pais, ss, aprendidos, vistos) {
       vistos[k].n++;
     }
   }
+  if (tipo === 'cas') {
+    normalizarCas_(o, fuenteId, tienda, porExterno);
+  }
   if (tipo === 'novedades') {
     o.grupo = grupoNovedad(o.motivo, o.codigo);
+    /**
+     * Amarrar la novedad a su pedido. Sin esto, la bandeja muestra el
+     * motivo pero no sabe de qué clienta habla — y el nombre vive en el
+     * pedido, no en la novedad.
+     */
+    if (!o.pedido_id && o.id_externo && porExterno) {
+      o.pedido_id = porExterno[String(o.id_externo).trim().toLowerCase()] || '';
+    }
+    /**
+     * Lo mismo que en pedidos: quien viene escrito en el archivo es una
+     * ETIQUETA, no una cuenta. `gestora` es control de acceso y solo la
+     * reparte Nova.
+     */
+    if (o.gestora !== undefined) {
+      if (!o.gestionado_por) o.gestionado_por = o.gestora;
+      delete o.gestora;
+    }
     /**
      * ── LO DEL ARCHIVO NO SE MEZCLA CON LO DEL EQUIPO ──
      *
@@ -562,6 +603,8 @@ function derivarNovedades(pedidos, fuenteId, tienda) {
          */
         solucion_plataforma: String(p.solucion || '').trim(),
         aclaracion: String(p.aclaracion || '').trim(),
+        // Quién la atendió según el archivo. Etiqueta, no cuenta.
+        gestionado_por: String(p.gestionado_por || '').trim(),
       };
     });
 }
