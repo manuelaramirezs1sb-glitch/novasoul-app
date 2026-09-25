@@ -502,7 +502,43 @@ const ESQUEMA_EMPRESARIAL = {
    * carga del día. Ver 97-accesos.gs.
    */
   Accesos: ['tienda','plataforma','url','usuario','clave','correo_codigo',
-            'canal_nombre','canal_url','nota','actualizado_en','actualizado_por'],
+            'canal_nombre','canal_url',
+            /**
+             * CÓMO LE PAGA LA CLIENTA.
+             *
+             * «no veo (…) la información para hacer los abonos o añadir
+             *  un link de pago por PayPal o si tiene otra pasarela».
+             *
+             * `pago_url` es el enlace que la gestora le manda a la
+             * compradora —PayPal, Wompi, un link de Nequi— y `pago_datos`
+             * es lo que se dicta por teléfono cuando no hay enlace: el
+             * banco, el número de cuenta y a nombre de quién.
+             *
+             * Son dos campos y no uno porque se usan en momentos
+             * distintos: el enlace se pega en el chat, los datos se leen
+             * en voz alta. Juntos en un solo campo, quien confirma tiene
+             * que leer todo el bloque buscando la línea que necesita.
+             */
+            'pago_nombre','pago_url','pago_datos',
+            'nota','actualizado_en','actualizado_por'],
+
+  /**
+   * La bitácora de intentos: una fila por nota, nunca una por caso.
+   *
+   * Existe porque había UNA columna `nota` por pedido y una caja de
+   * texto encima: quien anotaba el intento del jueves abría la caja con
+   * lo del miércoles dentro y escribía encima. El intento del miércoles
+   * desaparecía sin error y sin aviso.
+   *
+   * Ella: «deben dejar la nota por cada intento de contacto, deben
+   * aparecer todas, con fecha y nombre de quien puso la nota».
+   *
+   * `entidad` es Pedidos, Novedades o CAS. `autor_nombre` se guarda
+   * junto al correo por la misma razón que en Mensajes: la nota tiene
+   * que seguir diciendo quién la escribió cuando esa persona ya no esté
+   * en el equipo.
+   */
+  Notas: ['id','tienda','entidad','entidad_id','texto','autor','autor_nombre','creado_en'],
 
   /**
    * Los estados que cada plataforma inventa, y qué significan aquí.
@@ -4798,6 +4834,12 @@ function manejar(e, metodo) {
       // no puede pasar por la bitácora ni viajar en cada carga. Ver 97.
       case 'accesos':          return json(apiAccesos(s, p));
       case 'accesos_guardar':  return json(apiAccesosGuardar(s, p));
+      // La bitácora de intentos. Se agregan notas; no se reemplazan.
+      // Todo lo que la pantalla pinta al entrar, en un solo viaje.
+      // Eran DIECINUEVE peticiones; están contadas en 99-arranque-emp.gs.
+      case 'arranque':     return json(apiArranque(s, p));
+      case 'notas':        return json(apiNotas(s, p));
+      case 'nota_agregar': return json(apiNotaAgregar(s, p));
       case 'auditoria_casos':   return json(apiAuditoriaCasos(s, p));
       case 'auditoria_guardar': return json(apiAuditoriaGuardar(s, p));
       case 'estados':   return json(apiEstados(s, p));
@@ -7048,7 +7090,7 @@ function agregarMes(ss, tienda, mes, s, filas) {
   // La pauta solo se agrega para la dueña
   if (s.rol === 'dueno') {
     const shPa = ss.getSheetByName('Pauta');
-    out.gasto = 0; out.campanas = {}; out.gastoPorDia = {};
+    out.gasto = 0; out.campanas = {}; out.gastoPorDia = {}; out.gastoPorSemana = {};
     out.gastoSinConvertir = 0; out.monedasSinTasa = {};
     const monTienda = monedaDeTienda(ss, tienda);
     if (shPa && shPa.getLastRow() > 1) {
@@ -7108,6 +7150,30 @@ function agregarMes(ss, tienda, mes, s, filas) {
         if (!fin || fin === fecha) {
           out.gastoPorDia[fecha] = (out.gastoPorDia[fecha] || 0) + g;
         }
+
+        /**
+         * ── EL GASTO POR SEMANA ──
+         *
+         * «cómo no va a sacar el gasto semanal si ahí tiene los datos».
+         *
+         * Tiene razón, y por día no. Son dos preguntas con respuestas
+         * distintas: para repartir una fila de 35 días entre sus días
+         * hay que inventarse una curva diaria que el archivo no trae.
+         * Para la SEMANA no hace falta inventar tanto — y cuando el
+         * periodo cabe dentro de una semana no hay nada que inventar.
+         *
+         * Así que se reparte el gasto entre los días del periodo y se
+         * suma por semana, marcando qué semanas llevan un reparto
+         * adentro. Una semana marcada dice «esto es una parte de un
+         * periodo más largo», que es la verdad. Una semana sin marca es
+         * el gasto exacto.
+         */
+        semanasDePeriodo_(fecha, fin, g).forEach(function (x) {
+          const s = out.gastoPorSemana[x.semana] ||
+                    (out.gastoPorSemana[x.semana] = { gasto: 0, repartido: false });
+          s.gasto += x.gasto;
+          if (x.repartido) s.repartido = true;
+        });
       }
     }
     /**
@@ -7207,6 +7273,78 @@ function agregarMes(ss, tienda, mes, s, filas) {
     out.margen = out.ventas - out.gasto - out.costoProducto - out.costoEnvio
                  - cobroRetorno;
     out.utilidad = out.margen - out.fijos - out.comisiones;
+
+    /**
+     * ── EL PUNTO DE EQUILIBRIO, CALCULADO UNA SOLA VEZ ──
+     *
+     * Estaba calculado DOS veces en la pantalla, con dos cuentas
+     * distintas, y por eso decía dos cosas distintas a la vez:
+     *
+     *   Hoy    → «31 entregas para equilibrio · 47 entregadas»
+     *   Dinero → «te faltan 0 · 44 entregadas · meta 41»
+     *
+     * (el de Hoy ni siquiera era real: era el número de la maqueta, en
+     * pesos, sobre una tienda que factura en dólares).
+     *
+     * Y el de Dinero, aunque real, se contradecía con la tarjeta que
+     * tenía tres centímetros más arriba: decía «100% del punto de
+     * equilibrio» mientras QUEDA LIMPIO marcaba −109. Porque la
+     * contribución no restaba el cobro de retorno y lo que había que
+     * cubrir no sumaba las comisiones. Dos olvidos que, juntos, daban
+     * «ya cubriste tus gastos» a una tienda que estaba perdiendo plata.
+     *
+     * Ahora sale de aquí, de los mismos números con los que se calcula
+     * la utilidad, y por construcción cumple:
+     *
+     *      faltan > 0   ⟺   utilidad < 0
+     *
+     * Eso no es un detalle de presentación: es lo único que hace que las
+     * dos pantallas no puedan volver a pelearse. Hay una prueba que lo
+     * afirma sobre números al azar.
+     */
+    const porEntrega = out.entregados
+      ? (out.ventas - out.costoProducto - out.costoEnvio - cobroRetorno) / out.entregados
+      : 0;
+    const aCubrir = out.gasto + out.fijos + out.comisiones;
+
+    /**
+     * ── CUANDO CADA ENTREGA PIERDE PLATA ──
+     *
+     * Si la contribución es cero o negativa, NO existe un número de
+     * entregas que llegue al equilibrio: cada una hunde más el mes. La
+     * primera versión de esto ponía `necesarias = 0` y por tanto
+     * `faltan = 0`, y la pantalla decía «equilibrio cubierto» sobre una
+     * tienda que perdía 1.896 dólares. Lo encontró la prueba del
+     * invariante al meterle devoluciones con cobro de retorno.
+     *
+     * No es un caso raro: es el mes en que subieron el flete o cayó la
+     * tasa de entrega, y es justo cuando hay que enterarse. Así que se
+     * dice, en vez de devolver un cero que se lee al revés.
+     */
+    const alcanzable = porEntrega > 0;
+    const necesarias = alcanzable ? Math.ceil(aCubrir / porEntrega) : null;
+    out.equilibrio = {
+      // Lo que deja cada entrega después de TODO lo que depende de vender
+      contribucion: porEntrega,
+      // Lo que hay que cubrir con eso, desglosado para que la pantalla no
+      // tenga que volver a sumarlo por su cuenta
+      aCubrir: aCubrir,
+      detalle: [{ nombre: 'Pauta del mes', valor: out.gasto }]
+        .concat(out.detalleFijos.map(function (g) {
+          return { nombre: g.nombre, valor: g.valor };
+        }))
+        .concat(out.comisiones
+          ? [{ nombre: 'Comisiones de retiro y banco', valor: out.comisiones }] : []),
+      entregadas: out.entregados,
+      necesarias: necesarias,
+      faltan: alcanzable ? Math.max(0, necesarias - out.entregados) : null,
+      avance: alcanzable && necesarias
+        ? Math.min(100, Math.round(out.entregados / necesarias * 100)) : 0,
+      // `hay`: si hubo entregas con las que calcular algo.
+      // `alcanzable`: si vender más acerca el equilibrio o lo aleja.
+      hay: out.entregados > 0,
+      alcanzable: alcanzable,
+    };
   }
   return out;
 }
@@ -11450,6 +11588,61 @@ function masDias_(iso, n) {
 /** La semana cerrada más reciente: de lunes a domingo, ya terminada. */
 function semanaCerrada_(hoyISO) {
   return masDias_(lunesDe_(hoyISO), -7);
+}
+
+/**
+ * Un gasto de varios días, repartido por semanas.
+ *
+ * ┌─ POR QUÉ ESTO SÍ Y EL GASTO POR DÍA NO ────────────────────┐
+ * │                                                            │
+ * │ «cómo no va a sacar el gasto semanal si ahí tiene los       │
+ * │  datos».                                                    │
+ * │                                                            │
+ * │ El informe de conjuntos de Meta trae UNA fila por todo el   │
+ * │ periodo: «21 ago – 25 sep · $244». Repartir eso entre 36    │
+ * │ días dibuja una curva diaria plana que no existe — los      │
+ * │ martes y los domingos no gastan igual — y una curva         │
+ * │ inventada se lee como si fuera real.                        │
+ * │                                                            │
+ * │ Por semana es otra cosa. Cuando el periodo cabe dentro de   │
+ * │ una semana no se inventa NADA: es el gasto exacto de esa    │
+ * │ semana. Y cuando se pasa, el reparto proporcional por días  │
+ * │ es una aproximación que se puede decir en voz alta — y que  │
+ * │ esta función marca con `repartido` para que la pantalla lo  │
+ * │ diga en vez de disimularlo.                                │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * Devuelve [{ semana: lunes ISO, gasto, repartido }].
+ */
+function semanasDePeriodo_(desde, hasta, gasto) {
+  if (!desde) return [];
+  const fin = hasta && hasta > desde ? hasta : desde;
+
+  // Cuántos días cubre el periodo, contando los dos extremos.
+  const dias = Math.round(
+    (new Date(fin + 'T00:00:00Z') - new Date(desde + 'T00:00:00Z')) / 86400000) + 1;
+  if (!(dias > 0)) return [];
+
+  // Un periodo absurdamente largo es un archivo mal leído, no un gasto:
+  // recorrer un año día por día tampoco ayudaría a nadie.
+  if (dias > 400) return [];
+
+  const porDia = gasto / dias;
+  const acum = {};
+  let dia = desde;
+  for (let i = 0; i < dias; i++) {
+    const L = lunesDe_(dia);
+    acum[L] = (acum[L] || 0) + porDia;
+    dia = masDias_(dia, 1);
+  }
+
+  // `repartido` es del periodo entero: si tocó más de una semana, lo que
+  // cae en cada una es una parte calculada, no un dato del archivo.
+  const repartido = Object.keys(acum).length > 1;
+  return Object.keys(acum).sort().map(function (L) {
+    return { semana: L, gasto: acum[L], repartido: repartido };
+  });
 }
 
 // ─── LOS NÚMEROS DE UNA SEMANA ───────────────────────────────
@@ -20969,6 +21162,10 @@ function apiChatBorrar(s, p) {
  * │ `canal_url`          el canal donde la tienda habla con    │
  * │                      SUS COMPRADORES: Chat Center, WhatsApp│
  * │                                                            │
+ * │ `pago_*`             por dónde le paga la compradora: el   │
+ * │                      enlace que se pega en el chat y los   │
+ * │                      datos que se dictan por teléfono.     │
+ * │                                                            │
  * │ Estuvieron juntos un tiempo: el canal vivía en la pestaña  │
  * │ «Nova Chat» como si fuera el chat del equipo. No lo es —   │
  * │ el chat del equipo ahora está dentro de Nova (96-chat.gs), │
@@ -20981,7 +21178,8 @@ function apiChatBorrar(s, p) {
 
 /** Lo que Nova guarda de cada puerta. Uno por tienda. */
 const ACCESOS_CAMPOS = ['plataforma', 'url', 'usuario', 'clave', 'correo_codigo',
-                        'canal_nombre', 'canal_url', 'nota'];
+                        'canal_nombre', 'canal_url',
+                        'pago_nombre', 'pago_url', 'pago_datos', 'nota'];
 
 /**
  * Los campos que son un enlace, y por tanto se validan y se completan.
@@ -20991,7 +21189,7 @@ const ACCESOS_CAMPOS = ['plataforma', 'url', 'usuario', 'clave', 'correo_codigo'
  * porque validar solo en la pantalla deja la puerta abierta a quien llame
  * la API de frente.
  */
-const ACCESOS_ENLACES = ['url', 'canal_url'];
+const ACCESOS_ENLACES = ['url', 'canal_url', 'pago_url'];
 
 /** Los accesos de una tienda, tal como están en la hoja. */
 function accesosDe_(ss, tienda) {
@@ -21040,7 +21238,7 @@ function apiAccesos(s, p) {
     nombreTienda: nombreTienda(ss, tienda),
     accesos: a,
     puedeEditar: s.rol === 'dueno',
-    hay: !!(a.url || a.canal_url),
+    hay: !!(a.url || a.canal_url || a.pago_url || a.pago_datos),
   };
 }
 
@@ -21125,4 +21323,358 @@ function apiAccesosGuardar(s, p) {
   } catch (e) {
     return { ok: false, error: e.message };
   } finally { lock.releaseLock(); }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   35 · LA BITÁCORA DE INTENTOS
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  LA BITÁCORA · una nota por cada intento de contacto
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ QUÉ PIDIÓ ────────────────────────────────────────────────┐
+ * │                                                            │
+ * │ «recuerda que deben dejar la nota por cada intento de       │
+ * │  contacto. Deben aparecer todas, si se guardan que          │
+ * │  aparezca en la info con fecha y nombre de quien puso la    │
+ * │  nota».                                                     │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ LO QUE PASABA, QUE ES PEOR QUE «NO SE GUARDÓ» ────────────┐
+ * │                                                            │
+ * │ Había UNA columna `nota` por pedido y una caja de texto     │
+ * │ encima. Se guardaba bien. El problema es lo que pasaba la   │
+ * │ segunda vez: quien anotaba el intento del jueves abría la   │
+ * │ caja con lo del miércoles dentro, escribía encima, y el     │
+ * │ intento del miércoles DEJABA DE EXISTIR.                    │
+ * │                                                            │
+ * │ Nadie ve ese borrado. No hay error, no hay aviso: la nota   │
+ * │ anterior simplemente ya no está. Y después alguien mira el  │
+ * │ pedido y cree que solo se llamó una vez.                    │
+ * │                                                            │
+ * │ Por eso esto no es «agregar historial»: es tapar una        │
+ * │ pérdida de datos silenciosa.                               │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ NO SE EDITAN NI SE BORRAN ────────────────────────┐
+ * │                                                            │
+ * │ Igual que el chat del equipo. Una bitácora de intentos      │
+ * │ donde se puede reescribir lo dicho no sirve para lo único   │
+ * │ para lo que existe: saber qué se hizo, cuándo y quién.      │
+ * │                                                            │
+ * │ La auditoría se apoya en esto, y una auditoría sobre datos  │
+ * │ que el auditado puede cambiar no es una auditoría.          │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+
+/** Dónde se puede dejar una nota. Nada más: la lista es la puerta. */
+const NOTAS_ENTIDADES = ['Pedidos', 'Novedades', 'CAS'];
+
+/** Cuánto cabe en una nota, y cuántas trae una carga. */
+const NOTA_LARGO = 1500;
+const NOTAS_TOPE = 3000;
+
+/**
+ * Todas las notas de una tienda, de una sola lectura.
+ *
+ * La pantalla las indexa por entidad + id. Pedirlas de a un pedido serían
+ * trescientas peticiones para abrir una lista que ya está en memoria, y
+ * la hoja entera de notas es más pequeña que la de pedidos.
+ */
+function apiNotas(s, p) {
+  const tienda = String(p.tienda || s.tiendas[0] || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  const ss = libro_(s.sheetId);
+  const out = { ok: true, tienda: tienda, notas: {}, total: 0 };
+
+  const sh = ss.getSheetByName('Notas');
+  if (!sh || sh.getLastRow() < 2) return out;
+
+  const d = sh.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const c = function (n) { return e.indexOf(n); };
+
+  const todas = [];
+  for (let i = 1; i < d.length; i++) {
+    if (String(d[i][c('tienda')] || '').trim() !== tienda) continue;
+    const ent = String(d[i][c('entidad')] || '').trim();
+    const id = String(d[i][c('entidad_id')] || '').trim();
+    if (!ent || !id) continue;
+    todas.push({
+      clave: ent + ':' + id,
+      texto: String(d[i][c('texto')] || ''),
+      autor: String(d[i][c('autor_nombre')] || d[i][c('autor')] || ''),
+      cuando: String(d[i][c('creado_en')] || ''),
+    });
+  }
+
+  /**
+   * Si son muchísimas, se traen las más recientes. Nunca las más viejas:
+   * lo que hace falta para trabajar hoy es el último intento, no el
+   * primero. Y se dice cuántas quedaron fuera, para que nadie crea que
+   * esas son todas.
+   */
+  todas.sort(function (a, b) { return a.cuando < b.cuando ? -1 : 1; });
+  out.total = todas.length;
+  const trozo = todas.slice(-NOTAS_TOPE);
+  out.recortadas = todas.length - trozo.length;
+
+  trozo.forEach(function (n) {
+    if (!out.notas[n.clave]) out.notas[n.clave] = [];
+    out.notas[n.clave].push({ texto: n.texto, autor: n.autor, cuando: n.cuando });
+  });
+  return out;
+}
+
+/**
+ * Dejar una nota. Se agrega; nunca reemplaza a la anterior.
+ *
+ * Se comprueba que la fila exista Y que sea de una tienda suya antes de
+ * escribir nada. Sin eso, mandar un id cualquiera dejaría notas colgando
+ * de pedidos de otro cliente.
+ */
+function apiNotaAgregar(s, p) {
+  const entidad = String(p.entidad || '').trim();
+  if (NOTAS_ENTIDADES.indexOf(entidad) === -1) {
+    return { ok: false, error: 'Ahí no se pueden dejar notas.' };
+  }
+  const id = String(p.id || '').trim();
+  const texto = String(p.texto || '').trim();
+  if (!id) return { ok: false, error: 'No sé de qué caso.' };
+  if (!texto) return { ok: false, error: 'La nota está vacía.' };
+  if (texto.length > NOTA_LARGO) {
+    return { ok: false, error: 'La nota es muy larga. Máximo ' + NOTA_LARGO +
+                               ' caracteres: son varias notas, no una.' };
+  }
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) return { ok: false, error: 'Hay otra nota guardándose.' };
+  try {
+    const ss = libro_(s.sheetId);
+    const shE = ss.getSheetByName(entidad);
+    if (!shE || shE.getLastRow() < 2) {
+      return { ok: false, error: 'No encuentro ese ' + entidad.toLowerCase() + '.' };
+    }
+    const d = shE.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const cId = e.indexOf('id'), cT = e.indexOf('tienda');
+
+    let fila = -1;
+    for (let i = 1; i < d.length; i++) {
+      if (String(d[i][cId] || '').trim() === id) { fila = i; break; }
+    }
+    if (fila === -1) return { ok: false, error: 'No encuentro ese caso.' };
+
+    const tienda = cT !== -1 ? String(d[fila][cT] || '').trim() : (s.tiendas[0] || '');
+    if (s.tiendas.indexOf(tienda) === -1) {
+      return { ok: false, error: 'Ese caso no es de una tienda tuya.' };
+    }
+
+    const sh = ss.getSheetByName('Notas');
+    if (!sh) {
+      return { ok: false, error: 'Falta la hoja Notas. Corre bootstrapTodo() una vez.' };
+    }
+    const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
+    const nueva = {
+      id: 'n' + Utilities.getUuid().slice(0, 10),
+      tienda: tienda, entidad: entidad, entidad_id: id, texto: texto,
+      autor: s.email || '', autor_nombre: s.nombre || s.email || '',
+      creado_en: ahoraISO(),
+    };
+    sh.appendRow(enc.map(function (k) { return nueva[k] !== undefined ? nueva[k] : ''; }));
+
+    /**
+     * La columna `nota` de la fila se queda con la ÚLTIMA.
+     *
+     * No es duplicar el dato por comodidad: la auditoría levanta
+     * «sin_nota» leyendo esa columna, las alarmas la miran, y el export
+     * a Excel la lleva. Si dejara de escribirse, todo eso empezaría a
+     * decir que nadie anotó nada justo cuando el equipo por fin anota.
+     *
+     * La bitácora completa vive en Notas; esto es el resumen de una
+     * línea que el resto de Nova ya sabía leer.
+     */
+    const cN = e.indexOf('nota');
+    if (cN !== -1) shE.getRange(fila + 1, cN + 1).setValue(texto);
+
+    // Y quien anota es quien lo trabajó, si nadie lo había tocado antes.
+    const cHizo = e.indexOf('gestionado_por');
+    if (cHizo !== -1 && !String(d[fila][cHizo] || '').trim()) {
+      shE.getRange(fila + 1, cHizo + 1).setValue(s.nombre || s.email || '');
+    }
+
+    return { ok: true, nota: { texto: texto, autor: nueva.autor_nombre,
+                               cuando: nueva.creado_en },
+             gestionadoPor: cHizo !== -1
+               ? String(d[fila][cHizo] || '').trim() || (s.nombre || s.email || '') : '' };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  } finally { lock.releaseLock(); }
+}
+
+/**
+ * ── LO QUE YA ESTABA ESCRITO ANTES DE QUE HUBIERA BITÁCORA ──
+ *
+ * Las notas de una sola columna que el equipo lleva meses escribiendo no
+ * se tiran ni se migran: la pantalla las muestra como la primera entrada
+ * de la bitácora, sin autor ni fecha porque nunca los tuvo.
+ *
+ * Se hace al pintar y no con una migración porque una migración que se
+ * corre dos veces duplica todo, y ésta no tendría forma de saber si ya
+ * corrió. La pantalla ya tiene la fila en la mano; no cuesta nada.
+ */
+
+
+/* ═══════════════════════════════════════════════════════════════
+   36 · EMPRESARIAL EN UNA SOLA PETICIÓN
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  NOVA EMPRESARIAL EN UNA SOLA PETICIÓN
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ LO QUE SE MIDIÓ ──────────────────────────────────────────┐
+ * │                                                            │
+ * │ «se demora mucho en cargar».                                │
+ * │                                                            │
+ * │ Conté las peticiones que hace la pantalla al abrirse, en    │
+ * │ un navegador de verdad: DIECINUEVE.                        │
+ * │                                                            │
+ * │   accesos · alarmas · auditoria · auditoria_casos · cas ·   │
+ * │   equipo · estados · fuentes · historial · listar ×2 ·      │
+ * │   meta_estado · notas · productos · recuento · reparto ·    │
+ * │   reporte_dia · resumen · semaforo                         │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ DIECINUEVE CUESTAN TANTO ─────────────────────────┐
+ * │                                                            │
+ * │ No son los datos: son los VIAJES. Cada petición a Apps      │
+ * │ Script arranca un motor de Google, comprueba la sesión,     │
+ * │ corre y devuelve. Eso cuesta entre medio segundo y dos      │
+ * │ SIEMPRE, traiga tres filas o tres mil.                     │
+ * │                                                            │
+ * │ Y hay algo peor, que es lo que de verdad duele: Google      │
+ * │ SERIALIZA las peticiones del mismo usuario. Las diecinueve  │
+ * │ que el navegador manda «a la vez» se ejecutan una detrás de │
+ * │ otra. Diecinueve arranques, diecinueve `openById`,          │
+ * │ diecinueve lecturas de las mismas hojas.                    │
+ * │                                                            │
+ * │ Juntarlas en una no solo quita dieciocho viajes: dentro de  │
+ * │ UNA ejecución, `libro_()` memoriza el libro y cada hoja se  │
+ * │ abre una vez para todas las secciones.                     │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ LO QUE NO SE JUNTA, Y POR QUÉ ────────────────────────────┐
+ * │                                                            │
+ * │ Nada que ESCRIBA. Esto es solo lectura: si una petición de  │
+ * │ lectura se pierde, se reintenta y ya. Meter una escritura   │
+ * │ aquí la haría depender de que las otras dieciocho salgan    │
+ * │ bien.                                                      │
+ * │                                                            │
+ * │ Y nada que llame afuera: `meta_traer` habla con Facebook y  │
+ * │ puede tardar lo que quiera. Un arranque que espera a un     │
+ * │ servidor ajeno deja la pantalla en blanco por culpa de otro.│
+ * │ `meta_estado` sí entra: solo mira si hay llave guardada.    │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ Y SI UNA SECCIÓN FALLA ───────────────────────────────────┐
+ * │                                                            │
+ * │ Cada una va en su propio try. Una hoja que falta no puede   │
+ * │ dejar la pantalla entera en blanco — el peor síntoma de     │
+ * │ todos, porque no se distingue de «todavía está cargando».   │
+ * │                                                            │
+ * │ Lo que falló va en `fallaron`, con su nombre y su motivo, y │
+ * │ la pantalla vuelve a pedir ESAS por separado.              │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+
+/**
+ * Qué trae el arranque, y con qué se llama cada cosa.
+ *
+ * Está como tabla y no como diecisiete líneas de código para que agregar
+ * una sección sea agregar una fila — y para que se vea de un vistazo qué
+ * viaja al abrir la pantalla, que es la lista que hay que vigilar para
+ * que esto no vuelva a crecer a diecinueve.
+ */
+const ARRANQUE_EMP = [
+  ['resumen',          function (s, p) { return apiResumen(s, p); }],
+  ['pedidos',          function (s, p) {
+    return apiListar(s, { entidad: 'Pedidos', tienda: p.tienda, limite: p.limite });
+  }],
+  ['novedades',        function (s, p) {
+    return apiListar(s, { entidad: 'Novedades', tienda: p.tienda, limite: p.limite });
+  }],
+  ['notas',            function (s, p) { return apiNotas(s, p); }],
+  ['accesos',          function (s, p) { return apiAccesos(s, p); }],
+  ['equipo',           function (s, p) { return apiEquipo(s, p); }],
+  ['alarmas',          function (s, p) { return apiAlarmas(s, p); }],
+  ['productos',        function (s, p) { return apiProductos(s, p); }],
+  ['cas',              function (s, p) { return apiCas(s, p); }],
+  ['estados',          function (s, p) { return apiEstados(s, p); }],
+  ['historial',        function (s, p) { return apiHistorial(s, p); }],
+  ['fuentes',          function (s, p) { return apiFuentes(s, p); }],
+  ['recuento',         function (s, p) { return apiRecuento(s, p); }],
+  ['reporte_dia',      function (s, p) { return apiReporteDia(s, p); }],
+  ['semaforo',         function (s, p) { return apiSemaforo(s, p); }],
+  ['auditoria',        function (s, p) { return apiAuditoria(s, p); }],
+  ['auditoria_casos',  function (s, p) { return apiAuditoriaCasos(s, p); }],
+  ['reparto',          function (s, p) { return apiReparto(s, p); }],
+  ['meta_estado',      function (s, p) { return apiMetaEstado(s, p); }],
+];
+
+/**
+ * Todo lo que la pantalla pinta al entrar, de una.
+ *
+ * Devuelve `partes`, con la respuesta tal cual de cada acción: la
+ * pantalla no tiene que aprender un formato nuevo, le da a cada pintor
+ * exactamente lo que ya esperaba recibir de su propia petición.
+ */
+function apiArranque(s, p) {
+  const tienda = String(p.tienda || s.tiendas[0] || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  const args = { tienda: tienda, mes: p.mes || '', limite: p.limite || 0 };
+
+  const partes = {};
+  const fallaron = [];
+  const t0 = Date.now();
+
+  ARRANQUE_EMP.forEach(function (par) {
+    const nombre = par[0];
+    try {
+      const r = par[1](s, args);
+      /**
+       * Un «no tienes permiso» NO es un fallo del arranque.
+       *
+       * La admin no ve el reparto y la gestora no ve la auditoría: esas
+       * secciones responden `ok:false` a propósito. Ponerlas en
+       * `fallaron` haría que la pantalla las volviera a pedir una por
+       * una —diecinueve viajes otra vez, y el mismo no— por cada
+       * persona que no es la dueña.
+       */
+      partes[nombre] = r;
+    } catch (e) {
+      fallaron.push({ parte: nombre, error: String(e && e.message || e) });
+    }
+  });
+
+  return {
+    ok: true, tienda: tienda, partes: partes, fallaron: fallaron,
+    // Cuánto tardó de verdad, para no volver a discutirlo de memoria.
+    ms: Date.now() - t0,
+  };
 }

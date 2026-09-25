@@ -498,7 +498,43 @@ const ESQUEMA_EMPRESARIAL = {
    * carga del día. Ver 97-accesos.gs.
    */
   Accesos: ['tienda','plataforma','url','usuario','clave','correo_codigo',
-            'canal_nombre','canal_url','nota','actualizado_en','actualizado_por'],
+            'canal_nombre','canal_url',
+            /**
+             * CÓMO LE PAGA LA CLIENTA.
+             *
+             * «no veo (…) la información para hacer los abonos o añadir
+             *  un link de pago por PayPal o si tiene otra pasarela».
+             *
+             * `pago_url` es el enlace que la gestora le manda a la
+             * compradora —PayPal, Wompi, un link de Nequi— y `pago_datos`
+             * es lo que se dicta por teléfono cuando no hay enlace: el
+             * banco, el número de cuenta y a nombre de quién.
+             *
+             * Son dos campos y no uno porque se usan en momentos
+             * distintos: el enlace se pega en el chat, los datos se leen
+             * en voz alta. Juntos en un solo campo, quien confirma tiene
+             * que leer todo el bloque buscando la línea que necesita.
+             */
+            'pago_nombre','pago_url','pago_datos',
+            'nota','actualizado_en','actualizado_por'],
+
+  /**
+   * La bitácora de intentos: una fila por nota, nunca una por caso.
+   *
+   * Existe porque había UNA columna `nota` por pedido y una caja de
+   * texto encima: quien anotaba el intento del jueves abría la caja con
+   * lo del miércoles dentro y escribía encima. El intento del miércoles
+   * desaparecía sin error y sin aviso.
+   *
+   * Ella: «deben dejar la nota por cada intento de contacto, deben
+   * aparecer todas, con fecha y nombre de quien puso la nota».
+   *
+   * `entidad` es Pedidos, Novedades o CAS. `autor_nombre` se guarda
+   * junto al correo por la misma razón que en Mensajes: la nota tiene
+   * que seguir diciendo quién la escribió cuando esa persona ya no esté
+   * en el equipo.
+   */
+  Notas: ['id','tienda','entidad','entidad_id','texto','autor','autor_nombre','creado_en'],
 
   /**
    * Los estados que cada plataforma inventa, y qué significan aquí.

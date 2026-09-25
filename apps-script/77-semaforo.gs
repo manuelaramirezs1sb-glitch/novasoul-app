@@ -81,6 +81,61 @@ function semanaCerrada_(hoyISO) {
   return masDias_(lunesDe_(hoyISO), -7);
 }
 
+/**
+ * Un gasto de varios días, repartido por semanas.
+ *
+ * ┌─ POR QUÉ ESTO SÍ Y EL GASTO POR DÍA NO ────────────────────┐
+ * │                                                            │
+ * │ «cómo no va a sacar el gasto semanal si ahí tiene los       │
+ * │  datos».                                                    │
+ * │                                                            │
+ * │ El informe de conjuntos de Meta trae UNA fila por todo el   │
+ * │ periodo: «21 ago – 25 sep · $244». Repartir eso entre 36    │
+ * │ días dibuja una curva diaria plana que no existe — los      │
+ * │ martes y los domingos no gastan igual — y una curva         │
+ * │ inventada se lee como si fuera real.                        │
+ * │                                                            │
+ * │ Por semana es otra cosa. Cuando el periodo cabe dentro de   │
+ * │ una semana no se inventa NADA: es el gasto exacto de esa    │
+ * │ semana. Y cuando se pasa, el reparto proporcional por días  │
+ * │ es una aproximación que se puede decir en voz alta — y que  │
+ * │ esta función marca con `repartido` para que la pantalla lo  │
+ * │ diga en vez de disimularlo.                                │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * Devuelve [{ semana: lunes ISO, gasto, repartido }].
+ */
+function semanasDePeriodo_(desde, hasta, gasto) {
+  if (!desde) return [];
+  const fin = hasta && hasta > desde ? hasta : desde;
+
+  // Cuántos días cubre el periodo, contando los dos extremos.
+  const dias = Math.round(
+    (new Date(fin + 'T00:00:00Z') - new Date(desde + 'T00:00:00Z')) / 86400000) + 1;
+  if (!(dias > 0)) return [];
+
+  // Un periodo absurdamente largo es un archivo mal leído, no un gasto:
+  // recorrer un año día por día tampoco ayudaría a nadie.
+  if (dias > 400) return [];
+
+  const porDia = gasto / dias;
+  const acum = {};
+  let dia = desde;
+  for (let i = 0; i < dias; i++) {
+    const L = lunesDe_(dia);
+    acum[L] = (acum[L] || 0) + porDia;
+    dia = masDias_(dia, 1);
+  }
+
+  // `repartido` es del periodo entero: si tocó más de una semana, lo que
+  // cae en cada una es una parte calculada, no un dato del archivo.
+  const repartido = Object.keys(acum).length > 1;
+  return Object.keys(acum).sort().map(function (L) {
+    return { semana: L, gasto: acum[L], repartido: repartido };
+  });
+}
+
 // ─── LOS NÚMEROS DE UNA SEMANA ───────────────────────────────
 
 /**

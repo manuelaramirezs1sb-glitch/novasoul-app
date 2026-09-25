@@ -148,8 +148,8 @@ ok('la pantalla abre sin accesos puestos', r.ok, JSON.stringify(r));
 igual('y dice que no hay nada', false, r.hay);
 igual('con el nombre de la tienda para el mensaje', 'Nutrea Ecuador', r.nombreTienda);
 igual('la dueña puede editar', true, r.puedeEditar);
-igual('todos los campos en blanco', ['', '', '', '', '', '', '', ''],
-      F.ACCESOS_CAMPOS.map(k => r.accesos[k]));
+igual('todos los campos en blanco',
+      F.ACCESOS_CAMPOS.map(() => ''), F.ACCESOS_CAMPOS.map(k => r.accesos[k]));
 
 console.log('\n── 2 · guardar, y que el enlace quede usable ──');
 r = F.apiAccesosGuardar(S.duena, { tienda: 'ec', cambios: REALES });
@@ -163,6 +163,21 @@ igual('el del chat se respeta tal cual', 'https://chateapro.app/login', r.acceso
 igual('la plataforma queda con su nombre', 'Dropi', r.accesos.plataforma);
 igual('y queda dicho quién y cuándo', 'sara@x.com', r.accesos.actualizado_por);
 ok('con fecha', /^2026-09-25/.test(r.accesos.actualizado_en), r.accesos.actualizado_en);
+
+console.log('\n── 2b · por dónde le paga la compradora ──');
+r = F.apiAccesosGuardar(S.duena, { tienda: 'ec', cambios: {
+  pago_nombre: 'PayPal', pago_url: 'paypal.me/nutrea',
+  pago_datos: 'Bancolombia ahorros 123-456789-00 a nombre de Nutrea SAS' } });
+ok('se guardan', r.ok, JSON.stringify(r));
+igual('el enlace de pago también se completa', 'https://paypal.me/nutrea',
+      r.accesos.pago_url);
+igual('y los datos que se dictan por teléfono quedan tal cual',
+      'Bancolombia ahorros 123-456789-00 a nombre de Nutrea SAS', r.accesos.pago_datos);
+r = F.apiAccesosGuardar(S.duena, { tienda: 'ec',
+  cambios: { pago_url: 'javascript:alert(1)' } });
+ok('un enlace de pago peligroso se rechaza igual', r.ok === false, JSON.stringify(r));
+igual('y el bueno sigue', 'https://paypal.me/nutrea',
+      F.apiAccesos(S.duena, { tienda: 'ec' }).accesos.pago_url);
 
 console.log('\n── 3 · LA CONTRASEÑA NO ENTRA EN LA BITÁCORA ──');
 const mov = LIBROS.emp.Movimientos.slice(1);
@@ -252,7 +267,8 @@ ok('y guardar dice qué falta', r.ok === false && /bootstrapTodo/.test(r.error |
 console.log('\n── 10 · la hoja está declarada ──');
 ok('Accesos está en el esquema', !!C_ACC, JSON.stringify(C_ACC));
 ['tienda','plataforma','url','usuario','clave','correo_codigo',
- 'canal_nombre','canal_url','nota','actualizado_en','actualizado_por']
+ 'canal_nombre','canal_url','pago_nombre','pago_url','pago_datos',
+ 'nota','actualizado_en','actualizado_por']
   .forEach(c => ok('columna ' + c, (C_ACC || []).indexOf(c) !== -1));
 
 console.log(fallas ? '\n' + fallas + ' FALLAS\n' : '\nTodo bien\n');

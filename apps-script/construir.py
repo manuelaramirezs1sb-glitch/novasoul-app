@@ -52,6 +52,8 @@ ORDEN = [
     ('95-propio.gs',       '32 · EL CONTROL DIARIO · NOVEDADES Y CAS'),
     ('96-chat.gs',         '33 · EL CHAT DEL EQUIPO, DENTRO DE NOVA'),
     ('97-accesos.gs',      '34 · LOS ACCESOS DE LA TIENDA'),
+    ('98-notas.gs',        '35 · LA BITÁCORA DE INTENTOS'),
+    ('99-arranque-emp.gs', '36 · EMPRESARIAL EN UNA SOLA PETICIÓN'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

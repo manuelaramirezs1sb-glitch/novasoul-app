@@ -152,6 +152,12 @@ function manejar(e, metodo) {
       // no puede pasar por la bitácora ni viajar en cada carga. Ver 97.
       case 'accesos':          return json(apiAccesos(s, p));
       case 'accesos_guardar':  return json(apiAccesosGuardar(s, p));
+      // La bitácora de intentos. Se agregan notas; no se reemplazan.
+      // Todo lo que la pantalla pinta al entrar, en un solo viaje.
+      // Eran DIECINUEVE peticiones; están contadas en 99-arranque-emp.gs.
+      case 'arranque':     return json(apiArranque(s, p));
+      case 'notas':        return json(apiNotas(s, p));
+      case 'nota_agregar': return json(apiNotaAgregar(s, p));
       case 'auditoria_casos':   return json(apiAuditoriaCasos(s, p));
       case 'auditoria_guardar': return json(apiAuditoriaGuardar(s, p));
       case 'estados':   return json(apiEstados(s, p));
@@ -2402,7 +2408,7 @@ function agregarMes(ss, tienda, mes, s, filas) {
   // La pauta solo se agrega para la dueña
   if (s.rol === 'dueno') {
     const shPa = ss.getSheetByName('Pauta');
-    out.gasto = 0; out.campanas = {}; out.gastoPorDia = {};
+    out.gasto = 0; out.campanas = {}; out.gastoPorDia = {}; out.gastoPorSemana = {};
     out.gastoSinConvertir = 0; out.monedasSinTasa = {};
     const monTienda = monedaDeTienda(ss, tienda);
     if (shPa && shPa.getLastRow() > 1) {
@@ -2462,6 +2468,30 @@ function agregarMes(ss, tienda, mes, s, filas) {
         if (!fin || fin === fecha) {
           out.gastoPorDia[fecha] = (out.gastoPorDia[fecha] || 0) + g;
         }
+
+        /**
+         * ── EL GASTO POR SEMANA ──
+         *
+         * «cómo no va a sacar el gasto semanal si ahí tiene los datos».
+         *
+         * Tiene razón, y por día no. Son dos preguntas con respuestas
+         * distintas: para repartir una fila de 35 días entre sus días
+         * hay que inventarse una curva diaria que el archivo no trae.
+         * Para la SEMANA no hace falta inventar tanto — y cuando el
+         * periodo cabe dentro de una semana no hay nada que inventar.
+         *
+         * Así que se reparte el gasto entre los días del periodo y se
+         * suma por semana, marcando qué semanas llevan un reparto
+         * adentro. Una semana marcada dice «esto es una parte de un
+         * periodo más largo», que es la verdad. Una semana sin marca es
+         * el gasto exacto.
+         */
+        semanasDePeriodo_(fecha, fin, g).forEach(function (x) {
+          const s = out.gastoPorSemana[x.semana] ||
+                    (out.gastoPorSemana[x.semana] = { gasto: 0, repartido: false });
+          s.gasto += x.gasto;
+          if (x.repartido) s.repartido = true;
+        });
       }
     }
     /**
@@ -2561,6 +2591,78 @@ function agregarMes(ss, tienda, mes, s, filas) {
     out.margen = out.ventas - out.gasto - out.costoProducto - out.costoEnvio
                  - cobroRetorno;
     out.utilidad = out.margen - out.fijos - out.comisiones;
+
+    /**
+     * ── EL PUNTO DE EQUILIBRIO, CALCULADO UNA SOLA VEZ ──
+     *
+     * Estaba calculado DOS veces en la pantalla, con dos cuentas
+     * distintas, y por eso decía dos cosas distintas a la vez:
+     *
+     *   Hoy    → «31 entregas para equilibrio · 47 entregadas»
+     *   Dinero → «te faltan 0 · 44 entregadas · meta 41»
+     *
+     * (el de Hoy ni siquiera era real: era el número de la maqueta, en
+     * pesos, sobre una tienda que factura en dólares).
+     *
+     * Y el de Dinero, aunque real, se contradecía con la tarjeta que
+     * tenía tres centímetros más arriba: decía «100% del punto de
+     * equilibrio» mientras QUEDA LIMPIO marcaba −109. Porque la
+     * contribución no restaba el cobro de retorno y lo que había que
+     * cubrir no sumaba las comisiones. Dos olvidos que, juntos, daban
+     * «ya cubriste tus gastos» a una tienda que estaba perdiendo plata.
+     *
+     * Ahora sale de aquí, de los mismos números con los que se calcula
+     * la utilidad, y por construcción cumple:
+     *
+     *      faltan > 0   ⟺   utilidad < 0
+     *
+     * Eso no es un detalle de presentación: es lo único que hace que las
+     * dos pantallas no puedan volver a pelearse. Hay una prueba que lo
+     * afirma sobre números al azar.
+     */
+    const porEntrega = out.entregados
+      ? (out.ventas - out.costoProducto - out.costoEnvio - cobroRetorno) / out.entregados
+      : 0;
+    const aCubrir = out.gasto + out.fijos + out.comisiones;
+
+    /**
+     * ── CUANDO CADA ENTREGA PIERDE PLATA ──
+     *
+     * Si la contribución es cero o negativa, NO existe un número de
+     * entregas que llegue al equilibrio: cada una hunde más el mes. La
+     * primera versión de esto ponía `necesarias = 0` y por tanto
+     * `faltan = 0`, y la pantalla decía «equilibrio cubierto» sobre una
+     * tienda que perdía 1.896 dólares. Lo encontró la prueba del
+     * invariante al meterle devoluciones con cobro de retorno.
+     *
+     * No es un caso raro: es el mes en que subieron el flete o cayó la
+     * tasa de entrega, y es justo cuando hay que enterarse. Así que se
+     * dice, en vez de devolver un cero que se lee al revés.
+     */
+    const alcanzable = porEntrega > 0;
+    const necesarias = alcanzable ? Math.ceil(aCubrir / porEntrega) : null;
+    out.equilibrio = {
+      // Lo que deja cada entrega después de TODO lo que depende de vender
+      contribucion: porEntrega,
+      // Lo que hay que cubrir con eso, desglosado para que la pantalla no
+      // tenga que volver a sumarlo por su cuenta
+      aCubrir: aCubrir,
+      detalle: [{ nombre: 'Pauta del mes', valor: out.gasto }]
+        .concat(out.detalleFijos.map(function (g) {
+          return { nombre: g.nombre, valor: g.valor };
+        }))
+        .concat(out.comisiones
+          ? [{ nombre: 'Comisiones de retiro y banco', valor: out.comisiones }] : []),
+      entregadas: out.entregados,
+      necesarias: necesarias,
+      faltan: alcanzable ? Math.max(0, necesarias - out.entregados) : null,
+      avance: alcanzable && necesarias
+        ? Math.min(100, Math.round(out.entregados / necesarias * 100)) : 0,
+      // `hay`: si hubo entregas con las que calcular algo.
+      // `alcanzable`: si vender más acerca el equilibrio o lo aleja.
+      hay: out.entregados > 0,
+      alcanzable: alcanzable,
+    };
   }
   return out;
 }

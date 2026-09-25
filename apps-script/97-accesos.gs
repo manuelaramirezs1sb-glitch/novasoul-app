@@ -64,6 +64,10 @@
  * │ `canal_url`          el canal donde la tienda habla con    │
  * │                      SUS COMPRADORES: Chat Center, WhatsApp│
  * │                                                            │
+ * │ `pago_*`             por dónde le paga la compradora: el   │
+ * │                      enlace que se pega en el chat y los   │
+ * │                      datos que se dictan por teléfono.     │
+ * │                                                            │
  * │ Estuvieron juntos un tiempo: el canal vivía en la pestaña  │
  * │ «Nova Chat» como si fuera el chat del equipo. No lo es —   │
  * │ el chat del equipo ahora está dentro de Nova (96-chat.gs), │
@@ -76,7 +80,8 @@
 
 /** Lo que Nova guarda de cada puerta. Uno por tienda. */
 const ACCESOS_CAMPOS = ['plataforma', 'url', 'usuario', 'clave', 'correo_codigo',
-                        'canal_nombre', 'canal_url', 'nota'];
+                        'canal_nombre', 'canal_url',
+                        'pago_nombre', 'pago_url', 'pago_datos', 'nota'];
 
 /**
  * Los campos que son un enlace, y por tanto se validan y se completan.
@@ -86,7 +91,7 @@ const ACCESOS_CAMPOS = ['plataforma', 'url', 'usuario', 'clave', 'correo_codigo'
  * porque validar solo en la pantalla deja la puerta abierta a quien llame
  * la API de frente.
  */
-const ACCESOS_ENLACES = ['url', 'canal_url'];
+const ACCESOS_ENLACES = ['url', 'canal_url', 'pago_url'];
 
 /** Los accesos de una tienda, tal como están en la hoja. */
 function accesosDe_(ss, tienda) {
@@ -135,7 +140,7 @@ function apiAccesos(s, p) {
     nombreTienda: nombreTienda(ss, tienda),
     accesos: a,
     puedeEditar: s.rol === 'dueno',
-    hay: !!(a.url || a.canal_url),
+    hay: !!(a.url || a.canal_url || a.pago_url || a.pago_datos),
   };
 }
 

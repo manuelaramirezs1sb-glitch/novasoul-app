@@ -689,6 +689,33 @@ input.li:focus{border-color:var(--acc-d);}
 .acc-aviso{font:500 12px/1.6 'DM Sans';color:var(--t-ink2);background:var(--s-dark);
   border-radius:11px;padding:11px 14px;max-width:70ch;}
 .acc-nota{font:500 12px/1.6 'DM Sans';color:var(--t-mut);max-width:70ch;}
+/* El pie del gráfico de pauta: dice qué se calculó y qué se repartió. */
+.pauta-pie{font:500 11px/1.55 'DM Sans';color:var(--t-mut2);margin-top:10px;max-width:62ch;}
+/* Las pestañas del cierre. Al imprimir se esconden y se muestran los dos
+   paneles: un PDF archivado tiene que llevar el informe completo. */
+.cm-tabs{display:flex;gap:7px;}
+.cm-tab{font:600 12.5px/1 'DM Sans';padding:10px 16px;border-radius:20px;cursor:pointer;
+  color:var(--t-mut2);background:var(--s-card);border:1px solid var(--s-line2);}
+.cm-tab.on{background:var(--acc-d);color:#f1f4e8;border-color:transparent;}
+.cm-tab span{font:600 10.5px/1 'DM Sans';background:#c0392b;color:#fff;border-radius:9px;
+  padding:3px 6px;margin-left:7px;}
+.cm-tab.on span{background:rgba(255,255,255,.28);}
+.inf-link{color:var(--acc-d);font-weight:600;cursor:pointer;text-decoration:underline;}
+/* El vacío del gráfico no puede ser un hijo de .bars: ahí lo alinea
+   contra el suelo del flex y queda pegado al borde de abajo. */
+.bars .eq-vacio{align-self:center;}
+/* ─── LA BITÁCORA DE INTENTOS ──────────────────────────
+   No se pueden editar a propósito: la lista es de solo lectura y la
+   única caja que acepta texto es la de abajo, que AGREGA. */
+.nt-lista{display:flex;flex-direction:column;gap:7px;margin:5px 0 9px;
+  max-height:210px;overflow-y:auto;}
+.nt-row{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:11px;
+  padding:9px 12px;}
+.nt-txt{font:500 12.5px/1.55 'DM Sans';color:var(--t-ink);white-space:pre-wrap;
+  word-break:break-word;}
+.nt-meta{font:500 10.5px/1.4 'DM Sans';color:var(--t-mut2);margin-top:5px;}
+.nt-vacio{font:500 12px/1.5 'DM Sans';color:var(--t-mut2);padding:8px 2px;}
+.nt-pie{font:500 11px/1.5 'DM Sans';color:var(--t-mut2);margin:5px 0 9px;}
 .cfg-probar{font:600 12px/1 'DM Sans';color:var(--acc-d);text-decoration:none;}
 .cfg-probar:hover{text-decoration:underline;}
 /* ─── ROL: visibilidad por panel ─────────────────────── */
@@ -1223,6 +1250,9 @@ input.li:focus{border-color:var(--acc-d);}
   .view{display:none!important;}
   .view#v-cierre{display:block!important;}
   .cm-doc{border:none;border-radius:0;padding:0;gap:18px;}
+  /* Al imprimir no hay pestañas que tocar: van los dos paneles. */
+  .cm-tabs{display:none!important;}
+  #cm-diag{display:flex!important;}
   .cm-sec{break-inside:avoid;}
   .cm-item,.cm-k,.cm-fx{break-inside:avoid;}
   .cm-tbl{font-size:10px;}
@@ -1497,28 +1527,44 @@ input.li:focus{border-color:var(--acc-d);}
           <div class="kgrid" id="kmes"></div>
         </div>
 
-        <!-- Punto de equilibrio -->
-        <div class="card" style="cursor:pointer;" onclick="go('pauta',null)">
+        <!-- Punto de equilibrio.
+             `ro-dueno` porque es una tarjeta de plata: sale de la pauta,
+             los gastos fijos y las comisiones. Sin esa marca, la admin la
+             veía con los números de la maqueta —pesos colombianos en una
+             tienda que factura en dólares— y además el «Abrir →» la
+             mandaba a una pantalla que su rol no puede ver. -->
+        <div class="card ro-dueno" style="cursor:pointer;" onclick="go('pauta',null)">
           <div class="card-h"><span class="ct">Punto de equilibrio</span><span class="cl">Abrir →</span></div>
           <div class="eq-big" id="eqflt"></div>
           <div class="pbar"><div class="pfill" id="eqbar" style="background:#6d7d4a;"></div></div>
           <div style="font:500 11.5px/1.4 'DM Sans';color:var(--t-mut2);" id="eqsub"></div>
         </div>
 
-        <!-- Decisiones + Pauta -->
-        <div class="g2">
-          <div class="card">
-            <div class="card-h"><span class="ct">Solo tú puedes decidir</span><span class="bd bd-r">3</span></div>
-            <div style="display:flex;flex-direction:column;gap:8px;">
-              <div class="prow"><div class="pt">¿Renovamos el contrato con Dropi por 6 meses?</div><div class="ps">Vence el 30 de sep. Descuento 12% si renuevas antes del 15.</div></div>
-              <div class="prow"><div class="pt">Presupuesto extra de pauta · Colágeno Premium</div><div class="ps">La gestora propone <span id="pp-extra">$500</span> más esta semana. CPA subió.</div></div>
-              <div class="prow"><div class="pt">Bonificación especial Camila · agosto</div><div class="ps">93% efectividad, 214 entregas. Propone <span id="pp-bono">$120</span> extra.</div></div>
-            </div>
-          </div>
-          <div class="card" style="cursor:pointer;" onclick="go('pauta',null)">
-            <div class="card-h"><span class="ct">Escalar o frenar</span><span class="cl">Abrir →</span></div>
-            <div style="display:flex;flex-direction:column;gap:8px;" id="palist"></div>
-          </div>
+        <!--
+          ── AQUÍ ESTABA «SOLO TÚ PUEDES DECIDIR», Y SE BORRÓ ──
+
+          «esto está mal, quítalo o cámbialo, no es congruente».
+
+          Tenía razón, y de la peor manera: eran tres decisiones
+          inventadas —un contrato con Dropi que vence el 30, un
+          presupuesto para un «Colágeno Premium» que no existe, una
+          bonificación para una «Camila» que no trabaja aquí— escritas
+          con fecha, porcentaje y tono de certeza. Y donde iba la plata
+          decía «$ —», porque el número de la maqueta no tenía de dónde
+          salir.
+
+          Una tarjeta que se llama «solo tú puedes decidir» y le pone
+          decisiones falsas delante a la dueña es exactamente lo que no
+          puede pasar en la primera pantalla. Se borra entera en vez de
+          dejarla apagada: una maqueta que todavía se pinta vuelve sola.
+
+          Si va a existir, tiene que salir de las alarmas —que sí son
+          reales— y de lo que ella considere que es una decisión suya y
+          no de su equipo. Eso lo decide ella, no yo.
+        -->
+        <div class="card" style="cursor:pointer;" onclick="go('pauta',null)">
+          <div class="card-h"><span class="ct">Escalar o frenar</span><span class="cl">Abrir →</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;" id="palist"></div>
         </div>
 
         <!-- Equipo + Inventario riesgo -->
@@ -1698,9 +1744,16 @@ input.li:focus{border-color:var(--acc-d);}
             <div class="card-h"><span class="ct">ROAS por producto</span></div>
             <div style="display:flex;flex-direction:column;gap:8px;" id="roaslist"></div>
           </div>
+          <!-- «Gasto de pauta» y no «diario»: con el informe de conjuntos
+               de Meta lo que se puede calcular es la semana, y el título
+               prometía algo que el archivo no trae. El pie de abajo dice
+               cuál de los dos se está mostrando. -->
           <div class="card">
-            <div class="card-h"><span class="ct">Gasto diario de pauta</span></div>
+            <div class="card-h"><span class="ct">Gasto de pauta</span>
+              <span style="font:500 11px/1 'DM Sans';color:var(--t-mut2);"
+                    id="pauta-escala"></span></div>
             <div class="bars" id="pautabar"></div>
+            <div class="pauta-pie" id="pautapie"></div>
           </div>
         </div>
         <div class="card">
@@ -1737,12 +1790,12 @@ input.li:focus{border-color:var(--acc-d);}
             <div>
               <div style="font:600 10px/1 'DM Sans';letter-spacing:1.2px;color:var(--t-mut2);margin-bottom:8px;">TE FALTAN</div>
               <div style="display:flex;align-items:baseline;gap:10px;">
-                <span style="font:700 54px/1 'Fraunces',serif;color:var(--t-ink);" id="eq-faltan">31</span>
+                <span style="font:700 54px/1 'Fraunces',serif;color:var(--t-ink);" id="eq-faltan">—</span>
                 <span style="font:500 13px/1.4 'DM Sans';color:var(--t-mut);">entregas efectivas<br>para cubrir los gastos del mes</span>
               </div>
             </div>
-            <div class="pbar"><div class="pfill" id="eq-bar2" style="background:#6d7d4a;width:60%;"></div></div>
-            <div style="font:500 11.5px/1.4 'DM Sans';color:var(--t-mut2);" id="eq-sub2">47 entregadas · 60% del punto de equilibrio · meta: 78 entregas</div>
+            <div class="pbar"><div class="pfill" id="eq-bar2" style="background:#6d7d4a;width:0;"></div></div>
+            <div style="font:500 11.5px/1.4 'DM Sans';color:var(--t-mut2);" id="eq-sub2">Calculando con los pedidos del mes…</div>
             <div class="dline"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
               <div>
@@ -1751,8 +1804,8 @@ input.li:focus{border-color:var(--acc-d);}
               </div>
               <div style="background:#e6f0df;border:1px solid #d8e6cb;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px;">
                 <div class="slbl" style="color:#5f7a42;margin-bottom:4px;">CADA ENTREGA DEJA</div>
-                <div style="font:700 36px/1 'Fraunces',serif;color:var(--t-ink);" id="eq-contrib">$ 68.110</div>
-                <p style="font:500 12px/1.6 'DM Sans';color:#4e6636;margin:0;" id="eq-nota">Después de flete, costo de producto y devoluciones promedio.</p>
+                <div style="font:700 36px/1 'Fraunces',serif;color:var(--t-ink);" id="eq-contrib">—</div>
+                <p style="font:500 12px/1.6 'DM Sans';color:#4e6636;margin:0;" id="eq-nota">Lo que deja cada entrega después del producto, el flete y el cobro de retorno.</p>
               </div>
             </div>
           </div>
@@ -1872,7 +1925,28 @@ input.li:focus{border-color:var(--acc-d);}
           <div id="rep-salida"></div>
         </div>
 
+        <!--
+          EL DIAGNÓSTICO, ARRIBA Y EN SU PESTAÑA.
+
+          «el cierre del mes sí aparece, pero debería estar en una
+           pestaña aparte, ahí mismo pero como diagnóstico, no debajo del
+           cierre porque no todos bajan hasta allá para leer lo que dice».
+
+          Estaba como una sección más en mitad de un documento de siete
+          bloques pensado para imprimirse. Lo que dice —qué corregir este
+          mes— es justamente lo que nadie iba a encontrar.
+
+          Al imprimir salen los dos: `window.print()` no sabe de pestañas
+          y el informe se imprime entero, que es lo correcto para un PDF
+          que se archiva.
+        -->
+        <div class="cm-tabs">
+          <div class="cm-tab on" data-cm="doc" onclick="cierreTab('doc',this)">El cierre</div>
+          <div class="cm-tab" data-cm="diag" onclick="cierreTab('diag',this)">
+            Diagnóstico<span id="cm-diag-n"></span></div>
+        </div>
         <div class="cm-doc" id="cm-doc"></div>
+        <div class="cm-doc" id="cm-diag" style="display:none;"></div>
       </div>
 
       <!-- ════ PERMISOS ════ -->
@@ -2359,12 +2433,27 @@ const POR_TIENDA = {
       {lb:'Margen',           v:'24,8%',        sub:'Julio cerró en 22,1%',                  color:'#4c6236'},
       {lb:'Queda limpio',     v:'$ 16.960.000', sub:'Después de pauta, fletes y nómina',     color:'#6E7A55'},
     ],
+    /**
+     * El equilibrio de la demo, con la MISMA forma que manda el servidor.
+     *
+     * Antes era un objeto aparte —`{faltan:'31 entregas', sub:'Para
+     * cubrir $ 1.842.000…'}`— con sus propias frases ya escritas, y por
+     * eso pudo quedarse en pesos colombianos sobre una tienda en dólares
+     * sin que nada chillara. Con la forma del servidor, la demo y la
+     * operación pasan por el mismo pintor: si una se rompe, se rompen
+     * las dos, que es justo lo que hace falta para notarlo.
+     *
+     * Y los números cuadran entre sí: 1.170 ÷ 15 = 78 necesarias, 47
+     * hechas, faltan 31, 60% de avance.
+     */
+    equilibrio:{hay:true,contribucion:15,aCubrir:1170,entregadas:47,necesarias:78,
+      faltan:31,avance:60,
+      detalle:[{nombre:'Pauta del mes',valor:1000},{nombre:'Gastos fijos',valor:170}]},
     pendientes: [
       {t:'Aprobar el pago de pauta de la semana',     s:'$ 5.240.000 · Meta corta mañana'},
       {t:'Decidir si frenamos Dr. Melaxin',           s:'Pierde $ 23.440 por entrega desde el lunes'},
       {t:'Autorizar el precio nuevo de Tag Recede',   s:'Daniela lo pidió ayer 18:40'},
     ],
-    equilibrio:{faltan:'31 entregas',sub:'Para cubrir $ 1.842.000 de gastos fijos de hoy',hechas:'47 entregadas',pct:'60%'},
     productos:[
       {nm:'Tag Recede',       ver:'Escalar', por:'Cada entrega deja $ 68.110...', stock:'Stock 210 · alcanza 13 días', vBg:'#d3e0c2',vInk:'#4c6236',color:'#6d7d4a'},
       {nm:'Dr. Melaxin Spray',ver:'Frenar',  por:'Cuesta $ 49.200 traer...',      stock:'Stock 78 · 60% de devolución', vBg:'#f7dedc',vInk:'#b8322f',color:'#b8322f'},
@@ -2413,11 +2502,13 @@ const POR_TIENDA = {
       {lb:'Margen',           v:'22,1%',     sub:'Julio cerró en 20,3%',             color:'#4c6236'},
       {lb:'Queda limpio',     v:'Q 56.260',  sub:'Después de pauta, fletes y nómina',color:'#6E7A55'},
     ],
+    equilibrio:{hay:true,contribucion:30,aCubrir:1410,entregadas:29,necesarias:47,
+      faltan:18,avance:62,
+      detalle:[{nombre:'Pauta del mes',valor:1200},{nombre:'Gastos fijos',valor:210}]},
     pendientes:[
       {t:'Revisar la pauta de Evil Goods en Guatemala', s:'ROAS bajó a 1.9× esta semana'},
       {t:'Confirmar stock de Tag Recede para Guatemala', s:'Solo quedan 24 unidades'},
     ],
-    equilibrio:{faltan:'18 entregas',sub:'Para cubrir Q 12.800 de gastos fijos de hoy',hechas:'29 entregadas',pct:'61%'},
     productos:[
       {nm:'Tag Recede',       ver:'Escalar', por:'Cada entrega deja Q 48.000...', stock:'Stock 24 · solo 4 días',    vBg:'#f6ecd0',vInk:'#8a6a13',color:'#8a6a13'},
       {nm:'Crema Evil Goods', ver:'Frenar',  por:'ROAS bajó a 1.9×.',             stock:'Stock 38 · alto remanente', vBg:'#f7dedc',vInk:'#b8322f',color:'#b8322f'},
@@ -2541,11 +2632,19 @@ function buildHoy() {
   const d = POR_TIENDA[ST];
   // KPIs mes
   document.getElementById('kmes').innerHTML = d.kmes.map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
-  // Equilibrio
-  const eq = d.equilibrio;
-  document.getElementById('eqflt').textContent = eq.faltan + ' para equilibrio';
-  document.getElementById('eqbar').style.width = eq.pct;
-  document.getElementById('eqsub').textContent = eq.hechas + ' · ' + eq.sub;
+  /**
+   * El equilibrio de la maqueta ya no se pinta.
+   *
+   * Decía «31 entregas para equilibrio · Para cubrir $ 1.842.000 de
+   * gastos fijos de hoy» sobre una tienda que factura en dólares, y
+   * seguía diciéndolo con la sesión abierta y los datos reales cargados,
+   * porque `aplicarReales` nunca tocaba esta tarjeta. Al lado, Dinero
+   * decía «te faltan 0, meta 41». El mismo mes, dos respuestas.
+   *
+   * Ahora lo pinta `pintarEquilibrio(d)` con lo que manda el servidor, y
+   * la demo pasa por el MISMO pintor con la misma forma de datos.
+   */
+  pintarEquilibrio(d);
   // La alerta de CPA ya no vive aquí: es una de las seis alarmas, y sale
   // del mismo cálculo que el correo diario en vez de un umbral fijo.
   // Recuento
@@ -2558,9 +2657,6 @@ function buildHoy() {
   // Inventario riesgo — productos con Frenar o Pausado
   const riesgo = d.productos.filter(p=>p.ver==='Frenar'||p.ver==='Pausado');
   document.getElementById('invriesgo').innerHTML = riesgo.map(r=>`<div class="invr-row"><div class="invr-top"><span class="invr-nm">${r.nm}</span><span class="bd" style="color:${r.vInk};background:${r.vBg};">${r.ver}</span></div><span class="invr-sub">${r.stock} · ${r.por}</span></div>`).join('');
-  // Pendientes pauta (dinero)
-  document.getElementById('pp-extra').textContent = DEMO().ppExtra || (SYM()+' —');
-  document.getElementById('pp-bono').textContent  = DEMO().ppBono  || (SYM()+' —');
   // Bar chart
   const days=['L','M','M','J','V','S','D'], vals=d.dinBarVals, mx=Math.max(...vals);
   document.getElementById('dval').textContent = (SYM()+' ')+vals[6].toLocaleString(LOC());
@@ -3047,16 +3143,10 @@ function buildDinero(){
     {lb:'FLETES MES',      v:ec?'$ 4.200.000':'Q 18.400',   sub:'Por entregas efectivas',            color:'var(--t-mut)'},
   ];
   document.getElementById('dinkpi2').innerHTML=kpis.map(k=>`<div class="kc" style="border-left:4px solid ${k.color}"><div class="klbl">${k.lb}</div><div style="font:700 22px/1.1 'Fraunces',serif;color:${k.color};font-variant-numeric:tabular-nums;">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
-  document.getElementById('eq-faltan').textContent=ec?'31':'14';
-  document.getElementById('eq-sub2').textContent=ec?'47 entregadas · 60% del punto de equilibrio · meta: 78 entregas':'32 entregadas · 70% del punto de equilibrio · meta: 46 entregas';
-  document.getElementById('eq-bar2').style.width=ec?'60%':'70%';
-  document.getElementById('eq-contrib').textContent=ec?'$ 68.110':'Q 248';
-  document.getElementById('eq-nota').textContent='Después de flete, costo de producto y devoluciones promedio.';
-  document.getElementById('eq-costos').innerHTML=[
-    ['Pauta · promedio histórico', ec?'$ 21.180.000':'Q 84.600'],
-    ['Nómina', ec?'$ 8.400.000':'Q 32.000'],
-    ['Llamadas y recargas · Iris', ec?'$ 1.200.000':'Q 4.800'],
-  ].map((r,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;${i>0?'border-top:1px solid var(--s-line2)':''};"><span style="font:500 12px/1 'DM Sans';color:var(--t-ink2);">${r[0]}</span><span style="font:600 13px/1 'DM Sans';color:var(--t-ink);">${r[1]}</span></div>`).join('');
+  // El equilibrio de Dinero lo pinta el MISMO pintor que el de Hoy y que
+  // el de la operación real. Tenía aquí su propia copia, con tres cifras
+  // que no cuadraban entre sí ni con las de arriba.
+  pintarEquilibrio(POR_TIENDA[ST]);
   // Inicializar gastos
   renderGastos();
 }
@@ -3813,6 +3903,27 @@ function pintarAccesos() {
       '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></div>';
   }
 
+  // ── Por dónde le paga la compradora ──
+  if (a.pago_url || a.pago_datos) {
+    h += '<div class="card"><div class="card-h">' +
+      '<span class="ct">' + esc(a.pago_nombre || 'Cómo te pagan') + '</span>' +
+      '<span style="font:500 11px/1 \'DM Sans\';color:var(--t-mut2);">Para cobrar y para abonos</span></div>';
+    if (a.pago_url) {
+      h += accFila('ENLACE DE PAGO', a.pago_url, { campo: 'pago_url' }) +
+        '<a class="acc-abrir" href="' + esc(a.pago_url) + '" target="_blank" rel="noopener noreferrer">' +
+        'Abrir ' + esc(a.pago_nombre || 'el link de pago') + '</a>';
+    }
+    if (a.pago_datos) {
+      // Esto se DICTA por teléfono, así que va completo y en varias
+      // líneas, no recortado en una fila con puntos suspensivos.
+      h += '<div class="dlbl">DATOS PARA EL ABONO</div>' +
+        '<div class="acc-aviso" style="white-space:pre-wrap;">' + esc(a.pago_datos) + '</div>' +
+        '<div class="acc-mini" style="align-self:flex-start;" ' +
+        'onclick="accCopiar(\'pago_datos\')">Copiar los datos</div>';
+    }
+    h += '</div>';
+  }
+
   if (!h) {
     /**
      * Vacío no es lo mismo para las dos. La dueña puede resolverlo ahora;
@@ -3867,6 +3978,10 @@ function pintarAccesosForm() {
           'elcorreoquetucontrolas@gmail.com') +
     campo('canal_nombre', 'CANAL CON TUS COMPRADORAS', a.canal_nombre, 'Chat Center') +
     campo('canal_url', 'ENLACE DEL CANAL', a.canal_url, 'https://chateapro.app/login') +
+    campo('pago_nombre', 'CÓMO TE PAGAN', a.pago_nombre, 'PayPal · Nequi · Wompi') +
+    campo('pago_url', 'ENLACE DE PAGO', a.pago_url, 'https://paypal.me/tutienda') +
+    campo('pago_datos', 'DATOS PARA ABONOS', a.pago_datos,
+          'Bancolombia ahorros 123-456789-00 a nombre de…') +
     campo('nota', 'ALGO QUE TU EQUIPO DEBA SABER', a.nota,
           'La subcuenta solo confirma y gestiona novedades') +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
@@ -3887,7 +4002,8 @@ async function guardarAccesos() {
   };
   const cambios = {};
   ['plataforma', 'url', 'usuario', 'clave', 'correo_codigo',
-   'canal_nombre', 'canal_url', 'nota'].forEach(function (k) { cambios[k] = v(k); });
+   'canal_nombre', 'canal_url', 'pago_nombre', 'pago_url', 'pago_datos',
+   'nota'].forEach(function (k) { cambios[k] = v(k); });
 
   let r;
   try { r = await api('accesos_guardar', { tienda: ST, cambios: cambios }); }
@@ -4201,8 +4317,62 @@ function legible(html) {
 const REINTENTABLES = ['login', 'verificar', 'yo', 'resumen', 'listar',
                        'fuentes', 'cierre', 'trozo'];
 
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   EL ARRANQUE EN UN SOLO VIAJE
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * «se demora mucho en cargar».
+ *
+ * Conté las peticiones que hace esta pantalla al abrirse, en un
+ * navegador de verdad: DIECINUEVE. Y Google serializa las del mismo
+ * usuario, así que las diecinueve se ejecutan una detrás de otra, cada
+ * una arrancando su motor y abriendo la misma hoja otra vez.
+ *
+ * `arranque` las trae todas juntas. Lo que llega se guarda aquí, y
+ * `api()` sirve de esta despensa en vez de salir a la red.
+ *
+ * Se sirve UNA sola vez por acción y después se borra: la segunda vez
+ * que algo pide `listar` es porque acaba de guardar y necesita lo
+ * nuevo. Una despensa que no se vacía es una pantalla que se queda
+ * enseñando lo de hace diez minutos, y eso es peor que ser lenta.
+ */
+let ARRANQUE = null;
+
+/** Con qué nombre guardó el arranque lo que pide esta acción. */
+function claveArranque(accion, datos) {
+  if (accion === 'listar') {
+    const e = (datos || {}).entidad;
+    if (e === 'Pedidos') return 'pedidos';
+    if (e === 'Novedades') return 'novedades';
+    return '';
+  }
+  // El resto se llama igual aquí y allá. La lista de qué viaja está en
+  // ARRANQUE_EMP, en 99-arranque-emp.gs.
+  return ['resumen', 'notas', 'accesos', 'equipo', 'alarmas', 'productos', 'cas',
+          'estados', 'historial', 'fuentes', 'recuento', 'reporte_dia', 'semaforo',
+          'auditoria', 'auditoria_casos', 'reparto', 'meta_estado']
+         .indexOf(accion) !== -1 ? accion : '';
+}
+
 async function api(accion, datos, intento) {
   intento = intento || 0;
+
+  /**
+   * Si el arranque ya trajo esto, se sirve de ahí y no se viaja.
+   *
+   * Va antes de cualquier otra cosa para que la respuesta sea idéntica
+   * a la que habría llegado por la red: los pintores no se enteran de
+   * que no hubo petición, y por eso no hubo que tocar ninguno.
+   */
+  if (ARRANQUE) {
+    const clave = claveArranque(accion, datos);
+    if (clave && ARRANQUE[clave] !== undefined) {
+      const guardado = ARRANQUE[clave];
+      delete ARRANQUE[clave];
+      return guardado;
+    }
+  }
   /**
    * La identidad va DESPUÉS de los datos, no antes.
    *
@@ -4285,6 +4455,30 @@ async function api(accion, datos, intento) {
       'Con cualquier otra combinación Google pide iniciar sesión y el ' +
       'contenido se pierde por el camino.';
     delete j.diagnostico;
+  }
+
+  /**
+   * «Acción desconocida» tiene UNA causa, y no es un error de la app.
+   *
+   * Quiere decir que el servidor no conoce esa acción: el código nuevo
+   * no está pegado en Apps Script, o está pegado pero no se publicó una
+   * versión nueva. Pasó tal cual con Accesos: la pantalla existía, el
+   * código existía, y el servidor contestaba esto — y el mensaje crudo
+   * no decía qué hacer, así que parecía una pantalla rota.
+   *
+   * Se traduce aquí, en el único sitio por el que pasan todas las
+   * respuestas, para que cualquier pantalla futura lo herede sin que
+   * nadie se acuerde de esto.
+   */
+  if (j && j.error && /Acci[oó]n desconocida/i.test(j.error)) {
+    const cual = String(j.error).split(':').pop().trim();
+    j.error = 'Tu servidor todavía no conoce «' + cual + '».\n\n' +
+      'Esta pantalla ya está lista; lo que falta es el código nuevo en ' +
+      'Apps Script. Pega NOVA-COMPLETO.gs entero, corre bootstrapTodo() ' +
+      'una vez, y después Implementar → Versión: Nueva.\n\n' +
+      'Pegar sin publicar una versión nueva no basta: Google sigue ' +
+      'sirviendo la anterior.';
+    j.servidorViejo = true;
   }
 
   if (j && j.reautenticar) { sesionVencida(); }
@@ -4452,6 +4646,26 @@ async function cargarReales() {
   if (!CONECTADO || !TOKEN) { marcarOrigen(false); return; }
   try {
     const mes = new Date().toISOString().slice(0,7);
+
+    /**
+     * Un viaje para todo lo que se pinta al entrar.
+     *
+     * Si `arranque` falla —o el servidor todavía no la conoce, porque
+     * el código nuevo no se ha pegado en Apps Script— no pasa nada: la
+     * despensa queda vacía y cada `cargarX` sale a pedir lo suyo como
+     * siempre. Diecinueve viajes otra vez, pero la pantalla funciona.
+     */
+    ARRANQUE = null;
+    try {
+      const a = await api('arranque', { tienda: ST, mes: mes, limite: 300 });
+      if (a && a.ok && a.partes) {
+        ARRANQUE = a.partes;
+        if (a.fallaron && a.fallaron.length) {
+          console.warn('[Nova] el arranque no pudo con:', a.fallaron);
+        }
+      }
+    } catch (e) { /* sin arranque se pide de a una, que es lo de antes */ }
+
     const r = await api('resumen', { tienda: ST, mes: mes });
     /**
      * Que falle el resumen no puede dejar a oscuras a todo lo demás.
@@ -4491,7 +4705,8 @@ async function cargarReales() {
                        cargarReparto(), cargarAlarmas(),
                        cargarRecuento(), cargarProductos(), cargarAyer(),
                        cargarHistorial(), cargarCas(), cargarEstados(),
-                       cargarMeta(), cargarSemaforo()]);
+                       cargarMeta(), cargarSemaforo(), cargarNotas(),
+                       cargarAccesos()]);
     // Una gestora sin pedidos asignados también merece respuesta. Si las
     // listas vinieron vacías nadie la habría pintado, y se quedaría
     // mirando un "buscando…" que ya terminó.
@@ -4525,7 +4740,8 @@ function aplicarDinero(d) {
   const fletes  = d.costoEnvio || 0;
   const margen  = d.margen !== undefined ? d.margen : (ventas - pauta - prod - fletes);
   const fijos   = d.fijos || 0;
-  const utilidad = d.utilidad !== undefined ? d.utilidad : (margen - fijos);
+  const comisiones = d.comisiones || 0;
+  const utilidad = d.utilidad !== undefined ? d.utilidad : (margen - fijos - comisiones);
 
   // Los gastos fijos ya vienen de la hoja: la lista de abajo los pinta
   GASTOS_REALES = d.detalleFijos || [];
@@ -4546,8 +4762,18 @@ function aplicarDinero(d) {
     {lb:'GASTOS FIJOS', v:S+nf(fijos),
      sub:fijos ? (d.detalleFijos||[]).length + ' registrados' : 'Agrégalos abajo',
      color:'var(--t-mut)'},
+    /**
+     * Decía «Después de todo, incluida la nómina» y la nómina no está
+     * en ninguna parte de esta cuenta: lo que se resta aquí son los
+     * gastos fijos y las comisiones de retiro y de banco. Si la nómina
+     * está adentro es porque alguien la registró como gasto fijo, no
+     * porque Nova la sepa. Nombrar un costo que no se está restando es
+     * peor que no nombrar ninguno.
+     */
     {lb:'QUEDA LIMPIO', v:S+nf(utilidad),
-     sub:'Después de todo, incluida la nómina',
+     sub: comisiones
+       ? 'Después de gastos fijos y ' + S + nf(comisiones) + ' de comisiones'
+       : 'Después de pauta, producto, flete y gastos fijos',
      color:utilidad >= 0 ? '#6E7A55' : '#b8322f'},
   ];
 
@@ -4563,52 +4789,118 @@ function aplicarDinero(d) {
   }
 
   /**
-   * Punto de equilibrio: cuántas entregas hacen falta para no perder.
+   * El punto de equilibrio ya NO se calcula aquí.
    *
-   * Cada entrega deja lo que queda después del producto y el flete, y eso
-   * tiene que cubrir la pauta del mes más los gastos fijos.
+   * Se calculaba en esta pantalla con una cuenta, y en Hoy con otra, y
+   * por eso decían cosas distintas del mismo mes. Peor: la de aquí se
+   * contradecía con la tarjeta QUEDA LIMPIO que está tres centímetros
+   * más arriba — «100% del punto de equilibrio» encima de un −109.
    *
-   * Los fijos vienen de la hoja y en la moneda de la tienda. Mientras
-   * vivían solo en la pantalla, con valores de ejemplo en pesos sobre una
-   * tienda que factura en dólares, esta cuenta daba "faltan 441.191
-   * entregas" — y por eso se dejaron fuera hasta ahora.
+   * Ahora viene resuelto del servidor, de los mismos números con los que
+   * se calcula la utilidad. Ver `out.equilibrio` en agregarMes().
    */
-  const contrib = d.entregados ? (ventas - prod - fletes) / d.entregados : 0;
-  const aCubrir = pauta + fijos;
+  pintarEquilibrio(d);
 
-  const necesarias = contrib > 0 ? Math.ceil(aCubrir / contrib) : 0;
-  const faltan = Math.max(0, necesarias - (d.entregados || 0));
-  const avance = necesarias ? Math.min(100, Math.round((d.entregados || 0) / necesarias * 100)) : 0;
+  avisoSinTasa(d, 'dinero-aviso', document.getElementById('dinkpi2'));
+  desellar(['dinkpi2', 'eq-costos']);
+}
 
+/**
+ * Las DOS tarjetas de punto de equilibrio, con el mismo número.
+ *
+ * La de Hoy es el resumen —cuántas faltan y nada más— y la de Dinero es
+ * el desglose. Las pinta la misma función a propósito: mientras fueran
+ * dos, una se quedaba atrás. La de Hoy llevaba meses enseñando «31
+ * entregas · $ 1.842.000 de gastos fijos» — pesos colombianos en una
+ * tienda que factura en dólares, y un número que no salía de ninguna
+ * hoja: era el de la maqueta.
+ */
+function pintarEquilibrio(d) {
+  const S = SYM() + ' ';
+  const nf = function (n) { return NUM(Math.round(n || 0)); };
+  const eq = d.equilibrio;
   const set = function (id, txt) {
     const el = document.getElementById(id);
     if (el) el.textContent = txt;
   };
-  set('eq-faltan', contrib > 0 ? String(faltan) : '—');
-  set('eq-sub2', contrib > 0
-    ? d.entregados + ' entregadas · ' + avance + '% del punto de equilibrio · meta: ' +
-      necesarias + ' entregas para cubrir pauta y gastos fijos'
-    : 'Sin entregas este mes todavía: no hay con qué calcular el equilibrio.');
-  const barra = document.getElementById('eq-bar2');
-  if (barra) barra.style.width = avance + '%';
-  set('eq-contrib', contrib > 0 ? S + nf(contrib) : '—');
-  set('eq-nota', 'Lo que deja cada entrega después del producto y el flete, ' +
-    'sobre ' + (d.entregados || 0) + ' entregas de este mes.');
+  const ancho = function (id, pct) {
+    const el = document.getElementById(id);
+    if (el) el.style.width = pct + '%';
+  };
+
+  if (!eq || !eq.hay) {
+    ['eq-faltan', 'eqflt'].forEach(function (id) { set(id, '—'); });
+    const sinDatos = 'Sin entregas este mes todavía: no hay con qué calcular el equilibrio.';
+    set('eq-sub2', sinDatos); set('eqsub', sinDatos);
+    ancho('eq-bar2', 0); ancho('eqbar', 0);
+    set('eq-contrib', '—');
+    set('eq-nota', 'Cuando haya entregas, aquí sale lo que deja cada una.');
+    const c = document.getElementById('eq-costos');
+    if (c) c.innerHTML = '';
+    return;
+  }
+
+  /**
+   * Cada entrega pierde plata: no hay número de entregas que sirva.
+   *
+   * Poner «faltan 0» aquí —que es lo que hacía— dice justo lo contrario
+   * de lo que pasa. Y poner un número grande diría «vende más», que es
+   * el peor consejo posible en este mes: cada venta hunde más la cuenta.
+   */
+  if (!eq.alcanzable) {
+    const pierde = S + nf(Math.abs(eq.contribucion));
+    set('eqflt', 'Cada entrega pierde ' + pierde);
+    set('eqsub', 'Con estos costos no hay punto de equilibrio: vender más aleja ' +
+      'el mes de cubrirse. Revisa el flete, el costo del producto o el precio.');
+    ancho('eqbar', 0);
+    set('eq-faltan', '—');
+    set('eq-sub2', 'Cada entrega pierde ' + pierde + ' después del producto, el flete ' +
+      'y el cobro de retorno, sobre ' + eq.entregadas + ' entregas. ' +
+      'Ningún volumen cubre los gastos con estos números.');
+    ancho('eq-bar2', 0);
+    set('eq-contrib', '−' + pierde);
+    set('eq-nota', 'En rojo: lo que cuesta cada entrega por encima de lo que deja.');
+    const costos = document.getElementById('eq-costos');
+    if (costos) {
+      costos.innerHTML = (eq.detalle || []).map(function (g, i) {
+        return '<div style="display:flex;align-items:center;justify-content:space-between;' +
+          'padding:11px 0;' + (i ? 'border-top:1px solid var(--s-line2)' : '') + ';">' +
+          '<span style="font:500 12px/1 \'DM Sans\';color:var(--t-ink2);">' + esc(g.nombre) + '</span>' +
+          '<span style="font:600 13px/1 \'DM Sans\';color:var(--t-ink);">' + S + nf(g.valor) +
+          '</span></div>';
+      }).join('');
+    }
+    return;
+  }
+
+  // ── Hoy: el titular ──
+  set('eqflt', eq.faltan
+    ? eq.faltan + (eq.faltan === 1 ? ' entrega para equilibrio' : ' entregas para equilibrio')
+    : 'Equilibrio cubierto');
+  set('eqsub', eq.entregadas + ' entregadas · meta ' + eq.necesarias +
+    ' para cubrir ' + S + nf(eq.aCubrir) + ' de pauta, gastos fijos y comisiones');
+  ancho('eqbar', eq.avance);
+
+  // ── Dinero: el desglose ──
+  set('eq-faltan', String(eq.faltan));
+  set('eq-sub2', eq.entregadas + ' entregadas · ' + eq.avance +
+    '% del punto de equilibrio · meta: ' + eq.necesarias +
+    ' entregas para cubrir pauta, gastos fijos y comisiones');
+  ancho('eq-bar2', eq.avance);
+  set('eq-contrib', S + nf(eq.contribucion));
+  set('eq-nota', 'Lo que deja cada entrega después del producto, el flete y el ' +
+    'cobro de retorno, sobre ' + eq.entregadas + ' entregas de este mes.');
 
   const costos = document.getElementById('eq-costos');
   if (costos) {
-    const filas = [['Pauta del mes', S + nf(pauta)]].concat(
-      (d.detalleFijos || []).map(function (g) { return [g.nombre, S + nf(g.valor)]; }));
-    costos.innerHTML = filas.map(function (r, i) {
+    costos.innerHTML = (eq.detalle || []).map(function (g, i) {
       return '<div style="display:flex;align-items:center;justify-content:space-between;' +
         'padding:11px 0;' + (i ? 'border-top:1px solid var(--s-line2)' : '') + ';">' +
-        '<span style="font:500 12px/1 \'DM Sans\';color:var(--t-ink2);">' + esc(r[0]) + '</span>' +
-        '<span style="font:600 13px/1 \'DM Sans\';color:var(--t-ink);">' + r[1] + '</span></div>';
+        '<span style="font:500 12px/1 \'DM Sans\';color:var(--t-ink2);">' + esc(g.nombre) + '</span>' +
+        '<span style="font:600 13px/1 \'DM Sans\';color:var(--t-ink);">' + S + nf(g.valor) +
+        '</span></div>';
     }).join('');
   }
-
-  avisoSinTasa(d, 'dinero-aviso', document.getElementById('dinkpi2'));
-  desellar(['dinkpi2', 'eq-costos']);
 }
 
 /** Reemplaza los KPIs de Hoy con los de la hoja. */
@@ -4640,6 +4932,12 @@ function aplicarReales(d) {
                    cl:(d.roas||0)>=2?'g':'r'});
   }
   aplicarDinero(d);
+  /**
+   * El equilibrio se pinta desde aquí y no desde aplicarDinero, que sale
+   * temprano para quien no es dueña. La tarjeta de Hoy está en las dos
+   * pantallas y se quedaba con los números de la maqueta.
+   */
+  pintarEquilibrio(d);
   aplicarPauta(d);
   if (d.recaudo7) pintarRecaudo(d.recaudo7);
   CALC = null;   // los supuestos se rehacen con los números nuevos
@@ -4770,6 +5068,28 @@ function fechaCorta(v) {
   const d = fechaDe(v);
   if (!d) return String(v || '');
   return d.toLocaleDateString(LOC(), { day: '2-digit', month: 'short' });
+}
+
+/**
+ * La bitácora de intentos, indexada por «entidad:id».
+ *
+ * Se trae entera de una vez y no de a un pedido: abrir una lista de
+ * trescientos pedidos con una petición por pedido serían trescientas
+ * peticiones para pintar algo que cabe en una.
+ */
+let NOTAS = {};
+let NOTAS_RECORTADAS = 0;
+
+async function cargarNotas() {
+  if (!CONECTADO) return false;
+  let r;
+  try { r = await api('notas', { tienda: ST }); }
+  catch (e) { return false; }
+  if (!r || !r.ok) return false;
+  NOTAS = r.notas || {};
+  NOTAS_RECORTADAS = r.recortadas || 0;
+  if (PED_SEL_ID) pintarPanelPedido();
+  return true;
 }
 
 let PEDS_REALES = [];
@@ -5193,23 +5513,93 @@ function pintarPanelPedido() {
           'Venía en el export de ' + esc(p.fuente || 'la plataforma') +
           '. Se actualiza sola en cada importación.</div></div>'
       : '') +
-    '<div class="dlbl" style="margin-top:9px;">TU NOTA</div>' +
-    '<textarea class="narea" id="pd-nota" placeholder="Lo que escribas aquí es del equipo. Ninguna importación lo borra.">' +
-      esc(p.nota || '') + '</textarea>' +
+    /**
+     * ── LA BITÁCORA DE INTENTOS ──
+     *
+     * Aquí había UNA caja de texto con la nota anterior dentro. Quien
+     * anotaba el intento del jueves escribía encima del miércoles, y el
+     * miércoles dejaba de existir. Sin error y sin aviso.
+     *
+     * Ahora la caja sale VACÍA y lo anterior está arriba, en una lista
+     * que no se puede editar. No es una comodidad: es lo que impide que
+     * un intento borre al otro.
+     */
+    bitacoraHTML('Pedidos', p, 'pd-nota') +
     '<div class="nsavebtn" onclick="guardarPedido()">Guardar</div>' +
   '</div>';
+}
+
+/**
+ * Las notas de un caso, con quién y cuándo, y la caja para la siguiente.
+ *
+ * Sirve para Pedidos, Novedades y CAS: los tres tienen intentos de
+ * contacto y los tres tenían el mismo problema.
+ */
+function bitacoraHTML(entidad, p, inputId) {
+  const previas = (NOTAS[entidad + ':' + p.id] || []).slice();
+
+  /**
+   * La nota de antes de que existiera la bitácora se muestra como la
+   * primera entrada, sin autor ni fecha porque nunca los tuvo. No se
+   * migra: se lee. Una migración que corre dos veces duplica todo.
+   *
+   * Solo cuando no hay bitácora todavía — si la hay, esta columna ya es
+   * una copia de la última nota y saldría repetida.
+   */
+  const vieja = String(p.nota || '').trim();
+  if (vieja && !previas.length) previas.push({ texto: vieja, autor: '', cuando: '' });
+
+  const lista = previas.length
+    ? previas.map(function (n) {
+        return '<div class="nt-row"><div class="nt-txt">' + esc(n.texto) + '</div>' +
+          '<div class="nt-meta">' +
+          (n.cuando
+            ? esc(nchHora(n.cuando)) + (n.autor ? ' · ' + esc(n.autor) : '')
+            : 'De antes de la bitácora · no se sabe quién ni cuándo') +
+          '</div></div>';
+      }).join('')
+    : '<div class="nt-vacio">Todavía nadie ha anotado un intento de contacto ' +
+      'en este pedido.</div>';
+
+  return '<div class="dlbl" style="margin-top:9px;">INTENTOS DE CONTACTO' +
+      (previas.length ? ' · ' + previas.length : '') + '</div>' +
+    '<div class="nt-lista">' + lista + '</div>' +
+    '<textarea class="narea" id="' + (inputId || 'pd-nota') + '" ' +
+      'placeholder="Qué pasó en este intento: a quién llamaste, qué contestó, ' +
+      'qué queda pendiente."></textarea>' +
+    '<div class="nt-pie">Se agrega a la lista con tu nombre y la hora. ' +
+      'No reemplaza a las anteriores ni se puede editar después.</div>';
 }
 
 async function guardarPedido() {
   const p = (PEDS_VISTA || []).filter(function (x) { return x.id === PED_SEL_ID; })[0];
   if (!p) return;
   const sel = document.querySelector('#pedpanel .nstates .nst.on');
-  const nota = document.getElementById('pd-nota');
-  const campos = { nota: nota ? nota.value : '' };
+  const caja = document.getElementById('pd-nota');
+  const texto = caja ? String(caja.value || '').trim() : '';
+  const campos = {};
   if (sel) campos.estado_nova = sel.dataset.val;
 
   try {
-    const r = await api('escribir', { entidad: 'Pedidos', id: p.id, campos: campos });
+    /**
+     * La nota va por su propia acción, que AGREGA. `escribir` reemplaza
+     * el valor de una celda, que es exactamente lo que no se puede hacer
+     * con un intento de contacto.
+     */
+    if (texto) {
+      const rn = await api('nota_agregar', { entidad: 'Pedidos', id: p.id, texto: texto });
+      if (!rn.ok) { showToast(rn.error || 'No se pudo guardar la nota'); return; }
+      const clave = 'Pedidos:' + p.id;
+      NOTAS[clave] = (NOTAS[clave] || []).concat([rn.nota]);
+      p.nota = texto;
+      if (rn.gestionadoPor) p.gestionado_por = rn.gestionadoPor;
+      if (caja) caja.value = '';
+    }
+    if (!texto && !sel) { showToast('Escribe la nota o elige un estado'); return; }
+
+    const r = Object.keys(campos).length
+      ? await api('escribir', { entidad: 'Pedidos', id: p.id, campos: campos })
+      : { ok: true };
     if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
     Object.assign(p, campos);
 
@@ -5224,15 +5614,24 @@ async function guardarPedido() {
      * «Con novedad · 7» mintiendo hasta la próxima carga.
      */
     const enTodas = (PEDS_REALES || []).filter(function (x) { return x.id === p.id; })[0];
-    if (enTodas && enTodas !== p) Object.assign(enTodas, campos);
+    if (enTodas && enTodas !== p) {
+      Object.assign(enTodas, campos);
+      // La nota y quién lo trabajó no van en `campos` —la nota se agrega
+      // por su propia acción— pero la copia de la lista también las usa.
+      enTodas.nota = p.nota;
+      enTodas.gestionado_por = p.gestionado_por;
+    }
     pintarFiltrosPedidos(PEDS_REALES || []);
     pintarPedidosReales(PEDS_REALES || [], PEDS_TOTAL);
     pintarEstadosReales(PEDS_REALES || []);
+    // El panel se repinta AL FINAL: es donde aparece la nota nueva en la
+    // lista de intentos, y repintarlo antes la dejaba fuera.
+    pintarPanelPedido();
 
     showToast(campos.estado_nova
-      ? 'Guardado · ahora cuenta como ' +
+      ? (texto ? 'Intento anotado · ' : 'Guardado · ') + 'ahora cuenta como ' +
         ((COLOR_ESTADO[campos.estado_nova] || [])[2] || campos.estado_nova).toLowerCase()
-      : 'Guardado en la hoja');
+      : 'Intento anotado');
   } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
 
@@ -5542,9 +5941,10 @@ function pintarPanelNovedad() {
             x.replace(/_/g, ' ') + '</div>';
         }).join('') + '</div></div>' +
 
-    '<textarea class="narea" id="nv-nota" ' +
-      'placeholder="Qué pasó, qué acordaste con la clienta y qué sigue.">' +
-      esc(n.nota || '') + '</textarea>' +
+    // La misma bitácora que en Pedidos, y por el mismo motivo: aquí la
+    // caja también venía con la nota anterior dentro, lista para que la
+    // segunda gestión borrara la primera.
+    bitacoraHTML('Novedades', n, 'nv-nota') +
     '<div class="nsavebtn" onclick="guardarNovedad()">Guardar</div>' +
   '</div>';
 }
@@ -5558,12 +5958,27 @@ async function guardarNovedad() {
   const n = (NOVS_VISTA || []).filter(function (x) { return x.id === NOV_SEL_ID; })[0];
   if (!n) return;
   const sel = document.querySelector('#novpanel .nstates .nst.on');
-  const nota = document.getElementById('nv-nota');
-  const campos = { nota: nota ? nota.value : '' };
+  const caja = document.getElementById('nv-nota');
+  const texto = caja ? String(caja.value || '').trim() : '';
+  const campos = {};
   if (sel) campos.estado = sel.dataset.val;
 
   try {
-    const r = await api('escribir', { entidad: 'Novedades', id: n.id, campos: campos });
+    // La nota se AGREGA por su propia acción; `escribir` reemplazaría.
+    if (texto) {
+      const rn = await api('nota_agregar', { entidad: 'Novedades', id: n.id, texto: texto });
+      if (!rn.ok) { showToast(rn.error || 'No se pudo guardar la nota'); return; }
+      const clave = 'Novedades:' + n.id;
+      NOTAS[clave] = (NOTAS[clave] || []).concat([rn.nota]);
+      n.nota = texto;
+      if (rn.gestionadoPor) n.gestionado_por = rn.gestionadoPor;
+      if (caja) caja.value = '';
+    }
+    if (!texto && !sel) { showToast('Escribe la nota o elige un estado'); return; }
+
+    const r = Object.keys(campos).length
+      ? await api('escribir', { entidad: 'Novedades', id: n.id, campos: campos })
+      : { ok: true };
     if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
     Object.assign(n, campos);
 
@@ -5571,12 +5986,19 @@ async function guardarNovedad() {
     // estas mismas filas. Sin esto, cerrar una novedad la deja contada
     // como abierta hasta la próxima carga.
     const enTodas = (NOVS_REALES || []).filter(function (x) { return x.id === n.id; })[0];
-    if (enTodas && enTodas !== n) Object.assign(enTodas, campos);
+    if (enTodas && enTodas !== n) {
+      Object.assign(enTodas, campos);
+      enTodas.nota = n.nota;
+      enTodas.gestionado_por = n.gestionado_por;
+    }
     pintarNovedadesReales(NOVS_REALES || []);
+    // Al final, para que la nota nueva salga en la lista de intentos.
+    pintarPanelNovedad();
 
     showToast(campos.estado
-      ? 'Guardado · queda ' + String(campos.estado).replace(/_/g, ' ')
-      : 'Guardado en la hoja');
+      ? (texto ? 'Intento anotado · ' : 'Guardado · ') + 'queda ' +
+        String(campos.estado).replace(/_/g, ' ')
+      : 'Intento anotado');
   } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
 
@@ -6169,7 +6591,6 @@ function enterApp(forceRol){
   // Mostrar chat FAB
   document.getElementById('chat-fab').style.display='flex';
   initChat();
-  cargarAccesos();
 
 }
 function logout(){
@@ -6373,6 +6794,52 @@ function cierreDatos(mes, tienda){
  * lo que hay —una comisión bancaria, un costo de devolución que la
  * plataforma no reporta— se dice que falta, no se estima.
  */
+/**
+ * Lo último que calculó el cierre para su pestaña de diagnóstico.
+ *
+ * Vive fuera porque el informe se arma de una pasada y las dos pestañas
+ * salen de la misma cuenta: recalcular los hallazgos aparte sería volver
+ * a recorrer el mes entero para obtener lo mismo — y abrir la puerta a
+ * que las dos pantallas digan cosas distintas, que es exactamente el
+ * error que acabamos de arreglar en el punto de equilibrio.
+ */
+let DIAGNOSTICO = { html: '', n: 0 };
+
+/** Los hallazgos del mes, con lo que cuesta cada uno. */
+function diagnosticoHTML(F, d) {
+  if (!F.length) {
+    return '<section class="inf-sec"><p class="inf-eyebrow">Diagnóstico · ' +
+      esc(d.mes || '') + '</p>' +
+      '<h2 class="inf-h2">Nada que corregir este mes</h2>' +
+      '<p class="inf-lede">Todas las métricas del mes están dentro de los umbrales ' +
+      'que pusiste en Configuración. Si crees que algo anda mal y aquí no sale, ' +
+      'es que el umbral está demasiado suelto.</p></section>';
+  }
+  return '<section class="inf-sec"><p class="inf-eyebrow">Diagnóstico · ' +
+    esc(d.mes || '') + '</p>' +
+    '<h2 class="inf-h2">Lo que hay que corregir</h2>' +
+    '<p class="inf-lede">Ordenado por lo que cuesta, no por lo que llama la ' +
+    'atención.</p>' +
+    F.map(function (f) {
+      return '<div class="inf-find ' + (f.n === 'mal' ? 'crit' : 'warn') + '">' +
+        '<h3>' + f.t + '</h3><p>' + f.d + '</p>' +
+        (f.a ? '<span class="inf-imp ' + (f.n === 'mal' ? 'crit' : 'warn') + '">' +
+          f.a + '</span>' : '') +
+        '</div>';
+    }).join('') + '</section>';
+}
+
+/** Cambiar de pestaña en Cierre. */
+function cierreTab(cual, el) {
+  document.querySelectorAll('.cm-tab').forEach(function (x) {
+    x.classList.toggle('on', el ? x === el : x.dataset.cm === cual);
+  });
+  const doc = document.getElementById('cm-doc');
+  const diag = document.getElementById('cm-diag');
+  if (doc) doc.style.display = cual === 'doc' ? '' : 'none';
+  if (diag) diag.style.display = cual === 'diag' ? '' : 'none';
+}
+
 function pintarInforme(d, p, real) {
   const S = d.sym + ' ';
   const R = d.monedaReporte && d.tasa ? d.monedaReporte + ' ' : '';
@@ -6506,17 +6973,29 @@ function pintarInforme(d, p, real) {
           d.entregados + ' dejan plata.</p></div>' +
     '</div></section>';
 
-  // ── Hallazgos ──
+  /**
+   * ── LOS HALLAZGOS SE VAN A SU PESTAÑA ──
+   *
+   * Estaban aquí, como la quinta sección de un documento de siete, entre
+   * la unidad económica y los productos. Ella: «debería estar en una
+   * pestaña aparte, ahí mismo pero como diagnóstico, no debajo del
+   * cierre porque no todos bajan hasta allá para leer lo que dice».
+   *
+   * En el documento queda solo el puntero, y solo cuando hay algo que
+   * mirar: un enlace a una pestaña vacía enseña a no hacerle caso.
+   */
   const F = cierreFalencias(d, p);
-  h += '<section class="inf-sec"><p class="inf-eyebrow">Hallazgos · por impacto</p>' +
-    '<h2 class="inf-h2">' + (F.length ? 'Lo que hay que corregir' : 'Nada que corregir este mes') + '</h2>' +
-    (F.length ? F.map(function (f) {
-      return '<div class="inf-find ' + (f.n === 'mal' ? 'crit' : 'warn') + '">' +
-        '<h3>' + f.t + '</h3><p>' + f.d + '</p>' +
-        (f.a ? '<span class="inf-imp ' + (f.n === 'mal' ? 'crit' : 'warn') + '">' + f.a + '</span>' : '') +
-        '</div>';
-    }).join('') : '<p class="inf-lede">Las métricas del mes están dentro de sus umbrales.</p>') +
-    '</section>';
+  DIAGNOSTICO = { html: diagnosticoHTML(F, d), n: F.filter(function (x) {
+    return x.n === 'mal' || x.n === 'ojo';
+  }).length };
+  if (F.length) {
+    h += '<section class="inf-sec"><p class="inf-eyebrow">Hallazgos</p>' +
+      '<h2 class="inf-h2">' + F.length +
+      (F.length === 1 ? ' cosa que corregir' : ' cosas que corregir') + '</h2>' +
+      '<p class="inf-lede">Están en la pestaña <b>Diagnóstico</b>, arriba, con ' +
+      'cuánto cuesta cada una. <span class="inf-link" onclick="cierreTab(\'diag\')">' +
+      'Verlas ahora →</span></p></section>';
+  }
 
   // ── Productos ──
   const prods = Object.keys(d.productosDetalle || {}).map(function (k) {
@@ -6794,7 +7273,12 @@ async function buildCierre(){
   const real = await cierreReal(mes, tienda);
   const d = real || cierreDatos(mes,tienda);
   const p = real ? real.anterior : cierreDatos(mesAnterior(mes),tienda);
+  // El informe se arma primero: es el que calcula DIAGNOSTICO.
   document.getElementById('cm-doc').innerHTML = pintarInforme(d, p, real);
+  const diag = document.getElementById('cm-diag');
+  if (diag) diag.innerHTML = DIAGNOSTICO.html;
+  const n = document.getElementById('cm-diag-n');
+  if (n) n.textContent = DIAGNOSTICO.n ? String(DIAGNOSTICO.n) : '';
 }
 
 
@@ -7018,10 +7502,9 @@ function pintarPantallasGestora() {
               '</div>' +
               // Lo que la clienta va a preguntar, ya respondido
               fichaProducto(p.producto) +
-              '<textarea class="narea" id="gnota' + i + '" placeholder="Qué pasó, qué ' +
-                'acordaste con la clienta y qué sigue.">' + esc(p.nota || '') + '</textarea>' +
+              bitacoraHTML('Pedidos', p, 'gnota' + i) +
               '<div class="nsavebtn" onclick="event.stopPropagation();guardarNotaGestora(' +
-                i + ')">Guardar nota</div>' +
+                i + ')">Anotar intento</div>' +
             '</div></div>';
         }).join('')
       : '<div class="eq-vacio">No tienes pedidos asignados. Cuando la dueña o la ' +
@@ -7074,16 +7557,30 @@ function togGPed(i) {
  * cambiara a mano, la siguiente carga lo pisaría y parecería que se
  * perdió su trabajo. La nota, en cambio, es suya y nada la sobrescribe.
  */
+/**
+ * La gestora anota su intento. Se AGREGA a la bitácora.
+ *
+ * Escribía en la columna `nota` con `escribir`, que reemplaza: el
+ * intento de la mañana desaparecía al anotar el de la tarde. Es el
+ * mismo error que estaba en el panel de Pedidos, y aquí importa más,
+ * porque esta es la pantalla donde de verdad se llama a la gente.
+ */
 async function guardarNotaGestora(i) {
   const p = G_VISTA[i];
   if (!p) return;
-  const nota = document.getElementById('gnota' + i).value;
+  const caja = document.getElementById('gnota' + i);
+  const texto = caja ? String(caja.value || '').trim() : '';
+  if (!texto) { showToast('Escribe qué pasó en el intento'); return; }
   try {
-    const r = await api('escribir', { entidad: 'Pedidos', id: p.id,
-                                      campos: { nota: nota } });
+    const r = await api('nota_agregar', { entidad: 'Pedidos', id: p.id, texto: texto });
     if (!r.ok) { showToast(r.error || 'No se pudo guardar'); return; }
-    p.nota = nota;
-    showToast('Nota guardada');
+    const clave = 'Pedidos:' + p.id;
+    NOTAS[clave] = (NOTAS[clave] || []).concat([r.nota]);
+    p.nota = texto;
+    if (r.gestionadoPor) p.gestionado_por = r.gestionadoPor;
+    if (caja) caja.value = '';
+    pintarPantallasGestora();
+    showToast('Intento anotado');
   } catch (e) { showToast('Sin conexión: no se guardó'); }
 }
 
@@ -8396,7 +8893,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-25 · 2542';
+const VERSION_PANTALLA = '2026-09-25 · f674';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -9402,29 +9899,67 @@ function aplicarPauta(d) {
   }
 
   /**
-   * El gasto diario no se dibuja si el reporte vino agregado.
+   * ── EL GASTO: POR DÍA SI SE PUEDE, POR SEMANA SIEMPRE ──
    *
-   * El informe de conjuntos de Meta trae una sola fila por todo el
-   * periodo. Repartirlo entre los días sería inventar una curva que no
-   * existe, y una curva inventada se lee como si fuera real.
+   * Aquí sólo había la curva diaria, y con el informe de conjuntos de
+   * Meta —una fila por todo el periodo— el cuadro salía vacío con una
+   * explicación. Ella: «cómo no va a sacar el gasto semanal si ahí
+   * tiene los datos».
+   *
+   * Por día sigue sin dibujarse desde un periodo agregado: repartir
+   * $244 entre 36 días dibuja una recta que no existe. Por semana sí,
+   * porque cuando el periodo cabe en una semana el número es exacto, y
+   * cuando no, el reparto se DICE en vez de disimularse.
    */
   const bar = document.getElementById('pautabar');
+  const pie = document.getElementById('pautapie');
+  const escala = document.getElementById('pauta-escala');
   if (bar) {
     const dias = d.gastoPorDia || {};
     const claves = Object.keys(dias).sort();
-    if (claves.length > 1) {
-      const max = Math.max.apply(null, claves.map(function (k) { return dias[k]; }));
-      bar.innerHTML = claves.slice(-14).map(function (k) {
+    const sem = d.gastoPorSemana || {};
+    const semanas = Object.keys(sem).sort();
+    const set = function (el, html) { if (el) el.innerHTML = html; };
+
+    const barras = function (items, alto, etiqueta, titulo) {
+      const max = Math.max.apply(null, items.map(alto));
+      return items.map(function (x) {
         return '<div class="bcol"><div class="bfill" style="height:' +
-          Math.round(dias[k] / max * 100) + '%;background:var(--acc-d);" title="' +
-          k + ' · ' + S + nf(dias[k]) + '"></div>' +
-          '<span class="blbl">' + k.slice(-2) + '</span></div>';
+          (max ? Math.round(alto(x) / max * 100) : 0) +
+          '%;background:var(--acc-d);" title="' + esc(titulo(x)) + '"></div>' +
+          '<span class="blbl">' + esc(etiqueta(x)) + '</span></div>';
       }).join('');
+    };
+
+    if (claves.length > 1) {
+      bar.innerHTML = barras(claves.slice(-14),
+        function (k) { return dias[k]; },
+        function (k) { return k.slice(-2); },
+        function (k) { return k + ' · ' + S + nf(dias[k]); });
+      set(escala, 'Por día · últimos ' + Math.min(14, claves.length));
+      set(pie, '');
+      desellar(['pautabar']);
+    } else if (semanas.length) {
+      const hayReparto = semanas.some(function (k) { return sem[k].repartido; });
+      bar.innerHTML = barras(semanas.slice(-12),
+        function (k) { return sem[k].gasto; },
+        function (k) { return fechaCorta(k); },
+        function (k) { return 'Semana del ' + fechaCorta(k) + ' · ' + S + nf(sem[k].gasto) +
+                              (sem[k].repartido ? ' · parte de un periodo más largo' : ''); });
+      set(escala, 'Por semana');
+      set(pie, 'Tu reporte de Meta viene agregado por periodo, así que el día a día ' +
+        'no se puede sacar sin inventarlo. La semana sí. ' +
+        (hayReparto
+          ? 'Las semanas que se cruzan con un periodo más largo llevan la parte que les ' +
+            'toca por días; pasa el cursor y lo dice. '
+          : '') +
+        'Para el detalle diario, exporta en Meta con <b>Desglose → Por día</b>.');
       desellar(['pautabar']);
     } else {
-      bar.innerHTML = '<div class="eq-vacio">Tu reporte de Meta viene agregado por ' +
-        'periodo, no por día, así que no hay curva que mostrar. Para verla, ' +
-        'exporta en Meta con <b>Desglose → Por día</b>.</div>';
+      bar.innerHTML = '<div class="eq-vacio">Todavía no hay gasto de pauta este mes. ' +
+        'Sube el reporte de Meta desde Dinero.</div>';
+      set(escala, '');
+      set(pie, '');
     }
   }
 
@@ -10924,7 +11459,6 @@ function entrarConSesion(ses) {
   cargarReales();
   document.getElementById('chat-fab').style.display = 'flex';
   initChat();
-  cargarAccesos();
   vigilarSesion();
   ROL_REAL = ROL;
   pintarSelectorVista();

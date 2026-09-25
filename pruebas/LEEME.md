@@ -17,7 +17,25 @@ node pruebas/chat.js                  # el chat del equipo: quién lee qué
 node pruebas/chat-pantalla.js         # el chat en la pantalla, en Chromium
 node pruebas/accesos.js               # los accesos, y la contraseña fuera de la bitácora
 node pruebas/accesos-pantalla.js      # los accesos donde van, y tapados
+node pruebas/equilibrio.js            # el punto de equilibrio y su invariante
+node pruebas/notas.js                 # que una nota no borre a la otra
+node pruebas/pauta-semana.js          # el gasto por semana, y qué se reparte
+node pruebas/arranque-empresarial.js  # cuántas peticiones cuesta abrir la pantalla
 ```
+
+`equilibrio.js` afirma una propiedad, no un número:
+
+    faltan > 0   ⟺   utilidad < 0
+
+sobre 400 meses generados al azar con semilla fija. Es lo que hace
+imposible que «ya cubriste tus gastos» y «estás perdiendo plata»
+aparezcan juntos otra vez, como aparecían en la foto del 25 de
+septiembre. Buscando ese invariante encontró un caso real que yo no
+había pensado: con la contribución negativa decía «faltan 0».
+
+`arranque-empresarial.js` mide peticiones de RED, no llamadas a `api()`.
+La primera versión remedaba `api` —justo la función que sirve de la
+despensa del arranque— y por eso contaba 20 cuando ya eran 1.
 
 `accesos.js` tiene una aserción que sostiene una decisión y no un detalle:
 que la contraseña de la plataforma NO aparezca en ninguna celda de
