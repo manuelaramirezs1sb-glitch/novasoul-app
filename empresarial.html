@@ -640,8 +640,17 @@ input.li:focus{border-color:var(--acc-d);}
 .view.v-gestora{display:none;}
 [data-rol="gestora"] .view.v-gestora.on{display:flex;}
 /* Permiso que la dueña concede: oculto salvo que la sesión lo traiga */
+/* ─── LO QUE ABRE UN PERMISO ──────────────────────────────
+   Antes esto solo destapaba la ENTRADA DEL MENÚ, y la sección seguía
+   bloqueada por la regla de rol —con `!important`—. Resultado: a la
+   admin con permiso de pauta le aparecía «Pauta y gastos», lo tocaba,
+   y no pasaba nada. Un menú que promete una pantalla que no existe es
+   peor que no tener el menú: manda a la persona a preguntar qué hizo
+   mal.
+   Ahora la marca abre las dos cosas: el menú y la sección. */
 .pm-pauta{display:none;}
 #app[data-pauta="1"] .pm-pauta{display:block;}
+
 [data-rol="gestora"] #v-hoy,[data-rol="gestora"] #v-pedidos,
 [data-rol="gestora"] #v-novedades,[data-rol="gestora"] #v-oficina,
 [data-rol="gestora"] #v-gestoras,[data-rol="gestora"] #v-auditoria,
@@ -650,9 +659,17 @@ input.li:focus{border-color:var(--acc-d);}
 [data-rol="gestora"] #v-permisos,[data-rol="gestora"] #v-config,
 [data-rol="gestora"] #v-productos,
 [data-rol="gestora"] #v-cierre{display:none!important;}
-[data-rol="admin"] #v-pauta,[data-rol="admin"] #v-inventario,
+
+/* La admin: el dinero nunca, la pauta solo si la dueña se la dio.
+   `#v-inventario` salió de esta lista a pedido de ella: «es importante
+   que la admin esté pendiente de esos números». */
+[data-rol="admin"] #v-pauta,
 [data-rol="admin"] #v-dinero,[data-rol="admin"] #v-calc,
 [data-rol="admin"] #v-permisos,[data-rol="admin"] #v-config{display:none!important;}
+
+/* Y la excepción, que tiene que pesar más que la regla de arriba:
+   con permiso de pauta, la admin SÍ entra a esa sección. */
+#app[data-pauta="1"][data-rol="admin"] #v-pauta.on{display:flex!important;}
 
 /* ─── PERMISOS ───────────────────────────────────────── */
 .mtz-table{overflow-x:auto;}
@@ -1270,6 +1287,14 @@ input.li:focus{border-color:var(--acc-d);}
         <div class="ni ro-admin" data-v="novedades" onclick="go('novedades',this)">Novedades</div>
         <div class="ni ro-admin" data-v="oficina" onclick="go('oficina',this)">Seguimiento a oficina</div>
         <div class="ni ro-admin" data-v="productos" onclick="go('productos',this)">Productos</div>
+        <!--
+          INVENTARIO no tenía entrada de menú: solo se llegaba desde la
+          tarjeta «Inventario en riesgo» del Hoy, o desde Productos. Ella
+          pidió que la admin lo viera —«es importante que ella esté
+          pendiente de esos números»— y sin una entrada no habría sabido
+          que existe.
+        -->
+        <div class="ni ro-admin" data-v="inventario" onclick="go('inventario',this)">Inventario</div>
         <div class="ni v-gestora" data-v="g-pedidos" onclick="go('g-pedidos',this)">Mis pedidos</div>
         <div class="ni v-gestora" data-v="g-novedades" onclick="go('g-novedades',this)">Mis novedades</div>
       </div>
@@ -2316,7 +2341,13 @@ function buildAll() {
   buildHoy(); buildPedidos(); buildNovedades();
   buildOficina(); buildGestoras(); buildAuditoria();
   buildProductos();
-  if (ROL === 'dueno') { buildPauta(); buildInventario(); buildDinero(); buildPermisos(); pintarCalculadoras(); pintarSemanasCierre(); }
+  // El inventario es de la dueña Y de la admin: sin esto, la admin
+  // llegaba a una sección que nadie había construido.
+  buildInventario();
+  if (ROL === 'dueno') { buildDinero(); buildPermisos(); pintarCalculadoras(); pintarSemanasCierre(); }
+  // La pauta va aparte del bloque de la dueña: una admin con el permiso
+  // también la necesita construida, o al entrar vería la sección vacía.
+  if (ROL === 'dueno' || puedeSubir('pauta')) buildPauta();
 }
 
 /**
@@ -7749,7 +7780,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-25 · e00c';
+const VERSION_PANTALLA = '2026-09-25 · c6bb';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -9743,9 +9774,22 @@ const PERMISOS_EXTRA = [
   ['subir_pauta', 'Puede subir pauta', 'Meta y TikTok: ahí está el gasto y el margen.'],
   ['subir_cartera', 'Puede subir la cartera',
    'El extracto de la billetera: cuánto hay, cuánto se retiró y con qué concepto.'],
-  // Mirar y escribir no son el mismo riesgo, así que son permisos distintos.
-  ['ver_dinero', 'Puede ver el dinero',
-   'Utilidad, techo de CPA y el semáforo semanal. Solo mirar, no subir nada.'],
+  /**
+   * ── SE LLAMABA «PUEDE VER EL DINERO» Y NO ABRÍA NINGÚN DINERO ──
+   *
+   * Prometía la pantalla de Dinero y lo único que hacía era destapar
+   * las cifras del semáforo semanal. Ella lo zanjó: «que solo lo vea la
+   * dueña, y que cambie de nombre, que refleje lo que de verdad se
+   * muestra en la pantalla».
+   *
+   * El valor guardado sigue siendo `ver_dinero` a propósito: es lo que
+   * ya está escrito en las hojas Equipo que existen, y cambiarlo dejaría
+   * a esas personas sin el permiso de un día para otro sin que nadie se
+   * entere. Lo que cambia es el nombre que se lee.
+   */
+  ['ver_dinero', 'Puede ver el semáforo de la tienda',
+   'Las cifras del semáforo semanal: utilidad, gasto y techo de CPA. ' +
+   'NO abre la pantalla de Dinero — esa es solo de la dueña.'],
 ];
 
 async function cargarEquipo() {

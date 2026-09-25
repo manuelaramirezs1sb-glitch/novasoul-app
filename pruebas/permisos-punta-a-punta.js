@@ -174,8 +174,12 @@ r = S.apiCrear(DUENA, { entidad:'Equipo', datos: { nombre:'Gerald Ruiz',
 igual('y la admin con dos permisos extra', true, r.ok);
 
 console.log('\n══ 2 · CADA UNA ENTRA Y EL SERVIDOR LE ARMA SU SESIÓN ══');
+S.apiCrear(DUENA, { entidad:'Equipo', datos: { nombre:'Ruben Díaz',
+  correo:'ruben@vipcol.com', rol:'admin', tienda:'col', estado:'activo', permisos:'' } });
+
 const sZulay = entrar('zulay@vipcol.com');
 const sGerald = entrar('gerald@vipcol.com');
+const sRuben = entrar('ruben@vipcol.com');     // admin SIN permisos extra
 const sSara = entrar('sara@vipcol.com');
 ok('la gestora entra', !!sZulay);
 ok('la admin entra', !!sGerald);
@@ -267,7 +271,8 @@ const SECCIONES = ['hoy','pedidos','novedades','oficina','productos','gestoras',
   }
 
   const ve = {};
-  for (const [quien, ses] of [['dueña', sSara], ['admin', sGerald], ['gestora', sZulay]]) {
+  for (const [quien, ses] of [['dueña', sSara], ['admin', sGerald],
+                              ['admin-sin', sRuben], ['gestora', sZulay]]) {
     const r = await loQueVe(ses);
     ve[quien] = r.visto;
     ok('la pantalla de la ' + quien + ' no lanza errores', r.errores.length === 0,
@@ -276,14 +281,17 @@ const SECCIONES = ['hoy','pedidos','novedades','oficina','productos','gestoras',
 
   console.log('\n── Lo que ve cada una, medido en el navegador ──');
   const col = (s, n) => { s = String(s); return s + ' '.repeat(Math.max(0, n - s.length)); };
-  console.log('  ' + col('SECCIÓN', 13) + col('dueña', 8) + col('admin', 8) + 'gestora');
-  console.log('  ' + '─'.repeat(38));
+  console.log('  ' + col('SECCIÓN', 13) + col('dueña', 8) + col('admin+', 8) +
+              col('admin', 8) + 'gestora');
+  console.log('  ' + '─'.repeat(46));
   SECCIONES.forEach(function (v) {
     console.log('  ' + col(v, 13) +
       col(ve['dueña'].vistas.indexOf(v) !== -1 ? '·' : '', 8) +
       col(ve['admin'].vistas.indexOf(v) !== -1 ? '·' : '', 8) +
+      col(ve['admin-sin'].vistas.indexOf(v) !== -1 ? '·' : '', 8) +
       (ve['gestora'].vistas.indexOf(v) !== -1 ? '·' : ''));
   });
+  console.log('  (admin+ = con permiso de pauta)');
 
   console.log('\n── La gestora no puede ver lo que no le toca ──');
   ['pauta', 'dinero', 'calc', 'permisos', 'config', 'cierre', 'productos',
@@ -293,10 +301,19 @@ const SECCIONES = ['hoy','pedidos','novedades','oficina','productos','gestoras',
   ok('pero sí sus pedidos', ve['gestora'].vistas.indexOf('pedidos') === -1 ||
      true);   // la gestora usa sus propias vistas g-*, comprobadas aparte
 
-  console.log('\n── La admin tampoco ve el dinero ni la pauta ──');
-  ['pauta', 'dinero', 'calc', 'permisos', 'config'].forEach(function (v) {
+  console.log('\n── La admin: el dinero nunca ──');
+  ['dinero', 'calc', 'permisos', 'config'].forEach(function (v) {
     ok('no ve ' + v, ve['admin'].vistas.indexOf(v) === -1);
+    ok('  (ni con permisos extra) ' + v, ve['admin-sin'].vistas.indexOf(v) === -1);
   });
+  /**
+   * Y el inventario SÍ, que es lo que ella pidió: «la admin no tiene
+   * permiso para el inventario, por favor dáselo, es importante que
+   * ella esté pendiente de esos números».
+   */
+  ok('sí ve el inventario', ve['admin'].vistas.indexOf('inventario') !== -1);
+  ok('y tiene por dónde llegar', ve['admin'].menu.indexOf('inventario') !== -1,
+     'menú: ' + JSON.stringify(ve['admin'].menu));
   ok('sí ve pedidos', ve['admin'].vistas.indexOf('pedidos') !== -1);
   ok('sí ve novedades', ve['admin'].vistas.indexOf('novedades') !== -1);
   ok('sí ve al equipo', ve['admin'].vistas.indexOf('gestoras') !== -1);
@@ -307,55 +324,45 @@ const SECCIONES = ['hoy','pedidos','novedades','oficina','productos','gestoras',
   });
 
   // ════════════════════════════════════════════════════════════
-  console.log('\n══ 4 · EL ESLABÓN QUE NO ESTÁ CONECTADO ══');
+  console.log('\n══ 4 · EL PERMISO DE PAUTA, AHORA CONECTADO ══');
   /**
-   * ── AQUÍ ESTÁ LO QUE ELLA SOSPECHABA ──
+   * Antes: `aplicarPermisos()` estampaba `data-pauta` y esa marca
+   * revelaba ÚNICAMENTE la entrada del menú. La sección seguía
+   * escondida por la regla de rol, con `!important`. La admin tocaba
+   * «Pauta y gastos» y no pasaba nada.
    *
-   * «que esté bien hecho no quiere decir que esté conectado».
-   *
-   * La dueña le marcó a Gerald «Puede ver el dinero» y «Puede subir
-   * pauta». El servidor lo guardó, lo leyó y se lo puso en la sesión —
-   * eso se comprobó arriba y pasa.
-   *
-   * Pero LA PANTALLA no lee `SESION.permisos` en ningún sitio: esconde
-   * las secciones solo por ROL, con reglas de CSS fijas. Así que las
-   * dos casillas que marcó la dueña no cambian ni una pantalla.
-   *
-   * Esta prueba deja el hueco MEDIDO y a la vista, en vez de
-   * descrito. El día que se conecte, estas dos aserciones cambian de
-   * sentido y hay que venir a tocarlas — que es exactamente lo que
-   * tiene que pasar.
+   * Ella lo zanjó: «solo si la dueña le da permiso de ver la pauta la
+   * puede ver, si no le da permiso no».
    */
-  ok('la admin TIENE el permiso de ver dinero en su sesión',
-     sGerald.permisos.indexOf('ver_dinero') !== -1);
-  ok('…y aun así la pantalla de Dinero le sigue oculta',
-     ve['admin'].vistas.indexOf('dinero') === -1);
-  ok('la admin TIENE el permiso de subir pauta',
-     sGerald.permisos.indexOf('subir_pauta') !== -1);
-  ok('…y aun así la pantalla de Pauta le sigue oculta',
-     ve['admin'].vistas.indexOf('pauta') === -1);
-
-  /**
-   * ── LO QUE DE VERDAD PASA, QUE ES PEOR ──
-   *
-   * `aplicarPermisos()` sí lee los permisos, pero solo estampa
-   * `data-pauta` en el contenedor, y esa marca revela ÚNICAMENTE la
-   * ENTRADA DEL MENÚ (`.pm-pauta`). La SECCIÓN sigue escondida por la
-   * regla de rol, que además lleva `!important`.
-   *
-   * Resultado: a la admin con permiso de pauta le aparece «Pauta y
-   * gastos» en el menú, lo toca, y no pasa nada. Un menú que promete
-   * una pantalla que no existe es peor que no tener el menú: la manda
-   * a preguntar qué hizo mal.
-   */
-  ok('a la admin con permiso SÍ le aparece la entrada del menú',
+  ok('CON permiso, le aparece el menú',
      ve['admin'].menu.indexOf('pauta') !== -1,
      'menú: ' + JSON.stringify(ve['admin'].menu));
-  ok('PERO la sección sigue escondida: el menú no lleva a ningún lado',
-     ve['admin'].vistas.indexOf('pauta') === -1);
-  ok('y con Dinero ni siquiera aparece el menú',
-     ve['admin'].menu.indexOf('dinero') === -1 &&
+  ok('CON permiso, el menú ahora SÍ lleva a la sección',
+     ve['admin'].vistas.indexOf('pauta') !== -1);
+
+  ok('SIN permiso, no hay menú',
+     ve['admin-sin'].menu.indexOf('pauta') === -1,
+     'menú: ' + JSON.stringify(ve['admin-sin'].menu));
+  ok('SIN permiso, tampoco la sección',
+     ve['admin-sin'].vistas.indexOf('pauta') === -1);
+
+  console.log('\n══ 5 · EL DINERO ES SOLO DE LA DUEÑA ══');
+  /**
+   * «que solo lo vea la dueña, y que cambie de nombre, que refleje lo
+   * que de verdad se muestra en la pantalla».
+   */
+  ok('la admin con «ver_dinero» NO abre la pantalla de Dinero',
+     sGerald.permisos.indexOf('ver_dinero') !== -1 &&
      ve['admin'].vistas.indexOf('dinero') === -1);
+  ok('ni le aparece en el menú', ve['admin'].menu.indexOf('dinero') === -1);
+  ok('solo la dueña', ve['dueña'].vistas.indexOf('dinero') !== -1);
+
+  const html = fs.readFileSync(__dirname + '/../empresarial.html', 'utf8');
+  ok('y la casilla ya no promete «ver el dinero»',
+     !/'ver_dinero', 'Puede ver el dinero'/.test(html),
+     'la casilla sigue con el nombre viejo');
+  ok('sino lo que de verdad destapa: el semáforo',
+     /Puede ver el semáforo de la tienda/.test(html));
 
   await b.close();
   console.log(fallas ? '\n' + fallas + ' FALLAS\n' : '\nTodo bien.\n');
