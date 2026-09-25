@@ -205,10 +205,23 @@ igual('se le quita solo ese', ['subir_pedidos'], sJaime.permisos);
 // ══════════════════════════════════════════════════════════════
 console.log('\n══ 3 · Y AHORA LA PANTALLA ══');
 
-/** Las secciones del menú, y quién debería verlas. */
-const SECCIONES = ['hoy','pedidos','novedades','oficina','productos','gestoras',
-                   'auditoria','pauta','inventario','dinero','calc','cierre',
-                   'permisos','config'];
+/**
+ * Las secciones, y quién debería verlas.
+ *
+ * ── UN ERROR DEL CUADRO, NO DEL PRODUCTO ──
+ *
+ * La primera versión de esta lista tenía solo las secciones de la
+ * dueña. La gestora salía con la columna ENTERAMENTE VACÍA, y ella lo
+ * leyó como que la gestora no veía nada.
+ *
+ * No era así: la gestora tiene sus PROPIAS secciones —`g-hoy`,
+ * `g-pedidos`, `g-novedades`— y esas no estaban en la lista. Un cuadro
+ * que mide solo la mitad del mapa no dice «no hay nada al otro lado»:
+ * dice «no miré». Y se lee igual.
+ */
+const SECCIONES = ['hoy','g-hoy','pedidos','g-pedidos','novedades','g-novedades',
+                   'oficina','productos','gestoras','auditoria','pauta',
+                   'inventario','dinero','calc','cierre','permisos','config'];
 
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -281,17 +294,26 @@ const SECCIONES = ['hoy','pedidos','novedades','oficina','productos','gestoras',
 
   console.log('\n── Lo que ve cada una, medido en el navegador ──');
   const col = (s, n) => { s = String(s); return s + ' '.repeat(Math.max(0, n - s.length)); };
-  console.log('  ' + col('SECCIÓN', 13) + col('dueña', 8) + col('admin+', 8) +
-              col('admin', 8) + 'gestora');
-  console.log('  ' + '─'.repeat(46));
+  console.log('  ' + col('SECCIÓN', 14) + col('dueña', 8) + col('admin', 8) +
+              col('admin+', 8) + 'gestora');
+  console.log('  ' + '─'.repeat(47));
   SECCIONES.forEach(function (v) {
-    console.log('  ' + col(v, 13) +
+    console.log('  ' + col(v, 14) +
       col(ve['dueña'].vistas.indexOf(v) !== -1 ? '·' : '', 8) +
-      col(ve['admin'].vistas.indexOf(v) !== -1 ? '·' : '', 8) +
       col(ve['admin-sin'].vistas.indexOf(v) !== -1 ? '·' : '', 8) +
+      col(ve['admin'].vistas.indexOf(v) !== -1 ? '·' : '', 8) +
       (ve['gestora'].vistas.indexOf(v) !== -1 ? '·' : ''));
   });
-  console.log('  (admin+ = con permiso de pauta)');
+  console.log('\n  admin  = una admin cualquiera');
+  console.log('  admin+ = LA MISMA admin, después de que la dueña le marque' +
+              ' «puede subir pauta»');
+
+  console.log('\n── Y la gestora sí tiene sus propias pantallas ──');
+  ['g-hoy', 'g-pedidos', 'g-novedades'].forEach(function (v) {
+    ok('ve ' + v, ve['gestora'].vistas.indexOf(v) !== -1);
+    ok('y la tiene en su menú', ve['gestora'].menu.indexOf(v) !== -1);
+  });
+  ok('la dueña NO ve las de la gestora', ve['dueña'].vistas.indexOf('g-hoy') === -1);
 
   console.log('\n── La gestora no puede ver lo que no le toca ──');
   ['pauta', 'dinero', 'calc', 'permisos', 'config', 'cierre', 'productos',
