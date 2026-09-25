@@ -226,7 +226,16 @@ const ESQUEMA_EMPRESARIAL = {
             'valor','costo_producto','costo_envio','metodo_pago','bodega',
             'estado','estado_transportadora','estado_canonico','transportadora','guia',
             'intentos','gestora_asignada','fecha_promesa','fecha_entrega',
-            'razon_cancelacion','estado_nova','nota','ultimo_movimiento',
+            'razon_cancelacion','estado_nova','nota',
+            /**
+             * `nota` es del equipo y el importador no la toca.
+             * `observacion` es lo que traía el archivo: Dropi la llama
+             * «notas», y ahí es donde las gestoras escribían antes de
+             * Nova. Sin esta columna el importador la leía —solo para
+             * pescar un segundo teléfono— y la botaba.
+             */
+            'observacion',
+            'ultimo_movimiento',
             // Lo de oficina: el estado lo dice la transportadora, pero el
             // acuerdo con la clienta y el adelanto los pone el equipo.
             'adelanto','acuerdo_oficina','confirmado_oficina',
@@ -242,9 +251,27 @@ const ESQUEMA_EMPRESARIAL = {
   // estado de la novedad a propósito: una novedad puede resolverse y el
   // pedido devolverse igual. Son dos hechos distintos, y confundirlos
   // esconde justo el caso que hay que mirar.
+  /**
+   * ── DOS COLUMNAS PARA LO MISMO, A PROPÓSITO ──
+   *
+   * `solucion` es lo que el equipo escribe DENTRO de Nova, y el
+   * importador tiene prohibido pisarla.
+   *
+   * `solucion_plataforma` es lo que venía escrito en el archivo —lo que
+   * la gestora escribió en Dropi o en Effi antes de que existiera Nova—.
+   * Esa SÍ la actualiza cada importación, porque es un espejo de la
+   * plataforma, no un dato de aquí.
+   *
+   * Antes solo existía la primera, y el resultado era que el histórico
+   * de soluciones del archivo se leía y se tiraba: se importaban
+   * setenta novedades y las setenta llegaban sin una palabra de lo que
+   * ya se había hecho. Empezar de cero encima de trabajo que ya estaba
+   * hecho es la peor forma de estrenar una herramienta.
+   */
   Novedades: ['id','fuente','id_externo','pedido_id','fecha','tipo','motivo','grupo',
               'estado','solucionada','fecha_solucion','desenlace',
               'gestora','solucion','nota','intentos','resuelta_en',
+              'solucion_plataforma','aclaracion',
               'actualizado_en','actualizado_por'],
 
   // IRIS no es una plataforma de pedidos — es la central telefónica.
@@ -9425,7 +9452,26 @@ function prepararFila(f, tipo, fuenteId, tienda, pais, ss, aprendidos, vistos) {
   }
   if (tipo === 'novedades') {
     o.grupo = grupoNovedad(o.motivo, o.codigo);
-    if (o.aclaracion && !o.nota) { o.nota = o.aclaracion; }
+    /**
+     * ── LO DEL ARCHIVO NO SE MEZCLA CON LO DEL EQUIPO ──
+     *
+     * Antes la aclaración del archivo se copiaba dentro de `nota`, que
+     * es la columna donde escribe el equipo, «si estaba vacía». Y el
+     * histórico de soluciones caía dentro de `solucion`, igual.
+     *
+     * Parecía inofensivo porque el importador no pisa esas dos columnas
+     * al actualizar. Pero significa que la primera importación deja el
+     * texto de la plataforma haciéndose pasar por un apunte del equipo,
+     * y después nadie puede distinguir cuál es cuál — ni saber si lo
+     * que lee lo escribió una compañera aquí o venía en el Excel.
+     *
+     * Ahora cada uno tiene su columna. La pantalla las muestra por
+     * separado y dice de dónde salió cada una.
+     */
+    if (o.solucion !== undefined) {
+      if (!o.solucion_plataforma) o.solucion_plataforma = o.solucion;
+      delete o.solucion;
+    }
   }
   if (tipo === 'llamadas') {
     o.seg_conversado = aSegundos(o.seg_conversado);
@@ -9661,6 +9707,25 @@ function derivarNovedades(pedidos, fuenteId, tienda) {
         solucionada: solucionada ? 'si' : 'no',
         fecha_solucion: p.fecha_solucion || '',
         desenlace: cerrado ? p.estado_canonico : '',
+        /**
+         * ── LO QUE YA HABÍA ESCRITO LA GESTORA ──
+         *
+         * Dropi trae una columna `solucion` y Effi un «histórico de
+         * soluciones»: es lo que escribió quien atendió el caso, a
+         * veces durante meses, antes de que existiera Nova.
+         *
+         * El alias del importador SIEMPRE lo leyó. Esta función nunca
+         * lo copió a la fila, así que se leía y se tiraba: se
+         * importaban setenta novedades resueltas y las setenta
+         * llegaban sin una palabra de lo que se hizo.
+         *
+         * Va a `solucion_plataforma`, no a `solucion`: la segunda es la
+         * que el equipo escribe DENTRO de Nova y el importador tiene
+         * prohibido pisarla. Mezclarlas haría que una reimportación
+         * borrara lo que alguien escribió aquí.
+         */
+        solucion_plataforma: String(p.solucion || '').trim(),
+        aclaracion: String(p.aclaracion || '').trim(),
       };
     });
 }

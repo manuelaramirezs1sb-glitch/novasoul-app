@@ -4407,7 +4407,29 @@ function pintarPanelPedido() {
             (COLOR_ESTADO[x] ? COLOR_ESTADO[x][2] : x) + '</div>';
         }).join('') + '</div></div>' +
 
-    '<textarea class="narea" id="pd-nota" placeholder="Nota sobre este pedido…">' +
+    /**
+     * ── LO QUE VENÍA ESCRITO EN LA PLATAFORMA ──
+     *
+     * Va ARRIBA de la nota del equipo y en gris, marcado con su origen.
+     * Son dos cosas distintas y confundirlas es caro: una la escribió
+     * una compañera en Dropi hace tres meses, la otra la escribió
+     * alguien aquí esta mañana. Mezcladas, nadie sabe a cuál hacerle
+     * caso — ni a quién preguntarle.
+     *
+     * Esta columna la reescribe cada importación; la de abajo no la
+     * toca nadie más que el equipo.
+     */
+    (p.observacion
+      ? '<div style="border-top:1px solid var(--s-line2);padding-top:11px;">' +
+        '<div class="dlbl">LO QUE DECÍA EL ARCHIVO</div>' +
+        '<div class="dtxt" style="color:var(--t-mut);font-style:italic;">' +
+          esc(p.observacion) + '</div>' +
+        '<div style="font:500 11px/1.4 \'DM Sans\';color:var(--t-mut3);margin-top:4px;">' +
+          'Venía en el export de ' + esc(p.fuente || 'la plataforma') +
+          '. Se actualiza sola en cada importación.</div></div>'
+      : '') +
+    '<div class="dlbl" style="margin-top:9px;">TU NOTA</div>' +
+    '<textarea class="narea" id="pd-nota" placeholder="Lo que escribas aquí es del equipo. Ninguna importación lo borra.">' +
       esc(p.nota || '') + '</textarea>' +
     '<div class="nsavebtn" onclick="guardarPedido()">Guardar</div>' +
   '</div>';
@@ -4718,8 +4740,32 @@ function pintarPanelNovedad() {
       (n.fecha_solucion
         ? '<div style="grid-column:1/-1"><div class="dlbl">LA PLATAFORMA LA DIO POR SOLUCIONADA</div>' +
           '<div class="dtxt">' + esc(n.fecha_solucion) + '</div></div>' : '') +
+      /**
+       * ── LO QUE YA SE HABÍA HECHO, ANTES DE NOVA ──
+       *
+       * Este texto lo escribió quien atendió el caso en Dropi o en
+       * Effi, a veces meses antes. El importador siempre lo leyó, pero
+       * la función que arma la novedad nunca lo copiaba: se importaban
+       * setenta novedades resueltas y las setenta llegaban en blanco.
+       *
+       * Va marcado con su origen y separado de lo que el equipo
+       * escribe aquí. Quien lo lea tiene que poder saber, sin
+       * preguntar, si eso lo escribió una compañera en la plataforma o
+       * alguien en Nova esta mañana.
+       */
+      (n.solucion_plataforma
+        ? '<div style="grid-column:1/-1"><div class="dlbl">LO QUE SE HIZO, SEGÚN EL ARCHIVO</div>' +
+          '<div class="dtxt" style="color:var(--t-mut);font-style:italic;">' +
+            esc(n.solucion_plataforma) + '</div>' +
+          '<div style="font:500 11px/1.4 \'DM Sans\';color:var(--t-mut3);margin-top:3px;">' +
+            'Venía en el export de ' + esc(n.fuente || 'la plataforma') + '.</div></div>'
+        : '') +
+      (n.aclaracion
+        ? '<div style="grid-column:1/-1"><div class="dlbl">ACLARACIÓN DE LA TRANSPORTADORA</div>' +
+          '<div class="dtxt" style="color:var(--t-mut);">' + esc(n.aclaracion) + '</div></div>'
+        : '') +
       (n.solucion
-        ? '<div style="grid-column:1/-1"><div class="dlbl">SOLUCIÓN PEDIDA AL COURIER</div>' +
+        ? '<div style="grid-column:1/-1"><div class="dlbl">SOLUCIÓN ESCRITA EN NOVA</div>' +
           '<div class="dtxt">' + esc(n.solucion) + '</div></div>' : '') +
     '</div>' +
 
@@ -7703,7 +7749,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-25 · 3f6f';
+const VERSION_PANTALLA = '2026-09-25 · e00c';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
