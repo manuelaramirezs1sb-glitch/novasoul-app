@@ -22,7 +22,15 @@ node pruebas/notas.js                 # que una nota no borre a la otra
 node pruebas/pauta-semana.js          # el gasto por semana, y qué se reparte
 node pruebas/arranque-empresarial.js  # cuántas peticiones cuesta abrir la pantalla
 node pruebas/caches.js                # que guardar y volver a leer nunca dé lo viejo
+node pruebas/puerta-tiendas.js        # que cualquier cliente pueda entrar, no solo Nutrea
 ```
+
+`puerta-tiendas.js` existe porque Sara no pudo entrar a su propia cuenta:
+el paso 3 del login tenía las dos tiendas de Nutrea escritas a mano en el
+HTML y el código solo sabía esconderlas, nunca crear una. La puerta de
+Nova solo se abría para una cuenta cuyas tiendas se llamaran `ec` y `gt`.
+Y detrás había un segundo bloqueo: `POR_TIENDA[ST]` es `undefined` para
+cualquier otra tienda, así que `buildAll()` reventaba al entrar.
 
 `caches.js` es la contraparte de la velocidad. Desde que `libro_()`
 guarda lo leído mientras dura la petición —lo que bajó el arranque de 75

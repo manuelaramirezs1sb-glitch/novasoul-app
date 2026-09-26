@@ -2415,6 +2415,30 @@ function LOC(t) {
 /** Número en el formato del país de la tienda activa. */
 function NUM(n, t) { return Math.round(Number(n)||0).toLocaleString(LOC(t)); }
 /** El dato demo de la tienda activa; si no existe, el de la primera. */
+/**
+ * El esqueleto de ejemplo de una tienda.
+ *
+ * ┌─ POR QUÉ ESTO EXISTE Y HAY QUE USARLO SIEMPRE ─────────────┐
+ * │                                                            │
+ * │ `POR_TIENDA` solo tiene NUESTRAS dos tiendas, `ec` y `gt`. │
+ * │ Ocho sitios hacían `POR_TIENDA[ST]` directo, y con         │
+ * │ cualquier otra tienda eso es `undefined`: la primera línea │
+ * │ que leyera una propiedad reventaba y `buildAll()` se caía  │
+ * │ entera.                                                     │
+ * │                                                            │
+ * │ Sara entró a su cuenta con una tienda llamada `qfx` y la   │
+ * │ app se cayó al entrar. No se veía como un error: se veía   │
+ * │ como una pantalla en blanco.                               │
+ * │                                                            │
+ * │ Esta función ya existía para eso. Lo que faltaba era        │
+ * │ usarla en los ocho sitios.                                 │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * Lo que devuelve es SIEMPRE un ejemplo, y por eso el aviso «Datos de
+ * EJEMPLO» se queda puesto hasta que `cargarReales()` traiga los de
+ * verdad y lo quite.
+ */
 function DEMO(t) { return POR_TIENDA[t||ST] || POR_TIENDA[Object.keys(POR_TIENDA)[0]]; }
 
 const POR_TIENDA = {
@@ -2629,7 +2653,7 @@ function applyGestoraPerms(){
 }
 
 function buildHoy() {
-  const d = POR_TIENDA[ST];
+  const d = DEMO();
   // KPIs mes
   document.getElementById('kmes').innerHTML = d.kmes.map(k=>`<div class="kc ${k.cl}"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
   /**
@@ -2694,7 +2718,7 @@ function buildPedidos() {
    * verdad. Si el ejemplo se dibujara distinto, lo que ella aprende
    * mirándolo no le serviría el día que entren sus datos.
    */
-  const rows = POR_TIENDA[ST].pedidos;
+  const rows = DEMO().pedidos;
   const COLS = 'minmax(0,1.25fr) minmax(0,1.35fr) minmax(0,.85fr) auto auto';
   let h = '<div class="thead" style="--cols:' + COLS + '">' +
     '<div>Cliente</div><div>Producto</div><div>Destino</div>' +
@@ -2730,7 +2754,7 @@ function togPed(i) {
 function pintarPanelDemo() {
   const cont = document.getElementById('pedpanel');
   if (!cont) return;
-  const p = POR_TIENDA[ST].pedidos[PED_DEMO];
+  const p = DEMO().pedidos[PED_DEMO];
   if (!p) {
     cont.innerHTML = '<div class="tpanel"><div class="tpanel-t">El detalle</div>' +
       '<p class="tpanel-nada">Toca un pedido de la tabla y aquí sale su teléfono, ' +
@@ -2770,7 +2794,7 @@ function buildNovedades() {
   ].map(k=>`<div class="kc" style="border-left:4px solid ${k.c};"><div class="klbl">${k.lb}</div><div class="kval">${k.v}</div><div class="ksub">${k.sub}</div></div>`).join('');
 
   /** El ejemplo, con la misma tabla y el mismo panel que las de verdad. */
-  const novs = POR_TIENDA[ST].novedades;
+  const novs = DEMO().novedades;
   const COLS = 'minmax(0,1fr) minmax(0,1.5fr) auto auto auto';
   let h = '<div class="thead" style="--cols:' + COLS + '">' +
     '<div>Pedido</div><div>Motivo</div><div>Transportadora</div>' +
@@ -2806,7 +2830,7 @@ function togNov(i) {
 function pintarPanelNovDemo() {
   const cont = document.getElementById('novpanel');
   if (!cont) return;
-  const n = POR_TIENDA[ST].novedades[NOV_DEMO];
+  const n = DEMO().novedades[NOV_DEMO];
   if (!n) {
     cont.innerHTML = '<div class="tpanel"><div class="tpanel-t">El detalle</div>' +
       '<p class="tpanel-nada">Toca una novedad y aquí sale qué pasó, la nota de la ' +
@@ -3088,12 +3112,12 @@ function buildPauta() {
 
   document.getElementById('cpa-techo-lbl').textContent = (ec?'$ 10,00':'Q 37,20')+' por pedido';
 
-  document.getElementById('roaslist').innerHTML = POR_TIENDA[ST].roas.map(r=>`<div class="roas-row"><div><div class="roas-nm">${r.nm}</div></div><span class="bd ${r.cl}">${r.roas}</span></div>`).join('');
+  document.getElementById('roaslist').innerHTML = DEMO().roas.map(r=>`<div class="roas-row"><div><div class="roas-nm">${r.nm}</div></div><span class="bd ${r.cl}">${r.roas}</span></div>`).join('');
 
-  const pg=POR_TIENDA[ST].dinBarVals,pm=Math.max(...pg);
+  const pg=DEMO().dinBarVals,pm=Math.max(...pg);
   document.getElementById('pautabar').innerHTML = ['L','M','M','J','V','S','D'].map((d,i)=>`<div class="bcol"><div class="bfill" style="height:${Math.round(pg[i]/pm*100)}%;background:${i===6?'var(--acc-d)':'var(--s-dark3)'};" title="${C(pg[i])}"></div><span class="blbl">${d}</span></div>`).join('');
 
-  document.getElementById('cpalist').innerHTML = POR_TIENDA[ST].cpa.map(c=>`<div class="roas-row"><div class="roas-nm">${c.nm}</div><span class="bd ${c.cl}">CPA ${c.cpa}</span></div>`).join('');
+  document.getElementById('cpalist').innerHTML = DEMO().cpa.map(c=>`<div class="roas-row"><div class="roas-nm">${c.nm}</div><span class="bd ${c.cl}">CPA ${c.cpa}</span></div>`).join('');
 }
 
 /**
@@ -3146,7 +3170,7 @@ function buildDinero(){
   // El equilibrio de Dinero lo pinta el MISMO pintor que el de Hoy y que
   // el de la operación real. Tenía aquí su propia copia, con tres cifras
   // que no cuadraban entre sí ni con las de arriba.
-  pintarEquilibrio(POR_TIENDA[ST]);
+  pintarEquilibrio(DEMO());
   // Inicializar gastos
   renderGastos();
 }
@@ -4630,7 +4654,7 @@ async function verificarCodigo() {
     CONECTADO = true;
     SESION = r.sesion;
     // Las tiendas que la hoja autoriza mandan sobre las que muestra el HTML
-    pintarTiendasPermitidas(r.sesion.tiendas);
+    pintarTiendasPermitidas(r.sesion.tiendas, r.sesion.fichas);
     aplicarPermisos();
     vigilarSesion();
     step(3);
@@ -4644,32 +4668,137 @@ async function verificarCodigo() {
 let SESION = null;
 
 /** Oculta del selector las tiendas que esta persona no tiene asignadas. */
-function pintarTiendasPermitidas(tiendas) {
-  if (!tiendas || !tiendas.length) return;
-  // Si la hoja trae tiendas que el HTML no conoce, se agregan al vuelo.
-  // Es lo que permite que una cuenta con tiendas en Perú o México use
-  // esta misma pantalla sin tocar una línea de código.
-  tiendas.forEach(function(t){
-    // La hoja puede mandar el id suelto o la ficha completa
-    const id = typeof t === 'string' ? t : t.id;
-    const d  = typeof t === 'string' ? {} : t;
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   LAS TIENDAS DEL PASO 3, CONSTRUIDAS — NO ESCONDIDAS
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ EL BLOQUEO QUE ESTO ARREGLA ──────────────────────────────┐
+ * │                                                            │
+ * │ Sara entró por primera vez y se quedó parada en «Paso 3 de │
+ * │ 3 · ¿Con cuál abrimos?» con la lista VACÍA. No podía       │
+ * │ entrar a su cuenta.                                        │
+ * │                                                            │
+ * │ El paso 3 tenía DOS tarjetas escritas a mano en el HTML —  │
+ * │ «Nutrea Ecuador» y «Nutrea GT»— y esta función solo sabía  │
+ * │ ESCONDER la que no correspondiera. Nunca creaba una.       │
+ * │                                                            │
+ * │ O sea: la puerta de Nova solo se abría para una cuenta     │
+ * │ cuyas tiendas se llamaran exactamente `ec` y `gt`. La      │
+ * │ nuestra. Cualquier cliente con otro id veía una pantalla   │
+ * │ en blanco y se quedaba afuera — y la pantalla no decía     │
+ * │ nada, porque desde su punto de vista no había fallado      │
+ * │ nada: había escondido las dos que conocía.                 │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * Ahora las tarjetas se dibujan con lo que manda la hoja, con su
+ * nombre, su moneda y su país de verdad.
+ */
+function pintarTiendasPermitidas(tiendas, fichas) {
+  const s3v = document.getElementById('s3');
+  /**
+   * Sin tiendas NO se dejan las dos de ejemplo puestas.
+   *
+   * Era lo que hacía antes: salir sin tocar nada. Y lo que quedaba en
+   * pantalla eran «Nutrea Ecuador» y «Nutrea GT» — dos tiendas que no
+   * son suyas, clicables, de otra cuenta. Se entraba a una tienda
+   * inexistente y todo daba error sin decir por qué.
+   */
+  if (!tiendas || !tiendas.length) {
+    if (s3v) {
+      s3v.innerHTML =
+        '<div><div class="ltag">PASO 3 DE 3</div>' +
+        '<div class="ltitle">Tu cuenta todavía no tiene tiendas</div>' +
+        '<p class="lsub">Nova no puede abrir nada hasta que haya al menos una: ' +
+        'todo —pedidos, novedades, permisos— se organiza por tienda.</p>' +
+        '<p class="lsub" style="margin-top:10px;">Escríbele a quien te creó la ' +
+        'cuenta para que la agregue, y vuelve a entrar.</p></div>';
+    }
+    return;
+  }
+
+  // La hoja puede mandar el id suelto o la ficha completa.
+  const ids = tiendas.map(function (t) { return typeof t === 'string' ? t : t.id; });
+  const porId = {};
+  (fichas || []).forEach(function (f) { if (f && f.id) porId[f.id] = f; });
+  tiendas.forEach(function (t) { if (typeof t !== 'string' && t.id) porId[t.id] = t; });
+
+  ids.forEach(function (id) {
+    const d = porId[id] || {};
     if (!STORES[id] || d.moneda) {
       STORES[id] = {
-        name:   d.nombre || (STORES[id]||{}).name || id.toUpperCase(),
-        sub:    d.sub    || (STORES[id]||{}).sub  || '',
-        moneda: d.moneda || (STORES[id]||{}).moneda || 'USD',
-        pais:   d.pais   || (STORES[id]||{}).pais   || '',
-        sym:    SIMBOLOS[d.moneda] || (STORES[id]||{}).sym || '$',
-        f: (STORES[id]||{}).f || 1,
+        name:   d.nombre || (STORES[id] || {}).name || id.toUpperCase(),
+        sub:    d.sub    || (STORES[id] || {}).sub  || '',
+        /**
+         * La moneda NO se inventa.
+         *
+         * Aquí ponía `|| 'USD'`: una tienda guardada sin moneda —como
+         * pasa si el selector se queda en «Elige…»— se convertía en
+         * dólares en silencio. Una tienda colombiana leída como dólares
+         * no da error: da cifras mil veces más pequeñas con pinta de
+         * ciertas. Vacía se queda vacía, y la puerta lo dice en rojo.
+         *
+         * El SÍMBOLO sí cae en '$' para que los números no salgan
+         * desnudos, pero eso es un adorno; la moneda es el dato.
+         */
+        moneda: d.moneda || (STORES[id] || {}).moneda || '',
+        pais:   d.pais   || (STORES[id] || {}).pais  || '',
+        sym:    SIMBOLOS[d.moneda] || (STORES[id] || {}).sym || '$',
+        f: (STORES[id] || {}).f || 1,
       };
     }
   });
-  tiendas = tiendas.map(function(t){ return typeof t === 'string' ? t : t.id; });
-  if (tiendas.indexOf(ST) === -1) ST = tiendas[0];
-  document.querySelectorAll('#s3 .spick').forEach(function(el){
-    const m = (el.getAttribute('onclick')||'').match(/setStore\('(\w+)'\)/);
-    if (m) el.style.display = tiendas.indexOf(m[1])!==-1 ? '' : 'none';
-  });
+  if (ids.indexOf(ST) === -1) ST = ids[0];
+
+  /**
+   * Con UNA sola tienda no hay nada que elegir.
+   *
+   * Un paso que pregunta y tiene una sola respuesta es un clic de más
+   * en la primera pantalla que alguien ve de Nova. Se entra directo.
+   */
+  const s3 = document.getElementById('s3');
+  if (!s3) return;
+  if (ids.length === 1) {
+    /**
+     * Se BORRAN antes de entrar las dos tarjetas de ejemplo del HTML.
+     *
+     * Entrar directo no las quitaba, y quedaban ahí escondidas detrás
+     * de la app: al cerrar sesión, la dueña de QuickFix veía «Nutrea
+     * Ecuador» y «Nutrea GT» y podía entrar a una tienda que no existe
+     * en su cuenta.
+     */
+    s3.innerHTML = '<div><div class="ltag">PASO 3 DE 3</div>' +
+      '<div class="ltitle">Abriendo ' + esc((STORES[ids[0]] || {}).name || ids[0]) +
+      '…</div></div>';
+    setStore(ids[0]);
+    enterApp();
+    return;
+  }
+
+  const ini = function (n) {
+    const p = String(n || '?').trim().split(/\s+/);
+    return ((p[0] || '?')[0] + (p.length > 1 ? p[1][0] : '')).toUpperCase();
+  };
+  s3.innerHTML =
+    '<div><div class="ltag">PASO 3 DE 3</div><div class="ltitle">¿Con cuál abrimos?</div>' +
+    '<p class="lsub">Nova muestra una tienda a la vez. Puedes cambiarla en el menú ' +
+    'lateral cuando quieras.</p></div>' +
+    ids.map(function (id, i) {
+      const S = STORES[id] || {};
+      // El subtítulo dice lo que la hoja sabe de verdad. Si no sabe la
+      // moneda, se dice: una tienda sin moneda no suma bien y es mejor
+      // enterarse en la puerta que tres pantallas adentro.
+      const sub = [S.moneda || 'sin moneda', S.pais].filter(Boolean).join(' · ');
+      return '<div class="spick' + (i === 0 ? ' on' : '') + '" ' +
+        'onclick="setStore(\'' + esc(id).replace(/'/g, '') + '\');enterApp();">' +
+        '<div class="sico">' + esc(ini(S.name || id)) + '</div>' +
+        '<div><strong style="font:600 14px/1 \'DM Sans\';color:var(--t-ink);">' +
+          esc(S.name || id) + '</strong><br>' +
+        '<small style="font:500 11px/1 \'DM Sans\';color:' +
+          (S.moneda ? 'var(--t-mut2)' : '#b8322f') + ';">' + esc(sub) + '</small></div>' +
+        '<span style="color:var(--acc-d);font-size:18px;">→</span></div>';
+    }).join('');
 }
 
 /**
@@ -8943,7 +9072,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-25 · 879e';
+const VERSION_PANTALLA = '2026-09-26 · ede9';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -11466,7 +11595,7 @@ async function reanudarSesion() {
 
   CONECTADO = true;
   SESION = r.sesion;
-  pintarTiendasPermitidas(r.sesion.tiendas);
+  pintarTiendasPermitidas(r.sesion.tiendas, r.sesion.fichas);
   pintarSelectorTienda();
   aplicarPermisos();
   entrarConSesion(r.sesion);
