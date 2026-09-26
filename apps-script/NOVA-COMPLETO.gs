@@ -8287,8 +8287,29 @@ function apiHistorial(s, p) {
     const c = function (n) { return e.indexOf(n); };
     for (let i = 1; i < d.length; i++) {
       const f = d[i];
-      if (String(f[c('tienda')]).trim() !== tienda) continue;
+      const suya = String(f[c('tienda')]).trim();
       const fecha = aISO(f[c('fecha')], tz);
+      /**
+       * ── ¿Y SI ESTÁ, PERO EN OTRA TIENDA? ──
+       *
+       * «dice que le falta algo pero ya subí toda la info».
+       *
+       * Casi siempre es eso: el reporte se subió con la otra tienda
+       * abierta y las filas quedaron con ese `tienda`. El histórico
+       * decía «sin pauta» —cierto para esta tienda— y mandaba a subir
+       * otra vez algo que YA estaba, en el sitio de al lado.
+       *
+       * Ahora se cuentan también las de las otras tiendas del mismo
+       * mes, para poder decir dónde está en vez de pedirla de nuevo.
+       */
+      if (suya !== tienda) {
+        const bo = bucket(fecha);
+        if (bo && suya) {
+          bo.pautaOtras = bo.pautaOtras || {};
+          bo.pautaOtras[suya] = (bo.pautaOtras[suya] || 0) + 1;
+        }
+        continue;
+      }
       const b = bucket(fecha);
       if (!b) continue;
       b.pautaFilas++;
@@ -8308,10 +8329,22 @@ function apiHistorial(s, p) {
     const c = function (n) { return e.indexOf(n); };
     for (let i = 1; i < d.length; i++) {
       const f = d[i];
-      if (String(f[c('tienda')]).trim() !== tienda) continue;
+      const suya = String(f[c('tienda')]).trim();
       if (norm(f[c('activo')]) === 'no') continue;
       const v = num(f[c('valor')]);
       const mm = String(f[c('mes')] || '').trim();
+      // Igual que con la pauta: si está en otra tienda, se dice dónde.
+      if (suya !== tienda) {
+        if (suya) {
+          const marcar = function (b) {
+            b.fijosOtras = b.fijosOtras || {};
+            b.fijosOtras[suya] = (b.fijosOtras[suya] || 0) + 1;
+          };
+          if (!mm) out.forEach(marcar);
+          else { const bo = bucket(mm + '-01'); if (bo) marcar(bo); }
+        }
+        continue;
+      }
       // Sin mes es recurrente: cuenta en todos
       if (!mm) { out.forEach(function (b) { b.fijos += v; b.nFijos++; }); continue; }
       const b = bucket(mm + '-01');

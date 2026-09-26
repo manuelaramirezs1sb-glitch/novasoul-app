@@ -689,6 +689,9 @@ input.li:focus{border-color:var(--acc-d);}
 .acc-aviso{font:500 12px/1.6 'DM Sans';color:var(--t-ink2);background:var(--s-dark);
   border-radius:11px;padding:11px 14px;max-width:70ch;}
 .acc-nota{font:500 12px/1.6 'DM Sans';color:var(--t-mut);max-width:70ch;}
+/* Lo que «falta» pero está en otra tienda: no es una tarea pendiente,
+   es un aviso de que estás mirando la tienda equivocada. */
+.hist-falta.otra{background:#dde7ef;color:#2f4d63;}
 /* El pie del gráfico de pauta: dice qué se calculó y qué se repartió. */
 .pauta-pie{font:500 11px/1.55 'DM Sans';color:var(--t-mut2);margin-top:10px;max-width:62ch;}
 /* Las pestañas del cierre. Al imprimir se esconden y se muestran los dos
@@ -9159,7 +9162,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-26 · 3ffe';
+const VERSION_PANTALLA = '2026-09-26 · 1845';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -9248,13 +9251,36 @@ function pintarHistorial() {
       m.cartera ? m.cartera + ' movs. de cartera' : null,
     ].filter(Boolean).join(' · ');
 
+    /**
+     * ── «PERO SI YA LO SUBÍ» ──
+     *
+     * Casi siempre está subido, pero con la OTRA tienda abierta: las
+     * filas quedaron con ese `tienda` y este histórico —que mira una
+     * tienda a la vez— decía «sin pauta» y mandaba a subirlo otra vez.
+     *
+     * Cuando lo que falta aquí existe al lado, se dice dónde está en
+     * vez de pedirlo de nuevo. Es la diferencia entre un callejón sin
+     * salida y un «cámbiate de tienda».
+     */
+    const donde = function (f) {
+      const otras = f === 'pauta' ? m.pautaOtras
+                  : f === 'gastos fijos' ? m.fijosOtras : null;
+      const ids = otras ? Object.keys(otras) : [];
+      if (!ids.length) return '';
+      const nombres = ids.map(function (id) {
+        return ((STORES[id] || {}).name || id) + ' (' + otras[id] + ')';
+      }).join(', ');
+      return ' — ojo: hay de ese mes en ' + nombres;
+    };
+
     const faltas = (m.falta || []).map(function (f) {
       const extra = f === 'tasas' && m.pautaSinTasa
         ? ' (' + m.pautaSinTasa + ' filas en ' +
           Object.keys(m.monedasSinTasa || {}).join(', ') + ')'
-        : '';
-      return '<span class="hist-falta">' + esc(FALTA_QUE_HACER[f] || f) +
-        esc(extra) + '</span>';
+        : donde(f);
+      const alLado = !!donde(f);
+      return '<span class="hist-falta' + (alLado ? ' otra' : '') + '">' +
+        esc(FALTA_QUE_HACER[f] || f) + esc(extra) + '</span>';
     }).join('');
 
     return '<div class="hist-f' + (m.listo || m.cerrado ? '' : ' pend') + '" ' +
