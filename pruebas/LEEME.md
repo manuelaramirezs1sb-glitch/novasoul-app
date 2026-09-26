@@ -23,7 +23,15 @@ node pruebas/pauta-semana.js          # el gasto por semana, y qué se reparte
 node pruebas/arranque-empresarial.js  # cuántas peticiones cuesta abrir la pantalla
 node pruebas/caches.js                # que guardar y volver a leer nunca dé lo viejo
 node pruebas/puerta-tiendas.js        # que cualquier cliente pueda entrar, no solo Nutrea
+node pruebas/primer-dia.js            # una cuenta recién nacida: una tienda, cero de todo
 ```
+
+`primer-dia.js` no escribe a mano lo que contesta el servidor: lo CALCULA
+con el bundle de verdad sobre una hoja recién creada, y se lo da a la
+pantalla tal cual. Mi primer intento sí lo inventaba, y me dio tres
+fallos que no existían —campos que mi simulador no mandaba y el servidor
+sí— mientras tapaba el único que era real. Una prueba que se inventa la
+respuesta prueba mi imaginación, no el producto.
 
 `puerta-tiendas.js` existe porque Sara no pudo entrar a su propia cuenta:
 el paso 3 del login tenía las dos tiendas de Nutrea escritas a mano en el

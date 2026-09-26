@@ -2361,10 +2361,12 @@ function labelDe(correo){
   return found ? found.lbl : 'dueña';
 }
 
-// Catálogo de tiendas. Son valores de ejemplo hasta que la hoja
-// responda: `pintarTiendasPermitidas()` los reemplaza con las tiendas
-// reales del cliente, con su moneda y su símbolo. No hay nada aquí que
-// limite Nova a Ecuador y Guatemala.
+// Catálogo de tiendas. Son valores de ejemplo para la demo suelta.
+// En cuanto hay sesión, `pintarTiendasPermitidas()` REEMPLAZA este
+// objeto entero por las tiendas reales del cliente — no las agrega
+// encima. Durante un tiempo las agregaba, y por eso a una clienta
+// nueva le aparecían «Nutrea EC» y «Nutrea GT» en el cierre de mes y,
+// peor, en las casillas de Permisos para asignárselas a su equipo.
 let STORES = {
   ec: {name:'Nutrea EC', sub:'Shopify + Dropi · USD', sym:'$', moneda:'USD', pais:'Ecuador',   f:1},
   gt: {name:'Nutrea GT', sub:'Dropi · GTQ',           sym:'Q', moneda:'GTQ', pais:'Guatemala', f:3.72}
@@ -2973,6 +2975,31 @@ async function cargarAuditoriaCasos() {
 }
 
 function pintarAuditoriaCasos() {
+  /**
+   * ── LA CUENTA RECIÉN NACIDA ──
+   *
+   * Cuando todavía no hay novedades importadas, el servidor responde
+   * `{ok:true, vacio:true, porque:'…'}` — sin `recuento` y sin `casos`.
+   * Esta función leía `AUD.recuento.revisados` a pelo y reventaba.
+   *
+   * Y no se rompía sola: `cargarAuditoriaCasos` corre dentro del
+   * `Promise.all` del arranque, así que se llevaba por delante todo lo
+   * que faltara y dejaba el Hoy con el sello «Datos de EJEMPLO» encima
+   * de números que sí eran reales. El primer día de una clienta nueva
+   * es exactamente cuando pasa.
+   */
+  const cont0 = document.getElementById('audrows');
+  const kpi0 = document.getElementById('audkpi');
+  if (!AUD || AUD.vacio || !AUD.recuento) {
+    if (kpi0) kpi0.innerHTML = '';
+    if (cont0) {
+      cont0.innerHTML = '<div class="eq-vacio">' +
+        esc((AUD && AUD.porque) ||
+            'La auditoría revisa novedades ya cerradas. Aparece en cuanto tu ' +
+            'equipo cierre la primera.') + '</div>';
+    }
+    return;
+  }
   const R = AUD.recuento;
 
   document.getElementById('audkpi').innerHTML = [
@@ -4724,30 +4751,72 @@ function pintarTiendasPermitidas(tiendas, fichas) {
   (fichas || []).forEach(function (f) { if (f && f.id) porId[f.id] = f; });
   tiendas.forEach(function (t) { if (typeof t !== 'string' && t.id) porId[t.id] = t; });
 
+  /**
+   * ── STORES SE REEMPLAZA, NO SE MEZCLA ──
+   *
+   * El comentario de arriba de `STORES` decía que esta función «los
+   * reemplaza con las tiendas reales del cliente». No era verdad: los
+   * AGREGABA, y `ec` y `gt` se quedaban ahí para siempre.
+   *
+   * No era cosmético. Todo lo que recorre `STORES` se los ofrecía al
+   * cliente como si fueran suyos:
+   *
+   *   · Cierre de mes → el desplegable de tienda listaba «Nutrea EC».
+   *   · PERMISOS      → las casillas para asignarle tiendas a una
+   *                     gestora incluían las nuestras. Sara podía
+   *                     marcarle a su gestora una tienda que no existe
+   *                     en su cuenta, y esa gestora entraría a Nova
+   *                     para encontrarse «no tienes ninguna tienda
+   *                     asignada» sin entender por qué.
+   *
+   * Con sesión, las tiendas del cliente son TODAS las que hay. Las de
+   * ejemplo solo tienen sentido en la demo suelta, que nunca llama aquí.
+   */
+  /**
+   * ── STORES SE REEMPLAZA, NO SE MEZCLA ──
+   *
+   * El comentario de arriba de `STORES` decía que esta función «los
+   * reemplaza con las tiendas reales del cliente». No era verdad: los
+   * AGREGABA, y `ec` y `gt` se quedaban ahí para siempre.
+   *
+   * No era cosmético. Todo lo que recorre `STORES` se los ofrecía al
+   * cliente como si fueran suyos:
+   *
+   *   · Cierre de mes → el desplegable de tienda listaba «Nutrea EC».
+   *   · PERMISOS      → las casillas para asignarle tiendas a una
+   *                     gestora incluían las nuestras. Sara podía
+   *                     marcarle a su gestora una tienda que no existe
+   *                     en su cuenta, y esa gestora entraría para
+   *                     encontrarse «no tienes ninguna tienda asignada»
+   *                     sin entender por qué.
+   *
+   * Con sesión, las tiendas del cliente son TODAS las que hay. Las de
+   * ejemplo solo tienen sentido en la demo suelta, que nunca llama aquí.
+   */
+  const antes = STORES;
+  STORES = {};
   ids.forEach(function (id) {
     const d = porId[id] || {};
-    if (!STORES[id] || d.moneda) {
-      STORES[id] = {
-        name:   d.nombre || (STORES[id] || {}).name || id.toUpperCase(),
-        sub:    d.sub    || (STORES[id] || {}).sub  || '',
-        /**
-         * La moneda NO se inventa.
-         *
-         * Aquí ponía `|| 'USD'`: una tienda guardada sin moneda —como
-         * pasa si el selector se queda en «Elige…»— se convertía en
-         * dólares en silencio. Una tienda colombiana leída como dólares
-         * no da error: da cifras mil veces más pequeñas con pinta de
-         * ciertas. Vacía se queda vacía, y la puerta lo dice en rojo.
-         *
-         * El SÍMBOLO sí cae en '$' para que los números no salgan
-         * desnudos, pero eso es un adorno; la moneda es el dato.
-         */
-        moneda: d.moneda || (STORES[id] || {}).moneda || '',
-        pais:   d.pais   || (STORES[id] || {}).pais  || '',
-        sym:    SIMBOLOS[d.moneda] || (STORES[id] || {}).sym || '$',
-        f: (STORES[id] || {}).f || 1,
-      };
-    }
+    STORES[id] = {
+      name:   d.nombre || (antes[id] || {}).name || id.toUpperCase(),
+      sub:    d.sub    || (antes[id] || {}).sub  || '',
+      /**
+       * La moneda NO se inventa.
+       *
+       * Aquí ponía `|| 'USD'`: una tienda guardada sin moneda —como
+       * pasa si el selector se queda en «Elige…»— se convertía en
+       * dólares en silencio. Una tienda colombiana leída como dólares
+       * no da error: da cifras mil veces más pequeñas con pinta de
+       * ciertas. Vacía se queda vacía, y la puerta lo dice en rojo.
+       *
+       * El SÍMBOLO sí cae en '$' para que los números no salgan
+       * desnudos, pero eso es un adorno; la moneda es el dato.
+       */
+      moneda: d.moneda || (antes[id] || {}).moneda || '',
+      pais:   d.pais   || (antes[id] || {}).pais  || '',
+      sym:    SIMBOLOS[d.moneda] || (antes[id] || {}).sym || '$',
+      f: (antes[id] || {}).f || 1,
+    };
   });
   if (ids.indexOf(ST) === -1) ST = ids[0];
 
@@ -4876,7 +4945,25 @@ async function cargarReales() {
     // mirando un "buscando…" que ya terminó.
     if (ROL === 'gestora') pintarPantallasGestora();
     return { mes: mes, pedidos: PEDS_REALES.length, novedades: NOVS_REALES.length };
-  } catch (e) { marcarOrigen(false, 'sin conexión'); }
+  } catch (e) {
+    /**
+     * Este catch decía «sin conexión» pasara lo que pasara.
+     *
+     * Y tapaba lo contrario de lo que decía: con la respuesta del
+     * servidor ya pintada, un error de JAVASCRIPT en cualquiera de los
+     * quince pintores caía aquí y ponía «Datos de EJEMPLO · sin
+     * conexión» encima de datos que sí eran reales. Enseña a desconfiar
+     * de lo que sí se puede creer, y manda a buscar el problema al
+     * router.
+     *
+     * Ahora se distingue: sin red se dice sin red; si fue la pantalla,
+     * se dice y el error queda en la consola con su nombre.
+     */
+    const red = !navigator.onLine || /fetch|network|Failed/i.test(String(e && e.message));
+    console.error('[Nova] cargarReales falló:', e);
+    marcarOrigen(false, red ? 'sin conexión' : 'no pude dibujar algo: ' +
+      String(e && e.message || e).slice(0, 80));
+  }
 }
 
 /**
@@ -9072,7 +9159,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-26 · ede9';
+const VERSION_PANTALLA = '2026-09-26 · 3ffe';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
