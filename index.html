@@ -319,7 +319,7 @@ body { margin: 0; background: var(--bg); font-family: 'DM Sans', sans-serif; min
  * Los demás aparecen cuando la hoja confirma que el plan los incluye.
  */
 /** La huella de esta pantalla, para saber si es la última. */
-const VERSION_PANTALLA = '2026-09-26 · cc17';
+const VERSION_PANTALLA = '2026-09-26 · b53f';
 (function () {
   const el = document.getElementById('sello-version');
   if (el) el.textContent = 'Hub del ' + VERSION_PANTALLA;
@@ -380,13 +380,78 @@ function verCards(modulos, razon) {
  * con Empresarial, un permiso de más en el equipo de un cliente podría
  * abrir la consola de todos.
  */
-async function pedir(cuerpo) {
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   PEDIR, AGUANTANDO LOS MINUTOS RAROS DE APPS SCRIPT
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ LO QUE ESTO ARREGLA ──────────────────────────────────────┐
+ * │                                                            │
+ * │ Ella escribió su código de acceso y el hub contestó         │
+ * │ «Falta la acción.» — un error del servidor, en rojo, sin    │
+ * │ nada que hacer. No se podía entrar a Nova.                  │
+ * │                                                            │
+ * │ No es un error del código: es cómo funciona Apps Script.    │
+ * │ No responde el POST directamente — contesta un redirect a   │
+ * │ googleusercontent, y el navegador lo sigue convirtiéndolo   │
+ * │ en GET, que es lo que hace 301/302 desde siempre.           │
+ * │ Normalmente da igual, porque Google deja la respuesta ya    │
+ * │ calculada al otro lado. Pero en los minutos siguientes a    │
+ * │ publicar una versión nueva esa respuesta todavía no         │
+ * │ existe: el navegador acaba haciendo un GET pelado contra    │
+ * │ /exec, y `doGet` contesta «Falta la acción» sobre una       │
+ * │ petición que sí era POST.                                   │
+ * │                                                            │
+ * │ Empresarial ya sabía esperar y reintentar. El hub no —      │
+ * │ tiene su propia función de red, más corta, y este arreglo   │
+ * │ nunca llegó hasta aquí. Y el hub es la PUERTA: si falla,    │
+ * │ no se entra a nada.                                         │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+const PEDIR_ESPERAS = [1500, 3000, 6000];
+
+async function pedir(cuerpo, intento) {
+  intento = intento || 0;
   const r = await fetch(NOVA_API, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(cuerpo),
   });
-  return r.json();
+  const texto = await r.text();
+
+  let j;
+  try {
+    j = JSON.parse(texto);
+  } catch (err) {
+    /**
+     * Google devuelve una página de error, no JSON, mientras publica
+     * una versión nueva: unos minutos en los que toda llamada responde
+     * 404 aunque el código esté perfecto. Se cura solo, así que se
+     * espera en vez de acusar a nadie.
+     */
+    if (intento < PEDIR_ESPERAS.length) {
+      await new Promise(function (ok) { setTimeout(ok, PEDIR_ESPERAS[intento]); });
+      return pedir(cuerpo, intento + 1);
+    }
+    return { ok: false, error: 'Google no está contestando en condiciones. ' +
+      'Si acabas de publicar una versión nueva, espera un minuto y vuelve a ' +
+      'intentar.' };
+  }
+
+  // El POST llegó como GET y sin cuerpo: se espera y se reintenta.
+  if (j && j.diagnostico && j.diagnostico.metodo === 'GET' && !j.diagnostico.hubo_cuerpo) {
+    if (intento < PEDIR_ESPERAS.length) {
+      await new Promise(function (ok) { setTimeout(ok, PEDIR_ESPERAS[intento]); });
+      return pedir(cuerpo, intento + 1);
+    }
+    j.error = 'Google está recibiendo la petición sin su contenido. ' +
+      'Casi siempre es que acabas de publicar y todavía se está propagando: ' +
+      'espera un minuto y vuelve a intentar. Si sigue igual, revisa en Apps ' +
+      'Script que la implementación esté como «Ejecutar como: Yo» y «Quién ' +
+      'tiene acceso: Cualquier usuario».';
+  }
+  return j;
 }
 
 function pzPaso(n) {

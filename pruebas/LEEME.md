@@ -24,6 +24,7 @@ node pruebas/arranque-empresarial.js  # cuántas peticiones cuesta abrir la pant
 node pruebas/caches.js                # que guardar y volver a leer nunca dé lo viejo
 node pruebas/puerta-tiendas.js        # que cualquier cliente pueda entrar, no solo Nutrea
 node pruebas/primer-dia.js            # una cuenta recién nacida: una tienda, cero de todo
+node pruebas/hub-reintento.js         # la puerta, cuando Google contesta raro
 ```
 
 `primer-dia.js` no escribe a mano lo que contesta el servidor: lo CALCULA
