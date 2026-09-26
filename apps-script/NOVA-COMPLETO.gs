@@ -2742,11 +2742,58 @@ function leerCrudo(ss, fuenteId, tienda) {
   // del código. Así una corrección tuya sobrevive a cualquier cambio del .gs
   const alias = Object.assign({}, cfg.alias || {}, aliasDesdeMapeos(ss, fuenteId) || {});
 
+  /**
+   * ── META ESCRIBE LA MONEDA DENTRO DEL NOMBRE DE LA COLUMNA ──
+   *
+   * «la información de Meta no la está guardando, ¿por qué?»
+   *
+   * Porque el export de Meta no llama igual a la misma columna según en
+   * qué moneda le cobre a esa cuenta publicitaria:
+   *
+   *     Importe gastado (COP)      ← la cuenta de Ecuador
+   *     Importe gastado (GTQ)      ← la de Guatemala
+   *     Importe gastado (USD)      ← una cuenta en dólares
+   *
+   * Y los alias del código solo conocían `(cop)`, escrito a mano. Con
+   * cualquier otra moneda la columna del GASTO no se reconocía, las
+   * filas entraban con el importe vacío, y el mes aparecía «sin pauta»
+   * después de haber subido el archivo correcto.
+   *
+   * Lo mismo con `cpa` y `cpm`, que también llevan la moneda dentro.
+   *
+   * Se resuelve en dos pasadas:
+   *
+   *  1. EXACTA. Lo que ya funcionaba sigue igual, y manda. Un mapeo
+   *     confirmado a mano en la hoja `Mapeos` no se ve afectado.
+   *  2. SIN EL PARÉNTESIS FINAL. `importe gastado (gtq)` se compara
+   *     como `importe gastado`, que es lo que el alias quiere decir de
+   *     verdad. Solo se quita el último paréntesis —`cpm (coste por
+   *     1000 impresiones) (cop)` conserva el suyo— y solo si la primera
+   *     pasada no encontró nada, así que no puede robarle una columna a
+   *     una coincidencia buena.
+   */
+  const sinParentesis = function (s) {
+    return String(s).replace(/\s*\([^)]*\)\s*$/, '').trim();
+  };
+
   const idx = {};
+  const usadas = {};
   Object.keys(alias).forEach(function (campo) {
     const opciones = alias[campo].map(norm);
     for (let i = 0; i < enc.length; i++) {
-      if (opciones.indexOf(enc[i]) !== -1) { idx[campo] = i; return; }
+      if (opciones.indexOf(enc[i]) !== -1) {
+        idx[campo] = i; usadas[i] = true; return;
+      }
+    }
+  });
+  Object.keys(alias).forEach(function (campo) {
+    if (idx[campo] !== undefined) return;
+    const opciones = alias[campo].map(function (a) { return sinParentesis(norm(a)); });
+    for (let i = 0; i < enc.length; i++) {
+      if (usadas[i]) continue;   // esa columna ya es de otro campo
+      if (opciones.indexOf(sinParentesis(enc[i])) !== -1) {
+        idx[campo] = i; usadas[i] = true; return;
+      }
     }
   });
 
