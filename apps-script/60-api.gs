@@ -1442,7 +1442,11 @@ function apiEquipo(s, p) {
     const d = shN.getDataRange().getValues();
     const e = d[0].map(norm);
     const cF = e.indexOf('fecha'), cG = e.indexOf('gestora'), cE = e.indexOf('estado');
+    // A una gestora de Ecuador se le estaban contando las novedades de
+    // Guatemala, que ni puede ver.
+    const cT = e.indexOf('tienda');
     for (let i = 1; i < d.length; i++) {
+      if (!esDeTienda_(d[i], cT, tienda)) continue;
       const fecha = aISO(d[i][cF], 'UTC');
       if (!fecha || fecha.slice(0, 7) !== mes) continue;
       const g = porNombre[norm(d[i][cG])];
@@ -2382,7 +2386,11 @@ function agregarMes(ss, tienda, mes, s, filas) {
     const datos = shN.getDataRange().getValues();
     const e = datos[0].map(norm);
     const cF = e.indexOf('fecha'), cG = e.indexOf('grupo'), cM = e.indexOf('motivo');
+    // Sin esta línea el KPI «NOVEDADES» del mes sumaba las dos tiendas,
+    // en Hoy y en el cierre. Es parte de «los números no coinciden».
+    const cT = e.indexOf('tienda');
     for (let i = 1; i < datos.length; i++) {
+      if (!esDeTienda_(datos[i], cT, tienda)) continue;
       const fecha = aISO(datos[i][cF], 'UTC');
       if (!fecha || fecha.slice(0, 7) !== mes) continue;
       out.novedades++;

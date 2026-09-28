@@ -467,7 +467,32 @@ const ESQUEMA_EMPRESARIAL = {
    * ya se había hecho. Empezar de cero encima de trabajo que ya estaba
    * hecho es la peor forma de estrenar una herramienta.
    */
-  Novedades: ['id','fuente','id_externo','pedido_id','fecha','tipo','motivo','grupo',
+  /**
+   * ┌─ POR QUÉ `tienda` ESTÁ AQUÍ, Y TARDÓ ──────────────────────┐
+   * │                                                            │
+   * │ Era la ÚNICA hoja con filas de una tienda y sin columna     │
+   * │ para decir de cuál. La tienda se deducía del pedido, y por  │
+   * │ eso «se deducía» en cuatro sitios distintos… en ninguno.    │
+   * │                                                            │
+   * │ `apiListar` filtra por tienda solo si la hoja tiene la      │
+   * │ columna: sin ella, no filtraba NADA. Así que la bandeja de  │
+   * │ novedades de Ecuador traía también las de Guatemala, el     │
+   * │ KPI «NOVEDADES» del mes sumaba las dos, la alarma de        │
+   * │ «novedades sin gestionar» contaba las dos, y «qué quedó de  │
+   * │ ayer» también.                                              │
+   * │                                                            │
+   * │ «creo que está combinando datos». Sí, y aquí sí era el      │
+   * │ servidor. Lo busqué primero en la pantalla porque la        │
+   * │ pantalla es donde YO había tocado, no donde el dato estaba  │
+   * │ mal.                                                        │
+   * │                                                            │
+   * │ La tienda es un HECHO de la fila, no algo que cada lector   │
+   * │ vuelva a deducir. Con la columna, el filtro que ya existía  │
+   * │ funciona sin ningún caso especial.                          │
+   * │                                                            │
+   * └────────────────────────────────────────────────────────────┘
+   */
+  Novedades: ['id','fuente','id_externo','pedido_id','tienda','fecha','tipo','motivo','grupo',
               'estado','solucionada','fecha_solucion','desenlace',
               'gestora','solucion','nota','intentos','resuelta_en',
               'solucion_plataforma','aclaracion','gestionado_por',
@@ -1172,6 +1197,110 @@ const PARAMETROS_DEFAULT = [
 
 // ─── MOTOR ───────────────────────────────────────────────────
 
+/**
+ * ¿Esta fila es de esta tienda?
+ *
+ * Existe por la ventana entre pegar el código nuevo y correr
+ * `bootstrapTodo()`: en ese rato la columna `tienda` de Novedades
+ * todavía no existe, y un filtro que la exija dejaría la bandeja de
+ * novedades vacía en las dos tiendas. Sin columna se contesta «sí» —o
+ * sea, lo de antes— y en cuanto la columna está, filtra.
+ *
+ * Una fila con la columna puesta pero vacía no es de nadie: es una
+ * novedad cuyo pedido no aparece. El relleno dice cuántas hay; darle
+ * una tienda inventada sería peor que dejarla fuera.
+ */
+function esDeTienda_(fila, cT, tienda) {
+  if (cT === -1) return true;
+  return String(fila[cT] || '').trim() === tienda;
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   LA TIENDA DE LAS NOVEDADES QUE YA ESTABAN
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * `Novedades` acaba de estrenar columna `tienda`, y una columna nueva
+ * nace vacía. Las filas que ya estaban tienen que saber de qué tienda
+ * son, o el filtro nuevo las dejaría fuera de todas las tiendas — que
+ * es el error contrario al de antes y molesta igual.
+ *
+ * La tienda sale de su pedido: una novedad es de la tienda del pedido
+ * que la produjo, por definición. Se cruza por `pedido_id`.
+ *
+ * Es idempotente: solo escribe donde está vacío, así que correr
+ * `bootstrapTodo()` diez veces no cambia nada la segunda vez. Y escribe
+ * la columna de una sola vez, no celda por celda: cuatro mil novedades
+ * a una llamada cada una se pasan del tiempo que Google da.
+ *
+ * Si una novedad no encuentra su pedido, se queda sin tienda y se dice
+ * cuántas. Inventarle una tienda sería peor que dejarla sin ella.
+ */
+function rellenarTiendaNovedades_(sheetId) {
+  const ss = libro_(sheetId);
+  const shN = ss.getSheetByName('Novedades');
+  if (!shN || shN.getLastRow() < 2) return '';
+
+  const d = shN.getDataRange().getValues();
+  const e = d[0].map(norm);
+  const cT = e.indexOf('tienda'), cP = e.indexOf('pedido_id');
+  if (cT === -1 || cP === -1) return '';
+
+  // ¿Hay algo que rellenar? Si no, ni se abre Pedidos.
+  let faltan = 0;
+  for (let i = 1; i < d.length; i++) {
+    if (!String(d[i][cT] || '').trim()) faltan++;
+  }
+  if (!faltan) return '';
+
+  // La tienda de cada pedido, de una lectura
+  const tiendaDe = {};
+  const shP = ss.getSheetByName('Pedidos');
+  if (shP && shP.getLastRow() > 1) {
+    const p = shP.getDataRange().getValues();
+    const pe = p[0].map(norm);
+    const pI = pe.indexOf('id'), pT = pe.indexOf('tienda');
+    if (pI !== -1 && pT !== -1) {
+      for (let i = 1; i < p.length; i++) {
+        const id = String(p[i][pI] || '').trim();
+        if (id) tiendaDe[id] = String(p[i][pT] || '').trim();
+      }
+    }
+  }
+
+  const col = [];
+  let puestas = 0, huerfanas = 0;
+  for (let i = 1; i < d.length; i++) {
+    const ya = String(d[i][cT] || '').trim();
+    if (ya) { col.push([ya]); continue; }
+    const t = tiendaDe[String(d[i][cP] || '').trim()] || '';
+    if (t) puestas++; else huerfanas++;
+    col.push([t]);
+  }
+
+  /**
+   * Si no hay nada que poner, no se escribe.
+   *
+   * Una novedad huérfana —su pedido no está en la hoja— se queda sin
+   * tienda para siempre, así que `faltan` nunca baja a cero. Escribiendo
+   * igual, cada `bootstrapTodo()` reescribía la columna entera de cuatro
+   * mil filas para no cambiar una sola celda. Lo encontró la prueba al
+   * correr el relleno dos veces seguidas.
+   */
+  if (!puestas) {
+    return huerfanas
+      ? 'Novedades: ' + huerfanas + ' sin pedido que las reclame (quedan fuera de las tiendas)'
+      : '';
+  }
+
+  shN.getRange(2, cT + 1, col.length, 1).setValues(col);
+  // La hoja cambió por debajo de la caché de lectura de esta ejecución.
+  libroOlvidar_();
+
+  return 'Novedades: tienda puesta en ' + puestas +
+    (huerfanas ? ', ' + huerfanas + ' sin pedido que las reclame' : '');
+}
+
 function bootstrapTodo() {
   const log = [];
   log.push(construir(IDS_().empresarial, 'Nova_Empresarial_TEMPLATE',
@@ -1215,6 +1344,11 @@ function actualizarClientes() {
     const nombre = String(filas[i][cNom] || id).trim();
     try {
       out.push('  ' + construir(id, nombre, ESQUEMA_EMPRESARIAL, IMPORTS_EMPRESARIAL));
+      // La columna nueva nace vacía. Sin esto, cada novedad vieja sigue
+      // sin tienda y el filtro la deja fuera de TODAS — que es el error
+      // contrario al de antes y igual de malo.
+      const r = rellenarTiendaNovedades_(id);
+      if (r) out.push('    ' + r);
     } catch (e) {
       // Una hoja borrada o sin permiso no puede detener a las demás
       out.push('  ' + nombre + ': NO se pudo abrir (' + e.message + ')');
@@ -3763,8 +3897,12 @@ function evaluarAlarmas(ss, tienda) {
       const d = shN.getDataRange().getValues();
       const e = d[0].map(norm);
       const c = function (n) { return e.indexOf(n); };
+      // La alarma es de UNA tienda. Sin este filtro avisaba en Ecuador
+      // de novedades de Guatemala, con pedidos que ahí no existen.
+      const cT = c('tienda');
       for (let i = 1; i < d.length; i++) {
         const f = d[i];
+        if (!esDeTienda_(f, cT, tienda)) continue;
         if (norm(f[c('estado')]) !== 'abierta') continue;
         const fch = aISO(f[c('fecha')], 'UTC');
         if (!fch) continue;
@@ -6368,7 +6506,11 @@ function apiEquipo(s, p) {
     const d = shN.getDataRange().getValues();
     const e = d[0].map(norm);
     const cF = e.indexOf('fecha'), cG = e.indexOf('gestora'), cE = e.indexOf('estado');
+    // A una gestora de Ecuador se le estaban contando las novedades de
+    // Guatemala, que ni puede ver.
+    const cT = e.indexOf('tienda');
     for (let i = 1; i < d.length; i++) {
+      if (!esDeTienda_(d[i], cT, tienda)) continue;
       const fecha = aISO(d[i][cF], 'UTC');
       if (!fecha || fecha.slice(0, 7) !== mes) continue;
       const g = porNombre[norm(d[i][cG])];
@@ -7308,7 +7450,11 @@ function agregarMes(ss, tienda, mes, s, filas) {
     const datos = shN.getDataRange().getValues();
     const e = datos[0].map(norm);
     const cF = e.indexOf('fecha'), cG = e.indexOf('grupo'), cM = e.indexOf('motivo');
+    // Sin esta línea el KPI «NOVEDADES» del mes sumaba las dos tiendas,
+    // en Hoy y en el cierre. Es parte de «los números no coinciden».
+    const cT = e.indexOf('tienda');
     for (let i = 1; i < datos.length; i++) {
+      if (!esDeTienda_(datos[i], cT, tienda)) continue;
       const fecha = aISO(datos[i][cF], 'UTC');
       if (!fecha || fecha.slice(0, 7) !== mes) continue;
       out.novedades++;
@@ -10295,6 +10441,14 @@ function derivarNovedades(pedidos, fuenteId, tienda) {
         fuente: fuenteId,
         id_externo: p.id_externo,
         pedido_id: p.id,
+        /**
+         * La tienda venía como parámetro de esta función desde el
+         * primer día y NUNCA se escribía en la fila. Por eso las
+         * novedades de las dos tiendas se mezclaban en cuatro
+         * pantallas: sin este dato, el filtro por tienda de
+         * `apiListar` no tenía por dónde agarrar.
+         */
+        tienda: tienda,
         fecha: p.ultimo_movimiento || p.fecha,
         tipo: 'novedad',
         motivo: p.motivo_novedad,
@@ -18017,8 +18171,12 @@ function reporteDelDia(sheetId, tienda, diaISO) {
     const d = shN.getDataRange().getValues();
     const e = d[0].map(norm);
     const c = function (n) { return e.indexOf(n); };
+    // Las novedades de la OTRA tienda no son de este reporte. Faltaba, y
+    // por eso «qué quedó de ayer» decía lo mismo en las dos tiendas.
+    const cT = c('tienda');
     for (let i = 1; i < d.length; i++) {
       const f = d[i];
+      if (!esDeTienda_(f, cT, tienda)) continue;
       if (norm(f[c('estado')]) !== 'abierta') continue;
       const fecha = aISO(f[c('fecha')], 'UTC');
       const dias = fecha

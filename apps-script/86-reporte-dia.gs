@@ -147,8 +147,12 @@ function reporteDelDia(sheetId, tienda, diaISO) {
     const d = shN.getDataRange().getValues();
     const e = d[0].map(norm);
     const c = function (n) { return e.indexOf(n); };
+    // Las novedades de la OTRA tienda no son de este reporte. Faltaba, y
+    // por eso «qué quedó de ayer» decía lo mismo en las dos tiendas.
+    const cT = c('tienda');
     for (let i = 1; i < d.length; i++) {
       const f = d[i];
+      if (!esDeTienda_(f, cT, tienda)) continue;
       if (norm(f[c('estado')]) !== 'abierta') continue;
       const fecha = aISO(f[c('fecha')], 'UTC');
       const dias = fecha

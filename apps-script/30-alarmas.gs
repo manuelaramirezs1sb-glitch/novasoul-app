@@ -347,8 +347,12 @@ function evaluarAlarmas(ss, tienda) {
       const d = shN.getDataRange().getValues();
       const e = d[0].map(norm);
       const c = function (n) { return e.indexOf(n); };
+      // La alarma es de UNA tienda. Sin este filtro avisaba en Ecuador
+      // de novedades de Guatemala, con pedidos que ahí no existen.
+      const cT = c('tienda');
       for (let i = 1; i < d.length; i++) {
         const f = d[i];
+        if (!esDeTienda_(f, cT, tienda)) continue;
         if (norm(f[c('estado')]) !== 'abierta') continue;
         const fch = aISO(f[c('fecha')], 'UTC');
         if (!fch) continue;

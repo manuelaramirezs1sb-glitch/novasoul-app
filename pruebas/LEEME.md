@@ -27,6 +27,7 @@ node pruebas/primer-dia.js            # una cuenta recién nacida: una tienda, c
 node pruebas/horario.js               # que la semana que Nova arma sea POSIBLE
 node pruebas/hub-reintento.js         # la puerta, cuando Google contesta raro
 node pruebas/cambio-tienda.js         # saltar de tienda sin que se invente nada
+node pruebas/novedades-tienda.js      # una novedad es de UNA tienda, en las 5 puertas
 ```
 
 `primer-dia.js` no escribe a mano lo que contesta el servidor: lo CALCULA
@@ -110,6 +111,28 @@ Las de navegador usan el Chromium de este entorno. En otro, se apunta con
 La de `tasas.js` no necesita navegador ni internet: remeda los servicios de
 Google y le da hojas falsas al código real del bundle. Por eso corre en
 menos de un segundo y se puede correr siempre.
+
+`novedades-tienda.js` monta DOS tiendas, cada una con su novedad, y
+pregunta por cada una a las cinco puertas que leen novedades. Monta dos
+porque el error no era un filtro mal escrito: era que **no había
+filtro**. `Novedades` era la única hoja con filas de una tienda y sin
+columna para decir de cuál, y `apiListar` filtra por tienda solo si la
+columna existe. Una prueba de una sola tienda pasa igual con filtro y
+sin filtro — que es exactamente cómo esto vivió meses sin que nada
+avisara, mezclando la bandeja de novedades, el KPI del mes, la alarma de
+novedades sin gestionar, «qué quedó de ayer» y las novedades por gestora.
+
+Tiene una sección para la ventana entre pegar el código y correr
+`bootstrapTodo()`: en ese rato la columna todavía no existe y un filtro
+que la exija deja la bandeja vacía en las dos tiendas, que es el error
+contrario y molesta igual.
+
+Y afirma que el relleno **no vuelve a escribir**, no lo que dice. Una
+novedad huérfana —su pedido no está en la hoja— no se puede resolver
+nunca, así que el contador de «faltan» no baja a cero: la primera
+versión reescribía la columna entera de cuatro mil filas en cada
+`bootstrapTodo()` para no cambiar una celda. Lo encontró la prueba al
+correr el relleno dos veces seguidas.
 
 `contar-llamadas.js` no afirma ni falla: imprime. Existe porque una vez
 afirmé de memoria que traer un año de anuncios «llenaría la cuota de la

@@ -576,6 +576,14 @@ function derivarNovedades(pedidos, fuenteId, tienda) {
         fuente: fuenteId,
         id_externo: p.id_externo,
         pedido_id: p.id,
+        /**
+         * La tienda venía como parámetro de esta función desde el
+         * primer día y NUNCA se escribía en la fila. Por eso las
+         * novedades de las dos tiendas se mezclaban en cuatro
+         * pantallas: sin este dato, el filtro por tienda de
+         * `apiListar` no tenía por dónde agarrar.
+         */
+        tienda: tienda,
         fecha: p.ultimo_movimiento || p.fecha,
         tipo: 'novedad',
         motivo: p.motivo_novedad,
