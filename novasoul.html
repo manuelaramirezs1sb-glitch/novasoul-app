@@ -993,7 +993,7 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-28 · cc83';
+const VERSION_PANTALLA = '2026-09-28 · 0e05';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
@@ -1391,8 +1391,23 @@ function pintarHoy() {
             (u.horas ? ' · ' + hfmt(u.horas) : '') +
             ' · ' + esc((D.riesgos[u.riesgo] || {}).nombre || '') + '</div>' +
         '</div>' +
+        /**
+         * ── «LE DOY ESTOY EN ESTO Y NO ACTUALIZA» ──
+         *
+         * Sí actualizaba: la tarea pasaba a «haciendo» en la hoja. Lo
+         * que no cambiaba era la PANTALLA — una tarea en curso sigue
+         * abierta, así que seguía siendo la más urgente y la tarjeta se
+         * repintaba idéntica. Un botón que no deja rastro se lee como
+         * un botón roto, y se vuelve a pulsar.
+         *
+         * Ahora se ve en qué estás, y el botón pasa a ser el siguiente
+         * paso en vez de repetir el anterior.
+         */
         '<div style="display:flex;flex-direction:column;gap:9px;">' +
-          '<button class="card-cta" onclick="mover(\'' + u.id + '\',\'haciendo\')">Estoy en esto</button>' +
+          (u.estado === 'haciendo'
+            ? '<div class="chip hoy" style="align-self:flex-end;">● estás en esto</div>' +
+              '<button class="card-cta" onclick="mover(\'' + u.id + '\',\'hecho\')">Ya lo terminé</button>'
+            : '<button class="card-cta" onclick="mover(\'' + u.id + '\',\'haciendo\')">Estoy en esto</button>') +
           '<button class="link" onclick="editarTarea(\'' + u.id + '\')">VER / CAMBIAR</button>' +
         '</div>' +
       '</div>'
@@ -1428,9 +1443,43 @@ function pintarHoy() {
   const hoyList = D.pendientes.filter(function (t) {
     return t.estado !== 'hecho' && (t.fecha === D.hoy || (t.dias !== null && t.dias > 0));
   }).sort(function (a, b) { return (b.dias || 0) - (a.dias || 0); });
-  document.getElementById('hoy-lista').innerHTML = hoyList.length
-    ? hoyList.map(filaTarea).join('')
-    : '<div class="vacio">Nada con fecha de hoy ni vencido. Lo que sigue está en Mi semana.</div>';
+  /**
+   * ── LAS VENCIDAS, SEPARADAS Y CON QUÉ HACER ──
+   *
+   * «dice que tengo 4 pendientes vencidos y no me da la oportunidad de
+   *  verlos para cambiar las fechas de entrega o marcarlos como hechos».
+   *
+   * Estaban en la lista, mezcladas con las de hoy, y sus acciones eran
+   * un «✓» sin nombre y un texto que había que adivinar que se podía
+   * tocar. Contar cuatro vencidas arriba y no dar dónde resolverlas es
+   * lo mismo que no decirlo.
+   */
+  const vencidas = hoyList.filter(function (t) { return t.dias !== null && t.dias > 0; });
+  const deHoy = hoyList.filter(function (t) { return vencidas.indexOf(t) === -1; });
+  const filaVencida = function (t) {
+    return '<div class="fila">' +
+      '<span class="fila-t" onclick="editarTarea(\'' + t.id + '\')" style="cursor:pointer;">' +
+        esc(t.texto) +
+        (t.proyecto ? ' <span class="chip proy">' + esc(t.proyecto) + '</span>' : '') +
+      '</span>' +
+      '<span class="chip tarde">' + esc(cuando(t.dias)) + '</span>' +
+      '<button class="kbtn" onclick="mover(\'' + t.id + '\',\'hecho\')">Ya está hecho</button>' +
+      '<button class="kbtn" onclick="editarTarea(\'' + t.id + '\')">Cambiar la fecha</button>' +
+      '</div>';
+  };
+  document.getElementById('hoy-lista').innerHTML =
+    (vencidas.length
+      ? '<div class="card-lbl-rojo" style="margin-bottom:9px;">VENCIDAS · ' + vencidas.length +
+        '</div>' + vencidas.map(filaVencida).join('') +
+        '<p class="card-p" style="margin:9px 0 16px;">Una entrega vencida no se arregla ' +
+        'sola: o ya está hecha, o hay que ponerle fecha nueva. Mientras siga aquí, ' +
+        'cuenta en tu semana.</p>'
+      : '') +
+    (deHoy.length
+      ? (vencidas.length ? '<div class="card-lbl" style="margin-bottom:9px;">PARA HOY</div>' : '') +
+        deHoy.map(filaTarea).join('')
+      : (vencidas.length ? '' :
+         '<div class="vacio">Nada con fecha de hoy ni vencido. Lo que sigue está en Mi semana.</div>'));
 
   // ── El mes, por proyecto ──
   const pm = D.resumen.mes.porProyecto;
@@ -1498,8 +1547,36 @@ function bloqueRiesgo() {
     '<div class="hleg">' +
       '<div><i style="background:var(--acc);"></i>Horas fijas de tus proyectos · ' + hfmt(r.fijas) + '</div>' +
       '<div><i style="background:var(--acc-hi);"></i>Entregas con fecha · ' + hfmt(r.extra) + '</div>' +
-      '<div><i style="background:var(--soft2);"></i>Libres · ' + hfmt(Math.max(0, r.sobra)) + '</div>' +
-    '</div>';
+      /**
+       * Decía «Libres», y arriba en la misma tarjeta decía «Tienes 40 h
+       * libres». Dos cosas distintas con el mismo nombre a tres
+       * centímetros una de otra: arriba son las horas que TIENES, aquí
+       * las que te SOBRARÍAN después de todo. Se lee como un error de
+       * cuentas aunque las cuentas estén bien.
+       */
+      '<div><i style="background:var(--soft2);"></i>Te sobrarían · ' +
+        hfmt(Math.max(0, r.sobra)) + '</div>' +
+    '</div>' +
+    /**
+     * De dónde salen las horas fijas, proyecto por proyecto.
+     *
+     * Un «44 h» suelto no se puede comprobar: o se le cree o no, y
+     * cuando no cuadra con lo que uno recuerda haber escrito, no se le
+     * cree. Con el desglose se ve cuál proyecto pone cuántas.
+     */
+    ((r.fijasPorTrabajo || []).length
+      ? '<details style="margin-top:12px;"><summary style="cursor:pointer;' +
+        'font:600 11px/1 \'DM Sans\';letter-spacing:.6px;color:var(--mut3);">' +
+        'DE DÓNDE SALEN ESAS ' + hfmt(r.fijas) + '</summary>' +
+        '<div style="margin-top:9px;">' +
+        r.fijasPorTrabajo.map(function (x) {
+          return '<div class="fila"><span class="fila-t">' + esc(x.nombre) + '</span>' +
+            '<span class="fila-m">' + hfmt(x.horas) + ' por semana</span></div>';
+        }).join('') +
+        '<p class="card-p" style="margin-top:9px;">Estas son las horas que le ' +
+        'pusiste a cada proyecto en Central. Si alguno ya no va, apágalo ahí y ' +
+        'la semana se recalcula sola.</p></div></details>'
+      : '');
 
   if (r.dentroDeFijas) {
     html += '<p class="card-p" style="margin-top:13px;">' + r.dentroDeFijas +

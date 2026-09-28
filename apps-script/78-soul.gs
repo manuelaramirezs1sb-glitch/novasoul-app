@@ -682,6 +682,25 @@ function soulHoy(s, p) {
   const fijas = activos.reduce(function (a, t) { return a + t.horasSemana; }, 0);
 
   /**
+   * ── DE DÓNDE SALEN ESAS HORAS ──
+   *
+   * «no concuerda con el cuadro que llené (…) ya había establecido las
+   *  horas que necesito para trabajar en cada proyecto».
+   *
+   * El número era correcto —es la suma de las horas semanales de sus
+   * proyectos activos— pero la tarjeta solo enseñaba el total. Un «44»
+   * suelto no se puede comprobar: o le crees o no le crees, y cuando no
+   * cuadra con lo que uno recuerda haber escrito, no se le cree.
+   *
+   * Con el desglose deja de ser una cuestión de fe: se ve cuál proyecto
+   * pone cuántas, y si sobra uno que ya no va, se apaga en Central.
+   */
+  const fijasPorTrabajo = activos
+    .filter(function (t) { return t.horasSemana > 0; })
+    .map(function (t) { return { id: t.id, nombre: t.nombre, horas: t.horasSemana }; })
+    .sort(function (a, b) { return b.horas - a.horas; });
+
+  /**
    * Las horas de una entrega NO se suman si su proyecto ya tiene horas
    * fijas: las doce horas semanales de PHH ya incluyen la tarea de PHH.
    * Sumar las dos contaría lo mismo dos veces y daría una semana
@@ -822,6 +841,7 @@ function soulHoy(s, p) {
       ocupadas: ocupadas,
       comprometidas: comprometidas, sobra: sobra,
       dentroDeFijas: dentroDeFijas,
+      fijasPorTrabajo: fijasPorTrabajo,
       candidatas: candidatas,
       noAlcanza: noAlcanza,
       // La pantalla no adivina por qué falta: se lo decimos.
