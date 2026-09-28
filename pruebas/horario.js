@@ -90,7 +90,7 @@ global.Date = class extends RealDate {
 };
 
 
-(0, eval)(src + '\n;globalThis.__F = { soulHorario, bloquesDe_, diasDe_, huecosDelDia_,' +
+(0, eval)(src + '\n;globalThis.__F = { soulHorario, bloquesDe_, diasDe_, huecosDelDia_, semanaComprometida_,' +
   ' horaNum_, libroOlvidar_, soulOlvidar_, sembrarBloques, HORARIO_DESDE, HORARIO_HASTA };');
 const F = globalThis.__F;
 
@@ -315,6 +315,53 @@ console.log('\n══ 8 · los días se leen como ella los escribe ══');
 igual("'1-6' son lunes a sábado", [1,2,3,4,5,6], F.diasDe_('1-6'));
 igual("'1,2,4' son tres días sueltos", [1,2,4], F.diasDe_('1,2,4'));
 igual('vacío son todos', [1,2,3,4,5,6,7], F.diasDe_(''));
+
+console.log('\n══ 9 · SIN CONTAR LAS MISMAS HORAS DOS VECES ══');
+/**
+ * Ella, antes de pegar nada: «¿cruzas la info que ya tienes con la que
+ * te di si hay algo repetido como las horas de Nutrea o Nova?».
+ *
+ * No lo hacía. `Trabajos.horas_semana` (Central) y `Bloques` (lo que le
+ * dijo a Nova) son dos listas, y Nutrea está en las dos. Sin cruzarlas,
+ * la tarjeta de la semana sumaba las de Central y el organizador
+ * colocaba las de Bloques: dos números distintos para lo mismo, en dos
+ * pantallas que se miran seguidas.
+ */
+sembrar([
+  bloque({ id:'b1', nombre:'Nutrea · tiendas', trabajo_id:'t1',
+           horas_min:2, horas_max:3, cada:'dia', dias:'1-6', partes:2, orden:10 }),
+  bloque({ id:'b2', nombre:'Universidad · estudio',
+           horas_min:1, horas_max:2, cada:'dia', dias:'1-6', orden:30 }),
+]);
+const ACTIVOS = [
+  { id:'t1', nombre:'Nutrea', estado:'activo', horasSemana:20 },
+  { id:'t2', nombre:'PHH',    estado:'activo', horasSemana:5 },
+];
+let c = F.semanaComprometida_(YO, ACTIVOS);
+
+// Nutrea: 2 h × 6 días = 12 por el bloque. Las 20 de Central NO se suman.
+const nutrea = c.detalle.filter(function (x) { return /Nutrea/.test(x.nombre); });
+igual('Nutrea aparece UNA sola vez', 1, nutrea.length);
+igual('y con las horas del bloque, no las de Central', 12, nutrea[0].horas);
+ok('marcada como que viene del bloque', nutrea[0].deBloque === true);
+
+// PHH no tiene bloque: conserva sus horas de Central, no desaparece.
+const phh = c.detalle.filter(function (x) { return x.nombre === 'PHH'; });
+igual('un proyecto sin bloque sigue contando', 1, phh.length);
+igual('con sus horas de Central', 5, phh[0].horas);
+
+// Y lo que no es proyecto —estudio, gym— suma lo suyo.
+ok('el estudio también cuenta',
+   c.detalle.some(function (x) { return /estudio/i.test(x.nombre) && x.horas === 6; }),
+   JSON.stringify(c.detalle));
+
+igual('el total es 12 + 5 + 6, sin duplicar', 23, c.total);
+
+// Sin bloques, todo sigue como antes: las horas de Central mandan.
+sembrar([]);
+c = F.semanaComprometida_(YO, ACTIVOS);
+igual('sin bloques, manda Central', 25, c.total);
+igual('y se sabe que no hay bloques', false, c.hayBloques);
 
 console.log(fallas ? '\n' + fallas + ' FALLAS\n' : '\nTodo bien\n');
 process.exit(fallas ? 1 : 0);

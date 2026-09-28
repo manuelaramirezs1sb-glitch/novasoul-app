@@ -681,7 +681,19 @@ function soulHoy(s, p) {
     .reduce(function (a, d) { return a + (ocupadasPorDia[d] || 0); }, 0);
 
   const activos = trabajos.filter(function (t) { return t.estado === 'activo'; });
-  const fijas = activos.reduce(function (a, t) { return a + t.horasSemana; }, 0);
+  /**
+   * ── LAS HORAS SE CUENTAN UNA VEZ ──
+   *
+   * Esto sumaba `horas_semana` de Central, y el organizador colocaba las
+   * horas de la hoja `Bloques`. Nutrea y Nova están en las dos listas:
+   * dos números distintos para lo mismo, en dos pantallas que se miran
+   * seguidas.
+   *
+   * Ahora sale de un solo sitio: si un proyecto tiene bloque, manda el
+   * bloque; si no, conserva sus horas de Central. Ver `semanaComprometida_`.
+   */
+  const comp = semanaComprometida_(uid, activos);
+  const fijas = comp.total;
 
   /**
    * ── DE DÓNDE SALEN ESAS HORAS ──
@@ -697,10 +709,7 @@ function soulHoy(s, p) {
    * Con el desglose deja de ser una cuestión de fe: se ve cuál proyecto
    * pone cuántas, y si sobra uno que ya no va, se apaga en Central.
    */
-  const fijasPorTrabajo = activos
-    .filter(function (t) { return t.horasSemana > 0; })
-    .map(function (t) { return { id: t.id, nombre: t.nombre, horas: t.horasSemana }; })
-    .sort(function (a, b) { return b.horas - a.horas; });
+  const fijasPorTrabajo = comp.detalle;
 
   /**
    * Las horas de una entrega NO se suman si su proyecto ya tiene horas

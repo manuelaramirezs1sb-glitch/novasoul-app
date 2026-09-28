@@ -13264,7 +13264,19 @@ function soulHoy(s, p) {
     .reduce(function (a, d) { return a + (ocupadasPorDia[d] || 0); }, 0);
 
   const activos = trabajos.filter(function (t) { return t.estado === 'activo'; });
-  const fijas = activos.reduce(function (a, t) { return a + t.horasSemana; }, 0);
+  /**
+   * ── LAS HORAS SE CUENTAN UNA VEZ ──
+   *
+   * Esto sumaba `horas_semana` de Central, y el organizador colocaba las
+   * horas de la hoja `Bloques`. Nutrea y Nova están en las dos listas:
+   * dos números distintos para lo mismo, en dos pantallas que se miran
+   * seguidas.
+   *
+   * Ahora sale de un solo sitio: si un proyecto tiene bloque, manda el
+   * bloque; si no, conserva sus horas de Central. Ver `semanaComprometida_`.
+   */
+  const comp = semanaComprometida_(uid, activos);
+  const fijas = comp.total;
 
   /**
    * ── DE DÓNDE SALEN ESAS HORAS ──
@@ -13280,10 +13292,7 @@ function soulHoy(s, p) {
    * Con el desglose deja de ser una cuestión de fe: se ve cuál proyecto
    * pone cuántas, y si sobra uno que ya no va, se apaga en Central.
    */
-  const fijasPorTrabajo = activos
-    .filter(function (t) { return t.horasSemana > 0; })
-    .map(function (t) { return { id: t.id, nombre: t.nombre, horas: t.horasSemana }; })
-    .sort(function (a, b) { return b.horas - a.horas; });
+  const fijasPorTrabajo = comp.detalle;
 
   /**
    * Las horas de una entrega NO se suman si su proyecto ya tiene horas
@@ -22234,6 +22243,82 @@ function bloquesDe_(uid) {
   }).sort(function (a, b) { return a.orden - b.orden; });
 }
 
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   UN SOLO NÚMERO, NO DOS
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ LO QUE ELLA PREGUNTÓ ANTES DE PEGAR NADA ─────────────────┐
+ * │                                                            │
+ * │ «¿está el horario conectado con los proyectos de Central y  │
+ * │  lo que hay en mi horario, sin copias ni duplicados? ¿es    │
+ * │  decir, cruzas la info que ya tienes con la que te di si    │
+ * │  hay algo repetido como las horas de Nutrea o Nova?»        │
+ * │                                                            │
+ * │ No lo estaba, y tenía razón en preguntar. Había DOS listas  │
+ * │ viviendo en paralelo:                                       │
+ * │                                                            │
+ * │   Trabajos.horas_semana ··· lo que puso en Central. De ahí  │
+ * │                             salía el «44 h comprometidas».  │
+ * │   Bloques ················· lo que le dijo a Nova que       │
+ * │                             organizara.                     │
+ * │                                                            │
+ * │ Nutrea y Nova están en las dos. Sin cruzarlas, la tarjeta   │
+ * │ de la semana sumaba las de Central y el organizador          │
+ * │ colocaba las de Bloques: dos números distintos para lo      │
+ * │ mismo, en dos pantallas que se miran seguidas. Exactamente  │
+ * │ el error que arreglamos en el punto de equilibrio.          │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ CÓMO SE CRUZAN ───────────────────────────────────────────┐
+ * │                                                            │
+ * │ Un bloque puede apuntar a un proyecto (`trabajo_id`). Si    │
+ * │ apunta, MANDA el bloque: es lo más detallado —cuántas       │
+ * │ horas, qué días, en qué franja— y lo que de verdad se va a  │
+ * │ colocar en la semana. Las `horas_semana` de Central siguen  │
+ * │ ahí para todo lo demás, pero ya no se suman otra vez.      │
+ * │                                                            │
+ * │ Un proyecto SIN bloque conserva sus horas de Central: no    │
+ * │ desaparece de la cuenta por no estar en la lista nueva.     │
+ * │                                                            │
+ * │ Y un bloque sin proyecto —estudio, gym, yoga— suma lo suyo. │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+function semanaComprometida_(uid, activos) {
+  const bloques = bloquesDe_(uid);
+  const porTrabajo = {};
+  const detalle = [];
+
+  bloques.forEach(function (b) {
+    // Cuántas horas pide a la semana este bloque, en su forma mínima:
+    // lo que se promete es el mínimo; el máximo es lo que se aprovecha
+    // si el día da. Prometer el máximo hace que la semana no cuadre casi
+    // nunca, y una alarma que salta siempre no se lee.
+    const horas = b.cada === 'dia'
+      ? b.min * b.dias.length
+      : b.min * Math.max(1, b.veces || 1);
+    if (b.trabajoId) porTrabajo[b.trabajoId] = (porTrabajo[b.trabajoId] || 0) + horas;
+    detalle.push({ id: b.trabajoId || b.id, nombre: b.nombre, horas: horas,
+                   deBloque: true });
+  });
+
+  (activos || []).forEach(function (t) {
+    // Si ya hay un bloque para este proyecto, el bloque manda: no se
+    // suma dos veces lo mismo.
+    if (porTrabajo[t.id] !== undefined) return;
+    if (!(t.horasSemana > 0)) return;
+    detalle.push({ id: t.id, nombre: t.nombre, horas: t.horasSemana, deBloque: false });
+  });
+
+  return {
+    total: detalle.reduce(function (a, x) { return a + x.horas; }, 0),
+    detalle: detalle.sort(function (a, b) { return b.horas - a.horas; }),
+    hayBloques: bloques.length > 0,
+  };
+}
+
 /** "1-6", "1,2,4" o vacío (todos). */
 function diasDe_(v) {
   const s = String(v == null ? '' : v).trim();
@@ -22526,15 +22611,54 @@ function sembrarBloques(uid) {
     ['Yoga o pilates en casa', 'ejercicio', 0.5, 1, 'semana', 3, 'cualquiera', '1-7', 1, 70],
   ];
 
+  /**
+   * ── Y SE ENLAZAN CON LOS PROYECTOS QUE YA EXISTEN ──
+   *
+   * Ella preguntó justo esto antes de pegar nada: «¿cruzas la info que
+   * ya tienes con la que te di si hay algo repetido como las horas de
+   * Nutrea o Nova?».
+   *
+   * Sin el enlace, «Nutrea» aquí y «Nutrea» en Central son dos cosas
+   * para Nova, y sus horas se suman dos veces. Con él, el bloque manda
+   * y las `horas_semana` de Central dejan de contarse aparte.
+   *
+   * El emparejado es por nombre, y es flojo a propósito: «Nutrea ·
+   * tiendas» tiene que encontrar a «Nutrea». Lo que no encuentre queda
+   * sin enlazar y se puede arreglar a mano en la hoja — mejor eso que
+   * enlazarlo al proyecto equivocado por parecerse un poco.
+   */
+  const proyectos = soulTrabajos_().filter(function (x) { return x.estado === 'activo'; });
+  const enlazar = function (nombre) {
+    const n = norm(nombre);
+    let mejor = null;
+    proyectos.forEach(function (pr) {
+      const pn = norm(pr.nombre);
+      if (!pn) return;
+      if (n === pn || n.indexOf(pn) !== -1 || pn.indexOf(n) !== -1) {
+        if (!mejor || pn.length > norm(mejor.nombre).length) mejor = pr;
+      }
+    });
+    return mejor ? mejor.id : '';
+  };
+
+  const enlazados = [];
   filas.forEach(function (f, i) {
+    const trabajoId = enlazar(f[0]);
+    if (trabajoId) enlazados.push(f[0]);
     const o = {
       id: 'b' + (i + 1) + Utilities.getUuid().slice(0, 4),
-      usuario_id: yo, nombre: f[0], tipo: f[1],
+      usuario_id: yo, nombre: f[0], tipo: f[1], trabajo_id: trabajoId,
       horas_min: f[2], horas_max: f[3], cada: f[4], veces: f[5],
       franja: f[6], dias: f[7], partes: f[8], orden: f[9], activo: 'si', nota: '',
     };
     sh.appendRow(enc.map(function (c) { return o[c] !== undefined ? o[c] : ''; }));
   });
   soulOlvidar_('Bloques');
-  return 'Listo: ' + filas.length + ' bloques sembrados. Ajústalos en la hoja Bloques.';
+  return 'Listo: ' + filas.length + ' bloques sembrados.\n' +
+    (enlazados.length
+      ? 'Enlazados con tus proyectos de Central: ' + enlazados.join(', ') +
+        '. Sus horas ya NO se cuentan dos veces.'
+      : 'Ninguno calzó con un proyecto de Central: si alguno debería, ponle el ' +
+        'trabajo_id a mano en la hoja Bloques.') +
+    '\nAjusta lo que quieras en la hoja Bloques.';
 }
