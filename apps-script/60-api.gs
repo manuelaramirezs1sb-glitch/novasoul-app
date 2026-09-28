@@ -170,6 +170,9 @@ function manejar(e, metodo) {
       case 'semaforo':     return json(apiSemaforo(s, p));
       case 'estado_clasificar': return json(apiEstadoClasificar(s, p));
       case 'borrar':    return json(apiBorrar(s, p));
+      // Mirar antes de cerrar. No escribe nada: se puede abrir las
+      // veces que haga falta, y por eso va antes en la lista.
+      case 'cierre_previo': return json(apiCierrePrevio(s, p));
       case 'cerrarmes': return json(apiCerrarMes(s, p));
       case 'salir':     return json(apiSalir(p.token));
       default:          return json({ ok: false, error: 'Acción desconocida: ' + accion });
@@ -2807,6 +2810,128 @@ function ultimoDiaDelMes(mes) {
   const a = parseInt(mes.slice(0, 4), 10), m = parseInt(mes.slice(5, 7), 10);
   const d = new Date(Date.UTC(a, m, 0));
   return Utilities.formatDate(d, 'UTC', 'yyyy-MM-dd');
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   LO QUE FALTA PARA UN CIERRE LIMPIO
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ POR QUÉ EXISTE ───────────────────────────────────────────┐
+ * │                                                            │
+ * │ «el cierre de mes sigue igual, sin la opción de editar o    │
+ * │  revisar o mirar y analizar. Saber qué quedó pendiente, de  │
+ * │  una da cerrar mes y te avisa los pedidos que faltan por    │
+ * │  cambiar de estado para tener un cierre limpio».            │
+ * │                                                            │
+ * │ El flujo era: escribes el mes en un `prompt`, el servidor   │
+ * │ dice «quedan 14 sin resolver, ¿cierras igual?», y ya. Nova  │
+ * │ te hacía CERRAR PARA ENTERARTE — y cerrar congela las       │
+ * │ cifras para siempre.                                        │
+ * │                                                            │
+ * │ Peor: te decía CUÁNTOS eran y nunca CUÁLES. Con catorce     │
+ * │ pedidos anónimos no se puede hacer nada más que aceptar.    │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ NO ES UN ARCHIVO PARA DESCARGAR ──────────────────┐
+ * │                                                            │
+ * │ Ella propuso un archivo. El diagnóstico era correcto —el    │
+ * │ cuadrito no sirve— pero un archivo es un callejón sin       │
+ * │ salida para una tarea que es ARREGLAR COSAS: se abre en     │
+ * │ otra parte, no tiene botones, y los catorce pedidos siguen  │
+ * │ sin corregirse.                                             │
+ * │                                                            │
+ * │ Esto devuelve los pedidos con su id, para que la pantalla   │
+ * │ los liste y se les cambie el estado ahí mismo. El archivo   │
+ * │ se puede hacer después, como exportación de esta pantalla,  │
+ * │ y entonces sí sirve: para guardar, no para trabajar.        │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * No escribe nada. Se puede abrir las veces que haga falta.
+ */
+function apiCierrePrevio(s, p) {
+  if (s.rol !== 'dueno') {
+    return { ok: false, error: 'Solo la dueña cierra un mes.' };
+  }
+  const tienda = String(p.tienda || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  const mes = String(p.mes || '').trim();
+  if (!/^\d{4}-\d{2}$/.test(mes)) {
+    return { ok: false, error: 'El mes va como AAAA-MM.' };
+  }
+
+  // El mismo análisis que ya sabe hacer el cierre. No una segunda
+  // cuenta: dos cuentas del mismo mes acaban diciendo cosas distintas.
+  const r = apiCierre(s, { tienda: tienda, mes: mes });
+  if (!r.ok) return r;
+
+  r.previo = true;
+  r.ultimoDia = ultimoDiaDelMes(mes);
+  r.hoy = ahoraISO().slice(0, 10);
+  // Cerrar un mes que todavía corre es casi siempre un error de dedo.
+  r.mesEnCurso = mes === Utilities.formatDate(
+    new Date(), zonaHorariaDe(libro_(s.sheetId), tienda) || 'UTC', 'yyyy-MM');
+
+  /**
+   * Los pedidos que faltan, CON NOMBRE.
+   *
+   * Agrupados por el estado en que se quedaron, que es lo que dice qué
+   * hay que hacer con cada montón: los «en tránsito» esperan al
+   * courier, los «por confirmar» esperan a alguien de aquí.
+   */
+  const ss = libro_(s.sheetId);
+  const sh = ss.getSheetByName('Pedidos');
+  const abiertos = [];
+  if (sh && sh.getLastRow() > 1) {
+    const d = sh.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    const hoy = new Date(r.hoy + 'T00:00:00Z');
+    for (let i = 1; i < d.length; i++) {
+      const f = d[i];
+      if (String(f[c('tienda')]).trim() !== tienda) continue;
+      const fecha = aISO(f[c('fecha')], 'UTC');
+      if (!fecha || fecha.slice(0, 7) !== mes) continue;
+      const est = norm(f[c('estado_nova')] || f[c('estado_canonico')]) ||
+                  ESTADOS.SIN_CLASIFICAR;
+      if (['entregado', 'devolucion', 'cancelado'].indexOf(est) !== -1) continue;
+      const ult = aISO(f[c('ultimo_movimiento')] || f[c('actualizado_en')], 'UTC') || fecha;
+      abiertos.push({
+        id: String(f[c('id')] || ''),
+        idExterno: String(f[c('id_externo')] || ''),
+        cliente: String(f[c('cliente')] || ''),
+        producto: String(f[c('producto')] || ''),
+        ciudad: String(f[c('ciudad')] || ''),
+        valor: num(f[c('valor')]),
+        estado: est,
+        gestora: String(f[c('gestora_asignada')] || ''),
+        fecha: fecha,
+        diasQuieto: Math.max(0, Math.round((hoy - new Date(ult + 'T00:00:00Z')) / 86400000)),
+      });
+    }
+  }
+  // Lo más quieto primero: es lo que lleva más tiempo sin que nadie lo
+  // toque, y por tanto lo que menos probable es que se resuelva solo.
+  abiertos.sort(function (a, b) { return b.diasQuieto - a.diasQuieto; });
+
+  const grupos = {};
+  abiertos.forEach(function (x) {
+    if (!grupos[x.estado]) grupos[x.estado] = { estado: x.estado, n: 0, valor: 0 };
+    grupos[x.estado].n++;
+    grupos[x.estado].valor += x.valor;
+  });
+
+  r.abiertos = abiertos;
+  r.porEstado = Object.keys(grupos).map(function (k) { return grupos[k]; })
+    .sort(function (a, b) { return b.n - a.n; });
+  r.valorAbierto = Math.round(
+    abiertos.reduce(function (a, x) { return a + x.valor; }, 0) * 100) / 100;
+  r.limpio = abiertos.length === 0;
+  return r;
 }
 
 function apiCerrarMes(s, p) {

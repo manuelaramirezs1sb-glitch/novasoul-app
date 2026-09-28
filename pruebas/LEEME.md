@@ -28,6 +28,9 @@ node pruebas/horario.js               # que la semana que Nova arma sea POSIBLE
 node pruebas/hub-reintento.js         # la puerta, cuando Google contesta raro
 node pruebas/cambio-tienda.js         # saltar de tienda sin que se invente nada
 node pruebas/novedades-tienda.js      # una novedad es de UNA tienda, en las 5 puertas
+node pruebas/family-tiendas.js        # las tiendas de NovaSoul, en chico y sin plata
+node pruebas/cierre-previo.js         # qué falta para un cierre limpio (servidor)
+node pruebas/cierre-revision.js       # revisar antes de cerrar (pantalla)
 ```
 
 `primer-dia.js` no escribe a mano lo que contesta el servidor: lo CALCULA
@@ -133,6 +136,42 @@ nunca, así que el contador de «faltan» no baja a cero: la primera
 versión reescribía la columna entera de cuatro mil filas en cada
 `bootstrapTodo()` para no cambiar una celda. Lo encontró la prueba al
 correr el relleno dos veces seguidas.
+
+`cierre-revision.js` y `cierre-previo.js` sostienen una decisión que fue
+al revés de lo que ella pidió. Pidió **descargar un archivo** porque el
+cierre «me saca la info en un cuadrito no más». El diagnóstico era
+correcto; el archivo no, porque es un callejón sin salida para una tarea
+que es ARREGLAR COSAS: se abre en otra parte, no tiene botones, y los
+catorce pedidos siguen sin corregirse. La aserción que sostiene eso es
+«se cambia el estado desde la revisión y las cifras de arriba se rehacen
+con ese pedido dentro» — lo que un archivo no puede hacer.
+
+La otra que importa: **tocar «Cerrar el mes» ya no cierra nada**, solo
+abre la revisión. Antes era un `prompt` pidiendo AAAA-MM y un `confirm`
+que decía cuántos pedidos faltaban y nunca cuáles. Cerrar congela las
+cifras para siempre y solo se reabre editando la hoja a mano, así que un
+dedo torcido en ese `prompt` costaba caro.
+
+`family-tiendas.js` mide el ANCHO y el COLOR en pantalla, no en el CSS.
+Las dos primeras versiones estaban mal y el CSS se veía razonable en las
+dos: las tarjetas salían de 570px —«más pequeños», había pedido ella—
+porque `flex:1 1 150px` con dos tiendas las estira a media pantalla; y el
+verde salía DORADO, porque lo pinté con `var(--acc)`, que cambia con el
+tema. Un semáforo donde «bien» y «regular» son del mismo color no es un
+semáforo.
+
+Tiene además la aserción que protege una regla suya —«dentro de Nova
+nunca se comparan dos tiendas al mismo tiempo en una misma pantalla»—
+afinada: lo que la regla protegía era comparar CIFRAS, no ver estados.
+Las tarjetas no llevan dinero, y si alguien le mete una cifra, falla.
+
+Una advertencia de arnés que costó una aserción falsa: **si la vista está
+oculta, `getBoundingClientRect()` devuelve 0** y un «ninguna pasa de
+240px» pasa por la razón equivocada. Por eso hay también un mínimo.
+
+Y una de shell: el contador de rojas tiene que ir FUERA de cualquier
+`$( )`. Dentro es una subshell, `fail=1` no sale de ella, y casi reporto
+«todas verdes» con dos rojas.
 
 `contar-llamadas.js` no afirma ni falla: imprime. Existe porque una vez
 afirmé de memoria que traer un año de anuncios «llenaría la cuota de la

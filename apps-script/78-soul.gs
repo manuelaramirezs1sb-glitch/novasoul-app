@@ -1126,9 +1126,31 @@ function soulFijoBorrar(s, p) {
  * semáforo: son segundos, no milisegundos, y el día a día no puede
  * esperarlos. Se carga cuando ella entra a esta sección.
  *
- * UNA TIENDA A LA VEZ. Es la regla de toda Nova y aquí también: dos
- * tiendas en la misma pantalla invitan a compararlas, y son negocios
- * distintos en países distintos con monedas distintas.
+ * ┌─ UNA TIENDA A LA VEZ, Y UN RESUMEN DE TODAS ───────────────┐
+ * │                                                            │
+ * │ La regla era «una tienda a la vez», y sigue en pie donde    │
+ * │ importa: dos tiendas con sus CIFRAS en la misma pantalla    │
+ * │ invitan a compararlas, y son negocios distintos en países   │
+ * │ distintos con monedas distintas. Comparar 4.000 quetzales   │
+ * │ contra 1.200 dólares no significa nada.                     │
+ * │                                                            │
+ * │ «en resumen de tiendas pones unos cuadros para cada tienda  │
+ * │  pero más pequeños».                                        │
+ * │                                                            │
+ * │ Lo que hacía falta no era comparar: era SABER DÓNDE MIRAR   │
+ * │ sin ir tienda por tienda con los botones de arriba. Así que │
+ * │ `resumen` trae una tarjeta por tienda con ESTADO y no con   │
+ * │ plata: cuántas alarmas hay, de qué color, y las luces del   │
+ * │ semáforo. Ni un número de dinero.                           │
+ * │                                                            │
+ * │ Al abrir una, sale entera — y ahí sí hay cifras, de una     │
+ * │ tienda sola. La regla se respeta donde tenía sentido.       │
+ * │                                                            │
+ * │ No cuesta N lecturas: todas las tiendas de un cliente viven │
+ * │ en la MISMA hoja, y `libro_()` guarda lo leído mientras     │
+ * │ dura la petición. Se lee una vez y se recorre N veces.      │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
  */
 function soulFamily(s, p) {
   if (!soulPuede_(s)) return { ok: false, error: 'NovaSoul es de Manuela.' };
@@ -1138,6 +1160,8 @@ function soulFamily(s, p) {
     ok: true,
     clientes: [], cliente: null, tiendas: [], tienda: '',
     alarmas: [], semaforo: null, errorTienda: '',
+    // Una tarjeta chica por tienda: estado, nunca plata.
+    resumen: [],
     central: null, academy: null,
   };
 
@@ -1190,7 +1214,41 @@ function soulFamily(s, p) {
         out.semaforo = {
           tienda: sem.tienda, moneda: sem.moneda, semana: sem.semana,
           luces: sem.luces, alertas: sem.alertas, hayDatos: sem.hayDatos,
+          enCurso: sem.enCurso, hastaDia: sem.hastaDia,
+          diasCorridos: sem.diasCorridos,
         };
+
+        /**
+         * ── EL RESUMEN DE TODAS ──
+         *
+         * Sin plata a propósito: cuántas alarmas, de qué color, y las
+         * luces. Es para saber a cuál entrar, no para compararlas.
+         *
+         * Una tienda que falle no puede dejar a las demás sin tarjeta:
+         * la que falle lo dice en la suya.
+         */
+        out.resumen = out.tiendas.map(function (t) {
+          const f = { id: t.id, nombre: t.nombre, error: '',
+                      alarmas: 0, peor: '', luces: [], hayDatos: false };
+          try {
+            const e2 = evaluarAlarmas(cs, t.id);
+            const als = e2.alarmas || [];
+            f.alarmas = als.length;
+            f.peor = als.some(function (a) { return a.nivel === 'mal' || a.nivel === 'rojo'; })
+              ? 'rojo'
+              : als.length ? 'amarillo' : 'verde';
+            const s2 = (t.id === tienda.id)
+              ? sem                                  // ya está calculado
+              : semaforoSemanal(cl.sheetId, t.id, '');
+            f.hayDatos = !!s2.hayDatos;
+            f.luces = (s2.luces || []).map(function (l) {
+              return { etiqueta: l.etiqueta, estado: l.estado };
+            });
+          } catch (err) {
+            f.error = err.message;
+          }
+          return f;
+        });
       } else {
         out.errorTienda = 'Ese cliente no tiene tiendas activas.';
       }

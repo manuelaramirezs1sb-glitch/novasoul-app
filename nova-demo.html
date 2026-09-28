@@ -793,6 +793,43 @@ input.li:focus{border-color:var(--acc-d);}
 .calc-input{border:1px solid var(--s-line3);background:var(--s-card2);border-radius:11px;padding:12px 14px;font:500 14px/1 'DM Sans';color:var(--t-ink);outline:none;width:100%;}
 .calc-input:focus{border-color:var(--acc-d);}
 .calc-result-big{font:700 36px/1 'Fraunces',serif;color:var(--t-ink);font-variant-numeric:tabular-nums;}
+/* ─── REVISAR ANTES DE CERRAR ─────────────────────────
+   Mismo panel lateral que la vista sombra: un patrón, no dos. */
+#cierre-prev{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150;display:none;align-items:stretch;}
+#cierre-prev.on{display:flex;}
+/* Con el id: `.som-panel` está más abajo en esta hoja y, a igual
+   especificidad, gana la última. El panel salía de 480 y no de 640. */
+#cierre-prev .cp-panel{width:640px;}
+.cp-pie{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--s-line2);background:var(--s-card);}
+.cp-btn{flex:1;font:600 13px/1 'DM Sans';border-radius:11px;padding:13px 16px;cursor:pointer;border:1px solid transparent;}
+.cp-sec{background:transparent;border-color:var(--s-line);color:var(--t-mut);}
+.cp-ok{background:var(--acc-d);color:#f1f4e8;}
+.cp-ok[disabled]{opacity:.5;cursor:default;}
+.cp-aviso{border-radius:12px;padding:13px 15px;font:500 12.5px/1.6 'DM Sans';}
+.cp-aviso.mal{background:#f6e3db;color:#8a2f2c;}
+.cp-aviso.ojo{background:#f6ecd0;color:#7a5c10;}
+.cp-aviso.bien{background:#e6efe8;color:#2f5738;}
+.cp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;}
+.cp-k{background:var(--s-card2);border-radius:11px;padding:11px 13px;}
+.cp-k .kk{font:600 9.5px/1 'DM Sans';letter-spacing:.8px;color:var(--t-mut3);margin-bottom:6px;}
+.cp-k .vv{font:700 19px/1 'Fraunces',serif;color:var(--t-ink);font-variant-numeric:tabular-nums;}
+.cp-k .ss{font:500 10.5px/1.35 'DM Sans';color:var(--t-mut2);margin-top:4px;}
+.cp-k.mal .vv{color:#b8322f;}
+.cp-grupo{display:flex;flex-wrap:wrap;gap:6px;}
+.cp-chip{font:600 11px/1 'DM Sans';background:var(--s-card2);border:1px solid var(--s-line2);
+  border-radius:20px;padding:6px 11px;color:var(--t-ink2);}
+.cp-fila{background:var(--s-bg);border:1px solid var(--s-line2);border-radius:12px;
+  padding:11px 13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.cp-fila-id{flex:1 1 190px;min-width:0;}
+.cp-fila-nm{font:600 12.5px/1.3 'DM Sans';color:var(--t-ink);overflow-wrap:anywhere;}
+.cp-fila-sub{font:500 10.5px/1.4 'DM Sans';color:var(--t-mut);margin-top:3px;}
+.cp-fila select{font:500 12px/1 'DM Sans';border:1px solid var(--s-line);border-radius:9px;
+  padding:8px 9px;background:var(--s-card);color:var(--t-ink);max-width:170px;}
+.cp-quieto{font:600 10.5px/1 'DM Sans';border-radius:20px;padding:5px 9px;
+  background:#f6ecd0;color:#7a5c10;flex:none;}
+.cp-quieto.mucho{background:#f6e3db;color:#b8322f;}
+@media(max-width:640px){ #cierre-prev .cp-panel{width:100%;} }
+
 /* ─── VISTA SOMBRA ───────────────────────────────────── */
 #sombra{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150;display:none;align-items:stretch;}
 #sombra.on{display:flex;}
@@ -2254,6 +2291,29 @@ input.li:focus{border-color:var(--acc-d);}
 </div>
 
 <!-- ══════════════════ VISTA SOMBRA ══════════════════ -->
+<!-- ════════════ REVISAR ANTES DE CERRAR ════════════
+     «sin la opción de editar o revisar o mirar y analizar. Saber qué
+      quedó pendiente (…) te avisa los pedidos que faltan por cambiar de
+      estado para tener un cierre limpio».
+     Cerrar congela las cifras para siempre, así que cerrar es el ÚLTIMO
+     paso y no el primero. Aquí se mira, se arregla, y luego se cierra. -->
+<div id="cierre-prev" onclick="if(event.target===this)cerrarRevision()">
+  <div class="som-panel cp-panel">
+    <div class="som-head">
+      <div class="som-info">
+        <strong id="cp-titulo">Revisar antes de cerrar</strong>
+        <small id="cp-sub"></small>
+      </div>
+      <span class="som-close" onclick="cerrarRevision()">×</span>
+    </div>
+    <div class="som-body" id="cp-body"></div>
+    <div class="cp-pie">
+      <button class="cp-btn cp-sec" onclick="cerrarRevision()">Ahora no</button>
+      <button class="cp-btn cp-ok" id="cp-cerrar" onclick="confirmarCierre()">Cerrar el mes</button>
+    </div>
+  </div>
+</div>
+
 <div id="sombra" onclick="if(event.target===this)closeSombra()">
   <div class="som-panel">
     <div class="som-head">
@@ -6951,37 +7011,265 @@ function sellarEjemplo(conectado) {
  * devolución vieja se resuelva — y un número que cambia solo no sirve
  * ni para decidir ni para rendir cuentas.
  */
+/**
+ * ┌─ CERRAR ES EL ÚLTIMO PASO, NO EL PRIMERO ──────────────────┐
+ * │                                                            │
+ * │ «sin la opción de editar o revisar o mirar y analizar.      │
+ * │  Saber qué quedó pendiente, de una da cerrar mes y te avisa │
+ * │  los pedidos que faltan por cambiar de estado».             │
+ * │                                                            │
+ * │ Esto empezaba con un `prompt` pidiendo el mes y terminaba   │
+ * │ con un `confirm` que decía «quedan 14 sin resolver». CUÁNTOS│
+ * │ y nunca CUÁLES: con catorce pedidos anónimos lo único que   │
+ * │ se puede hacer es aceptar. Nova te hacía cerrar para        │
+ * │ enterarte, y cerrar congela las cifras para siempre.        │
+ * │                                                            │
+ * │ Ahora esto solo ABRE la revisión. No escribe nada.          │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+let CIERRE_PREV = null;
+
 async function cerrarMesActual() {
   if (!CONECTADO) {
-    alert('Entra con tu correo para poder cerrar el mes.');
+    showToast('Entra con tu correo para poder cerrar el mes.');
     return;
   }
   if (ROL !== 'dueno') {
-    alert('Solo la dueña cierra un mes.');
+    showToast('Solo la dueña cierra un mes.');
     return;
   }
-  const mes = prompt('¿Qué mes quieres cerrar? (AAAA-MM)',
-    new Date(new Date().setMonth(new Date().getMonth() - 1))
-      .toISOString().slice(0, 7));
-  if (!mes) return;
+  /**
+   * El mes ya no se escribe a mano.
+   *
+   * El `prompt` pedía AAAA-MM y un dedo torcido cerraba el mes
+   * equivocado — y un mes cerrado solo se reabre editando la hoja. Se
+   * propone el anterior, que es el que casi siempre se cierra, y se
+   * puede cambiar desde la misma revisión.
+   */
+  const d = new Date(); d.setMonth(d.getMonth() - 1);
+  await abrirRevisionCierre(d.toISOString().slice(0, 7));
+}
 
-  let r = await api('cerrarmes', { tienda: ST, mes: mes });
+async function abrirRevisionCierre(mes) {
+  const caja = document.getElementById('cierre-prev');
+  const body = document.getElementById('cp-body');
+  if (!caja || !body) return;
+  caja.classList.add('on');
+  body.innerHTML = '<div class="eq-vacio">Revisando ' + esc(mes) + '…</div>';
 
-  // Cerrar con pedidos pendientes se permite, pero se advierte: sus
-  // ventas ya no entran en ese mes y las cifras quedan así para siempre.
-  if (!r.ok && r.requiere_confirmacion) {
-    if (!confirm(r.error + '\n\n¿Cerrar de todas formas?')) return;
-    r = await api('cerrarmes', { tienda: ST, mes: mes, forzar: true });
+  let r;
+  try { r = await api('cierre_previo', { tienda: ST, mes: mes }); }
+  catch (e) {
+    body.innerHTML = '<div class="cp-aviso mal">Sin conexión: ' + esc(e.message) + '</div>';
+    return;
   }
-  if (!r.ok) { alert(r.error || 'No se pudo cerrar el mes.'); return; }
+  if (!r || !r.ok) {
+    body.innerHTML = '<div class="cp-aviso mal">' +
+      esc((r && r.error) || 'No pude revisar ese mes.') + '</div>';
+    return;
+  }
+  CIERRE_PREV = r;
+  pintarRevisionCierre();
+}
 
-  const S = SYM();
-  alert('Mes ' + mes + ' cerrado.\n\n' +
-    'Ventas: ' + S + ' ' + NUM(r.datos.ventas) + '\n' +
-    'Entregados: ' + NUM(r.datos.entregados) + ' de ' + NUM(r.datos.pedidos) + '\n' +
-    'Efectividad: ' + (r.datos.efectividad || 0).toFixed(1) + '%\n\n' +
-    'Estas cifras quedan congeladas: no cambian aunque después se ' +
-    'resuelva un pedido viejo.');
+function cerrarRevision() {
+  const caja = document.getElementById('cierre-prev');
+  if (caja) caja.classList.remove('on');
+  CIERRE_PREV = null;
+}
+
+/** Los meses que se pueden cerrar: los doce anteriores al actual. */
+function mesesCerrables() {
+  const out = [];
+  const d = new Date();
+  for (let k = 1; k <= 12; k++) {
+    const x = new Date(d.getFullYear(), d.getMonth() - k, 1);
+    out.push(x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'));
+  }
+  return out;
+}
+
+function pintarRevisionCierre() {
+  const r = CIERRE_PREV;
+  const body = document.getElementById('cp-body');
+  const btn = document.getElementById('cp-cerrar');
+  if (!r || !body) return;
+  const S = SYM() + ' ';
+  const a = r.actual || {};
+
+  document.getElementById('cp-titulo').textContent =
+    r.cerrado ? 'Este mes ya está cerrado' : 'Revisar antes de cerrar';
+  document.getElementById('cp-sub').textContent =
+    (STORES[ST] || {}).name || ST;
+
+  const sel = '<select onchange="abrirRevisionCierre(this.value)" ' +
+    'style="font:600 12px/1 \'DM Sans\';border:1px solid var(--s-line);' +
+    'border-radius:9px;padding:8px 10px;background:var(--s-card);color:var(--t-ink);">' +
+    mesesCerrables().map(function (m) {
+      return '<option value="' + m + '"' + (m === r.mes ? ' selected' : '') + '>' +
+        esc(nombreMes(m)) + '</option>';
+    }).join('') + '</select>';
+
+  let h = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+    '<span class="som-section" style="margin:0;">QUÉ MES</span>' + sel + '</div>';
+
+  if (r.cerrado) {
+    h += '<div class="cp-aviso bien">Ya lo cerraste' +
+      (r.cerrado_en ? ' el ' + esc(String(r.cerrado_en).slice(0, 10)) : '') +
+      '. Las cifras de abajo son las que quedaron congeladas ese día. ' +
+      'Para rehacerlo hay que poner ese mes en «abierto» en la hoja Cierres.</div>';
+  } else if (r.mesEnCurso) {
+    h += '<div class="cp-aviso ojo"><b>Este mes todavía corre.</b> ' +
+      'Cerrarlo ahora congela unas cifras a las que les faltan días. ' +
+      'Casi siempre se cierra el mes anterior.</div>';
+  }
+
+  /**
+   * ── EL ANÁLISIS, ARRIBA ──
+   *
+   * Es el mismo que Nova ya arma en Cierre de mes. No una segunda
+   * cuenta: dos cuentas del mismo mes acaban diciendo cosas distintas y
+   * no hay manera de saber a cuál creerle.
+   */
+  const k = function (kk, vv, ss, mal) {
+    return '<div class="cp-k' + (mal ? ' mal' : '') + '"><div class="kk">' + kk +
+      '</div><div class="vv">' + vv + '</div>' +
+      (ss ? '<div class="ss">' + esc(ss) + '</div>' : '') + '</div>';
+  };
+  const ant = r.anterior || {};
+  const vs = function (hoy, antes) {
+    if (!antes) return 'sin mes anterior';
+    const d = (hoy - antes) / antes * 100;
+    return (d >= 0 ? '+' : '') + d.toFixed(0) + '% vs. ' + nombreMes(mesAnteriorTxt(r.mes));
+  };
+  h += '<div><div class="som-section">ASÍ QUEDÓ ' +
+    esc(nombreMes(r.mes).toUpperCase()) + '</div><div class="cp-kpis">' +
+    k('VENTAS', S + NUM(a.ventas || 0), vs(a.ventas || 0, ant.ventas || 0)) +
+    k('ENTREGADOS', NUM(a.entregados || 0),
+      (a.pedidos || 0) + ' pedidos · ' + (a.efectividad || 0).toFixed(0) + '% de entrega') +
+    k('DEVUELTOS', NUM(a.devueltos || 0),
+      a.despachados ? (a.tasaDevolucion || 0).toFixed(0) + '% de lo despachado' : '',
+      (a.tasaDevolucion || 0) > 20) +
+    k('PAUTA', S + NUM(a.gasto || 0),
+      a.gasto ? 'ROAS ' + ((a.ventas || 0) / a.gasto).toFixed(1) + 'x' : 'sin pauta cargada') +
+    k('MARGEN', S + NUM(a.margen || 0), 'después de pauta, producto y flete',
+      (a.margen || 0) < 0) +
+    '</div></div>';
+
+  /**
+   * ── Y LO QUE FALTA, CON NOMBRE Y CON BOTÓN ──
+   */
+  const abiertos = r.abiertos || [];
+  if (r.limpio) {
+    h += '<div class="cp-aviso bien"><b>Cierre limpio.</b> Ningún pedido de ' +
+      esc(nombreMes(r.mes)) + ' se quedó sin desenlace: todos están entregados, ' +
+      'devueltos o cancelados. Lo que cierres es lo que pasó.</div>';
+  } else {
+    h += '<div class="cp-aviso ojo"><b>' + abiertos.length +
+      (abiertos.length === 1 ? ' pedido no tiene desenlace' : ' pedidos no tienen desenlace')
+      + ' todavía</b>, por ' + S + NUM(r.valorAbierto || 0) + '. ' +
+      'Si cierras ahora, esas ventas NO entran en ' + esc(nombreMes(r.mes)) +
+      ' y las cifras quedan congeladas así para siempre. ' +
+      'Cámbiales el estado aquí abajo y la cuenta se rehace sola.</div>';
+    h += '<div class="cp-grupo">' + (r.porEstado || []).map(function (g) {
+      const f = COLOR_ESTADO[g.estado] || ['#5b5b55', '#e6e4de', g.estado];
+      return '<span class="cp-chip" style="color:' + f[0] + ';background:' + f[1] +
+        ';border-color:transparent;">' + esc(f[2]) + ' · ' + g.n + '</span>';
+    }).join('') + '</div>';
+
+    const opciones = Object.keys(COLOR_ESTADO).map(function (id) {
+      return '<option value="' + id + '">' + esc(COLOR_ESTADO[id][2]) + '</option>';
+    }).join('');
+    h += '<div style="display:flex;flex-direction:column;gap:8px;">' +
+      abiertos.map(function (x, i) {
+        return '<div class="cp-fila" id="cpf' + i + '">' +
+          '<div class="cp-fila-id">' +
+            '<div class="cp-fila-nm">' + esc(x.cliente || '(sin nombre)') +
+              (x.idExterno ? ' <span style="color:var(--t-mut3);font-weight:500;">#' +
+                esc(x.idExterno) + '</span>' : '') + '</div>' +
+            '<div class="cp-fila-sub">' + esc(x.producto || '—') +
+              (x.ciudad ? ' · ' + esc(x.ciudad) : '') + ' · ' + S + NUM(x.valor) +
+              (x.gestora ? ' · ' + esc(x.gestora) : '') + '</div>' +
+          '</div>' +
+          '<span class="cp-quieto' + (x.diasQuieto > 7 ? ' mucho' : '') + '">' +
+            x.diasQuieto + (x.diasQuieto === 1 ? ' día quieto' : ' días quieto') + '</span>' +
+          '<select onchange="cambiarEstadoDesdeCierre(' + i + ', this.value)">' +
+            '<option value="">' + esc((COLOR_ESTADO[x.estado] || {})[2] || x.estado) +
+            ' · cambiar a…</option>' + opciones + '</select>' +
+        '</div>';
+      }).join('') + '</div>';
+  }
+
+  body.innerHTML = h;
+  if (btn) {
+    btn.disabled = !!r.cerrado;
+    btn.textContent = r.cerrado ? 'Ya está cerrado'
+      : r.limpio ? 'Cerrar ' + nombreMes(r.mes)
+      : 'Cerrar igual, con ' + abiertos.length + ' sin resolver';
+  }
+}
+
+/** El mes anterior a uno dado. La pantalla también lo necesita. */
+function mesAnteriorTxt(mes) {
+  const a = parseInt(String(mes).slice(0, 4), 10);
+  const m = parseInt(String(mes).slice(5, 7), 10);
+  if (!a || !m) return String(mes);
+  const d = new Date(Date.UTC(a, m - 2, 1));
+  return d.toISOString().slice(0, 7);
+}
+
+/**
+ * Cambiar el estado sin salir de la revisión.
+ *
+ * Es la diferencia entre enterarse y poder hacer algo. Después de
+ * guardar se vuelve a pedir la revisión: el pedido sale de la lista y
+ * las cifras de arriba se rehacen con él dentro, que es justamente lo
+ * que hay que ver antes de decidir si ya se puede cerrar.
+ */
+async function cambiarEstadoDesdeCierre(i, estado) {
+  if (!estado || !CIERRE_PREV) return;
+  const x = (CIERRE_PREV.abiertos || [])[i];
+  if (!x) return;
+  const fila = document.getElementById('cpf' + i);
+  if (fila) fila.style.opacity = '.5';
+  let r;
+  try {
+    r = await api('escribir', { entidad: 'Pedidos', id: x.id,
+                                campos: { estado_nova: estado } });
+  } catch (e) { r = { ok: false, error: e.message }; }
+  if (!r || !r.ok) {
+    if (fila) fila.style.opacity = '1';
+    showToast((r && r.error) || 'No se pudo guardar');
+    return;
+  }
+  showToast(x.cliente + ' → ' + ((COLOR_ESTADO[estado] || [])[2] || estado));
+  // La lista y las cifras se rehacen juntas: un pedido que cambia de
+  // estado cambia las ventas del mes, y verlo es el punto.
+  await abrirRevisionCierre(CIERRE_PREV.mes);
+  // Y la pantalla de atrás, que quedó con el pedido en el otro estado.
+  cargarPedidosReales();
+}
+
+async function confirmarCierre() {
+  const r = CIERRE_PREV;
+  if (!r || r.cerrado) return;
+  const btn = document.getElementById('cp-cerrar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Cerrando…'; }
+
+  let res;
+  try {
+    res = await api('cerrarmes', { tienda: ST, mes: r.mes,
+                                   forzar: !r.limpio });
+  } catch (e) { res = { ok: false, error: e.message }; }
+
+  if (!res || !res.ok) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Cerrar el mes'; }
+    showToast((res && res.error) || 'No se pudo cerrar el mes.');
+    return;
+  }
+  cerrarRevision();
+  showToast(nombreMes(r.mes) + ' quedó cerrado. Las cifras ya no cambian.');
   cargarReales();
 }
 
@@ -9357,7 +9645,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-28 · c8f4';
+const VERSION_PANTALLA = '2026-09-28 · 8353';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');

@@ -358,6 +358,17 @@ const FAMILY = {
     alertas: [{ titulo: 'El CPA pasó el techo tres semanas seguidas.' }],
     hayDatos: true },
   errorTienda: '',
+  /**
+   * El resumen de TODAS las tiendas, que ahora sale en tarjetas chicas.
+   * Estado y no plata: ese es el trato con la regla de «nunca dos
+   * tiendas comparándose».
+   */
+  resumen: [
+    { id: 'gt', nombre: 'Nutrea GT', error: '', alarmas: 4, peor: 'rojo', hayDatos: true,
+      luces: [{ etiqueta: 'CPA', estado: 'rojo' }, { etiqueta: 'Entrega', estado: 'verde' }] },
+    { id: 'ec', nombre: 'Nutrea EC', error: '', alarmas: 0, peor: 'verde', hayDatos: true,
+      luces: [{ etiqueta: 'CPA', estado: 'verde' }, { etiqueta: 'Entrega', estado: 'verde' }] },
+  ],
   central: { proyectos: 3, entregasVencidas: 1, cobrosAtrasados: 1,
              atrasadoPorMoneda: { COP: 800000 }, carga: {} },
   academy: { estudiantes: 0, porque: 'Todavía no has dado de alta a nadie en novAcademy.' },
@@ -817,13 +828,40 @@ const FAMILY = {
     ok('y dice la verdad de novAcademy en vez de un cero mudo' + A,
        /Todavía no has dado de alta/.test(fam));
     /**
-     * La regla de toda Nova: nunca dos tiendas en la misma pantalla.
-     * El selector las ofrece, el cuerpo muestra una.
+     * ── LA REGLA, AFINADA ──
+     *
+     * Era «nunca dos tiendas en la misma pantalla». Ahora es «nunca dos
+     * tiendas con sus CIFRAS en la misma pantalla», que es lo que la
+     * regla protegía de verdad: comparar quetzales contra dólares no
+     * significa nada.
+     *
+     * «en resumen de tiendas pones unos cuadros para cada tienda pero
+     *  más pequeños». El estado de todas se ve de un golpe; el dinero,
+     * de una a la vez.
      */
-    ok('NUNCA muestra dos tiendas a la vez' + A,
-       fam.indexOf('Nutrea EC') === -1 && /Nutrea GT/.test(fam));
-    ok('pero deja cambiar de tienda' + A,
-       (await p.$$eval('#fam-sel .kbtn', e => e.map(x => x.textContent))).join(',') === 'Nutrea GT,Nutrea EC');
+    ok('las tiendas están todas, en tarjetas chicas' + A,
+       (await p.$$eval('.fam-t .fam-t-n', e => e.map(x => x.textContent))).join(',') ===
+       'Nutrea GT,Nutrea EC');
+    ok('y desde ellas se cambia de tienda' + A,
+       (await p.$$eval('.fam-t', e => e.map(x => x.getAttribute('onclick') || '')))
+         .every(x => /cargarFamily\(/.test(x)));
+    /**
+     * Lo que sigue prohibido: la tienda que NO está abierta no puede
+     * traer un solo número suyo. Se mira el cuerpo sin las tarjetas.
+     */
+    const cuerpoSinTarjetas = await p.evaluate(() => {
+      const c = document.getElementById('fam-cuerpo').cloneNode(true);
+      c.querySelectorAll('.fam-tiendas, .fam-nota').forEach(x => x.remove());
+      return (c.innerText || '').replace(/\s+/g, ' ');
+    });
+    ok('pero las CIFRAS son de una sola tienda' + A,
+       cuerpoSinTarjetas.indexOf('Nutrea EC') === -1 && /Nutrea GT/.test(cuerpoSinTarjetas),
+       cuerpoSinTarjetas.slice(0, 120));
+    /** Y las tarjetas no llevan plata: es lo que las hace comparables. */
+    const enTarjetas = (await p.$$eval('.fam-t', e =>
+      e.map(x => (x.innerText || '').replace(/\s+/g, ' ')))).join(' | ');
+    ok('y las tarjetas no enseñan dinero' + A,
+       !/\$|GTQ|USD|COP|\d[\d.,]{3,}/.test(enTarjetas), enTarjetas);
 
     // ══ «Acción desconocida» se traduce a qué hacer ══
     const viejo = await p.evaluate(async () => {

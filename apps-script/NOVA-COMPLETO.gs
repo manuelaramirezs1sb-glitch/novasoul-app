@@ -5234,6 +5234,9 @@ function manejar(e, metodo) {
       case 'semaforo':     return json(apiSemaforo(s, p));
       case 'estado_clasificar': return json(apiEstadoClasificar(s, p));
       case 'borrar':    return json(apiBorrar(s, p));
+      // Mirar antes de cerrar. No escribe nada: se puede abrir las
+      // veces que haga falta, y por eso va antes en la lista.
+      case 'cierre_previo': return json(apiCierrePrevio(s, p));
       case 'cerrarmes': return json(apiCerrarMes(s, p));
       case 'salir':     return json(apiSalir(p.token));
       default:          return json({ ok: false, error: 'Acción desconocida: ' + accion });
@@ -7871,6 +7874,128 @@ function ultimoDiaDelMes(mes) {
   const a = parseInt(mes.slice(0, 4), 10), m = parseInt(mes.slice(5, 7), 10);
   const d = new Date(Date.UTC(a, m, 0));
   return Utilities.formatDate(d, 'UTC', 'yyyy-MM-dd');
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   LO QUE FALTA PARA UN CIERRE LIMPIO
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ POR QUÉ EXISTE ───────────────────────────────────────────┐
+ * │                                                            │
+ * │ «el cierre de mes sigue igual, sin la opción de editar o    │
+ * │  revisar o mirar y analizar. Saber qué quedó pendiente, de  │
+ * │  una da cerrar mes y te avisa los pedidos que faltan por    │
+ * │  cambiar de estado para tener un cierre limpio».            │
+ * │                                                            │
+ * │ El flujo era: escribes el mes en un `prompt`, el servidor   │
+ * │ dice «quedan 14 sin resolver, ¿cierras igual?», y ya. Nova  │
+ * │ te hacía CERRAR PARA ENTERARTE — y cerrar congela las       │
+ * │ cifras para siempre.                                        │
+ * │                                                            │
+ * │ Peor: te decía CUÁNTOS eran y nunca CUÁLES. Con catorce     │
+ * │ pedidos anónimos no se puede hacer nada más que aceptar.    │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ NO ES UN ARCHIVO PARA DESCARGAR ──────────────────┐
+ * │                                                            │
+ * │ Ella propuso un archivo. El diagnóstico era correcto —el    │
+ * │ cuadrito no sirve— pero un archivo es un callejón sin       │
+ * │ salida para una tarea que es ARREGLAR COSAS: se abre en     │
+ * │ otra parte, no tiene botones, y los catorce pedidos siguen  │
+ * │ sin corregirse.                                             │
+ * │                                                            │
+ * │ Esto devuelve los pedidos con su id, para que la pantalla   │
+ * │ los liste y se les cambie el estado ahí mismo. El archivo   │
+ * │ se puede hacer después, como exportación de esta pantalla,  │
+ * │ y entonces sí sirve: para guardar, no para trabajar.        │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * No escribe nada. Se puede abrir las veces que haga falta.
+ */
+function apiCierrePrevio(s, p) {
+  if (s.rol !== 'dueno') {
+    return { ok: false, error: 'Solo la dueña cierra un mes.' };
+  }
+  const tienda = String(p.tienda || '').trim();
+  if (s.tiendas.indexOf(tienda) === -1) {
+    return { ok: false, error: 'No tienes acceso a esa tienda.' };
+  }
+  const mes = String(p.mes || '').trim();
+  if (!/^\d{4}-\d{2}$/.test(mes)) {
+    return { ok: false, error: 'El mes va como AAAA-MM.' };
+  }
+
+  // El mismo análisis que ya sabe hacer el cierre. No una segunda
+  // cuenta: dos cuentas del mismo mes acaban diciendo cosas distintas.
+  const r = apiCierre(s, { tienda: tienda, mes: mes });
+  if (!r.ok) return r;
+
+  r.previo = true;
+  r.ultimoDia = ultimoDiaDelMes(mes);
+  r.hoy = ahoraISO().slice(0, 10);
+  // Cerrar un mes que todavía corre es casi siempre un error de dedo.
+  r.mesEnCurso = mes === Utilities.formatDate(
+    new Date(), zonaHorariaDe(libro_(s.sheetId), tienda) || 'UTC', 'yyyy-MM');
+
+  /**
+   * Los pedidos que faltan, CON NOMBRE.
+   *
+   * Agrupados por el estado en que se quedaron, que es lo que dice qué
+   * hay que hacer con cada montón: los «en tránsito» esperan al
+   * courier, los «por confirmar» esperan a alguien de aquí.
+   */
+  const ss = libro_(s.sheetId);
+  const sh = ss.getSheetByName('Pedidos');
+  const abiertos = [];
+  if (sh && sh.getLastRow() > 1) {
+    const d = sh.getDataRange().getValues();
+    const e = d[0].map(norm);
+    const c = function (n) { return e.indexOf(n); };
+    const hoy = new Date(r.hoy + 'T00:00:00Z');
+    for (let i = 1; i < d.length; i++) {
+      const f = d[i];
+      if (String(f[c('tienda')]).trim() !== tienda) continue;
+      const fecha = aISO(f[c('fecha')], 'UTC');
+      if (!fecha || fecha.slice(0, 7) !== mes) continue;
+      const est = norm(f[c('estado_nova')] || f[c('estado_canonico')]) ||
+                  ESTADOS.SIN_CLASIFICAR;
+      if (['entregado', 'devolucion', 'cancelado'].indexOf(est) !== -1) continue;
+      const ult = aISO(f[c('ultimo_movimiento')] || f[c('actualizado_en')], 'UTC') || fecha;
+      abiertos.push({
+        id: String(f[c('id')] || ''),
+        idExterno: String(f[c('id_externo')] || ''),
+        cliente: String(f[c('cliente')] || ''),
+        producto: String(f[c('producto')] || ''),
+        ciudad: String(f[c('ciudad')] || ''),
+        valor: num(f[c('valor')]),
+        estado: est,
+        gestora: String(f[c('gestora_asignada')] || ''),
+        fecha: fecha,
+        diasQuieto: Math.max(0, Math.round((hoy - new Date(ult + 'T00:00:00Z')) / 86400000)),
+      });
+    }
+  }
+  // Lo más quieto primero: es lo que lleva más tiempo sin que nadie lo
+  // toque, y por tanto lo que menos probable es que se resuelva solo.
+  abiertos.sort(function (a, b) { return b.diasQuieto - a.diasQuieto; });
+
+  const grupos = {};
+  abiertos.forEach(function (x) {
+    if (!grupos[x.estado]) grupos[x.estado] = { estado: x.estado, n: 0, valor: 0 };
+    grupos[x.estado].n++;
+    grupos[x.estado].valor += x.valor;
+  });
+
+  r.abiertos = abiertos;
+  r.porEstado = Object.keys(grupos).map(function (k) { return grupos[k]; })
+    .sort(function (a, b) { return b.n - a.n; });
+  r.valorAbierto = Math.round(
+    abiertos.reduce(function (a, x) { return a + x.valor; }, 0) * 100) / 100;
+  r.limpio = abiertos.length === 0;
+  return r;
 }
 
 function apiCerrarMes(s, p) {
@@ -13982,9 +14107,31 @@ function soulFijoBorrar(s, p) {
  * semáforo: son segundos, no milisegundos, y el día a día no puede
  * esperarlos. Se carga cuando ella entra a esta sección.
  *
- * UNA TIENDA A LA VEZ. Es la regla de toda Nova y aquí también: dos
- * tiendas en la misma pantalla invitan a compararlas, y son negocios
- * distintos en países distintos con monedas distintas.
+ * ┌─ UNA TIENDA A LA VEZ, Y UN RESUMEN DE TODAS ───────────────┐
+ * │                                                            │
+ * │ La regla era «una tienda a la vez», y sigue en pie donde    │
+ * │ importa: dos tiendas con sus CIFRAS en la misma pantalla    │
+ * │ invitan a compararlas, y son negocios distintos en países   │
+ * │ distintos con monedas distintas. Comparar 4.000 quetzales   │
+ * │ contra 1.200 dólares no significa nada.                     │
+ * │                                                            │
+ * │ «en resumen de tiendas pones unos cuadros para cada tienda  │
+ * │  pero más pequeños».                                        │
+ * │                                                            │
+ * │ Lo que hacía falta no era comparar: era SABER DÓNDE MIRAR   │
+ * │ sin ir tienda por tienda con los botones de arriba. Así que │
+ * │ `resumen` trae una tarjeta por tienda con ESTADO y no con   │
+ * │ plata: cuántas alarmas hay, de qué color, y las luces del   │
+ * │ semáforo. Ni un número de dinero.                           │
+ * │                                                            │
+ * │ Al abrir una, sale entera — y ahí sí hay cifras, de una     │
+ * │ tienda sola. La regla se respeta donde tenía sentido.       │
+ * │                                                            │
+ * │ No cuesta N lecturas: todas las tiendas de un cliente viven │
+ * │ en la MISMA hoja, y `libro_()` guarda lo leído mientras     │
+ * │ dura la petición. Se lee una vez y se recorre N veces.      │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
  */
 function soulFamily(s, p) {
   if (!soulPuede_(s)) return { ok: false, error: 'NovaSoul es de Manuela.' };
@@ -13994,6 +14141,8 @@ function soulFamily(s, p) {
     ok: true,
     clientes: [], cliente: null, tiendas: [], tienda: '',
     alarmas: [], semaforo: null, errorTienda: '',
+    // Una tarjeta chica por tienda: estado, nunca plata.
+    resumen: [],
     central: null, academy: null,
   };
 
@@ -14046,7 +14195,41 @@ function soulFamily(s, p) {
         out.semaforo = {
           tienda: sem.tienda, moneda: sem.moneda, semana: sem.semana,
           luces: sem.luces, alertas: sem.alertas, hayDatos: sem.hayDatos,
+          enCurso: sem.enCurso, hastaDia: sem.hastaDia,
+          diasCorridos: sem.diasCorridos,
         };
+
+        /**
+         * ── EL RESUMEN DE TODAS ──
+         *
+         * Sin plata a propósito: cuántas alarmas, de qué color, y las
+         * luces. Es para saber a cuál entrar, no para compararlas.
+         *
+         * Una tienda que falle no puede dejar a las demás sin tarjeta:
+         * la que falle lo dice en la suya.
+         */
+        out.resumen = out.tiendas.map(function (t) {
+          const f = { id: t.id, nombre: t.nombre, error: '',
+                      alarmas: 0, peor: '', luces: [], hayDatos: false };
+          try {
+            const e2 = evaluarAlarmas(cs, t.id);
+            const als = e2.alarmas || [];
+            f.alarmas = als.length;
+            f.peor = als.some(function (a) { return a.nivel === 'mal' || a.nivel === 'rojo'; })
+              ? 'rojo'
+              : als.length ? 'amarillo' : 'verde';
+            const s2 = (t.id === tienda.id)
+              ? sem                                  // ya está calculado
+              : semaforoSemanal(cl.sheetId, t.id, '');
+            f.hayDatos = !!s2.hayDatos;
+            f.luces = (s2.luces || []).map(function (l) {
+              return { etiqueta: l.etiqueta, estado: l.estado };
+            });
+          } catch (err) {
+            f.error = err.message;
+          }
+          return f;
+        });
       } else {
         out.errorTienda = 'Ese cliente no tiene tiendas activas.';
       }

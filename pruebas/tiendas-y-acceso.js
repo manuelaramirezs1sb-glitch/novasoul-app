@@ -125,11 +125,26 @@ function sembrar() {
       estado_canonico: i < 3 ? 'novedad' : (i < 7 ? 'en_transito' : 'entregado'),
       telefono_norm:'59399900'+i }));
   }
-  // Y tres novedades colgando de los tres primeros.
+  /**
+   * Y tres novedades colgando de los tres primeros.
+   *
+   * Con su TIENDA, que es como las escribe el importador desde que
+   * `Novedades` tiene esa columna. Sin ella esta prueba se puso roja
+   * —«las novedades de su tienda: esperaba 3, obtuve 0»— y tenía razón
+   * en avisar: una fila con la columna puesta y vacía no es de nadie,
+   * así que el filtro la deja fuera de TODAS las tiendas.
+   *
+   * En producción eso solo le puede pasar a una novedad cuyo pedido ya
+   * no esté en la hoja, y el relleno dice cuántas son. Queda anclado
+   * abajo para que nadie se lo encuentre de sorpresa.
+   */
   for (let i = 0; i < 3; i++) {
     LIBROS.emp.Novedades.push(fila(E.Novedades, { id:'n'+i, pedido_id:'d'+i,
-      fecha:'2026-09-24', motivo:'No contesta', estado:'abierta' }));
+      tienda:'ec', fecha:'2026-09-24', motivo:'No contesta', estado:'abierta' }));
   }
+  // La huérfana: su pedido no existe, así que no es de ninguna tienda.
+  LIBROS.emp.Novedades.push(fila(E.Novedades, { id:'n-huerfana', pedido_id:'no-existe',
+    fecha:'2026-09-24', motivo:'Vino sin pedido', estado:'abierta' }));
   // Un pedido de GT, para comprobar que no se cruza.
   LIBROS.emp.Pedidos.push(fila(E.Pedidos, { id:'gt1', tienda:'gt',
     fecha:'2026-09-24', cliente:'De Guate', valor:80, estado_canonico:'en_transito' }));
@@ -174,6 +189,17 @@ igual('la dueña ve los 10 pedidos', 10, cuantosVe(DUENA, 'Pedidos'));
 igual('la gestora también ve los 10, sin que nadie le asigne nada',
       10, cuantosVe(HERMANA, 'Pedidos'));
 igual('y las novedades de su tienda', 3, cuantosVe(HERMANA, 'Novedades'));
+/**
+ * Y la huérfana no aparece. Es una decisión, no un descuido: una
+ * novedad cuyo pedido no está en la hoja no se puede atribuir a una
+ * tienda, e inventarle una sería peor que dejarla fuera. Quien la
+ * quiera encontrar la tiene en el log del relleno, que las cuenta.
+ */
+igual('la dueña tampoco ve la huérfana en ninguna de sus dos tiendas', [0, 0],
+      ['ec', 'gt'].map(function (t) {
+        return (F.apiListar(DUENA, { entidad: 'Novedades', tienda: t, limite: 300 })
+          .filas || []).filter(function (f) { return f.id === 'n-huerfana'; }).length;
+      }));
 
 console.log('\n── Pero solo de SU tienda ──');
 /** El recorte que de verdad protege: la tienda, no el pedido. */
