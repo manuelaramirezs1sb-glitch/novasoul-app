@@ -2496,12 +2496,42 @@ function agregarMes(ss, tienda, mes, s, filas) {
          */
         semanasDePeriodo_(fecha, fin, g).forEach(function (x) {
           const s = out.gastoPorSemana[x.semana] ||
-                    (out.gastoPorSemana[x.semana] = { gasto: 0, repartido: false });
+                    (out.gastoPorSemana[x.semana] = { gasto: 0, repartido: false,
+                                                      dias: {} });
           s.gasto += x.gasto;
           if (x.repartido) s.repartido = true;
+          /**
+           * Qué días de esa semana tienen gasto.
+           *
+           * «que vaya sumando la parte de importe gastado que da Meta
+           * por cada día». La semana en curso ya se sumaba —el mes
+           * incluye sus días— pero la barra no decía que iba a medias,
+           * así que un martes se veía una semana pequeñita al lado de
+           * semanas enteras y parecía una caída de la pauta.
+           *
+           * Con los días se puede decir «3 de 7 días» y dejar de
+           * comparar peras con semanas.
+           */
+          if (!x.repartido) s.dias[fecha] = true;
         });
       }
     }
+    /**
+     * Los días se cuentan aquí, y la semana en curso se marca aquí.
+     *
+     * La pantalla podría deducir cuál es la semana en curso, pero
+     * entonces «hoy» sería el del navegador de quien mira y no el de la
+     * zona horaria de la tienda. Una tienda en Guatemala mirada desde
+     * Colombia tendría un lunes distinto al suyo.
+     */
+    const lunesHoy = lunesDe_(Utilities.formatDate(
+      new Date(), zonaHorariaDe(ss, tienda) || 'UTC', 'yyyy-MM-dd'));
+    Object.keys(out.gastoPorSemana).forEach(function (k) {
+      const s = out.gastoPorSemana[k];
+      s.diasConGasto = Object.keys(s.dias || {}).length;
+      delete s.dias;
+      s.enCurso = (k === lunesHoy);
+    });
     /**
      * Los gastos fijos del mes.
      *

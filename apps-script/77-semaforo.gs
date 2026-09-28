@@ -145,10 +145,41 @@ function semanasDePeriodo_(desde, hasta, gasto) {
  * colores son opiniones. Poder mirar los hechos sin la opinión encima es
  * lo que permite discutir la opinión.
  */
-function numerosSemana_(pedidos, pauta, lunes) {
-  const domingo = masDias_(lunes, 6);
+/**
+ * @param {string} corte  último día a contar, si la semana va a medias.
+ *                        Vacío = la semana entera.
+ *
+ * ┌─ POR QUÉ HAY UN CORTE ─────────────────────────────────────┐
+ * │                                                            │
+ * │ «gastos de meta en la semana SIN QUE SE HAYA TERMINADO,     │
+ * │  que vaya sumando la parte de importe gastado que da Meta   │
+ * │  por cada día».                                             │
+ * │                                                            │
+ * │ El semáforo miraba siempre la última semana CERRADA, así    │
+ * │ que la semana en curso no existía hasta el lunes. Con seis  │
+ * │ días de datos en la mano, esperar al lunes es esconderlos.  │
+ * │                                                            │
+ * │ Pero una semana a medias no se puede comparar contra una    │
+ * │ entera: siempre diría que vas peor, y no sería verdad —     │
+ * │ es que todavía no termina. Es el mismo error que el         │
+ * │ recuento del mes ya evita.                                  │
+ * │                                                            │
+ * │ Así que el corte se aplica a las DOS: martes-a-hoy contra   │
+ * │ martes-a-ese-mismo-día de la semana pasada. Se comparan     │
+ * │ tramos del mismo largo, que es lo único comparable.         │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+function numerosSemana_(pedidos, pauta, lunes, corte) {
+  const domingoReal = masDias_(lunes, 6);
+  const domingo = (corte && corte < domingoReal) ? corte : domingoReal;
   const o = {
     lunes: lunes, domingo: domingo,
+    // Cuántos días de calendario cubre este tramo. Con siete es la
+    // semana entera; con menos, la pantalla tiene que decirlo.
+    diasDelTramo: Math.round(
+      (new Date(domingo + 'T00:00:00Z') - new Date(lunes + 'T00:00:00Z')) / 86400000) + 1,
+    aMedias: domingo < domingoReal,
     pedidos: 0, despachados: 0, entregados: 0, devoluciones: 0, cancelados: 0,
     enTransito: 0, sinClasificar: 0,
     ventas: 0, ganancia: 0, costoDevoluciones: 0,
@@ -523,19 +554,42 @@ function semaforoSemanal(sheetId, tienda, lunes) {
   const L = lunes || semanaCerrada_(hoyISO);
   const SEMANAS = 8;
 
+  /**
+   * ── LA SEMANA EN CURSO SE MIDE HASTA HOY ──
+   *
+   * Si la semana que se pide es la que estamos viviendo, el tramo va de
+   * su lunes a hoy. Y el MISMO corte se aplica a todo con lo que se
+   * compara —la semana anterior y las cuatro del promedio— para que
+   * sean tramos del mismo largo.
+   *
+   * Sin esto, un miércoles el semáforo comparaba tres días contra siete
+   * y pintaba rojo todo. Un color que aparece por el calendario y no por
+   * el negocio enseña a no mirar el semáforo.
+   */
+  const enCurso = L === lunesDe_(hoyISO);
+  // El corte, en días desde el lunes: 0 el lunes, 6 el domingo.
+  const diaDeCorte = enCurso
+    ? Math.round((new Date(hoyISO + 'T00:00:00Z') - new Date(L + 'T00:00:00Z')) / 86400000)
+    : 6;
+  const corteDe = function (lunesN) { return masDias_(lunesN, diaDeCorte); };
+
   const desde = masDias_(L, -7 * (SEMANAS - 1));
   const hasta = masDias_(L, 6);
   const u = ajustesSemaforo(ss, tienda);
   const d = datosParaSemaforo_(ss, tienda, desde, hasta);
 
-  const hoy = numerosSemana_(d.pedidos, d.pauta, L);
-  const antes = numerosSemana_(d.pedidos, d.pauta, masDias_(L, -7));
+  const hoy = numerosSemana_(d.pedidos, d.pauta, L, corteDe(L));
+  const antesL = masDias_(L, -7);
+  const antes = numerosSemana_(d.pedidos, d.pauta, antesL, corteDe(antesL));
 
   // El promedio de las 4 semanas previas: por semana de CALENDARIO, no
   // por semana con datos. Dividir entre las que tienen datos esconde
   // justamente las que faltan.
   const previas = [];
-  for (let k = 2; k <= 5; k++) previas.push(numerosSemana_(d.pedidos, d.pauta, masDias_(L, -7 * k)));
+  for (let k = 2; k <= 5; k++) {
+    const lk = masDias_(L, -7 * k);
+    previas.push(numerosSemana_(d.pedidos, d.pauta, lk, corteDe(lk)));
+  }
   const prom = {};
   ['pedidos', 'entregados', 'devoluciones', 'cancelados', 'ventas',
    'utilidadAntesPauta', 'gasto'].forEach(function (k) {
@@ -547,6 +601,18 @@ function semaforoSemanal(sheetId, tienda, lunes) {
   return {
     tienda: tienda, moneda: d.moneda,
     semana: { lunes: L, domingo: hasta },
+    /**
+     * Que la semana va a medias no es un detalle: cambia lo que
+     * significan todos los números de abajo. Va junto a ellos, no en un
+     * pie de página.
+     */
+    enCurso: enCurso,
+    hastaDia: hoy.domingo,
+    diasCorridos: hoy.diasDelTramo,
+    // Con qué se está comparando, dicho para poder repetirlo en pantalla
+    comparaCon: { lunes: antesL, hasta: antes.domingo, dias: antes.diasDelTramo },
+    // La última semana cerrada, para poder ofrecer el cambio
+    ultimaCerrada: semanaCerrada_(hoyISO),
     generado: ahoraISO(),
     umbrales: u,
     hoy: hoy, anterior: antes, promedio4: prom,
@@ -612,7 +678,21 @@ function apiSemaforo(s, p) {
   if (s.tiendas.indexOf(tienda) === -1) {
     return { ok: false, error: 'No tienes acceso a esa tienda.' };
   }
-  const sem = semaforoSemanal(s.sheetId, tienda, String(p.lunes || ''));
+  /**
+   * En PANTALLA la semana que se abre por defecto es la EN CURSO.
+   *
+   * El correo del lunes sigue siendo de la semana cerrada —es su razón
+   * de ser: «qué pasó la semana que cerró»— y por eso el valor por
+   * defecto de `semaforoSemanal` no cambia. Pero mirar la pantalla un
+   * jueves y que te enseñe la semana pasada, teniendo cuatro días de
+   * datos cargados, es esconder lo que sí se sabe.
+   *
+   * Con `lunes` explícito se puede pedir cualquier semana, y la
+   * pantalla usa `ultimaCerrada` para ofrecer la de antes.
+   */
+  const pedido = String(p.lunes || '');
+  const L = pedido || lunesDe_(ahoraISO().slice(0, 10));
+  const sem = semaforoSemanal(s.sheetId, tienda, L);
   // El mismo texto del correo del lunes, para que la pantalla lo pueda
   // enseñar e imprimir sin rearmarlo por su cuenta.
   return { ok: true, semaforo: sem, texto: semaforoTexto(sem) };
@@ -629,7 +709,16 @@ function semaforoTexto(sem) {
   const m = sem.moneda ? ' ' + sem.moneda : '';
   const L = [];
   L.push('SEMÁFORO · ' + sem.tienda);
-  L.push(sem.semana.lunes + ' a ' + sem.semana.domingo);
+  if (sem.enCurso) {
+    // Decirlo aquí arriba y no al pie: cambia lo que significan todos
+    // los números que siguen.
+    L.push(sem.semana.lunes + ' a ' + sem.hastaDia + ' · LA SEMANA VA A MEDIAS (' +
+           sem.diasCorridos + ' de 7 días)');
+    L.push('Se compara contra los mismos ' + sem.comparaCon.dias +
+           ' días de la semana pasada, no contra la semana entera.');
+  } else {
+    L.push(sem.semana.lunes + ' a ' + sem.semana.domingo);
+  }
   L.push('');
 
   if (!sem.hayDatos) {

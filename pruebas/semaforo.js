@@ -273,5 +273,80 @@ ok('corre después de las tasas, Meta y las alarmas',
    'semáforo ' + (sem && sem.hora) + ' vs ' +
    previos.map(t => t.fn + '@' + t.hora).join(', '));
 
+console.log('\nLA SEMANA EN CURSO SE MIDE HASTA HOY, Y SE COMPARA CONTRA IGUAL');
+/**
+ * ┌─ LO QUE PIDIÓ ─────────────────────────────────────────────┐
+ * │                                                            │
+ * │ «gastos de meta en la semana SIN QUE SE HAYA TERMINADO,     │
+ * │  que vaya sumando la parte de importe gastado que da Meta   │
+ * │  por cada día».                                             │
+ * │                                                            │
+ * │ El semáforo miraba siempre la última semana CERRADA, así    │
+ * │ que un jueves con cuatro días cargados enseñaba la semana   │
+ * │ pasada.                                                     │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ Y LO QUE NO SE PODÍA HACER AL ARREGLARLO ─────────────────┐
+ * │                                                            │
+ * │ Comparar el tramo a medias contra semanas ENTERAS. Eso      │
+ * │ pintaría rojo todos los lunes y martes por el calendario, y │
+ * │ un color que sale del calendario y no del negocio enseña a  │
+ * │ no mirar el semáforo. Es el mismo error que el recuento del │
+ * │ mes ya evitaba.                                             │
+ * │                                                            │
+ * │ Así que el corte va a las DOS: los mismos días de la        │
+ * │ semana anterior, y de las cuatro del promedio.              │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * `hoy` en las pruebas es el de verdad, así que la semana en curso se
+ * calcula, no se escribe: escribirla haría que la prueba pasara esta
+ * semana y fallara la que viene.
+ */
+const HOY = new Date().toISOString().slice(0, 10);
+const LC = F.lunesDe_(HOY);                     // el lunes de la semana en curso
+const LA = F.masDias_(LC, -7);                  // el de la anterior
+const corridos = Math.round(
+  (new Date(HOY + 'T00:00:00Z') - new Date(LC + 'T00:00:00Z')) / 86400000) + 1;
+
+/**
+ * El montaje: en la semana EN CURSO, un entregado y gasto el lunes. En
+ * la ANTERIOR, lo mismo el lunes, MÁS un entregado y gasto el domingo
+ * —o sea, fuera del tramo comparable si el corte funciona.
+ */
+montar(
+  [pedido(LC, 'entregado', 300, 100, 30),
+   pedido(LA, 'entregado', 300, 100, 30),
+   pedido(F.masDias_(LA, 6), 'entregado', 999, 100, 30)],
+  [gasto(LC, 50), gasto(LA, 50), gasto(F.masDias_(LA, 6), 400)]
+);
+let sc = F.semaforoSemanal('emp', 'gt', LC);
+ok('sabe que la semana va en curso', sc.enCurso === true, JSON.stringify(sc.enCurso));
+igual('cuenta hasta hoy, no hasta el domingo', HOY, sc.hastaDia);
+igual('y dice cuántos días lleva', corridos, sc.diasCorridos);
+igual('el gasto es el de los días corridos', 50, Math.round(sc.hoy.gasto));
+igual('con lo que se compara tiene el mismo largo', corridos, sc.comparaCon.dias);
+/**
+ * La de la aserción: el domingo de la semana pasada NO entra. Si
+ * entrara, el gasto anterior sería 450 y las ventas 1299 — y la semana
+ * en curso se vería como un desastre que no es.
+ */
+igual('el domingo de la semana pasada queda fuera del tramo', 50,
+      Math.round(sc.anterior.gasto));
+igual('y sus ventas también', 300, Math.round(sc.anterior.ventas));
+ok('ofrece la última semana cerrada para poder ir', !!sc.ultimaCerrada, String(sc.ultimaCerrada));
+ok('el texto avisa que va a medias antes de dar números',
+   /VA A MEDIAS/.test(F.semaforoTexto(sc)),
+   F.semaforoTexto(sc).split('\n').slice(0, 4).join(' | '));
+
+// Y una semana cerrada de verdad sigue midiéndose entera
+montar([pedido(L, 'entregado', 300, 100, 30), pedido(d(6), 'entregado', 300, 100, 30)],
+       [gasto(L, 50), gasto(d(6), 50)]);
+sc = F.semaforoSemanal('emp', 'gt', L);
+ok('una semana vieja no se marca en curso', sc.enCurso === false, String(sc.enCurso));
+igual('y se mide completa, domingo incluido', 7, sc.hoy.diasDelTramo);
+igual('con todo su gasto', 100, Math.round(sc.hoy.gasto));
+
 console.log(fallas ? '\n' + fallas + ' FALLA(S)\n' : '\nTodo pasa.\n');
 process.exit(fallas ? 1 : 0);

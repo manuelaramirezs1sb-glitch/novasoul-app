@@ -24,8 +24,41 @@
  */
 const fs = require('fs');
 const src = fs.readFileSync(__dirname + '/../apps-script/NOVA-COMPLETO.gs', 'utf8');
+
+/**
+ * `semanasDePeriodo_` es pura y no necesita a Google. `agregarMes` sí,
+ * y la sección 8 lo usa: es la que comprueba que la semana en curso
+ * llegue marcada a la pantalla.
+ */
+const HOJAS = {};
+function hoja(n) {
+  const m = HOJAS[n];
+  if (!m) return null;
+  return { getLastRow: () => m.length, getLastColumn: () => (m[0] || []).length,
+    getDataRange: () => ({ getValues: () => m }),
+    getRange: () => ({ getValues: () => [[]], setValues: () => {}, setValue: () => {} }) };
+}
+const SS = { getSheetByName: hoja };
+global.SpreadsheetApp = { openById: () => SS, flush: () => {} };
+global.PropertiesService = { getScriptProperties: () => ({
+  getProperty: () => '', getProperties: () => ({}) }) };
+global.Logger = { log: () => {} };
+global.ScriptApp = { getProjectTriggers: () => [] };
+global.Session = { getScriptTimeZone: () => 'UTC', getActiveUser: () => ({ getEmail: () => '' }) };
+global.LockService = { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) };
+global.CacheService = { getScriptCache: () => ({ get: () => null, put: () => {} }) };
+global.UrlFetchApp = {};
+global.Utilities = { sleep: () => {}, getUuid: () => 'u',
+  formatDate: (d, tz, pat) => {
+    const iso = new Date(d).toISOString();
+    if (pat === 'yyyy-MM-dd') return iso.slice(0, 10);
+    if (pat === 'yyyy-MM') return iso.slice(0, 7);
+    return iso;
+  } };
+
 (0, eval)(src.replace(/^function on(Open|Edit)/gm, 'function _no$1') +
-  '\n;globalThis.__F = { semanasDePeriodo_, lunesDe_ };');
+  '\n;globalThis.__F = { semanasDePeriodo_, lunesDe_, agregarMes, libroOlvidar_, ' +
+  'ESQUEMA_EMPRESARIAL };');
 const F = globalThis.__F;
 
 let fallas = 0;
@@ -91,6 +124,71 @@ console.log('\n── 7 · el gasto en cero no rompe nada ──');
 r = F.semanasDePeriodo_('2026-09-21', '2026-09-30', 0);
 ok('devuelve semanas', r.length >= 2, String(r.length));
 igual('todas en cero', true, r.every(x => x.gasto === 0));
+
+console.log('\n── 8 · la semana en curso llega MARCADA a la pantalla ──');
+/**
+ * «gastos de meta en la semana sin que se haya terminado, que vaya
+ * sumando la parte de importe gastado que da Meta por cada día».
+ *
+ * El gasto de la semana en curso YA se sumaba: el mes incluye sus días.
+ * Lo que faltaba era que la barra dijera que va a medias, porque un
+ * martes se veía una semana pequeñita al lado de semanas enteras y
+ * parecía una caída de la pauta cuando era el calendario.
+ *
+ * La semana se calcula, no se escribe: escrita, la prueba pasaría esta
+ * semana y fallaría la que viene.
+ */
+const HOY = new Date().toISOString().slice(0, 10);
+const LC = F.lunesDe_(HOY);
+const mes = HOY.slice(0, 7);
+const cols = (t) => F.ESQUEMA_EMPRESARIAL[t];
+const filaDe = (t, v) => cols(t).map((c) => (v[c] === undefined ? '' : v[c]));
+
+Object.keys(HOJAS).forEach((k) => delete HOJAS[k]);
+HOJAS.Parametros = [cols('Parametros'),
+  filaDe('Parametros', { clave: 'moneda_reporte', valor: 'GTQ' })];
+HOJAS.Tiendas = [cols('Tiendas'),
+  filaDe('Tiendas', { id: 'gt', nombre: 'Nutrea GT', moneda: 'GTQ',
+                      zona_horaria: 'UTC', estado: 'activa' })];
+HOJAS.Pedidos = [cols('Pedidos')];
+// Dos días de gasto en la semana en curso, y uno en una semana vieja
+// del mismo mes si cabe; si el mes acaba de empezar, basta con la actual.
+const viejo = F.lunesDe_(mes + '-01') === LC ? null : mes + '-01';
+HOJAS.Pauta = [cols('Pauta'),
+  filaDe('Pauta', { id: 'g1', fecha: LC, fecha_fin: LC, tienda: 'gt',
+                    plataforma: 'meta', gasto: 40, moneda_gasto: 'GTQ' }),
+  filaDe('Pauta', { id: 'g2', fecha: HOY, fecha_fin: HOY, tienda: 'gt',
+                    plataforma: 'meta', gasto: 60, moneda_gasto: 'GTQ' })]
+  .concat(viejo ? [filaDe('Pauta', { id: 'g3', fecha: viejo, fecha_fin: viejo,
+                    tienda: 'gt', plataforma: 'meta', gasto: 5,
+                    moneda_gasto: 'GTQ' })] : []);
+['Gastos', 'Cartera', 'Facturacion', 'Novedades', 'Cierres', 'Tasas']
+  .forEach((t) => { HOJAS[t] = [cols(t)]; });
+F.libroOlvidar_();
+
+const out = F.agregarMes(SS, 'gt', mes, { rol: 'dueno', sheetId: 'emp', tiendas: ['gt'] });
+const sem = out.gastoPorSemana || {};
+ok('la semana en curso está en la gráfica', !!sem[LC], JSON.stringify(Object.keys(sem)));
+igual('y viene marcada como en curso', true, !!(sem[LC] || {}).enCurso);
+/**
+ * Dos días con gasto, no siete. Es el número con el que la pantalla
+ * escribe «lleva 2 días con gasto, no compares esta barra con las de al
+ * lado». Cuando hoy ES lunes las dos filas caen en el mismo día, y
+ * entonces es uno: por eso se calcula en vez de escribirse.
+ */
+igual('dice cuántos días llevan gasto',
+      HOY === LC ? 1 : 2, (sem[LC] || {}).diasConGasto);
+igual('y suma los dos días', 100, Math.round((sem[LC] || {}).gasto));
+if (viejo) {
+  igual('una semana vieja del mismo mes NO se marca en curso', false,
+        !!(sem[F.lunesDe_(viejo)] || {}).enCurso);
+}
+/**
+ * Y el detalle por día no se filtra: la pantalla lo prefiere cuando lo
+ * tiene, y solo cae a semanas cuando el reporte viene agregado.
+ */
+ok('el gasto por día también llega', Object.keys(out.gastoPorDia || {}).length >= 1,
+   JSON.stringify(out.gastoPorDia));
 
 console.log(fallas ? '\n' + fallas + ' FALLAS\n' : '\nTodo bien\n');
 process.exit(fallas ? 1 : 0);

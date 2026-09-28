@@ -9357,7 +9357,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-28 · 3978';
+const VERSION_PANTALLA = '2026-09-28 · c8f4';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -10428,13 +10428,33 @@ function aplicarPauta(d) {
       desellar(['pautabar']);
     } else if (semanas.length) {
       const hayReparto = semanas.some(function (k) { return sem[k].repartido; });
+      const enCurso = semanas.filter(function (k) { return sem[k].enCurso; })[0];
+      /**
+       * LA SEMANA EN CURSO SE DICE, NO SE DISIMULA.
+       *
+       * «gastos de meta en la semana sin que se haya terminado, que
+       * vaya sumando (…) por cada día». Ya sumaba —el mes incluye sus
+       * días— pero la barra no decía nada, así que un martes se veía
+       * una semana pequeñita al lado de semanas enteras y parecía una
+       * caída de la pauta cuando era el calendario.
+       */
       bar.innerHTML = barras(semanas.slice(-12),
         function (k) { return sem[k].gasto; },
-        function (k) { return fechaCorta(k); },
+        function (k) { return fechaCorta(k) + (sem[k].enCurso ? ' ·' : ''); },
         function (k) { return 'Semana del ' + fechaCorta(k) + ' · ' + S + nf(sem[k].gasto) +
+                              (sem[k].enCurso
+                                ? ' · VA A MEDIAS, ' + (sem[k].diasConGasto || 0) +
+                                  (sem[k].diasConGasto === 1 ? ' día con gasto' : ' días con gasto')
+                                : '') +
                               (sem[k].repartido ? ' · parte de un periodo más largo' : ''); });
-      set(escala, 'Por semana');
-      set(pie, 'Tu reporte de Meta viene agregado por periodo, así que el día a día ' +
+      set(escala, 'Por semana' + (enCurso ? ' · la última va a medias' : ''));
+      set(pie, (enCurso
+          ? '<b>La última barra es la semana en curso</b> y crece cada vez que subas ' +
+            'el reporte de Meta: lleva ' + (sem[enCurso].diasConGasto || 0) +
+            (sem[enCurso].diasConGasto === 1 ? ' día' : ' días') +
+            ' con gasto, no siete. No la compares de frente con las de al lado. '
+          : '') +
+        'Tu reporte de Meta viene agregado por periodo, así que el día a día ' +
         'no se puede sacar sin inventarlo. La semana sí. ' +
         (hayReparto
           ? 'Las semanas que se cruzan con un periodo más largo llevan la parte que les ' +
@@ -10895,7 +10915,35 @@ function pintarSemaforo() {
     return;
   }
   const s = SEM_DATA, m = s.moneda ? ' ' + s.moneda : '';
-  const rango = esc(s.semana.lunes) + ' a ' + esc(s.semana.domingo);
+  /**
+   * EL RANGO DICE HASTA DÓNDE SE CONTÓ DE VERDAD.
+   *
+   * El semáforo abría siempre en la última semana CERRADA, así que un
+   * jueves con cuatro días de datos cargados te enseñaba la semana
+   * pasada. Ahora abre en la semana en curso, y por eso el rango tiene
+   * que terminar en hoy y no en un domingo que todavía no llega: un
+   * rango que dice «a domingo» sobre cuatro días hace creer que la
+   * semana fue flojísima.
+   */
+  const enCurso = !!s.enCurso;
+  const rango = enCurso
+    ? esc(s.semana.lunes) + ' a ' + esc(s.hastaDia)
+    : esc(s.semana.lunes) + ' a ' + esc(s.semana.domingo);
+  const aMedias = enCurso
+    ? '<div class="sem-por"><b>Va a medias: ' + s.diasCorridos + ' de 7 días.</b> ' +
+      'Todo lo de abajo se compara contra los mismos ' + s.comparaCon.dias +
+      ' días de la semana pasada (' + esc(s.comparaCon.lunes) + ' a ' +
+      esc(s.comparaCon.hasta) + '), no contra la semana entera — comparar cuatro ' +
+      'días contra siete siempre diría que vas peor.' +
+      (s.ultimaCerrada
+        ? ' <a href="#" onclick="verSemanaSemaforo(\'' + esc(s.ultimaCerrada) +
+          '\');return false;">Ver la última semana cerrada →</a>'
+        : '') +
+      '</div>'
+    // Y desde una semana vieja, la vuelta a la de ahora. Sin esto se
+    // queda atrapada en la semana que abrió por el enlace.
+    : '<div class="sem-por"><a href="#" onclick="verSemanaSemaforo(\'\');' +
+      'return false;">← Volver a la semana en curso</a></div>';
 
   // Una semana sin datos no se disfraza de semana en ceros.
   if (!s.hayDatos) {
@@ -10912,7 +10960,8 @@ function pintarSemaforo() {
 
   if (enHoy) {
     enHoy.innerHTML = '<div class="card">' +
-      '<div class="ct">Tu semana · ' + rango + '</div>' + luces +
+      '<div class="ct">' + (enCurso ? 'Tu semana, hasta hoy · ' : 'Tu semana · ') +
+        rango + '</div>' + luces + aMedias +
       '<div class="sem-por">El detalle está en Pauta y gastos.</div>' +
     '</div>';
   }
@@ -10959,7 +11008,9 @@ function pintarSemaforo() {
   '</div>' : '';
 
   enPauta.innerHTML =
-    '<div class="card"><div class="ct">Tu semana · ' + rango + '</div>' + luces + '</div>' +
+    '<div class="card"><div class="ct">' +
+      (enCurso ? 'Tu semana, hasta hoy · ' : 'Tu semana · ') + rango + '</div>' +
+      luces + aMedias + '</div>' +
     '<div class="card"><div class="ct">Los números</div>' + tabla +
       '<div class="sem-pie">Solo los entregados generan ganancia. Cada devolución ' +
       'cuesta el flete; los cancelados cuestan cero. La entrega es entregados ÷ ' +
@@ -11245,6 +11296,26 @@ function verSemanaCierre() {
   }).catch(function (e) {
     salida.innerHTML = '<div class="inv-aviso">Sin conexión: ' + esc(e.message) + '</div>';
   });
+}
+
+/**
+ * Cambiar la semana que enseñan las luces, sin recargar la pantalla.
+ *
+ * El semáforo ahora abre en la semana EN CURSO, que es lo que hace
+ * falta un jueves. Pero la semana cerrada sigue siendo la que se compara
+ * de verdad, así que tiene que estar a un clic y no escondida en el
+ * selector de otra pantalla.
+ */
+async function verSemanaSemaforo(lunes) {
+  let r;
+  try { r = await api('semaforo', { tienda: ST, lunes: lunes || '' }); }
+  catch (e) { showToast('Sin conexión: ' + e.message); return; }
+  if (!r || !r.ok || !r.semaforo) {
+    showToast((r && r.error) || 'No pude traer esa semana.');
+    return;
+  }
+  SEM_DATA = r.semaforo;
+  pintarSemaforo();
 }
 
 /** Las últimas doce semanas cerradas, para elegir cuál mirar. */
