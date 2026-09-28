@@ -993,7 +993,7 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-26 · bb93';
+const VERSION_PANTALLA = '2026-09-28 · cc83';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
@@ -2823,6 +2823,21 @@ function pintarCielo() {
           ? 'Armé ' + CI.automatico.pensumCreado + ' del pensum con las que están ' +
             'abiertas o empiezan pronto — puedes cambiarlas o borrarlas.'
           : '') + '</div>'
+      : '') +
+    /**
+     * ── POR QUÉ NO SEMBRÓ, CUANDO NO SEMBRÓ ──
+     *
+     * Nova guardaba el motivo en `transitosPorque` y esta pantalla
+     * nunca lo enseñaba: solo dejaba los cuadros vacíos. Ella estuvo
+     * días viendo «no me carga el pensum» sin que nada dijera que las
+     * efemérides estaban guardadas a nombre de otro correo.
+     *
+     * Una pantalla que sabe por qué falló y se calla es peor que una
+     * que falla: quita hasta la posibilidad de preguntar bien.
+     */
+    (CI.automatico && CI.automatico.transitosPorque && !CI.pensum.length
+      ? '<div class="aviso mal on" style="margin-top:10px;">' +
+        esc(CI.automatico.transitosPorque) + '</div>'
       : '') +
     (CI.automatico && CI.automatico.efemerides && CI.automatico.efemerides.avisar
       ? '<div class="aviso mal on" style="margin-top:10px;">' +

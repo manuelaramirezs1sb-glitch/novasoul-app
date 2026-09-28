@@ -1471,8 +1471,7 @@ function soulCielo(s, p) {
       efemerides: efemeridesVencen_(hoy),
     },
     // Los ejes del karma: nodos y el eje Mediocielo–Fondo del cielo.
-    ejes: typeof EFEMERIDES_CARTA !== 'undefined' &&
-          norm(EFEMERIDES_CARTA.usuario_id) === norm(uid)
-      ? lecEjes_(EFEMERIDES_CARTA) : [],
+    // Los ejes del karma colgaban del mismo candado del correo.
+    ejes: efemeridesSonDe_(uid) ? lecEjes_(EFEMERIDES_CARTA) : [],
   };
 }

@@ -66,11 +66,98 @@
  *    setenta y ocho escrituras y unos veinte segundos; el mismo bloque
  *    de una vez es una.
  */
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   ¿ESTAS EFEMÉRIDES SON DE QUIEN PREGUNTA?
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ EL ERROR QUE ESTO ARREGLA ────────────────────────────────┐
+ * │                                                            │
+ * │ «en el cielo sigue pidiéndome tránsitos cuando eso ya lo    │
+ * │  habíamos organizado (…) ¡y sigue con los tránsitos y el    │
+ * │  pensum kármico!»                                           │
+ * │                                                            │
+ * │ Cuando calculé sus efemérides con Swiss Ephemeris guardé    │
+ * │ su carta con un correo DE RELLENO —`manuela@nova.com`— que  │
+ * │ me inventé y nunca le pregunté. Y el código decía: siembra  │
+ * │ solo si el correo de quien entra coincide con ese.          │
+ * │                                                            │
+ * │ Su usuario en NovaSoul es el correo con el que entra a Nova │
+ * │ Central, que no es ese. Así que no coincidía NUNCA, y de    │
+ * │ esa comparación de texto colgaban CUATRO cosas:             │
+ * │                                                            │
+ * │   · las temporadas de tránsito (la hoja quedaba vacía)      │
+ * │   · el pensum kármico (se arma desde esas temporadas)       │
+ * │   · los ejes: nodos, Mediocielo, Fondo del cielo            │
+ * │   · la lectura a fondo del año                              │
+ * │                                                            │
+ * │ Y lo peor: Nova SABÍA por qué no sembraba —lo guardaba en   │
+ * │ `transitosPorque`— y la pantalla nunca lo mostraba. Solo    │
+ * │ cuadros vacíos, días seguidos.                              │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ SE COMPARA LA CARTA Y NO EL CORREO ───────────────┐
+ * │                                                            │
+ * │ Una carta natal no es de un correo: es de una persona. Ella │
+ * │ puede cambiar de correo mañana y su Ascendente seguirá en   │
+ * │ 15° de Capricornio.                                        │
+ * │                                                            │
+ * │ Así que la pregunta correcta no es «¿te llamas igual?» sino │
+ * │ «¿es tu cielo?». Y eso sí se puede comprobar: si el         │
+ * │ Ascendente que ella tiene cargado coincide con el de estas  │
+ * │ efemérides, están calculadas para su nacimiento. Un grado   │
+ * │ de tolerancia porque Horus y Swiss Ephemeris redondean      │
+ * │ distinto, y un grado no alcanza para confundir dos cartas.  │
+ * │                                                            │
+ * │ El correo se sigue aceptando para no romper nada de antes.  │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+function efemeridesSonDe_(uid) {
+  if (typeof EFEMERIDES_CARTA === 'undefined') return false;
+
+  // Lo de antes: si el correo calza, listo.
+  if (norm(EFEMERIDES_CARTA.usuario_id) === norm(uid)) return true;
+
+  /**
+   * Y si no, ¿es su cielo? El Ascendente lo dice: depende de la hora y
+   * el lugar EXACTOS del nacimiento, así que dos personas distintas no
+   * lo comparten por casualidad.
+   *
+   * Se compara el signo y el grado DENTRO del signo, y no el grado a
+   * secas, porque las dos cosas se guardan distinto según de dónde
+   * vengan: la hoja Carta trae «capricornio 15,1» y estas efemérides
+   * traen 285,1045 —los mismos 15,1 contados desde Aries—. El `% 30`
+   * las deja hablando el mismo idioma sin tener que saber cuál es cuál.
+   *
+   * (Mi primera versión comparaba los grados crudos: 15,1 contra
+   * 285,1045. No habría casado nunca, y habría dejado el problema
+   * exactamente igual que estaba.)
+   */
+  const asc = (cartaDe_(uid) || []).filter(function (c) {
+    return c.cuerpo === 'ascendente' && c.grado !== null;
+  })[0];
+  if (!asc) return false;
+
+  const suyo = EFEMERIDES_CARTA.natal && EFEMERIDES_CARTA.natal.ascendente;
+  if (!suyo) return false;
+  if (norm(asc.signo) !== norm(suyo.signo)) return false;
+
+  const enSigno = function (g) { return ((Number(g) % 30) + 30) % 30; };
+  const a = enSigno(asc.grado), b = enSigno(suyo.grado);
+  if (!isFinite(a) || !isFinite(b)) return false;
+  // Un grado de tolerancia: Horus y Swiss Ephemeris redondean distinto,
+  // y un grado no alcanza para confundir dos cartas.
+  const sep = Math.min(Math.abs(a - b), 30 - Math.abs(a - b));
+  return sep <= 1;
+}
+
 function transitosSembrar_(uid) {
   if (typeof EFEMERIDES_SEMILLA === 'undefined') {
     return { sembro: 0, porque: 'No hay efemérides calculadas en este Nova.' };
   }
-  if (norm(EFEMERIDES_CARTA.usuario_id) !== norm(uid)) {
+  if (!efemeridesSonDe_(uid)) {
     return { sembro: 0, porque: 'Las efemérides cargadas son de otra carta. ' +
              'Para sembrar las tuyas hay que correr el script con tus datos de nacimiento.' };
   }
@@ -294,8 +381,7 @@ function soulCieloLectura(s, p) {
     const asc = (carta || []).filter(function (c) { return c.cuerpo === 'ascendente'; })[0];
     if (asc && asc.signo && rev) {
       out.profeccion = lecProfeccion_((rev.edad % 12) + 1, asc.signo,
-        typeof EFEMERIDES_CARTA !== 'undefined' &&
-        norm(EFEMERIDES_CARTA.usuario_id) === norm(uid) ? EFEMERIDES_CARTA : null);
+        efemeridesSonDe_(uid) ? EFEMERIDES_CARTA : null);
       out.profeccion.desde = rev.desde;
       out.profeccion.hasta = rev.hasta;
       out.profeccion.edad = rev.edad;
@@ -304,9 +390,7 @@ function soulCieloLectura(s, p) {
         ? 'Para leer tu año necesito tu Ascendente, y todavía no está en tu carta.'
         : 'Necesito tu fecha de nacimiento para contar los años cumplidos.';
     }
-    out.ejes = typeof EFEMERIDES_CARTA !== 'undefined' &&
-               norm(EFEMERIDES_CARTA.usuario_id) === norm(uid)
-      ? lecEjes_(EFEMERIDES_CARTA) : [];
+    out.ejes = efemeridesSonDe_(uid) ? lecEjes_(EFEMERIDES_CARTA) : [];
   }
 
   return out;

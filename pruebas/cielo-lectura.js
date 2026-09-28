@@ -161,6 +161,46 @@ console.log('\n── Las efemérides existen y son las suyas ──');
 ok('hay semilla cargada', F.EFEMERIDES_SEMILLA.length > 100,
    F.EFEMERIDES_SEMILLA.length + ' temporadas');
 igual('la semilla es de su carta', YO, F.EFEMERIDES_CARTA.usuario_id);
+
+/**
+ * ── Y CON OTRO CORREO, TAMBIÉN SON SUYAS ──
+ *
+ * Este es el caso que estuvo roto días y que esta prueba NO cubría,
+ * porque usaba el mismo correo de relleno que yo le puse a las
+ * efemérides: `manuela@nova.com`. Su correo de verdad es otro, así que
+ * la comparación de texto fallaba siempre, y con ella se caían las
+ * temporadas, el pensum, los ejes y la lectura del año.
+ *
+ * Una carta natal no es de un correo: es de una persona. Ahora se
+ * compara el Ascendente, que es un hecho de su nacimiento.
+ */
+const OTRO = 'novasoul959@gmail.com';
+function cartaDe(correo, filas) {
+  filas.forEach(function (c) {
+    LIBROS.s.Carta.push([correo, c[0], c[1], c[2], c[3], '', '']);
+  });
+  soulOlvidar_(); libroOlvidar_();
+}
+
+sembrarHojas();
+cartaDe(OTRO, [['ascendente', 'capricornio', 15.1, 1], ['sol', 'virgo', 27.3, 9]]);
+let sOtro = F.transitosSembrar_(OTRO);
+ok('con OTRO correo, las temporadas se siembran igual', sOtro.sembro > 100,
+   sOtro.sembro + ' · ' + (sOtro.porque || ''));
+
+// Pero NO son de cualquiera: otro Ascendente, nada.
+sembrarHojas();
+cartaDe(OTRO, [['ascendente', 'aries', 3.0, 1], ['sol', 'tauro', 12.0, 2]]);
+sOtro = F.transitosSembrar_(OTRO);
+igual('otra carta NO recibe estas efemérides', 0, sOtro.sembro);
+ok('y se dice por qué, en vez de dejar el cuadro vacío',
+   /otra carta/i.test(sOtro.porque || ''), sOtro.porque);
+
+// Y sin carta cargada tampoco se reparten a ciegas.
+sembrarHojas();
+sOtro = F.transitosSembrar_(OTRO);
+igual('sin carta, no se siembra', 0, sOtro.sembro);
+sembrarHojas();
 ok('trae los nodos, que ella pidió por nombre',
    !!F.EFEMERIDES_CARTA.natal.nodo_norte && !!F.EFEMERIDES_CARTA.natal.nodo_sur);
 ok('trae el Fondo del cielo, que ella pidió por nombre',
