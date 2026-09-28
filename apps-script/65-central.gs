@@ -113,6 +113,8 @@ function manejarCentral(accion, p) {
     case 'nc_soul_guardar':    return soulPendienteGuardar(s, p);
     case 'nc_soul_borrar':     return soulPendienteBorrar(s, p);
     case 'nc_soul_horas':      return soulHorasGuardar(s, p);
+    // Que Nova arme la semana. Devuelve una PROPUESTA: no toca la rutina.
+    case 'nc_soul_horario':    return soulHorario(s, p);
     case 'nc_soul_mindlab':    return soulMindlabGuardar(s, p);
     case 'nc_soul_mindlab_bajar': return soulMindlabAPendientes(s, p);
     case 'nc_soul_finanzas':   return soulFinanzas(s, p);

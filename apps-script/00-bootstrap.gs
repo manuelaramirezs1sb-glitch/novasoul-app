@@ -978,6 +978,28 @@ const ESQUEMA_SOUL = {
   Horas: ['usuario_id','dia_semana','horas_libres','nota'],
 
   /**
+   * Lo que quiere que quepa cada semana, para que Nova arme el horario.
+   *
+   * Ella: «que Nova organice mis horarios de trabajo, Nutrea siempre es
+   * en la mañana y en la tarde, reparte las horas de trabajo durante el
+   * día sin cruzarse con otros proyectos».
+   *
+   * Vive en una hoja y no en el código porque subir Nova a cuatro horas
+   * o apagar PHH una semana es algo que va a querer hacer, y no debería
+   * costar un despliegue.
+   *
+   *   cada    'dia' (todos los días que diga `dias`) o 'semana'
+   *   veces   cuántas sesiones por semana, cuando cada='semana'
+   *   franja  manana · tarde · noche · cualquiera
+   *   dias    '1-6', '1,2,4'… (1 = lunes)
+   *   partes  en cuántos trozos se parte lo del día. Nutrea va en 2:
+   *           uno por la mañana y otro por la tarde.
+   *   orden   quién entra primero cuando no cabe todo
+   */
+  Bloques: ['id','usuario_id','nombre','tipo','trabajo_id','horas_min','horas_max',
+            'cada','veces','franja','dias','partes','orden','activo','nota'],
+
+  /**
    * Mindlab: doce semanas, una tarea cada una.
    *
    * Vive en su propia hoja y no suelta en Pendientes porque el plan es

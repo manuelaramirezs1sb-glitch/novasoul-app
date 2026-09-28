@@ -54,6 +54,7 @@ ORDEN = [
     ('97-accesos.gs',      '34 · LOS ACCESOS DE LA TIENDA'),
     ('98-notas.gs',        '35 · LA BITÁCORA DE INTENTOS'),
     ('99-arranque-emp.gs', '36 · EMPRESARIAL EN UNA SOLA PETICIÓN'),
+    ('A0-horario.gs',      '37 · QUE NOVA ORGANICE LA SEMANA'),
 ]
 
 SALIDA = AQUI / 'NOVA-COMPLETO.gs'

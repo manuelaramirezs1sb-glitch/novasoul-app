@@ -33,6 +33,8 @@
 
 /** Las hojas de Soul con id propio, y sus columnas. */
 const SOUL_HOJAS = {
+  Bloques: ['id','usuario_id','nombre','tipo','trabajo_id','horas_min','horas_max',
+            'cada','veces','franja','dias','partes','orden','activo','nota'],
   Pendientes: ['id','usuario_id','texto','tipo','origen','fecha','hecho',
                'hecho_en','plataforma_id','trabajo_id','estado','prioridad',
                'horas_estimadas','horas_reales','riesgo','nota','materia_id'],
