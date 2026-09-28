@@ -26,6 +26,7 @@ node pruebas/puerta-tiendas.js        # que cualquier cliente pueda entrar, no s
 node pruebas/primer-dia.js            # una cuenta recién nacida: una tienda, cero de todo
 node pruebas/horario.js               # que la semana que Nova arma sea POSIBLE
 node pruebas/hub-reintento.js         # la puerta, cuando Google contesta raro
+node pruebas/cambio-tienda.js         # saltar de tienda sin que se invente nada
 ```
 
 `primer-dia.js` no escribe a mano lo que contesta el servidor: lo CALCULA
@@ -54,6 +55,33 @@ Si una prueba cambia las pestañas POR DEBAJO (reemplazando los arreglos
 del arnés en vez de escribir por la API), tiene que llamar a
 `libroOlvidar_()`: está simulando a alguien editando el Google Sheet a
 mano, que es algo que entre dos peticiones sí puede pasar.
+
+Ajusté seis arneses así y me faltó `apps-script/pruebas/tasas.js`, que es
+el único que vive en otra carpeta. Quedó rojo en `main` varios días: su
+segundo escenario leía las pestañas del primero y `estadoTasasDe_` veía
+una tienda donde había dos. **Una prueba roja en main no avisa de nada**
+— hay que correr la lista entera, no la que se acaba de tocar.
+
+`cambio-tienda.js` es la prueba que me enseñó a no creerle a mi propia
+explicación. Yo estaba seguro de que la mezcla de tiendas venía de que
+`cambiarTienda` limpiaba cinco de diecisiete variables. Lo arreglé,
+escribí la prueba, y **al desactivar el arreglo a propósito siguió en
+verde**: mi explicación no era la causa. Al imprimir la pantalla de
+Ecuador en vez de razonar sobre ella apareció la de verdad —
+
+    if (!r.ok || !r.filas.length) return false;
+
+Cero pedidos se trataba como «no hay respuesta», no se pintaba nada, y
+quedaba el HTML de la maqueta: seis pedidos con nombres inventados, dos
+novedades con su transportadora, «3 gestoras · agosto 2026», «VENTAS
+$ 68.420.000». Con el cartel verde «Datos reales de tu hoja» encima.
+
+Por eso la prueba no busca variables sino TEXTOS DE LA MAQUETA: esos
+nombres solo existen escritos a mano en el HTML, así que uno de ellos en
+pantalla con la sesión abierta significa que un pintor se calló. Y por
+eso rompe un cargador a propósito: los dieciocho iban en un
+`Promise.all` desnudo y uno que se cayera sellaba la pantalla entera
+como EJEMPLO, devolviendo las tablas falsas de golpe.
 
 `equilibrio.js` afirma una propiedad, no un número:
 

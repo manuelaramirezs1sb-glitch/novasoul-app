@@ -1688,7 +1688,7 @@ input.li:focus{border-color:var(--acc-d);}
             <div class="slbl" style="color:var(--t-ondark-mut);">DE DÓNDE SALE EL PAGO</div>
             <p style="font:500 12px/1.65 'DM Sans';color:var(--t-ondark-mut);">Sueldo base fijo, más comisión por pedido entregado, más bono si la efectividad supera un escalón. Las devoluciones mal gestionadas restan. Todo sale del recaudo de la tienda.</p>
             <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-top:1px solid var(--s-deep);padding-top:11px;flex-wrap:wrap;">
-              <span style="font:500 11.5px/1 'DM Sans';color:var(--t-ondark-mut);">3 gestoras · agosto 2026</span>
+              <span style="font:500 11.5px/1 'DM Sans';color:var(--t-ondark-mut);" id="nomquien">—</span>
               <div><span style="font:600 9px/1 'DM Sans';letter-spacing:1px;color:var(--t-ondark-mut);">NÓMINA DEL MES &nbsp;</span><span style="font:700 22px/1 'Fraunces',serif;color:var(--t-ondark);" id="nomtot"></span></div>
             </div>
           </div>
@@ -4191,6 +4191,61 @@ function go(view, el) {
 // ─── STORE SWITCH ─────────────────────────────────────
 function setStore(s){ST=s;localStorage.setItem('ne_store',s);}
 
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   OLVIDAR LA TIENDA QUE ESTÁBAMOS MIRANDO
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ LO QUE ESTO ARREGLA ──────────────────────────────────────┐
+ * │                                                            │
+ * │ «creo que está combinando datos porque me aparecen          │
+ * │  productos de Guatemala en Ecuador (…) sigue apareciéndome  │
+ * │  el cuadro de los trabajadores que no tengo».               │
+ * │                                                            │
+ * │ No estaba combinando nada en el servidor: cada respuesta    │
+ * │ venía de su tienda. Lo que pasaba es que la PANTALLA se     │
+ * │ quedaba con lo de la tienda anterior.                       │
+ * │                                                            │
+ * │ Diecisiete variables guardan cosas de una tienda —          │
+ * │ productos, CAS, alarmas, equipo, notas, histórico— y        │
+ * │ `cambiarTienda` limpiaba CINCO. Las otras doce seguían con  │
+ * │ lo de antes hasta que su carga terminara… y si esa carga    │
+ * │ venía vacía, no las pisaba nadie. Guatemala tiene           │
+ * │ productos, Ecuador no: los de Guatemala se quedaban.        │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ UNA FUNCIÓN Y NO DOCE LÍNEAS MÁS ─────────────────┐
+ * │                                                            │
+ * │ Porque la lista va a volver a crecer. Cada pantalla nueva   │
+ * │ trae su variable, y acordarse de venir a añadirla aquí es   │
+ * │ justo lo que no pasó las últimas cinco veces.               │
+ * │                                                            │
+ * │ Con un solo sitio, la regla es una frase que se puede       │
+ * │ decir: «si guarda algo de UNA tienda, se olvida aquí».      │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+function olvidarTienda() {
+  // Lo que se lista
+  PEDS_REALES = []; PEDS_VISTA = []; PEDS_TOTAL = 0; PED_SEL_ID = '';
+  NOVS_REALES = []; NOVS_VISTA = []; NOV_SEL_ID = ''; NOV_VECES = {};
+  G_VISTA = [];
+  PRODS = []; INV_VISTA = [];
+  // Lo que se calcula
+  REAL = null; REPARTO = null; AUD = null; HISTORIAL = [];
+  CAS_DATOS = null; ALARMAS_HOY = []; ESTADOS_DATA = null; META_DATA = null;
+  // Lo que es de la tienda aunque no lo parezca
+  ACC = null; ACC_VER = false; NOTAS = {}; NOTAS_RECORTADAS = 0;
+  MI_EQUIPO = [];
+  CHAT = null; CHAT_CON = ''; CHAT_VISTO = 0;
+  // La despensa del arranque es de la tienda anterior: si se queda,
+  // la primera pantalla que pregunte recibe lo de antes.
+  ARRANQUE = null;
+  ARRANQUE_MS = 0; ARRANQUE_LENTAS = [];
+  CALC = null;
+}
+
 /* ═══════════════════════════════════════════════════════════════
      EN QUÉ TIENDA ESTOY
    ═══════════════════════════════════════════════════════════════
@@ -4280,15 +4335,10 @@ async function cambiarTienda(t) {
   setStore(t);
   pintarSelectorTienda();
   updateSub();
-  // Se vacía lo de la tienda anterior antes de pedir lo nuevo: si la
-  // petición tarda, mejor una pantalla que dice «cargando» que una que
-  // enseña los pedidos de la otra tienda como si fueran de esta.
-  PEDS_REALES = []; NOVS_REALES = []; PEDS_VISTA = [];
-  REPARTO = null;
-  // Los accesos son de la tienda, no de la persona: los de Ecuador no
-  // sirven para entrar a Guatemala, y dejarlos en pantalla es peor que
-  // no tenerlos.
-  ACC = null;
+  // Se vacía TODO lo de la tienda anterior antes de pedir lo nuevo: si
+  // la petición tarda, mejor una pantalla que dice «cargando» que una
+  // que enseña los productos de la otra tienda como si fueran de esta.
+  olvidarTienda();
   buildAll();
   // `cargarReales` trae TODO lo de la tienda nueva en un viaje, accesos
   // incluidos. Pedirlos aparte aquí era gastar un viaje en algo que ya
@@ -4331,7 +4381,7 @@ function switchSt(s){
   updateSub(); buildAll();
   montarImportadores();
   // La tienda cambió: los datos de la anterior no pueden quedarse en pantalla
-  ACC = null;
+  olvidarTienda();
   cargarReales();
 }
 
@@ -4427,6 +4477,8 @@ const REINTENTABLES = ['login', 'verificar', 'yo', 'resumen', 'listar',
  * enseñando lo de hace diez minutos, y eso es peor que ser lenta.
  */
 let ARRANQUE = null;
+let ARRANQUE_MS = 0;
+let ARRANQUE_LENTAS = [];
 
 /** Con qué nombre guardó el arranque lo que pide esta acción. */
 function claveArranque(accion, datos) {
@@ -4899,6 +4951,17 @@ async function cargarReales() {
         if (a.fallaron && a.fallaron.length) {
           console.warn('[Nova] el arranque no pudo con:', a.fallaron);
         }
+        /**
+         * Lo que tardó, guardado para poder decirlo.
+         *
+         * «la saltada de tienda a tienda está lenta» no se puede
+         * arreglar sin saber CUÁNTO y en QUÉ. El servidor manda ahora
+         * el tiempo de cada una de sus veinte secciones; esto lo deja
+         * a mano para que el aviso de arriba lo diga en segundos.
+         */
+        ARRANQUE_MS = a.ms || 0;
+        ARRANQUE_LENTAS = a.lentas || [];
+        if (a.tiempos) console.info('[Nova] arranque ' + a.ms + 'ms', a.tiempos);
       }
     } catch (e) { /* sin arranque se pide de a una, que es lo de antes */ }
 
@@ -4933,21 +4996,50 @@ async function cargarReales() {
     aplicarReales(r.datos);
     pintarEstadoCierre(r.datos);
     cargarHistorialFuentes();
-    // Cada lista se conecta por su cuenta: que Novedades esté vacía no
-    // puede dejar a Pedidos sin cargar. Se esperan las dos para saber
-    // cuándo la pantalla terminó de ponerse al día.
-    await Promise.all([cargarPedidosReales(), cargarNovedadesReales(),
-                       cargarEquipo(), cargarAuditoria(), cargarAuditoriaCasos(),
-                       cargarReparto(), cargarAlarmas(),
-                       cargarRecuento(), cargarProductos(), cargarAyer(),
-                       cargarHistorial(), cargarCas(), cargarEstados(),
-                       cargarMeta(), cargarSemaforo(), cargarNotas(),
-                       cargarAccesos(), cargarChat('')]);
+    /**
+     * ┌─ CADA PINTOR RESPONDE SOLO POR LO SUYO ────────────────────┐
+     * │                                                            │
+     * │ Estos dieciocho iban en un `Promise.all` desnudo, y con eso │
+     * │ UNO que se cayera tumbaba la carga entera: el `catch` de    │
+     * │ abajo sellaba la pantalla como «Datos de EJEMPLO» y dejaba  │
+     * │ a la vista las tablas de muestra de Pedidos y Novedades,    │
+     * │ con clientes y cifras que no existen.                       │
+     * │                                                            │
+     * │ Lo vi con un `nombreMes(undefined)` en el recuento: un mes  │
+     * │ sin nombre y toda la pantalla pasaba a ser mentira.         │
+     * │                                                            │
+     * │ Ahora cada uno se cae solo, con su nombre en la consola, y  │
+     * │ el aviso de arriba dice QUÉ no cargó en vez de desdecir     │
+     * │ todo lo que sí.                                             │
+     * │                                                            │
+     * └────────────────────────────────────────────────────────────┘
+     */
+    const TRABAJOS = [
+      ['pedidos',   cargarPedidosReales], ['novedades',  cargarNovedadesReales],
+      ['equipo',    cargarEquipo],        ['auditoría',  cargarAuditoria],
+      ['casos',     cargarAuditoriaCasos],['reparto',    cargarReparto],
+      ['alarmas',   cargarAlarmas],       ['recuento',   cargarRecuento],
+      ['productos', cargarProductos],     ['ayer',       cargarAyer],
+      ['histórico', cargarHistorial],     ['CAS',        cargarCas],
+      ['estados',   cargarEstados],       ['Meta',       cargarMeta],
+      ['semáforo',  cargarSemaforo],      ['notas',      cargarNotas],
+      ['accesos',   cargarAccesos],
+      ['chat',      function () { return cargarChat(''); }],
+    ];
+    const rotos = [];
+    await Promise.all(TRABAJOS.map(function (t) {
+      return Promise.resolve().then(t[1]).catch(function (e) {
+        rotos.push(t[0]);
+        console.error('[Nova] no pude cargar ' + t[0] + ':', e);
+      });
+    }));
     // Una gestora sin pedidos asignados también merece respuesta. Si las
     // listas vinieron vacías nadie la habría pintado, y se quedaría
     // mirando un "buscando…" que ya terminó.
     if (ROL === 'gestora') pintarPantallasGestora();
-    return { mes: mes, pedidos: PEDS_REALES.length, novedades: NOVS_REALES.length };
+    if (rotos.length) avisarRotos(rotos);
+    return { mes: mes, pedidos: PEDS_REALES.length, novedades: NOVS_REALES.length,
+             rotos: rotos };
   } catch (e) {
     /**
      * Este catch decía «sin conexión» pasara lo que pasara.
@@ -5193,7 +5285,15 @@ function aplicarReales(d) {
    */
   pintarEquilibrio(d);
   aplicarPauta(d);
-  if (d.recaudo7) pintarRecaudo(d.recaudo7);
+  /**
+   * El `if` estaba solo: sin recaudo de la semana no se llamaba al
+   * pintor, y quedaban en pantalla las barras de muestra con su
+   * «HOY $ 1.240 · mejor día miércoles · la semana va 11% por encima
+   * del promedio». Un número inventado con esa precisión se cree.
+   *
+   * Ahora se llama siempre: el pintor sabe decir que no hay nada.
+   */
+  pintarRecaudo(d.recaudo7);
   CALC = null;   // los supuestos se rehacen con los números nuevos
   pintarCalculadoras();
   pintarCartera(d.cartera);
@@ -5217,14 +5317,41 @@ function marcarOrigen(real, motivo) {
   }
   if (real) {
     b.style.background = '#e6efe8'; b.style.color = '#2f5738';
+    /**
+     * Cuando tarda, se dice cuánto y en qué.
+     *
+     * Antes el aviso solo ponía la hora, así que «sigue lento» era lo
+     * único que se podía reportar y yo solo podía suponer la causa.
+     * Debajo de tres segundos no se menciona: si no molesta, es ruido.
+     */
+    const lento = ARRANQUE_MS >= 3000;
     b.textContent = '● Datos reales de tu hoja · actualizado ' +
-      new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+      new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}) +
+      (lento ? ' · tardó ' + (ARRANQUE_MS / 1000).toFixed(1) + ' s' +
+        (ARRANQUE_LENTAS.length ? ' (lo más pesado: ' +
+          ARRANQUE_LENTAS.join(', ') + ')' : '') : '');
   } else {
     b.style.background = '#f6ecd0'; b.style.color = '#7a5c10';
     b.textContent = '● Datos de EJEMPLO' + (motivo? ' · '+motivo : '') +
       ' — no tomes decisiones con estos números.';
   }
   sellarEjemplo(real);
+}
+
+/**
+ * Lo que no cargó, dicho por su nombre.
+ *
+ * No vuelve a sellar nada: lo que sí llegó de la hoja sigue siendo de la
+ * hoja. Antes esto no existía y la única forma de avisar era marcar toda
+ * la pantalla como ejemplo — o sea, desmentir de paso los quince pedazos
+ * que estaban bien.
+ */
+function avisarRotos(rotos) {
+  const b = document.getElementById('origen-datos');
+  if (!b) return;
+  b.style.background = '#f6ecd0'; b.style.color = '#7a5c10';
+  b.textContent = '● Cargó casi todo · no pude traer ' + rotos.join(', ') +
+    '. Esas partes están como estaban; lo demás sí es de tu hoja.';
 }
 
 // ─── PEDIDOS Y NOVEDADES REALES ───────────────────────────────
@@ -5412,10 +5539,24 @@ async function cargarPedidosReales() {
   let r;
   try { r = await api('listar', { entidad: 'Pedidos', tienda: ST, limite: 300 }); }
   catch (e) { return false; }
-  if (!r.ok || !r.filas || !r.filas.length) return false;
+  /**
+   * CERO PEDIDOS ES UNA RESPUESTA, NO UN MOTIVO PARA CALLARSE.
+   *
+   * Aquí decía `|| !r.filas.length → return false`, y eso dejaba en
+   * pantalla la tabla de muestra —seis pedidos inventados con nombres
+   * y ciudades de Ecuador— con el cartel verde «Datos reales de tu
+   * hoja» encima. En una tienda recién abierta, o al saltar a una
+   * tienda que todavía no tiene nada, Nova enseñaba clientes que no
+   * existen como si fueran suyos.
+   *
+   * Es el peor error de los dos posibles: una pantalla en blanco se
+   * nota y se pregunta; una pantalla con datos falsos se cree.
+   */
+  if (!r.ok) return false;
+  r.filas = r.filas || [];
 
   PEDS_REALES = r.filas;
-  PEDS_TOTAL = r.total;
+  PEDS_TOTAL = r.total || 0;
   cargarOficina();
   pintarPantallasGestora();
   pintarFiltrosPedidos(r.filas);
@@ -5491,9 +5632,17 @@ function pintarPedidosReales(todas, total) {
       '</div>';
   }).join('');
 
+  /**
+   * Vacío por filtro y vacío porque no hay nada no son lo mismo. Decir
+   * «ningún pedido con este filtro» en una tienda sin un solo pedido
+   * manda a buscar el problema en los filtros, que están bien.
+   */
   document.getElementById('pedlist').innerHTML = filas.length
     ? cabecera + cuerpo
-    : '<div class="tvacio">Ningún pedido con este filtro.</div>';
+    : (todas.length
+        ? '<div class="tvacio">Ningún pedido con este filtro.</div>'
+        : '<div class="tvacio">Esta tienda todavía no tiene pedidos. ' +
+          'Sube el archivo de la plataforma con «Importar» y aparecen aquí.</div>');
 
   pintarPanelPedido();
 
@@ -5900,6 +6049,21 @@ async function guardarPedido() {
 
 /** La barra de estados, contada sobre los pedidos que hay de verdad. */
 function pintarEstadosReales(filas) {
+  /**
+   * Sin pedidos no hay reparto de estados, y hay que decirlo con
+   * palabras. Vaciar la tarjeta y ya la deja muda: quien la mira no
+   * sabe si es que no hay datos o si Nova se quedó a medias.
+   */
+  if (!filas.length) {
+    const b = document.getElementById('stbar');
+    const l = document.getElementById('stlist');
+    if (b) b.innerHTML = '';
+    if (l) {
+      l.innerHTML = '<div class="tvacio">Todavía no hay pedidos en esta tienda. ' +
+        'En cuanto importes el primer archivo, aquí sale en qué estado está cada uno.</div>';
+    }
+    return;
+  }
   const cuenta = {};
   filas.forEach(function (p) {
     const e = fichaEstado(p);
@@ -5936,7 +6100,11 @@ async function cargarNovedadesReales() {
   let r;
   try { r = await api('listar', { entidad: 'Novedades', tienda: ST, limite: 300 }); }
   catch (e) { return false; }
-  if (!r.ok || !r.filas || !r.filas.length) return false;
+  // Mismo caso que en Pedidos: sin novedades quedaban las dos de muestra
+  // y los KPIs inventados —«ABIERTAS 2», «Tasa 80% resolución»— sobre
+  // una tienda que no ha tenido ni una sola novedad.
+  if (!r.ok) return false;
+  r.filas = r.filas || [];
 
   NOVS_REALES = r.filas;
   pintarNovedadesReales(r.filas);
@@ -7316,11 +7484,22 @@ function tile(k, v, sub, cls, lead) {
     '<div class="sub">' + sub + '</div></div>';
 }
 
+/**
+ * Un mes 'AAAA-MM' dicho con palabras.
+ *
+ * El `mes.slice` iba sin red, y un `undefined` —que llega cuando la
+ * respuesta viene a medias— tumbaba al pintor que la llamaba. Eso, por
+ * cómo está armada la carga, sellaba la pantalla ENTERA como «Datos de
+ * EJEMPLO» y dejaba las tablas de muestra a la vista. Un mes sin nombre
+ * no puede costar tanto.
+ */
 function nombreMes(mes) {
   const M = ['enero','febrero','marzo','abril','mayo','junio','julio',
              'agosto','septiembre','octubre','noviembre','diciembre'];
-  const a = mes.slice(0, 4), m = parseInt(mes.slice(5, 7), 10) - 1;
-  return (M[m] || mes) + ' ' + a;
+  const s = String(mes == null ? '' : mes);
+  if (!/^\d{4}-\d{2}/.test(s)) return s || 'ese mes';
+  const a = s.slice(0, 4), m = parseInt(s.slice(5, 7), 10) - 1;
+  return (M[m] || s) + ' ' + a;
 }
 
 /**
@@ -9002,9 +9181,25 @@ function pintarRecaudo(r) {
   const foot = document.getElementById('barfoot');
   const lbl = document.getElementById('dlbl');
   const val = document.getElementById('dval');
-  if (!cont || !r || !r.serie) return;
+  if (!cont) return;
 
   const S = SYM() + ' ';
+  // Sin serie, o con una serie de puros ceros, la gráfica no dice nada
+  // y hay que escribirlo. Callarse deja las barras de muestra.
+  const hayAlgo = r && r.serie && r.serie.length &&
+    r.serie.some(function (d) { return (d.total || 0) > 0; });
+  if (!hayAlgo) {
+    RECAUDO_SERIE = [];
+    cont.innerHTML = '';
+    if (lbl) lbl.textContent = 'HOY';
+    if (val) val.textContent = S + NUM(0);
+    if (foot) {
+      foot.textContent = (r && r.serie && r.serie.length)
+        ? 'Ninguna entrega en los últimos siete días, así que no entró plata.'
+        : 'Aquí sale lo que entra cada día en cuanto haya pedidos entregados.';
+    }
+    return;
+  }
   const serie = r.serie;
   const mx = Math.max.apply(null, serie.map(function (d) { return d.total; }));
   const DIA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
@@ -9162,7 +9357,7 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-28 · 1845';
+const VERSION_PANTALLA = '2026-09-28 · 3978';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
@@ -11250,6 +11445,23 @@ async function cargarEquipo() {
 
 /** La tabla de personas: quién es, qué puede, y cómo va este mes. */
 function pintarEquipo() {
+  /**
+   * La cabecera de Comisiones decía «3 gestoras · agosto 2026»,
+   * escrito a mano en el HTML desde la maqueta. Salía igual en una
+   * tienda sin nadie —«sigue apareciéndome el cuadro de los
+   * trabajadores que no tengo»— y con un mes que ya pasó.
+   */
+  const quien = document.getElementById('nomquien');
+  if (quien) {
+    const gs = MI_EQUIPO.filter(function (x) {
+      return x.rol === 'gestora' && x.estado !== 'inactivo';
+    });
+    quien.textContent = gs.length
+      ? gs.length + (gs.length === 1 ? ' gestora · ' : ' gestoras · ') +
+        nombreMes(new Date().toISOString().slice(0, 7))
+      : 'Sin gestoras en esta tienda todavía';
+  }
+
   const cont = document.getElementById('eqlista');
   if (!cont) return;
 

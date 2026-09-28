@@ -59,6 +59,17 @@ function contiene(nombre, texto, trozo) {
 }
 function montar(reporte, tiendas, pauta, tasas) {
   Object.keys(HOJAS).forEach(k => delete HOJAS[k]);
+  /**
+   * Cambiar `HOJAS` es editar el Google Sheet POR DEBAJO de la API, y
+   * desde que `libro_()` guarda lo leído mientras dura la petición eso
+   * hay que anunciarlo. Sin esta línea, el segundo `montar` de este
+   * archivo leía las pestañas del primero: `estadoTasasDe_` veía una
+   * sola tienda donde había dos y `e.pares[1]` no existía.
+   *
+   * Está escrito en pruebas/LEEME.md y aun así se me pasó justo aquí,
+   * porque esta es la única prueba que vive en otra carpeta.
+   */
+  if (typeof libroOlvidar_ === 'function') libroOlvidar_();
   HOJAS.Parametros = [['tienda','clave','valor','actualizado_en','actualizado_por'],
                       ['', 'moneda_reporte', reporte, '', '']];
   HOJAS.Tiendas = [['id','nombre','marca','pais','sociedad','nit','moneda',

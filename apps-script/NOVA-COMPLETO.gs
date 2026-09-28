@@ -22095,10 +22095,21 @@ function apiArranque(s, p) {
 
   const partes = {};
   const fallaron = [];
+  /**
+   * CUÁNTO TARDA CADA SECCIÓN, NO SOLO EL TOTAL.
+   *
+   * «la saltada de tienda a tienda está lenta». Con un solo total no se
+   * puede responder eso: hay veinte secciones y el total no dice cuál
+   * se come el tiempo. Medir cada una cuesta una resta y quita la
+   * discusión de memoria — que es la que me hizo poner un tope de 90
+   * días en Meta por una cuota que resultó no existir.
+   */
+  const tiempos = {};
   const t0 = Date.now();
 
   ARRANQUE_EMP.forEach(function (par) {
     const nombre = par[0];
+    const tp = Date.now();
     try {
       const r = par[1](s, args);
       /**
@@ -22114,12 +22125,21 @@ function apiArranque(s, p) {
     } catch (e) {
       fallaron.push({ parte: nombre, error: String(e && e.message || e) });
     }
+    tiempos[nombre] = Date.now() - tp;
   });
 
   return {
     ok: true, tienda: tienda, partes: partes, fallaron: fallaron,
     // Cuánto tardó de verdad, para no volver a discutirlo de memoria.
     ms: Date.now() - t0,
+    tiempos: tiempos,
+    // Las tres que más tardaron, ya ordenadas: es lo que hay que mirar
+    // cuando alguien dice «está lento», y así no hay que leer veinte
+    // números para encontrarlas.
+    lentas: Object.keys(tiempos)
+      .sort(function (a, b) { return tiempos[b] - tiempos[a]; })
+      .slice(0, 3)
+      .map(function (k) { return k + ' ' + tiempos[k] + 'ms'; }),
   };
 }
 
