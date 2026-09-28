@@ -91,7 +91,8 @@ global.Date = class extends RealDate {
 
 
 (0, eval)(src + '\n;globalThis.__F = { soulHorario, bloquesDe_, diasDe_, huecosDelDia_, semanaComprometida_,' +
-  ' horaNum_, libroOlvidar_, soulOlvidar_, sembrarBloques, HORARIO_DESDE, HORARIO_HASTA };');
+  ' horaNum_, libroOlvidar_, soulOlvidar_, sembrarBloques, soulDeQuien_,' +
+  ' HORARIO_DESDE, HORARIO_HASTA };');
 const F = globalThis.__F;
 
 let fallas = 0;
@@ -362,6 +363,111 @@ sembrar([]);
 c = F.semanaComprometida_(YO, ACTIVOS);
 igual('sin bloques, manda Central', 25, c.total);
 igual('y se sabe que no hay bloques', false, c.hayBloques);
+
+
+console.log('\n══ 10 · CORRERLO DESDE EL EDITOR, SIN ESCRIBIR EL CORREO ══');
+/**
+ * ┌─ SU ERROR, TAL CUAL ───────────────────────────────────────┐
+ * │                                                            │
+ * │   Error: sembrarBloques("tucorreo@…") — di de quién son.    │
+ * │                                                            │
+ * │ No era un fallo del código: era un fallo de diseño mío.     │
+ * │ `sembrarBloques` se corre UNA VEZ, a mano, desde el botón   │
+ * │ «Ejecutar» del editor de Apps Script — y ese botón llama    │
+ * │ SIN ARGUMENTOS. La escribí de forma que no se podía usar    │
+ * │ por el único camino por el que se iba a usar.               │
+ * │                                                            │
+ * │ `primeraSocia` ya hacía el respaldo bien. La inconsistencia │
+ * │ era mía, no de Google.                                      │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+const SESION_ORIG = global.Session;
+const conUsuario = (correo) => {
+  global.Session = { getScriptTimeZone: () => 'UTC',
+    getActiveUser: () => ({ getEmail: () => correo }),
+    getEffectiveUser: () => ({ getEmail: () => correo }) };
+};
+
+// ── 1 · El argumento siempre manda ──
+conUsuario('otro@correo.com');
+sembrar([]);
+igual('el correo que se pasa gana sobre todo', YO, F.soulDeQuien_(YO));
+
+// ── 2 · Sin argumento, quien tocó el botón ──
+conUsuario(YO);
+sembrar([]);
+igual('sin argumento, el de quien está corriendo el script', YO, F.soulDeQuien_());
+igual('y le da igual cómo esté escrito', YO, F.soulDeQuien_('  ' + YO.toUpperCase() + ' '));
+
+// ── 3 · Y si Google no lo da, lo que ya dicen las hojas ──
+/**
+ * Google devuelve vacío en algunos contextos, y además su correo puede
+ * no ser el mismo con el que ella entra a NovaSoul. Las hojas dicen la
+ * verdad de ESTE producto.
+ */
+conUsuario('');
+sembrar([]);
+igual('sin Google, sale de la Rutina y las Horas', YO, F.soulDeQuien_());
+
+// ── 4 · Con dos personas, NO se adivina ──
+/**
+ * La aserción que protege de verdad: sembrarle a una persona los
+ * bloques de otra es peor que fallar. Un horario en la cuenta
+ * equivocada no se nota hasta que ya se planeó la semana con él.
+ */
+conUsuario('');
+sembrar([]);
+LIBROS.s.Rutina.push(['r99','otra@correo.com','clase','X',2,'08:00','09:00',
+                      '','','','','','','','si','']);
+F.libroOlvidar_(); F.soulOlvidar_();
+let cayo = '';
+try { F.soulDeQuien_(); } catch (e) { cayo = e.message; }
+ok('con dos correos se rinde en vez de elegir', /2 personas/.test(cayo), cayo);
+ok('y los nombra para poder decidir',
+   cayo.indexOf(YO) !== -1 && cayo.indexOf('otra@correo.com') !== -1, cayo);
+
+// ── 5 · Y sin nada de nada, dice cómo correrlo ──
+conUsuario('');
+F.libroOlvidar_(); F.soulOlvidar_();
+LIBROS.s = { Bloques: [C_BLO], Rutina: [C_RUT], Horas: [C_HOR],
+             Trabajos: [['id','nombre','estado','horas_semana']] };
+cayo = '';
+try { F.soulDeQuien_(); } catch (e) { cayo = e.message; }
+ok('en una cuenta vacía dice exactamente qué escribir',
+   /sembrarBloques\("tucorreo@…"\)/.test(cayo), cayo);
+
+// ── 6 · Y sembrarBloques() pelado ya funciona ──
+/** La prueba de que su error no vuelve: sin argumento, siembra. */
+conUsuario(YO);
+sembrar([]);
+/**
+ * Con el try: si esto vuelve a romperse, la prueba tiene que DECIRLO,
+ * no morirse. Rompí el arreglo a propósito para comprobarlo y la
+ * primera versión se caía entera — y una prueba que se cae tapa las
+ * nueve aserciones que venían detrás.
+ */
+let dicho = '';
+try { dicho = F.sembrarBloques(); }
+catch (e) { dicho = 'SE CAYÓ: ' + e.message; }
+ok('sembrarBloques() sin argumento ya no se cae',
+   /bloques sembrados/.test(dicho), dicho);
+/**
+ * El `&& length` no sobra: `every` sobre una lista VACÍA devuelve true.
+ * Sin él, esta aserción se quedaba verde cuando no se había sembrado
+ * absolutamente nada — lo comprobé rompiendo el arreglo a propósito.
+ */
+const puestos = LIBROS.s.Bloques.slice(1);
+ok('y quedaron con su correo, no con otro',
+   puestos.length > 0 && puestos.every(f => String(f[1]).toLowerCase() === YO),
+   puestos.length + ' bloques: ' + JSON.stringify(puestos.map(f => f[1])));
+/** Correrlo dos veces no puede duplicarle la semana. */
+F.libroOlvidar_(); F.soulOlvidar_();
+let otra = '';
+try { otra = F.sembrarBloques(); } catch (e) { otra = 'SE CAYÓ: ' + e.message; }
+ok('correrlo otra vez no toca nada', /Ya tienes/.test(otra), otra);
+
+global.Session = SESION_ORIG;
 
 console.log(fallas ? '\n' + fallas + ' FALLAS\n' : '\nTodo bien\n');
 process.exit(fallas ? 1 : 0);

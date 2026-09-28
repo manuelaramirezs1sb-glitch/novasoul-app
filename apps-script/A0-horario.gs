@@ -461,9 +461,81 @@ function horasUtilesDe_(uid) {
  * con otras personas, al final lo que se puede correr sin que nadie se
  * entere.
  */
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   DE QUIÉN SON LAS COSAS DE SOUL, SIN QUE HAYA QUE ESCRIBIRLO
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ LO QUE PASÓ ──────────────────────────────────────────────┐
+ * │                                                            │
+ * │   Error: sembrarBloques("tucorreo@…") — di de quién son.    │
+ * │                                                            │
+ * │ No es un fallo del código: es un fallo de diseño mío. Esta  │
+ * │ función se corre UNA VEZ, a mano, desde el botón            │
+ * │ «Ejecutar» del editor de Apps Script — y ese botón llama    │
+ * │ sin argumentos. O sea que la escribí de forma que no se     │
+ * │ puede usar por el único camino por el que se iba a usar.    │
+ * │                                                            │
+ * │ `bootstrapTodo()` no tiene ese problema y por eso nunca lo  │
+ * │ noté: no le hace falta saber quién eres.                    │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ DE DÓNDE SALE EL CORREO, Y EN QUÉ ORDEN ──────────────────┐
+ * │                                                            │
+ * │ 1. El que se pase como argumento. Siempre manda.            │
+ * │ 2. Quien esté corriendo el script. Es quien tocó el botón.  │
+ * │ 3. El correo que YA está escrito en las hojas de Soul —     │
+ * │    Rutina, Trabajos, Horas—. Si hay exactamente UNO, es     │
+ * │    ella; si hay varios, NO SE ADIVINA.                      │
+ * │                                                            │
+ * │ El tercero existe porque los dos primeros pueden fallar:    │
+ * │ Google a veces devuelve vacío en `getActiveUser`, y un      │
+ * │ correo de Google puede no ser el mismo con el que entra a   │
+ * │ Nova. Las hojas dicen la verdad de este producto.           │
+ * │                                                            │
+ * │ Con dos correos distintos se rinde y lo dice, en vez de     │
+ * │ sembrarle a una persona los bloques de otra. Un horario     │
+ * │ puesto en la cuenta equivocada es peor que un error.        │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+function soulDeQuien_(uid) {
+  const dado = String(uid || '').toLowerCase().trim();
+  if (dado) return dado;
+
+  // 2 · Quien tocó el botón
+  try {
+    const s = Session.getActiveUser().getEmail() ||
+              Session.getEffectiveUser().getEmail();
+    if (s) return String(s).toLowerCase().trim();
+  } catch (e) { /* en algunos contextos Google no lo da; seguimos */ }
+
+  // 3 · Lo que ya dicen las hojas
+  const vistos = {};
+  ['Rutina', 'Trabajos', 'Horas', 'Materias', 'Pendientes'].forEach(function (tab) {
+    let d;
+    try { d = soulCrudo_(tab); } catch (e) { return; }
+    if (!d || !d.length) return;
+    const cU = d[0].map(norm).indexOf('usuario_id');
+    if (cU === -1) return;
+    d.slice(1).forEach(function (f) {
+      const c = String(f[cU] || '').toLowerCase().trim();
+      if (c) vistos[c] = (vistos[c] || 0) + 1;
+    });
+  });
+  const correos = Object.keys(vistos);
+  if (correos.length === 1) return correos[0];
+  if (correos.length > 1) {
+    throw new Error('En estas hojas hay ' + correos.length + ' personas (' +
+      correos.join(', ') + '). Dime de quién: sembrarBloques("elcorreo@…").');
+  }
+  throw new Error('No pude saber de quién son. Córrelo así: ' +
+    'sembrarBloques("tucorreo@…") — el mismo con el que entras a NovaSoul.');
+}
+
 function sembrarBloques(uid) {
-  const yo = String(uid || '').toLowerCase().trim();
-  if (!yo) throw new Error('sembrarBloques("tucorreo@…") — di de quién son.');
+  const yo = soulDeQuien_(uid);
 
   const sh = soulSheet_('Bloques');
   const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);

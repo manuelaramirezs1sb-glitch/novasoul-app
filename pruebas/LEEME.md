@@ -173,6 +173,29 @@ Y una de shell: el contador de rojas tiene que ir FUERA de cualquier
 `$( )`. Dentro es una subshell, `fail=1` no sale de ella, y casi reporto
 «todas verdes» con dos rojas.
 
+`horario.js` tiene una sección que no es de horarios sino de un fallo de
+DISEÑO mío. `sembrarBloques` se corre una vez, a mano, desde el botón
+«Ejecutar» del editor de Apps Script — y ese botón llama sin argumentos.
+La escribí exigiendo un correo, o sea imposible de usar por el único
+camino por el que se iba a usar:
+
+    Error: sembrarBloques("tucorreo@…") — di de quién son.
+
+`primeraSocia` ya hacía el respaldo bien, así que la inconsistencia era
+mía y no de Google. Ahora el correo sale, en este orden: el argumento,
+quien esté corriendo el script, o el que ya esté escrito en las hojas de
+Soul. Con dos correos distintos **se rinde y los nombra** en vez de
+elegir: sembrarle a una persona el horario de otra no se nota hasta que
+ya planeó la semana con él.
+
+Dos trampas de arnés que salieron ahí y valen para cualquier prueba:
+
+- una prueba que **se muere** tapa las que venían detrás. La llamada que
+  puede reventar va en `try`, y el fallo se reporta con su mensaje.
+- `every` sobre una lista **vacía** devuelve `true`. «Todos los bloques
+  quedaron con su correo» estaba verde cuando no se había sembrado
+  ninguno. Lleva `length > 0` delante.
+
 `contar-llamadas.js` no afirma ni falla: imprime. Existe porque una vez
 afirmé de memoria que traer un año de anuncios «llenaría la cuota de la
 hora», puse un tope de 90 días por esa razón, y al contarlo resultó
