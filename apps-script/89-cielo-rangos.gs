@@ -396,17 +396,71 @@ function lunasEntre_(desdeISO, hastaISO) {
  * movió, así que ponerlo en la lista de la semana es ruido; y Mercurio
  * ya pasó tres veces en un año, así que ponerlo en la del año también.
  */
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   LOS TRES RANGOS, QUE AHORA SÍ SON DE TIEMPO
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ LO QUE ESTABA MAL ────────────────────────────────────────┐
+ * │                                                            │
+ * │ «me lo tiraste todo de un solo golpe, mucha información me  │
+ * │  sobre-estimula (…) me aparece todo lo de la semana, el mes │
+ * │  y el año, y no veo cuáles son los de la semana, cuáles los │
+ * │  del mes y cuáles los del año, no hay distinción».          │
+ * │                                                            │
+ * │ Tenía toda la razón, y la causa era de diseño: las tres     │
+ * │ pestañas NO FILTRABAN POR TIEMPO. Filtraban por planeta —   │
+ * │ «semana» era personales+sociales, «mes» esos MISMOS más     │
+ * │ generacionales—. Por eso se repetían entre pestañas y el    │
+ * │ nombre prometía tiempo mientras el filtro hablaba de        │
+ * │ planetas.                                                   │
+ * │                                                            │
+ * │ Se ve en sus números: las 8 temporadas que le salieron en   │
+ * │ «Esta semana» duraban entre 25 y 175 días. NINGUNA era de   │
+ * │ esa semana.                                                 │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ CÓMO QUEDÓ ───────────────────────────────────────────────┐
+ * │                                                            │
+ * │ Cada temporada cae en UN SOLO rango, por lo que DURA. No    │
+ * │ hay repetición posible, y la distinción es la que el        │
+ * │ nombre promete.                                             │
+ * │                                                            │
+ * │   Esta semana  ·  hasta 21 días  ·  lo que se decide ya     │
+ * │   Este mes     ·  22 a 120 días  ·  lo que se está armando  │
+ * │   Este año     ·  más de 120     ·  el fondo que no se mueve│
+ * │                                                            │
+ * │ Los cortes no son astrología: son la escala de tiempo con   │
+ * │ la que una persona decide. Tres semanas es «esta semana o   │
+ * │ la que viene»; cuatro meses ya es «este año».               │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
 const CIELO_RANGOS = {
-  semana: { nombre: 'Esta semana', dias: 7,
-            grupos: ['personal', 'social'],
+  semana: { nombre: 'Esta semana', dias: 7, duraHasta: 21,
             que: 'Lo que se decide en días. Aquí manda la Luna.' },
-  mes:    { nombre: 'Este mes', dias: 30,
-            grupos: ['personal', 'social', 'generacional'],
-            que: 'El mes solar de tu revolución, y lo que Júpiter y Saturno están ordenando.' },
-  anio:   { nombre: 'Este año', dias: 365,
-            grupos: ['social', 'generacional'],
-            que: 'De qué va el capítulo: la casa que rige tu año y lo que está transformándose de fondo.' },
+  mes:    { nombre: 'Este mes', dias: 30, duraDesde: 22, duraHasta: 120,
+            que: 'Lo que se está armando: semanas, no días. Júpiter y Saturno ordenando.' },
+  anio:   { nombre: 'Este año', dias: 365, duraDesde: 121,
+            que: 'El fondo que no se mueve. Energía larga y constante: es la que se puede aprovechar a propósito.' },
 };
+
+/** Cuántos días dura una temporada, contando el primero y el último. */
+function duracionTransito_(t) {
+  const fin = t.hasta || t.desde;
+  if (!t.desde || !fin) return 1;
+  return Math.round((new Date(fin + 'T00:00:00Z') -
+                     new Date(t.desde + 'T00:00:00Z')) / 86400000) + 1;
+}
+
+/** ¿A cuál de los tres rangos pertenece, por lo que dura? */
+function rangoDeTransito_(t) {
+  const d = duracionTransito_(t);
+  if (d <= CIELO_RANGOS.semana.duraHasta) return 'semana';
+  if (d <= CIELO_RANGOS.mes.duraHasta) return 'mes';
+  return 'anio';
+}
 
 /**
  * La lectura de un rango, con las cuatro preguntas respondidas.
@@ -426,16 +480,18 @@ function cieloRango_(uid, rango, hoyISO, carta, nac) {
     // Cruza el tramo: empieza antes y termina después, o cae adentro.
     if (t.desde > hasta) return false;
     if (t.hasta && t.hasta < desde) return false;
-    return R.grupos.indexOf(t.grupo) !== -1;
+    // Y es de ESTE rango por lo que dura. Una temporada cae en uno solo:
+    // es lo que hace que las tres pestañas se distingan.
+    return rangoDeTransito_(t) === rango;
   });
 
   const leidos = dentro.map(function (t) {
     const l = lecturaTransito_(t);
     if (!l.hay) return null;
-    const dias = Math.round((new Date((t.hasta || t.desde) + 'T00:00:00Z') -
-                             new Date(t.desde + 'T00:00:00Z')) / 86400000) + 1;
+    const dias = duracionTransito_(t);
     return Object.assign({}, l, {
       desde: t.desde, hasta: t.hasta, dias: dias,
+      activaHoy: t.desde <= hoyISO && (!t.hasta || t.hasta >= hoyISO),
       pico: t.desde <= hoyISO && (!t.hasta || t.hasta >= hoyISO),
       casa: t.casa, casaPlacidus: t.casaPlacidus, casasDifieren: t.casasDifieren,
       // Lo que ella haya escrito a mano manda sobre lo compuesto.
@@ -447,23 +503,70 @@ function cieloRango_(uid, rango, hoyISO, carta, nac) {
     .sort(function (a, b) { return b.intensidad - a.intensidad; });
 
   const fuera = {
-    semana: 'Los planetas lentos no se mueven en una semana. Míralos en el año.',
+    semana: 'Lo que dura meses no cabe en una semana. Está en Este mes y en Este año.',
     mes: '',
-    anio: 'Los planetas rápidos ya pasaron varias veces este año. Míralos en la semana.',
+    anio: 'Lo que se decide en días no es del año. Está en Esta semana.',
   }[rango];
+
+  /**
+   * ── ACTIVAS HOY, PRIMERO ──
+   *
+   * «para la parte de temporadas abiertas, que estén como principal,
+   *  activas hoy. Eso me interesa leerlo».
+   *
+   * Lo que ya está abierto es sobre lo que se puede hacer algo hoy. Lo
+   * que empieza en dos semanas es una nota al pie, no una lectura.
+   */
+  const activas = leidos.filter(function (x) { return x.activaHoy; });
+  const porVenir = leidos.filter(function (x) { return !x.activaHoy; });
+
+  /**
+   * ── Y EL FONDO LARGO, QUE NO PUEDE DESAPARECER ──
+   *
+   * «me importa lo de Saturno porque es una energía constante y
+   *  duradera y debo aprovecharla».
+   *
+   * Con el filtro por duración, Saturno de 175 días se va a «Este año»
+   * — que es donde va, porque no es noticia de esta semana. Pero
+   * tampoco puede desaparecer de la vista: es la energía de fondo sobre
+   * la que se construye todo lo demás.
+   *
+   * Así que en los rangos cortos aparece nombrada, sin su lectura
+   * completa y sin competir. Una línea, no un bloque.
+   */
+  let deFondo = [];
+  if (rango !== 'anio') {
+    deFondo = transitos.filter(function (t) {
+      return rangoDeTransito_(t) === 'anio' &&
+             t.desde <= hoyISO && (!t.hasta || t.hasta >= hoyISO);
+    }).map(function (t) {
+      const l = lecturaTransito_(t);
+      return l.hay ? { titulo: l.titulo, hasta: t.hasta,
+                       intensidad: l.intensidad, dias: duracionTransito_(t) } : null;
+    }).filter(function (x) { return x; })
+      .sort(function (a, b) { return b.intensidad - a.intensidad; })
+      .slice(0, 3);
+  }
 
   return {
     rango: rango, nombre: R.nombre, que: R.que,
     desde: desde, hasta: hasta,
     temporadas: leidos,
+    // Lo que se lee primero, y lo que puede esperar
+    activas: activas,
+    porVenir: porVenir,
+    deFondo: deFondo,
     lunas: rango === 'anio' ? [] : lunasEntre_(desde, hasta),
     lunaHoy: faseLunar_(hoyISO),
     fueraDeRango: fuera,
     // Un tramo sin nada no es un error. Se dice.
     vacio: leidos.length === 0,
-    porqueVacio: leidos.length ? '' :
-      'No hay ningún tránsito de ' + R.grupos.join(' ni ') + ' abierto en este tramo. ' +
-      'Un cielo tranquilo también es información: es tiempo para sostener lo que ya está.',
+    porqueVacio: leidos.length ? '' : (
+      rango === 'semana'
+        ? 'Ninguna temporada corta abierta esta semana: nada que se decida en días. ' +
+          'Un cielo tranquilo también es información — es tiempo para sostener lo que ya está' +
+          (deFondo.length ? ', y lo de fondo sigue corriendo.' : '.')
+        : 'Nada de esta escala abierto ahora mismo. Mira los otros dos tramos.'),
   };
 }
 

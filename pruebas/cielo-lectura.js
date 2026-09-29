@@ -101,7 +101,7 @@ global.Date = class extends RealDate {
 (0, eval)(src + '\n;globalThis.__F = { transitosSembrar_, lecturaTransito_, lecProfeccion_,' +
   ' lecEjes_, lecIntensidad_, cieloRango_, soulCieloLectura, soulTransitoLectura,' +
   ' pensumAuto_, pensumDe_, transitosDe_, soulCielo, efemeridesVencen_, lunasEntre_,' +
-  ' porQueElCielo, cartaDe_,' +
+  ' porQueElCielo, cartaDe_, rangoDeTransito_, duracionTransito_,' +
   ' faseLunar_, EFEMERIDES_SEMILLA, EFEMERIDES_CARTA, EFEMERIDES_HASTA,' +
   ' LEC_CASAS, LEC_CUERPOS, LEC_ASPECTOS, LEC_NATAL, CIELO_RANGOS, LUNA_FASES };');
 const F = globalThis.__F;
@@ -502,6 +502,123 @@ ok('y explica que el pensum no se llena solo', /NO se llena solo/.test(d), d);
 ok('diciendo dónde se proponen', /Proponer desde mis tránsitos/.test(d), d);
 
 global.Logger = LOG_ORIG;
+
+
+// ══════════════════════════════════════════════════════════════
+console.log('\n── LOS TRES RANGOS, SOBRE SUS 178 TRÁNSITOS DE VERDAD ──');
+/**
+ * ┌─ LO QUE ESTABA MAL ────────────────────────────────────────┐
+ * │                                                            │
+ * │ «me aparece todo lo de la semana, el mes y el año, y no veo │
+ * │  cuáles son los de la semana, cuáles los del mes y cuáles   │
+ * │  los del año, no hay distinción».                           │
+ * │                                                            │
+ * │ Las tres pestañas no filtraban por TIEMPO sino por PLANETA, │
+ * │ y «mes» era un superconjunto de «semana». Por eso se        │
+ * │ repetían. Las 8 que le salieron en «Esta semana» duraban    │
+ * │ entre 25 y 175 días: ninguna era de esa semana.             │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * Esto corre sobre la semilla REAL —sus 178 tránsitos— y no sobre un
+ * fixture inventado. Un fixture con tres tránsitos bonitos no habría
+ * encontrado el problema, que es justamente lo que pasó.
+ */
+sembrarHojas();
+F.transitosSembrar_(YO);
+soulOlvidar_(); libroOlvidar_();
+const HOY2 = '2026-09-29';
+const rangos = ['semana', 'mes', 'anio'];
+const lec = {};
+rangos.forEach(function (r) { lec[r] = F.cieloRango_(YO, r, HOY2, F.cartaDe_(YO), {}); });
+
+/**
+ * LA aserción: una temporada no puede estar en dos pestañas. Es lo que
+ * hace que «distinción» signifique algo.
+ */
+const titulos = {};
+let repetidas = [];
+rangos.forEach(function (r) {
+  lec[r].temporadas.forEach(function (x) {
+    const k = x.titulo + '|' + x.desde;
+    if (titulos[k] && titulos[k] !== r) repetidas.push(x.titulo + ' (' + titulos[k] + ' y ' + r + ')');
+    titulos[k] = r;
+  });
+});
+igual('ninguna temporada sale en dos pestañas', [], repetidas);
+
+/** Y cada pestaña contiene solo lo de su escala. */
+ok('«Esta semana» no trae nada que dure más de 21 días',
+   lec.semana.temporadas.every(function (x) { return x.dias <= 21; }),
+   JSON.stringify(lec.semana.temporadas.map(function (x) { return x.dias; })));
+ok('«Este mes» trae semanas, no días ni años',
+   lec.mes.temporadas.every(function (x) { return x.dias >= 22 && x.dias <= 120; }),
+   JSON.stringify(lec.mes.temporadas.map(function (x) { return x.dias; })));
+ok('«Este año» trae lo largo',
+   lec.anio.temporadas.every(function (x) { return x.dias > 120; }),
+   JSON.stringify(lec.anio.temporadas.map(function (x) { return x.dias; })));
+
+console.log('\n── ACTIVAS HOY, PRIMERO ──');
+/**
+ * «para la parte de temporadas abiertas, que estén como principal,
+ *  activas hoy. Eso me interesa leerlo».
+ */
+rangos.forEach(function (r) {
+  const L = lec[r];
+  ok(r + ': activas y por venir salen separadas',
+     Array.isArray(L.activas) && Array.isArray(L.porVenir));
+  ok(r + ': lo activo está abierto HOY de verdad',
+     L.activas.every(function (x) { return x.desde <= HOY2 && (!x.hasta || x.hasta >= HOY2); }),
+     JSON.stringify(L.activas.map(function (x) { return [x.desde, x.hasta]; })));
+  ok(r + ': y lo de por venir todavía no',
+     L.porVenir.every(function (x) { return x.desde > HOY2 || (x.hasta && x.hasta < HOY2); }));
+  igual(r + ': entre las dos están todas', L.temporadas.length,
+        L.activas.length + L.porVenir.length);
+});
+
+console.log('\n── SATURNO NO DESAPARECE ──');
+/**
+ * «me importa lo de Saturno porque es una energía constante y duradera
+ *  y debo aprovecharla».
+ *
+ * Con el filtro por duración, Saturno de 175 días se va a «Este año»,
+ * que es donde va. Pero no puede desaparecer de la vista en los rangos
+ * cortos: es el fondo sobre el que se construye todo lo demás.
+ */
+ok('los saturnos largos están en el año',
+   lec.anio.activas.some(function (x) { return /Saturno/.test(x.titulo); }),
+   JSON.stringify(lec.anio.activas.map(function (x) { return x.titulo; })));
+ok('y en la semana aparecen como fondo, nombrados',
+   lec.semana.deFondo.length > 0 &&
+   lec.semana.deFondo.some(function (x) { return /Saturno/.test(x.titulo); }),
+   JSON.stringify(lec.semana.deFondo.map(function (x) { return x.titulo; })));
+ok('pero el fondo es una lista corta, no otra lectura entera',
+   lec.semana.deFondo.length <= 3 &&
+   lec.semana.deFondo.every(function (x) { return x.tiempoPara === undefined; }),
+   JSON.stringify(lec.semana.deFondo));
+igual('y en el año no se repite como fondo de sí mismo', 0, lec.anio.deFondo.length);
+
+console.log('\n── LAS CASAS: PLACIDUS MANDA ──');
+/**
+ * «yo usaría Placidus como sistema principal y casas enteras como
+ *  segunda capa de lectura, es decir que las discrepancias sean
+ *  información pero la principal lectura sea con Placidus».
+ *
+ * 80 de sus 178 tránsitos discrepan —el 44%—, así que esto no es un
+ * caso raro: es casi la mitad de lo que lee.
+ */
+const todas = [].concat(lec.semana.temporadas, lec.mes.temporadas, lec.anio.temporadas);
+const conBorde = todas.filter(function (x) { return x.borde; });
+ok('hay temporadas donde los dos sistemas discrepan', conBorde.length > 0,
+   conBorde.length + ' de ' + todas.length);
+ok('la casa que se lee es la de Placidus',
+   todas.every(function (x) { return x.casaNumero === null || x.casaNumero !== undefined; }));
+ok('y donde discrepan, la otra va como segunda capa y no como alarma',
+   conBorde.every(function (x) {
+     return /segunda capa/.test(x.borde.texto) && /Placidus/.test(x.borde.texto);
+   }), conBorde.length ? conBorde[0].borde.texto : '(ninguna)');
+ok('donde NO discrepan, no se dice nada',
+   todas.filter(function (x) { return !x.borde; }).length > 0);
 
 console.log(fallas ? '\n' + fallas + ' FALLAS\n' : '\nTodo bien.\n');
 process.exit(fallas ? 1 : 0);

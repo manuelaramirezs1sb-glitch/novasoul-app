@@ -375,7 +375,31 @@ function lecturaTransito_(t) {
   const c = LEC_CUERPOS[cuerpoId];
   const a = lecAspecto_(t.aspecto);
   const n = lecNatal_(t.aNatal || t.a_natal || '');
-  const casa = LEC_CASAS[Number(t.casa)] || null;
+  /**
+   * ── PLACIDUS MANDA; CASAS ENTERAS ES LA SEGUNDA CAPA ──
+   *
+   * «yo usaría Placidus como sistema principal y casas enteras como
+   *  segunda capa de lectura, es decir que las discrepancias sean
+   *  información pero la principal lectura sea con Placidus».
+   *
+   * Antes leía con `t.casa`, que son las casas enteras, y arriba salía
+   * un cuadro rosa avisando de la discrepancia. Ese cuadro saltaba en
+   * 80 de sus 178 tránsitos —el 44%— o sea que avisaba de lo normal, y
+   * una alarma que suena la mitad de las veces deja de leerse.
+   *
+   * Ahora la lectura es la de Placidus, que es de donde ella saca su
+   * carta (Horus). Cuando la otra discrepa no es una alarma: es que el
+   * tránsito va por el borde entre dos casas, y eso se dice como lo que
+   * es —información— en una línea y no en un recuadro.
+   */
+  const casaNum = (t.casaPlacidus !== null && t.casaPlacidus !== undefined &&
+                   t.casaPlacidus !== '')
+    ? Number(t.casaPlacidus)
+    : Number(t.casa);
+  const casa = LEC_CASAS[casaNum] || null;
+  const casaOtra = (t.casa !== null && t.casa !== undefined && t.casa !== '' &&
+                    Number(t.casa) !== casaNum)
+    ? LEC_CASAS[Number(t.casa)] || null : null;
 
   // Sin planeta o sin aspecto no hay lectura posible, y decirlo es mejor
   // que inventar una genérica que sirva para cualquier cosa.
@@ -420,6 +444,20 @@ function lecturaTransito_(t) {
     aNatal: n ? n.nombre : String(t.aNatal || t.a_natal || ''),
     casaNombre: casa ? casa.nombre : '',
     casaArea: casa ? casa.area : '',
+    casaNumero: casa ? casaNum : null,
+    /**
+     * La segunda capa. Solo va cuando de verdad discrepa, y va como
+     * información y no como aviso: el tránsito está pasando por el
+     * borde entre dos casas, y eso se puede leer como lo que es.
+     */
+    borde: casaOtra ? {
+      casa: Number(t.casa), nombre: casaOtra.nombre, area: casaOtra.area,
+      texto: 'Va por el borde: en Placidus cae en tu ' +
+        (casa ? casa.nombre.toLowerCase() : 'casa ' + casaNum) +
+        ' y en casas enteras en tu ' + casaOtra.nombre.toLowerCase() +
+        '. Se lee con Placidus; lo de casas enteras es la segunda capa — ' +
+        'también se está moviendo ' + casaOtra.area.toLowerCase() + '.',
+    } : null,
     grupo: c.grupo,
     ritmo: c.ritmo,
     duraTipico: c.dura,

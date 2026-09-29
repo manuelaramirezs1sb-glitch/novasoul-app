@@ -32,6 +32,7 @@ node pruebas/family-tiendas.js        # las tiendas de NovaSoul, en chico y sin 
 node pruebas/cierre-previo.js         # qué falta para un cierre limpio (servidor)
 node pruebas/cierre-revision.js       # revisar antes de cerrar (pantalla)
 node pruebas/sello-gs.js              # que el .gs diga qué versión es, sin mentir
+node pruebas/cielo-pantalla.js        # el cielo de a poco: activas hoy primero
 ```
 
 `primer-dia.js` no escribe a mano lo que contesta el servidor: lo CALCULA

@@ -1024,7 +1024,7 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-29 · 10b0';
+const VERSION_PANTALLA = '2026-09-29 · cde0';
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
@@ -2840,15 +2840,20 @@ function pintarLectura() {
       }).join('') + '</div>';
   }
 
-  /* ── LAS TEMPORADAS, ORDENADAS POR LO QUE PESAN ── */
-  if (L.vacio) {
-    html += '<div class="vacio">' + esc(L.porqueVacio) + '</div>';
-  } else {
-    html += '<div class="card-lbl" style="margin:16px 0 4px;">' +
-      L.temporadas.length + (L.temporadas.length === 1 ? ' TEMPORADA ABIERTA' : ' TEMPORADAS ABIERTAS') +
-      ' · DE LA QUE MÁS PESA A LA QUE MENOS</div>';
-
-    html += L.temporadas.map(function (t, i) {
+  /**
+   * ── ACTIVAS HOY, PRIMERO. Y LO DEMÁS, PLEGADO ──
+   *
+   * «me lo tiraste todo de un solo golpe, mucha información me
+   *  sobre-estimula (…) me gusta que ya tenga la info, pero debe
+   *  dármela poco a poco cuando la necesite».
+   *
+   * Y: «para la parte de temporadas abiertas, que estén como principal,
+   *  activas hoy. Eso me interesa leerlo».
+   *
+   * Así que lo abierto HOY se lee, y lo que empieza después espera
+   * detrás de un número. Antes salían las ocho de golpe, sin jerarquía.
+   */
+  const unaTemporada = function (t, i) {
       const abierta = i === LEC_ABIERTA;
       return '<div style="border-bottom:1px solid var(--soft2);padding:12px 0;">' +
         '<div style="cursor:pointer;" onclick="abrirTemporada(' + i + ')">' +
@@ -2876,7 +2881,58 @@ function pintarLectura() {
         '</div>' +
         (abierta ? bloqueTemporada(t) : '') +
       '</div>';
-    }).join('');
+  };
+
+  const activas = L.activas || L.temporadas || [];
+  const porVenir = L.porVenir || [];
+
+  if (L.vacio) {
+    html += '<div class="vacio">' + esc(L.porqueVacio) + '</div>';
+  } else {
+    if (activas.length) {
+      html += '<div class="card-lbl" style="margin:16px 0 4px;">' +
+        activas.length + (activas.length === 1 ? ' TEMPORADA ACTIVA HOY' : ' TEMPORADAS ACTIVAS HOY') +
+        ' · DE LA QUE MÁS PESA A LA QUE MENOS</div>';
+      html += activas.map(function (t, i) { return unaTemporada(t, i); }).join('');
+    }
+    /**
+     * Lo que todavía no empieza no se lee: se cuenta. Es una nota al
+     * pie, no una lectura — y solo se abre si ella quiere.
+     */
+    if (porVenir.length) {
+      html += '<details style="margin-top:14px;">' +
+        '<summary style="cursor:pointer;font:600 11.5px/1.5 \'DM Sans\';' +
+          'color:var(--mut3);list-style:none;">▾ ' + porVenir.length +
+          (porVenir.length === 1 ? ' que todavía no empieza' : ' que todavía no empiezan') +
+        '</summary>' +
+        porVenir.map(function (t, i) {
+          return unaTemporada(t, activas.length + i);
+        }).join('') + '</details>';
+    }
+  }
+
+  /**
+   * ── EL FONDO LARGO ──
+   *
+   * «me importa lo de Saturno porque es una energía constante y
+   *  duradera y debo aprovecharla».
+   *
+   * Vive en «Este año», que es donde va. Pero aquí se nombra, sin su
+   * lectura entera, para que no desaparezca de la vista mientras se
+   * mira la semana. Una línea, no un bloque.
+   */
+  if (L.deFondo && L.deFondo.length) {
+    html += '<div style="margin-top:16px;padding-top:12px;' +
+        'border-top:1px solid var(--soft2);">' +
+      '<div class="card-lbl" style="margin-bottom:6px;">DE FONDO, CORRIENDO IGUAL</div>' +
+      L.deFondo.map(function (x) {
+        return '<div class="kpi-s" style="padding:3px 0;">· ' + esc(x.titulo) +
+          (x.hasta ? ' <span style="color:var(--mut3);">hasta ' + esc(fcorta(x.hasta)) +
+            '</span>' : '') + '</div>';
+      }).join('') +
+      '<p class="card-p" style="margin-top:7px;color:var(--mut3);font-size:12px;">' +
+      'Energía larga y constante: no es noticia de esta semana, pero es sobre la que ' +
+      'se construye todo lo demás. Se lee entera en <b>Este año</b>.</p></div>';
   }
 
   if (L.fueraDeRango) {
@@ -2905,12 +2961,24 @@ function bloqueTemporada(t) {
       '<span class="chip horas">' + t.dias + ' días</span>' +
       '<span class="chip">' + esc(t.ritmo) + '</span>' +
     '</div>' +
-    (t.casasDifieren
-      ? '<div class="aviso mal on" style="margin-top:8px;">Los dos sistemas de casas no ' +
-        'coinciden aquí: Horus (Placidus) dice casa ' + t.casaPlacidus + ' y las casas ' +
-        'enteras dicen casa ' + t.casa + '. Abajo se lee con la ' +
-        (t.casaNombre.indexOf(String(t.casaPlacidus)) !== -1 ? 'de Horus' : 'de casas enteras') +
-        '.</div>'
+    /**
+     * ── EL BORDE, COMO INFORMACIÓN Y NO COMO ALARMA ──
+     *
+     * «yo usaría Placidus como sistema principal y casas enteras como
+     *  segunda capa de lectura, es decir que las discrepancias sean
+     *  información pero la principal lectura sea con Placidus».
+     *
+     * Aquí había un recuadro rojo de aviso. Saltaba en 80 de sus 178
+     * tránsitos —el 44%—, o sea que avisaba de lo normal, y una alarma
+     * que suena la mitad de las veces deja de leerse.
+     *
+     * Ahora la lectura es la de Placidus y esto es una línea que dice
+     * lo que de verdad pasa: el tránsito va por el borde entre dos
+     * casas, y la segunda también se está moviendo.
+     */
+    (t.borde
+      ? '<p class="card-p" style="margin-top:8px;color:var(--mut3);font-size:12px;">' +
+        esc(t.borde.texto) + '</p>'
       : '') +
     seccion('TIEMPO PARA QUÉ', '<p class="card-p" style="margin-top:7px;">' +
       esc(t.tiempoPara) + '</p>') +
