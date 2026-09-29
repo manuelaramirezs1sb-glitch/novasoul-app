@@ -467,6 +467,42 @@ let otra = '';
 try { otra = F.sembrarBloques(); } catch (e) { otra = 'SE CAYÓ: ' + e.message; }
 ok('correrlo otra vez no toca nada', /Ya tienes/.test(otra), otra);
 
+/**
+ * ── Y LO QUE DICE SE TIENE QUE VER ──
+ *
+ * «ya esto me salió en lo de sembrar» — y lo que le salió fue
+ * «Se ha completado la ejecución» y nada más.
+ *
+ * El registro del editor de Apps Script SOLO enseña lo que pasa por
+ * `Logger.log`. El valor que una función DEVUELVE no se ve por ningún
+ * lado. O sea que sembró siete bloques, los enlazó con sus proyectos de
+ * Central —justo lo que había preguntado antes de pegar nada— y no se
+ * enteró de ninguna de las dos cosas.
+ *
+ * Un mensaje que nadie puede leer es lo mismo que no escribirlo.
+ */
+const LOGS = [];
+const LOGGER_ORIG = global.Logger;
+global.Logger = { log: (m) => LOGS.push(String(m)) };
+
+conUsuario(YO);
+sembrar([]);
+LOGS.length = 0;
+const salida = F.sembrarBloques();
+ok('lo que sembró queda en el registro, no solo en el return',
+   LOGS.join('\n').indexOf('bloques sembrados') !== -1, JSON.stringify(LOGS));
+igual('y es exactamente lo mismo que devuelve', salida, LOGS[LOGS.length - 1]);
+ok('dice si enlazó con Central o si no',
+   /Central/.test(LOGS.join('\n')), JSON.stringify(LOGS));
+
+/** Correrlo dos veces tampoco puede quedarse callado. */
+F.libroOlvidar_(); F.soulOlvidar_();
+LOGS.length = 0;
+F.sembrarBloques();
+ok('y la segunda vez también se ve por qué no hizo nada',
+   /Ya tienes/.test(LOGS.join('\n')), JSON.stringify(LOGS));
+
+global.Logger = LOGGER_ORIG;
 global.Session = SESION_ORIG;
 
 console.log(fallas ? '\n' + fallas + ' FALLAS\n' : '\nTodo bien\n');

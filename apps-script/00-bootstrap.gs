@@ -1336,6 +1336,27 @@ function rellenarTiendaNovedades_(sheetId) {
  * │                                                            │
  * └────────────────────────────────────────────────────────────┘
  */
+/**
+ * Decir algo y que se VEA.
+ *
+ * El registro del editor de Apps Script solo enseña lo que pasa por
+ * `Logger.log`. El valor que una función DEVUELVE no se ve por ningún
+ * lado: el registro dice «Se ha completado la ejecución» y ya.
+ *
+ * `sembrarBloques` sembraba siete bloques, los enlazaba con los
+ * proyectos de Central —que era justo lo que ella había preguntado
+ * antes de pegar nada— y devolvía un mensaje contándolo… que nadie
+ * podía leer. Un mensaje que no se ve es lo mismo que no escribirlo.
+ *
+ * Existe como función y no como dos líneas sueltas para que la
+ * siguiente función que se corra a mano no vuelva a olvidarlo: se
+ * devuelve lo que dice `soulDecir_`, y ya queda logueado.
+ */
+function soulDecir_(msg) {
+  Logger.log(msg);
+  return msg;
+}
+
 function queVersion() {
   const v = (typeof NOVA_GS === 'string' && NOVA_GS)
     ? NOVA_GS
@@ -1346,8 +1367,7 @@ function queVersion() {
     'OJO: esto NO dice qué versión están usando las pantallas. Eso se ' +
     'implementa aparte (Implementar → Nueva versión) y se comprueba ' +
     'abajo en Nova Empresarial, donde dice «Apps Script del …».';
-  Logger.log(msg);
-  return msg;
+  return soulDecir_(msg);
 }
 
 function bootstrapTodo() {

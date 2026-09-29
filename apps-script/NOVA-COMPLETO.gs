@@ -1,9 +1,9 @@
 /* NOVA-COMPLETO.gs · generado por apps-script/construir.py
    NO SE EDITA A MANO: los cambios van en los archivos numerados.
-   2026-09-29 · 23283 líneas · 18d283
+   2026-09-29 · 23321 líneas · 0e2c44
    Para saber qué versión está corriendo: ejecuta queVersion() */
 
-const NOVA_GS = '2026-09-29 · 23283 líneas · 18d283';
+const NOVA_GS = '2026-09-29 · 23321 líneas · 0e2c44';
 
 /* ═══════════════════════════════════════════════════════════════
    1 · INSTALACIÓN
@@ -1347,6 +1347,27 @@ function rellenarTiendaNovedades_(sheetId) {
  * │                                                            │
  * └────────────────────────────────────────────────────────────┘
  */
+/**
+ * Decir algo y que se VEA.
+ *
+ * El registro del editor de Apps Script solo enseña lo que pasa por
+ * `Logger.log`. El valor que una función DEVUELVE no se ve por ningún
+ * lado: el registro dice «Se ha completado la ejecución» y ya.
+ *
+ * `sembrarBloques` sembraba siete bloques, los enlazaba con los
+ * proyectos de Central —que era justo lo que ella había preguntado
+ * antes de pegar nada— y devolvía un mensaje contándolo… que nadie
+ * podía leer. Un mensaje que no se ve es lo mismo que no escribirlo.
+ *
+ * Existe como función y no como dos líneas sueltas para que la
+ * siguiente función que se corra a mano no vuelva a olvidarlo: se
+ * devuelve lo que dice `soulDecir_`, y ya queda logueado.
+ */
+function soulDecir_(msg) {
+  Logger.log(msg);
+  return msg;
+}
+
 function queVersion() {
   const v = (typeof NOVA_GS === 'string' && NOVA_GS)
     ? NOVA_GS
@@ -1357,8 +1378,7 @@ function queVersion() {
     'OJO: esto NO dice qué versión están usando las pantallas. Eso se ' +
     'implementa aparte (Implementar → Nueva versión) y se comprueba ' +
     'abajo en Nova Empresarial, donde dice «Apps Script del …».';
-  Logger.log(msg);
-  return msg;
+  return soulDecir_(msg);
 }
 
 function bootstrapTodo() {
@@ -8539,7 +8559,8 @@ function autorizar() {
     headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
     muteHttpExceptions: true,
   });
-  return 'Permiso concedido. Ya puedes subir archivos de Excel.';
+  // Se corre a mano desde el editor, y ahí solo se ve lo que se loguea.
+  return soulDecir_('Permiso concedido. Ya puedes subir archivos de Excel.');
 }
 
 /**
@@ -23216,7 +23237,11 @@ function sembrarBloques(uid) {
   const sh = soulSheet_('Bloques');
   const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
   const ya = soulLeerSuave_('Bloques', yo, []).length;
-  if (ya) return 'Ya tienes ' + ya + ' bloques. No toco nada: edítalos en la hoja.';
+  // También por Logger: si no, correrlo dos veces no dice nada y parece
+  // que la segunda vez tampoco hizo nada… que es cierto, pero hay que
+  // poder saberlo.
+  if (ya) return soulDecir_('Ya tienes ' + ya + ' bloques. No toco nada: ' +
+    'edítalos en la hoja Bloques.');
 
   const filas = [
     // nombre, tipo, min, max, cada, veces, franja, dias, partes, orden
@@ -23272,11 +23297,24 @@ function sembrarBloques(uid) {
     sh.appendRow(enc.map(function (c) { return o[c] !== undefined ? o[c] : ''; }));
   });
   soulOlvidar_('Bloques');
-  return 'Listo: ' + filas.length + ' bloques sembrados.\n' +
+  /**
+   * Y SE LOGUEA, no solo se devuelve.
+   *
+   * «ya esto me salió en lo de sembrar» — y lo que le salió fue
+   * «Se ha completado la ejecución» y nada más. El registro del editor
+   * de Apps Script solo enseña lo que pasa por `Logger.log`: el valor
+   * que una función DEVUELVE no se ve por ningún lado.
+   *
+   * O sea que sembró siete bloques, los enlazó con sus proyectos de
+   * Central —que es justo lo que ella había preguntado antes de pegar
+   * nada— y no se enteró de ninguna de las dos cosas. Un mensaje que
+   * nadie puede leer es lo mismo que no escribirlo.
+   */
+  return soulDecir_('Listo: ' + filas.length + ' bloques sembrados.\n' +
     (enlazados.length
       ? 'Enlazados con tus proyectos de Central: ' + enlazados.join(', ') +
         '. Sus horas ya NO se cuentan dos veces.'
       : 'Ninguno calzó con un proyecto de Central: si alguno debería, ponle el ' +
         'trabajo_id a mano en la hoja Bloques.') +
-    '\nAjusta lo que quieras en la hoja Bloques.';
+    '\nAjusta lo que quieras en la hoja Bloques.');
 }

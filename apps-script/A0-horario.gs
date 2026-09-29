@@ -540,7 +540,11 @@ function sembrarBloques(uid) {
   const sh = soulSheet_('Bloques');
   const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm);
   const ya = soulLeerSuave_('Bloques', yo, []).length;
-  if (ya) return 'Ya tienes ' + ya + ' bloques. No toco nada: edítalos en la hoja.';
+  // También por Logger: si no, correrlo dos veces no dice nada y parece
+  // que la segunda vez tampoco hizo nada… que es cierto, pero hay que
+  // poder saberlo.
+  if (ya) return soulDecir_('Ya tienes ' + ya + ' bloques. No toco nada: ' +
+    'edítalos en la hoja Bloques.');
 
   const filas = [
     // nombre, tipo, min, max, cada, veces, franja, dias, partes, orden
@@ -596,11 +600,24 @@ function sembrarBloques(uid) {
     sh.appendRow(enc.map(function (c) { return o[c] !== undefined ? o[c] : ''; }));
   });
   soulOlvidar_('Bloques');
-  return 'Listo: ' + filas.length + ' bloques sembrados.\n' +
+  /**
+   * Y SE LOGUEA, no solo se devuelve.
+   *
+   * «ya esto me salió en lo de sembrar» — y lo que le salió fue
+   * «Se ha completado la ejecución» y nada más. El registro del editor
+   * de Apps Script solo enseña lo que pasa por `Logger.log`: el valor
+   * que una función DEVUELVE no se ve por ningún lado.
+   *
+   * O sea que sembró siete bloques, los enlazó con sus proyectos de
+   * Central —que es justo lo que ella había preguntado antes de pegar
+   * nada— y no se enteró de ninguna de las dos cosas. Un mensaje que
+   * nadie puede leer es lo mismo que no escribirlo.
+   */
+  return soulDecir_('Listo: ' + filas.length + ' bloques sembrados.\n' +
     (enlazados.length
       ? 'Enlazados con tus proyectos de Central: ' + enlazados.join(', ') +
         '. Sus horas ya NO se cuentan dos veces.'
       : 'Ninguno calzó con un proyecto de Central: si alguno debería, ponle el ' +
         'trabajo_id a mano en la hoja Bloques.') +
-    '\nAjusta lo que quieras en la hoja Bloques.';
+    '\nAjusta lo que quieras en la hoja Bloques.');
 }

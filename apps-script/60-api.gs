@@ -3415,7 +3415,8 @@ function autorizar() {
     headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
     muteHttpExceptions: true,
   });
-  return 'Permiso concedido. Ya puedes subir archivos de Excel.';
+  // Se corre a mano desde el editor, y ahí solo se ve lo que se loguea.
+  return soulDecir_('Permiso concedido. Ya puedes subir archivos de Excel.');
 }
 
 /**
