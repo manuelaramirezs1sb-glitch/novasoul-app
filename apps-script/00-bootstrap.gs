@@ -1319,14 +1319,33 @@ function rellenarTiendaNovedades_(sheetId) {
  * `NOVA_GS` lo escribe `construir.py` al armar el archivo, así que no
  * se puede quedar viejo: un sello puesto a mano miente el día que
  * alguien olvida actualizarlo, y entonces es peor que no tenerlo.
+ *
+ * ┌─ GUARDADO NO ES IMPLEMENTADO ──────────────────────────────┐
+ * │                                                            │
+ * │ «¿hay alguna diferencia si primero lo corro y luego lo      │
+ * │  implemento?»                                               │
+ * │                                                            │
+ * │ El botón «Ejecutar» corre lo GUARDADO. Las pantallas hablan │
+ * │ con `/exec`, que sirve lo IMPLEMENTADO. Son dos cosas, y    │
+ * │ esta función solo sabe de la primera.                       │
+ * │                                                            │
+ * │ La primera versión de este mensaje decía «lo que está       │
+ * │ PUBLICADO es otro archivo», que es justo la palabra que     │
+ * │ confunde las dos. Un mensaje de diagnóstico que usa mal la  │
+ * │ palabra clave manda a arreglar lo que no está roto.         │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
  */
 function queVersion() {
   const v = (typeof NOVA_GS === 'string' && NOVA_GS)
     ? NOVA_GS
     : '(sin sello: este archivo es anterior a que existiera)';
-  const msg = 'NOVA-COMPLETO.gs que está corriendo:\n  ' + v +
-    '\n\nSi no coincide con el que te acaban de pasar, lo que está ' +
-    'publicado es otro archivo.';
+  const msg = 'GUARDADO en el editor:\n  ' + v +
+    '\n\nSi no coincide con el archivo que te acaban de pasar, lo que ' +
+    'guardaste es otro.\n\n' +
+    'OJO: esto NO dice qué versión están usando las pantallas. Eso se ' +
+    'implementa aparte (Implementar → Nueva versión) y se comprueba ' +
+    'abajo en Nova Empresarial, donde dice «Apps Script del …».';
   Logger.log(msg);
   return msg;
 }

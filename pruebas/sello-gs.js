@@ -134,7 +134,22 @@ global.Utilities = { sleep: () => {}, getUuid: () => 'u',
   '\n;globalThis.__V = { queVersion, NOVA_GS };');
 const dicho = globalThis.__V.queVersion();
 ok('devuelve el sello, no un texto vacío', dicho.indexOf(sello) !== -1, dicho);
-ok('y dice qué hacer si no coincide', /otro archivo/.test(dicho), dicho);
+ok('dice qué hacer si no coincide', /es otro/.test(dicho), dicho);
+/**
+ * «¿hay alguna diferencia si primero lo corro y luego lo implemento?»
+ *
+ * El botón «Ejecutar» corre lo GUARDADO; las pantallas hablan con
+ * `/exec`, que sirve lo IMPLEMENTADO. Esta función solo sabe de lo
+ * primero, y la primera versión del mensaje decía «lo que está
+ * PUBLICADO es otro archivo» — justo la palabra que confunde las dos.
+ * Un mensaje de diagnóstico que usa mal la palabra clave manda a
+ * arreglar lo que no está roto.
+ */
+ok('deja claro que habla de lo GUARDADO, no de lo implementado',
+   /GUARDADO/.test(dicho) && /NO dice qué versión están usando las pantallas/.test(dicho),
+   dicho);
+ok('y no usa «publicado», que es la palabra ambigua',
+   !/publicad/i.test(dicho), dicho);
 
 console.log(fallas ? '\n' + fallas + ' FALLAS\n' : '\nTodo bien\n');
 process.exit(fallas ? 1 : 0);
