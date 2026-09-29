@@ -101,6 +101,7 @@ global.Date = class extends RealDate {
 (0, eval)(src + '\n;globalThis.__F = { transitosSembrar_, lecturaTransito_, lecProfeccion_,' +
   ' lecEjes_, lecIntensidad_, cieloRango_, soulCieloLectura, soulTransitoLectura,' +
   ' pensumAuto_, pensumDe_, transitosDe_, soulCielo, efemeridesVencen_, lunasEntre_,' +
+  ' porQueElCielo, cartaDe_,' +
   ' faseLunar_, EFEMERIDES_SEMILLA, EFEMERIDES_CARTA, EFEMERIDES_HASTA,' +
   ' LEC_CASAS, LEC_CUERPOS, LEC_ASPECTOS, LEC_NATAL, CIELO_RANGOS, LUNA_FASES };');
 const F = globalThis.__F;
@@ -233,6 +234,36 @@ sembrarHojas();
 const ajeno = F.transitosSembrar_('otra@persona.com');
 igual('a otra persona NO se le siembra la carta de Manuela', 0, ajeno.sembro);
 ok('y se le explica por qué', /otra carta/.test(ajeno.porque || ''), ajeno.porque);
+
+/**
+ * ── EL CORREO NO ES PRUEBA DE NADA ──
+ *
+ * `EFEMERIDES_CARTA.usuario_id` vale 'manuela@nova.com', que es un
+ * marcador de posición: nunca fue el correo de nadie. Había un atajo
+ * que lo aceptaba como identificación, o sea que quien llegara a tener
+ * ese correo heredaba la carta natal de otra persona. Es la misma clase
+ * de error que dejó a Sara sin poder entrar: un dato de una cuenta
+ * escrito dentro del código de todas.
+ *
+ * Lo que identifica un cielo es el ASCENDENTE, que depende de la hora y
+ * el lugar exactos del nacimiento. Eso es evidencia; un correo es una
+ * etiqueta que cualquiera puede llevar.
+ */
+sembrarHojas();
+/**
+ * La Carta se VACÍA primero. Mi primera versión solo agregaba una fila
+ * y el arnés ya traía la carta buena de este correo, así que la
+ * aserción fallaba por culpa del fixture: seguía encontrando el
+ * Ascendente correcto un par de filas más arriba.
+ */
+LIBROS.s.Carta = [C_CAR.slice()];
+soulOlvidar_(); libroOlvidar_();
+cartaDe(F.EFEMERIDES_CARTA.usuario_id, [['ascendente', 'aries', 3.0, 1]]);
+const conElCorreo = F.transitosSembrar_(F.EFEMERIDES_CARTA.usuario_id);
+igual('tener el correo de las efemérides NO basta si la carta es otra',
+      0, conElCorreo.sembro);
+ok('y se dice por qué', /otra carta/.test(conElCorreo.porque || ''),
+   conElCorreo.porque);
 
 /** Lo que ella escribió a mano manda: no se siembra encima. */
 sembrarHojas();
@@ -393,6 +424,84 @@ ok('la gibosa explica de dónde viene la palabra',
    /giba|joroba/.test(F.LUNA_FASES.filter(f => f.id === 'gibosa')[0].forma));
 ok('la fase de hoy llega con su forma a la pantalla',
    !!F.faseLunar_('2026-09-24').forma);
+
+
+// ══════════════════════════════════════════════════════════════
+console.log('\n── POR QUÉ EL CIELO NO CARGA: que señale el eslabón bueno ──');
+/**
+ * ┌─ POR QUÉ ESTO EXISTE ──────────────────────────────────────┐
+ * │                                                            │
+ * │ «en el cielo sigue pidiéndome tránsitos cuando eso ya lo    │
+ * │  habíamos organizado (…) ¡¡y sigue con los tránsitos y el   │
+ * │  pensum kármico!! ayñ ya me está estresando esto».          │
+ * │                                                            │
+ * │ El cielo es una cadena, y cuando se corta la pantalla solo  │
+ * │ puede decir el síntoma del final —«faltan tránsitos»—       │
+ * │ aunque el corte esté tres eslabones antes. Cada vuelta      │
+ * │ costaba un mensaje mío preguntando y uno suyo mirando la    │
+ * │ hoja.                                                       │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * Lo que se afirma no es que imprima algo: es que señale el eslabón
+ * CORRECTO. Un diagnóstico que acusa al eslabón equivocado manda a
+ * arreglar lo que no está roto, que es peor que no decir nada.
+ */
+const LOGS2 = [];
+const LOG_ORIG = global.Logger;
+global.Logger = { log: (m) => LOGS2.push(String(m)) };
+const diag = (quien) => { LOGS2.length = 0; const d = F.porQueElCielo(quien);
+  ok('  (y queda en el registro)', LOGS2.length === 1 && LOGS2[0] === d); return d; };
+
+// 1 · Sin carta: se corta en el primer eslabón
+sembrarHojas();
+LIBROS.s.Carta = [C_CAR.slice()];
+soulOlvidar_(); libroOlvidar_();
+let d = diag(YO);
+ok('sin carta, acusa a la carta', /1· Carta natal: 0/.test(d) && /AQUÍ SE CORTA/.test(d), d);
+ok('y no culpa a los tránsitos, que es el síntoma y no la causa',
+   d.indexOf('3· Tránsitos') === -1, d);
+
+// 2 · Carta sin Ascendente: se corta ahí, no antes
+sembrarHojas();
+LIBROS.s.Carta = [C_CAR.slice()];
+soulOlvidar_(); libroOlvidar_();
+cartaDe(YO, [['sol', 'virgo', 27.3, 9]]);
+d = diag(YO);
+ok('con carta pero sin Ascendente, lo dice con esas palabras',
+   /falta el ASCENDENTE/.test(d), d);
+
+// 3 · Ascendente que no es el de las efemérides
+sembrarHojas();
+LIBROS.s.Carta = [C_CAR.slice()];
+soulOlvidar_(); libroOlvidar_();
+cartaDe(YO, [['ascendente', 'aries', 3.0, 1]]);
+d = diag(YO);
+ok('con otro Ascendente, acusa a las efemérides y no a la carta',
+   /2· Las efemérides/.test(d) && /No coinciden/.test(d), d);
+
+// 4 · Todo bien y sin sembrar todavía
+sembrarHojas();
+d = diag(YO);
+ok('con la carta buena, dice que las efemérides SÍ son suyas', /son tuyas/.test(d), d);
+ok('y que los tránsitos se siembran solos al abrir el Cielo',
+   /Tránsitos en tu hoja: 0/.test(d) && /[Ss]e siembran solos/.test(d), d);
+
+// 5 · Con tránsitos ya sembrados, llega hasta el pensum
+sembrarHojas();
+F.transitosSembrar_(YO);
+soulOlvidar_(); libroOlvidar_();
+d = diag(YO);
+ok('con tránsitos, llega al pensum', /4· Pensum kármico/.test(d), d);
+/**
+ * Y dice la verdad incómoda: el pensum NO se llena solo. Sale de los
+ * tránsitos pero es ella quien decide cuáles son temporada. Decir «se
+ * llenará solo» la dejaría esperando algo que no va a pasar.
+ */
+ok('y explica que el pensum no se llena solo', /NO se llena solo/.test(d), d);
+ok('diciendo dónde se proponen', /Proponer desde mis tránsitos/.test(d), d);
+
+global.Logger = LOG_ORIG;
 
 console.log(fallas ? '\n' + fallas + ' FALLAS\n' : '\nTodo bien.\n');
 process.exit(fallas ? 1 : 0);

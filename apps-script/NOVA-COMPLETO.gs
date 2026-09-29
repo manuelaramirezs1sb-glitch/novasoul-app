@@ -1,9 +1,9 @@
 /* NOVA-COMPLETO.gs · generado por apps-script/construir.py
    NO SE EDITA A MANO: los cambios van en los archivos numerados.
-   2026-09-29 · 23321 líneas · 0e2c44
+   2026-09-29 · 23445 líneas · a38dcf
    Para saber qué versión está corriendo: ejecuta queVersion() */
 
-const NOVA_GS = '2026-09-29 · 23321 líneas · 0e2c44';
+const NOVA_GS = '2026-09-29 · 23445 líneas · a38dcf';
 
 /* ═══════════════════════════════════════════════════════════════
    1 · INSTALACIÓN
@@ -19669,8 +19669,21 @@ const EFEMERIDES_SEMILLA = [
 function efemeridesSonDe_(uid) {
   if (typeof EFEMERIDES_CARTA === 'undefined') return false;
 
-  // Lo de antes: si el correo calza, listo.
-  if (norm(EFEMERIDES_CARTA.usuario_id) === norm(uid)) return true;
+  /**
+   * Aquí había un atajo: si el correo calzaba con
+   * `EFEMERIDES_CARTA.usuario_id`, listo. Lo quité.
+   *
+   * Ese campo vale 'manuela@nova.com', que es un marcador de posición
+   * que nunca fue el correo de nadie — o sea que el atajo no ayudaba a
+   * la persona a la que pretendía ayudar. Y sí podía hacer daño: es un
+   * correo escrito a mano dentro de un producto que ahora usan tres
+   * cuentas, y cualquiera que llegara a tenerlo heredaría la carta
+   * natal de otra persona. Es la misma clase de error que dejó a Sara
+   * sin poder entrar: un dato de una cuenta escrito dentro del código.
+   *
+   * La prueba de verdad es el Ascendente, que es evidencia y no una
+   * etiqueta.
+   */
 
   /**
    * Y si no, ¿es su cielo? El Ascendente lo dice: depende de la hora y
@@ -19703,6 +19716,117 @@ function efemeridesSonDe_(uid) {
   // y un grado no alcanza para confundir dos cartas.
   const sep = Math.min(Math.abs(a - b), 30 - Math.abs(a - b));
   return sep <= 1;
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   POR QUÉ EL CIELO NO ESTÁ CARGANDO
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ POR QUÉ EXISTE ───────────────────────────────────────────┐
+ * │                                                            │
+ * │ «en el cielo sigue pidiéndome tránsitos cuando eso ya lo    │
+ * │  habíamos organizado (…) ¡¡y sigue con los tránsitos y el   │
+ * │  pensum kármico!! ayñ ya me está estresando esto».          │
+ * │                                                            │
+ * │ El cielo es una CADENA, y cuando se corta, la pantalla solo │
+ * │ puede decir el síntoma del final: «faltan tránsitos». Pero  │
+ * │ el corte puede estar tres eslabones antes, y desde fuera no │
+ * │ hay forma de saber en cuál.                                 │
+ * │                                                            │
+ * │     Carta natal → ¿las efemérides son tuyas? → se siembran  │
+ * │     los 178 tránsitos → el pensum se propone desde ellos    │
+ * │                                                            │
+ * │ Esto recorre la cadena y dice DÓNDE se cortó y qué hacer.   │
+ * │ Sin esto, cada vuelta cuesta un mensaje mío preguntando y   │
+ * │ uno suyo mirando la hoja.                                   │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * Se corre a mano desde el editor, sin argumentos, como todo lo demás.
+ * No escribe nada: solo mira y cuenta.
+ */
+function porQueElCielo(uid) {
+  const L = [];
+  let yo;
+  try { yo = soulDeQuien_(uid); }
+  catch (e) { return soulDecir_('No pude saber de quién: ' + e.message); }
+  L.push('EL CIELO DE ' + yo);
+  L.push('');
+
+  // 1 · La carta natal
+  let carta = [];
+  try { carta = cartaDe_(yo) || []; } catch (e) { /* hoja sin crear */ }
+  const asc = carta.filter(function (c) {
+    return c.cuerpo === 'ascendente' && c.grado !== null;
+  })[0];
+  L.push('1· Carta natal: ' + carta.length + ' cuerpos cargados.');
+  if (!carta.length) {
+    L.push('   ✗ AQUÍ SE CORTA. Sin carta, Nova no puede comprobar que las');
+    L.push('     efemérides que trae sean las tuyas, y no siembra nada.');
+    L.push('     Carga tu carta en la hoja Carta de Nova_Soul.');
+    return soulDecir_(L.join('\n'));
+  }
+  if (!asc) {
+    L.push('   ✗ AQUÍ SE CORTA. Hay carta pero le falta el ASCENDENTE con');
+    L.push('     su grado, que es justo lo que identifica tu cielo: depende');
+    L.push('     de la hora y el lugar exactos, así que no se repite por');
+    L.push('     casualidad. Agrega la fila «ascendente» con signo y grado.');
+    return soulDecir_(L.join('\n'));
+  }
+  L.push('   Ascendente: ' + asc.signo + ' ' + asc.grado + '°');
+
+  // 2 · ¿Son suyas las efemérides que trae este Nova?
+  const suyas = efemeridesSonDe_(yo);
+  const ref = (typeof EFEMERIDES_CARTA !== 'undefined' && EFEMERIDES_CARTA.natal)
+    ? EFEMERIDES_CARTA.natal.ascendente : null;
+  L.push('');
+  L.push('2· Las efemérides que trae Nova son de un ascendente ' +
+    (ref ? ref.signo + ' ' + (Math.round((ref.grado % 30) * 10) / 10) + '°' : '(no hay)') + '.');
+  if (!suyas) {
+    L.push('   ✗ AQUÍ SE CORTA. No coinciden con el tuyo, así que Nova NO');
+    L.push('     te las va a poner: serían los tránsitos de otra persona.');
+    L.push('     O el ascendente de tu carta está mal escrito, o estas');
+    L.push('     efemérides hay que recalcularlas con tus datos.');
+    return soulDecir_(L.join('\n'));
+  }
+  L.push('   ✓ Coinciden: son tuyas.');
+
+  // 3 · Los tránsitos
+  let transitos = [];
+  try { transitos = transitosDe_(yo) || []; } catch (e) { /* hoja sin crear */ }
+  L.push('');
+  L.push('3· Tránsitos en tu hoja: ' + transitos.length +
+    (typeof EFEMERIDES_SEMILLA !== 'undefined'
+      ? ' (Nova trae ' + EFEMERIDES_SEMILLA.length + ' listos para sembrar)' : ''));
+  if (!transitos.length) {
+    L.push('   Todavía ninguno. Se siembran solos la próxima vez que abras');
+    L.push('   el Cielo en NovaSoul. Si no pasa, dime qué dice la pantalla.');
+    return soulDecir_(L.join('\n'));
+  }
+  const hoy = ahoraISO().slice(0, 10);
+  const abiertos = transitos.filter(function (t) {
+    return t.desde <= hoy && (t.hasta || t.desde) >= hoy;
+  });
+  L.push('   ✓ ' + abiertos.length + ' abiertos hoy.');
+
+  // 4 · El pensum
+  let pensum = [];
+  try { pensum = pensumDe_(yo) || []; } catch (e) { /* hoja sin crear */ }
+  L.push('');
+  L.push('4· Pensum kármico: ' + pensum.length + ' temporadas.');
+  if (!pensum.length) {
+    L.push('   Ninguna todavía. El pensum NO se llena solo: sale de los');
+    L.push('   tránsitos, pero eres tú quien decide cuáles son temporada.');
+    L.push('   En el Cielo, «Proponer desde mis tránsitos» te arma');
+    L.push('   candidatas y tú aceptas las que sean.');
+  } else {
+    const deNova = pensum.filter(function (x) { return x.laPusoNova; }).length;
+    L.push('   ✓ ' + (pensum.length - deNova) + ' tuyas, ' + deNova + ' propuestas por Nova.');
+  }
+  L.push('');
+  L.push('La cadena está entera.');
+  return soulDecir_(L.join('\n'));
 }
 
 function transitosSembrar_(uid) {
