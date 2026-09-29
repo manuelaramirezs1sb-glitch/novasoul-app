@@ -1297,6 +1297,40 @@ function rellenarTiendaNovedades_(sheetId) {
     (huerfanas ? ', ' + huerfanas + ' sin pedido que las reclame' : '');
 }
 
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   QUÉ VERSIÓN ESTÁ CORRIENDO
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ POR QUÉ HIZO FALTA ───────────────────────────────────────┐
+ * │                                                            │
+ * │ Le mandé cuatro veces el mismo archivo en una tarde. Todos  │
+ * │ se llaman NOVA-COMPLETO.gs y ninguno decía cuál era, así    │
+ * │ que pegó el tercero creyendo que era el cuarto. El error    │
+ * │ que reportó como nuevo era el viejo — y lo único que lo     │
+ * │ delató fue que el número de línea del error no cuadraba     │
+ * │ con el de mi archivo.                                       │
+ * │                                                            │
+ * │ La PANTALLA lleva su sello desde hace meses, exactamente    │
+ * │ por esto. El backend no, y lo pagó ella con su tiempo.      │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * `NOVA_GS` lo escribe `construir.py` al armar el archivo, así que no
+ * se puede quedar viejo: un sello puesto a mano miente el día que
+ * alguien olvida actualizarlo, y entonces es peor que no tenerlo.
+ */
+function queVersion() {
+  const v = (typeof NOVA_GS === 'string' && NOVA_GS)
+    ? NOVA_GS
+    : '(sin sello: este archivo es anterior a que existiera)';
+  const msg = 'NOVA-COMPLETO.gs que está corriendo:\n  ' + v +
+    '\n\nSi no coincide con el que te acaban de pasar, lo que está ' +
+    'publicado es otro archivo.';
+  Logger.log(msg);
+  return msg;
+}
+
 function bootstrapTodo() {
   const log = [];
   log.push(construir(IDS_().empresarial, 'Nova_Empresarial_TEMPLATE',

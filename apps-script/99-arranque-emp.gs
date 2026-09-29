@@ -153,6 +153,12 @@ function apiArranque(s, p) {
 
   return {
     ok: true, tienda: tienda, partes: partes, fallaron: fallaron,
+    /**
+     * Qué .gs está publicado, para verlo al lado del sello de la
+     * pantalla. Sin esto, «pegué el archivo nuevo» y «está corriendo el
+     * archivo nuevo» son dos cosas que nadie puede comparar.
+     */
+    gs: (typeof NOVA_GS === 'string' ? NOVA_GS : ''),
     // Cuánto tardó de verdad, para no volver a discutirlo de memoria.
     ms: Date.now() - t0,
     tiempos: tiempos,

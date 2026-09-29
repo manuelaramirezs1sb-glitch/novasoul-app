@@ -5021,6 +5021,9 @@ async function cargarReales() {
          */
         ARRANQUE_MS = a.ms || 0;
         ARRANQUE_LENTAS = a.lentas || [];
+        // Qué .gs está publicado de verdad, al lado del de la pantalla.
+        VERSION_GS = a.gs || '';
+        pintarVersion();
         if (a.tiempos) console.info('[Nova] arranque ' + a.ms + 'ms', a.tiempos);
       }
     } catch (e) { /* sin arranque se pide de a una, que es lo de antes */ }
@@ -9645,11 +9648,25 @@ function pintarCartera(c) {
  * La fecha se escribe al construir. Si la de la pantalla no coincide con
  * la del archivo que acabas de publicar, lo que estás viendo es caché.
  */
-const VERSION_PANTALLA = '2026-09-28 · 8353';
+const VERSION_PANTALLA = '2026-09-29 · 870c';
+
+/**
+ * El sello del servidor, que llega con el arranque.
+ *
+ * Existe por lo mismo que el de la pantalla, pero tardó más: le mandé
+ * cuatro veces NOVA-COMPLETO.gs en una tarde —todos con el mismo
+ * nombre— y pegó el tercero creyendo que era el cuarto. El error que
+ * reportó como nuevo era el viejo. Los dos sellos juntos convierten esa
+ * confusión en una mirada.
+ */
+let VERSION_GS = '';
 
 function pintarVersion() {
   const el = document.getElementById('sello-version');
-  if (el) el.textContent = 'Pantalla del ' + VERSION_PANTALLA;
+  if (!el) return;
+  el.textContent = 'Pantalla del ' + VERSION_PANTALLA +
+    (VERSION_GS ? ' · Apps Script del ' + VERSION_GS
+                : ' · Apps Script: sin sello (es una versión anterior)');
 }
 
 /**

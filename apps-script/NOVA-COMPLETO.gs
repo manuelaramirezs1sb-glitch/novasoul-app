@@ -1,3 +1,10 @@
+/* NOVA-COMPLETO.gs · generado por apps-script/construir.py
+   NO SE EDITA A MANO: los cambios van en los archivos numerados.
+   2026-09-29 · 23264 líneas · 883f14
+   Para saber qué versión está corriendo: ejecuta queVersion() */
+
+const NOVA_GS = '2026-09-29 · 23264 líneas · 883f14';
+
 /* ═══════════════════════════════════════════════════════════════
    1 · INSTALACIÓN
    ═══════════════════════════════════════════════════════════════ */
@@ -1299,6 +1306,40 @@ function rellenarTiendaNovedades_(sheetId) {
 
   return 'Novedades: tienda puesta en ' + puestas +
     (huerfanas ? ', ' + huerfanas + ' sin pedido que las reclame' : '');
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   QUÉ VERSIÓN ESTÁ CORRIENDO
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ POR QUÉ HIZO FALTA ───────────────────────────────────────┐
+ * │                                                            │
+ * │ Le mandé cuatro veces el mismo archivo en una tarde. Todos  │
+ * │ se llaman NOVA-COMPLETO.gs y ninguno decía cuál era, así    │
+ * │ que pegó el tercero creyendo que era el cuarto. El error    │
+ * │ que reportó como nuevo era el viejo — y lo único que lo     │
+ * │ delató fue que el número de línea del error no cuadraba     │
+ * │ con el de mi archivo.                                       │
+ * │                                                            │
+ * │ La PANTALLA lleva su sello desde hace meses, exactamente    │
+ * │ por esto. El backend no, y lo pagó ella con su tiempo.      │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * `NOVA_GS` lo escribe `construir.py` al armar el archivo, así que no
+ * se puede quedar viejo: un sello puesto a mano miente el día que
+ * alguien olvida actualizarlo, y entonces es peor que no tenerlo.
+ */
+function queVersion() {
+  const v = (typeof NOVA_GS === 'string' && NOVA_GS)
+    ? NOVA_GS
+    : '(sin sello: este archivo es anterior a que existiera)';
+  const msg = 'NOVA-COMPLETO.gs que está corriendo:\n  ' + v +
+    '\n\nSi no coincide con el que te acaban de pasar, lo que está ' +
+    'publicado es otro archivo.';
+  Logger.log(msg);
+  return msg;
 }
 
 function bootstrapTodo() {
@@ -22590,6 +22631,12 @@ function apiArranque(s, p) {
 
   return {
     ok: true, tienda: tienda, partes: partes, fallaron: fallaron,
+    /**
+     * Qué .gs está publicado, para verlo al lado del sello de la
+     * pantalla. Sin esto, «pegué el archivo nuevo» y «está corriendo el
+     * archivo nuevo» son dos cosas que nadie puede comparar.
+     */
+    gs: (typeof NOVA_GS === 'string' ? NOVA_GS : ''),
     // Cuánto tardó de verdad, para no volver a discutirlo de memoria.
     ms: Date.now() - t0,
     tiempos: tiempos,

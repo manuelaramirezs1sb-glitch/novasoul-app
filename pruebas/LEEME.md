@@ -31,6 +31,7 @@ node pruebas/novedades-tienda.js      # una novedad es de UNA tienda, en las 5 p
 node pruebas/family-tiendas.js        # las tiendas de NovaSoul, en chico y sin plata
 node pruebas/cierre-previo.js         # qué falta para un cierre limpio (servidor)
 node pruebas/cierre-revision.js       # revisar antes de cerrar (pantalla)
+node pruebas/sello-gs.js              # que el .gs diga qué versión es, sin mentir
 ```
 
 `primer-dia.js` no escribe a mano lo que contesta el servidor: lo CALCULA
@@ -195,6 +196,32 @@ Dos trampas de arnés que salieron ahí y valen para cualquier prueba:
 - `every` sobre una lista **vacía** devuelve `true`. «Todos los bloques
   quedaron con su correo» estaba verde cuando no se había sembrado
   ninguno. Lleva `length > 0` delante.
+
+`sello-gs.js` existe por una tarde perdida. Le mandé cuatro veces
+`NOVA-COMPLETO.gs` en unas horas, todos con el mismo nombre y ninguno
+diciendo cuál era. Pegó el tercero creyendo que era el cuarto y reportó
+como nuevo un error que ya estaba arreglado. Lo único que lo delató fue
+que el número de línea del error —23076, en un archivo que terminaba en
+23145— no cuadraba con el mío: o sea que el diagnóstico dependió de que
+yo me fijara en un número de línea, que no es un diagnóstico sino suerte.
+
+La PANTALLA llevaba su `VERSION_PANTALLA` desde hacía meses, por
+exactamente esta razón, escrita en su propio comentario. El backend no.
+
+Lo que la prueba vigila no es que el sello exista, sino que **no pueda
+mentir**: que el número de líneas sea el del archivo de verdad, que
+reconstruir sin cambios dé el mismo sello, que cambiar una línea lo
+cambie, y que no esté escrito a mano en ninguna fuente. Un sello que
+dice un número y el archivo tiene otro es peor que no tener sello: se
+compara, cuadra, y se descarta la hipótesis correcta.
+
+Detalle que importa: las líneas se cuentan con `split('\n').length` y no
+con `wc -l`. El editor de Apps Script numera la última línea vacía, así
+que ese es el número que se ve abajo del todo — y es el que se compara.
+`wc -l` daría uno menos y la comparación fallaría por uno.
+
+La sección 5 deja el repositorio como estaba pase lo que pase (`finally`).
+Una prueba que ensucia el árbol es una trampa para la siguiente.
 
 `contar-llamadas.js` no afirma ni falla: imprime. Existe porque una vez
 afirmé de memoria que traer un año de anuncios «llenaría la cuota de la

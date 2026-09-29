@@ -80,10 +80,54 @@ def main():
         return 1
 
     texto = '\n\n'.join(partes)
+
+    # ── EL SELLO DEL BACKEND ──────────────────────────────────
+    #
+    # La pantalla lleva `VERSION_PANTALLA` desde hace meses, justo por
+    # esto: sin una marca visible no se puede saber si lo que corre es
+    # lo nuevo o lo de ayer. El .gs no lo llevaba, y se pagó.
+    #
+    # Le mandé cuatro veces el mismo archivo en una tarde —todos
+    # llamados NOVA-COMPLETO.gs, sin forma de distinguirlos— y pegó el
+    # tercero. El error que reportó como nuevo era el viejo, en la línea
+    # exacta del archivo anterior, y lo único que lo delató fue que el
+    # número de línea del error no cuadraba con el mío.
+    #
+    # Con el sello se pregunta y se responde en diez segundos.
+    import datetime
+    import hashlib
+
+    # La huella es del CUERPO, sin la cabecera: si se calculara sobre el
+    # archivo entero cambiaría al escribirse a sí misma.
+    huella = hashlib.sha256(texto.encode('utf-8')).hexdigest()[:6]
+
+    PLANTILLA = (
+        '/* NOVA-COMPLETO.gs · generado por apps-script/construir.py\n'
+        '   NO SE EDITA A MANO: los cambios van en los archivos numerados.\n'
+        '   {sello}\n'
+        '   Para saber qué versión está corriendo: ejecuta queVersion() */\n\n'
+        "const NOVA_GS = '{sello}';\n\n"
+    )
+    # Y las líneas son las del archivo FINAL, cabecera incluida. Es el
+    # número con el que se compara contra el que alguien tiene abierto:
+    # un conteo que no cuadra con lo que se ve en pantalla no sirve para
+    # lo único que existe.
+    #
+    # `count('\n') + 1` y no `wc -l`: el editor de Apps Script numera la
+    # última línea vacía, así que este es el número que ella ve abajo del
+    # todo. `wc -l` daría uno menos y la comparación fallaría por uno.
+    lineas = texto.count('\n') + 1 + PLANTILLA.count('\n')
+    sello = f"{datetime.date.today().isoformat()} · {lineas} líneas · {huella}"
+    texto = PLANTILLA.format(sello=sello) + texto
     SALIDA.write_text(texto, encoding='utf-8')
 
-    lineas = texto.count('\n') + 1
-    print(f'NOVA-COMPLETO.gs: {len(ORDEN)} archivos, {lineas} líneas')
+    real = texto.count('\n') + 1
+    if real != lineas:                      # el sello no puede mentir
+        print(f'ERROR: el sello dice {lineas} líneas y el archivo tiene {real}',
+              file=sys.stderr)
+        return 1
+
+    print(f'NOVA-COMPLETO.gs: {len(ORDEN)} archivos, {lineas} líneas · {huella}')
 
     # Una función declarada dos veces no falla al pegar, pero la segunda
     # gana en silencio. Vale la pena avisar.
