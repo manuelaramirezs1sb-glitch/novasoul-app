@@ -100,7 +100,24 @@ function bloquesDe_(uid) {
     return {
       id: String(f.id || ''),
       nombre: String(f.nombre || '').trim(),
-      trabajoId: String(f.trabajo_id || '').trim(),
+      /**
+       * ── UN BLOQUE PUEDE CUBRIR VARIOS PROYECTOS ──
+       *
+       * «changos se duplicó esta vaina, aparece Nutrea doble, las
+       * tiendas y Nutrea Ecu y Nutrea GT».
+       *
+       * `trabajo_id` era UN id, y por eso el bloque «Nutrea · tiendas»
+       * no podía cubrir a NUTREA GT y a NUTREA EC a la vez. Aunque el
+       * emparejado por nombre hubiera acertado, habría tapado uno de
+       * los dos y el otro se habría contado aparte igual: catorce horas
+       * de trabajo aparecían como treinta y ocho.
+       *
+       * Ahora acepta varios separados por coma. Un id suelto sigue
+       * valiendo, así que ninguna fila que ya exista cambia de sentido.
+       */
+      trabajoIds: String(f.trabajo_id || '').split(/[,;]/)
+        .map(function (x) { return x.trim(); })
+        .filter(function (x) { return x; }),
       min: min, max: Math.max(min, max),
       cada: norm(f.cada) === 'semana' ? 'semana' : 'dia',
       veces: num(f.veces) || 0,
@@ -169,9 +186,14 @@ function semanaComprometida_(uid, activos) {
     const horas = b.cada === 'dia'
       ? b.min * b.dias.length
       : b.min * Math.max(1, b.veces || 1);
-    if (b.trabajoId) porTrabajo[b.trabajoId] = (porTrabajo[b.trabajoId] || 0) + horas;
-    detalle.push({ id: b.trabajoId || b.id, nombre: b.nombre, horas: horas,
-                   deBloque: true });
+    // Un bloque puede cubrir VARIOS proyectos: «Nutrea · tiendas» son
+    // NUTREA GT y NUTREA EC. Todos los que cubra quedan tapados, o el
+    // que sobre se cuenta aparte — que es cómo 14 h salieron como 38.
+    b.trabajoIds.forEach(function (tid) {
+      porTrabajo[tid] = (porTrabajo[tid] || 0) + horas;
+    });
+    detalle.push({ id: b.trabajoIds[0] || b.id, nombre: b.nombre, horas: horas,
+                   deBloque: true, cubre: b.trabajoIds.slice() });
   });
 
   (activos || []).forEach(function (t) {
@@ -332,7 +354,7 @@ function soulHorario(s, p) {
     if (!puesto) return false;
     ocupar_(huecos[dia], puesto);
     dias[dia - 1].puestos.push({
-      bloque: b.id, nombre: b.nombre, trabajoId: b.trabajoId,
+      bloque: b.id, nombre: b.nombre, trabajoId: b.trabajoIds[0] || '',
       inicio: hhmm_(puesto.a), fin: hhmm_(puesto.b), horas: horas,
       franja: franja,
     });
@@ -534,6 +556,104 @@ function soulDeQuien_(uid) {
     'sembrarBloques("tucorreo@…") — el mismo con el que entras a NovaSoul.');
 }
 
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *   QUÉ QUEDÓ SUELTO ENTRE TUS BLOQUES Y TUS PROYECTOS
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ┌─ LO QUE PASÓ ──────────────────────────────────────────────┐
+ * │                                                            │
+ * │ «changos se duplicó esta vaina, aparece Nutrea doble, las   │
+ * │  tiendas y Nutrea Ecu y Nutrea GT».                         │
+ * │                                                            │
+ * │ Catorce horas de trabajo aparecían como treinta y ocho,     │
+ * │ porque «Nutrea · tiendas» no encontró por nombre a «NUTREA  │
+ * │ GT» ni a «NUTREA EC», y Nova contó el bloque Y los dos      │
+ * │ proyectos. Igual con «Carta de Sky» y «Carta Sky Blue».     │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * ┌─ POR QUÉ ESTO Y NO UN EMPAREJADO MÁS LISTO ────────────────┐
+ * │                                                            │
+ * │ Porque adivinar por parecido de nombre es exactamente lo    │
+ * │ que produjo el error. Puedo afinarlo —y lo afiné— pero la   │
+ * │ próxima vez que ella cree un proyecto con otro nombre,      │
+ * │ vuelve a fallar en silencio, y un número inflado en         │
+ * │ silencio es lo peor: se ve bien y está mal.                 │
+ * │                                                            │
+ * │ Esto NO adivina. Enseña lo que quedó suelto por los dos     │
+ * │ lados y ella decide. Es el mismo trato que en Empresarial   │
+ * │ con los estados sin clasificar: Nova dice qué no sabe, la   │
+ * │ dueña lo resuelve, y la cuenta se rehace.                   │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ *
+ * No escribe nada: solo mira y cuenta. Se corre sin argumentos.
+ */
+function enlacesDelHorario(uid) {
+  let yo;
+  try { yo = soulDeQuien_(uid); }
+  catch (e) { return soulDecir_('No pude saber de quién: ' + e.message); }
+
+  const bloques = bloquesDe_(yo);
+  const proyectos = soulTrabajos_().filter(function (x) { return x.estado === 'activo'; });
+  const porId = {};
+  proyectos.forEach(function (p) { porId[p.id] = p; });
+
+  // Qué proyectos ya están cubiertos por algún bloque
+  const cubiertos = {};
+  bloques.forEach(function (b) {
+    b.trabajoIds.forEach(function (t) { cubiertos[t] = b.nombre; });
+  });
+
+  const L = [];
+  L.push('TUS BLOQUES Y TUS PROYECTOS · ' + yo);
+  L.push('');
+
+  L.push('BLOQUES (' + bloques.length + ')');
+  bloques.forEach(function (b) {
+    const nombres = b.trabajoIds.map(function (t) {
+      return porId[t] ? porId[t].nombre : '(id ' + t + ' que ya no existe)';
+    });
+    L.push('  ' + (nombres.length ? '✓' : '·') + ' ' + b.nombre +
+      (nombres.length ? '  →  ' + nombres.join(' + ') : '  →  sin proyecto'));
+  });
+
+  /**
+   * Los que se cuentan dos veces. Es la lista que importa: cada uno de
+   * estos está sumando sus horas APARTE de las del bloque que hace el
+   * mismo trabajo.
+   */
+  const sueltos = proyectos.filter(function (p) {
+    return !cubiertos[p.id] && p.horasSemana > 0;
+  });
+  L.push('');
+  L.push('PROYECTOS DE CENTRAL CON HORAS Y SIN BLOQUE (' + sueltos.length + ')');
+  if (!sueltos.length) {
+    L.push('  Ninguno: no hay horas contadas dos veces.');
+  } else {
+    sueltos.forEach(function (p) {
+      L.push('  · ' + p.nombre + '  ' + p.horasSemana + ' h/semana   [id: ' + p.id + ']');
+    });
+    L.push('');
+    L.push('  Si alguno de estos YA está dentro de un bloque de arriba, copia su');
+    L.push('  id a la celda trabajo_id de ese bloque, en la hoja Bloques.');
+    L.push('  Varios van separados por coma:  abc123,def456');
+    L.push('  Mientras no lo hagas, sus horas se cuentan dos veces.');
+  }
+
+  // Y el total, con y sin el arreglo, que es lo que se ve en pantalla
+  const c = semanaComprometida_(yo, proyectos);
+  const dobles = sueltos.reduce(function (a, p) { return a + p.horasSemana; }, 0);
+  L.push('');
+  L.push('Ahora mismo NovaSoul dice ' + Math.round(c.total) + ' h comprometidas.');
+  if (dobles) {
+    L.push('De esas, ' + Math.round(dobles) + ' h pueden estar repetidas: serían ' +
+           Math.round(c.total - dobles) + ' h.');
+  }
+  return soulDecir_(L.join('\n'));
+}
+
 function sembrarBloques(uid) {
   const yo = soulDeQuien_(uid);
 
@@ -574,22 +694,50 @@ function sembrarBloques(uid) {
    * enlazarlo al proyecto equivocado por parecerse un poco.
    */
   const proyectos = soulTrabajos_().filter(function (x) { return x.estado === 'activo'; });
+  /**
+   * ── EL EMPAREJADO, Y POR QUÉ NO ME FÍO DE ÉL ──
+   *
+   * «Nutrea · tiendas» no encontró ni a «NUTREA GT» ni a «NUTREA EC»
+   * porque ninguno contiene al otro, y «Carta de Sky» no encontró a
+   * «Carta Sky Blue» por lo mismo. Resultado: catorce horas contadas
+   * como treinta y ocho.
+   *
+   * Dos cambios. Uno: devuelve TODOS los que calcen, no el mejor — un
+   * bloque de «las tiendas» cubre las dos tiendas. Y dos: se comparan
+   * también las PALABRAS, para que «nutrea tiendas» encuentre a
+   * «nutrea gt».
+   *
+   * Pero esto sigue siendo adivinar por parecido, que es lo que falló.
+   * Por eso lo que de verdad arregla el problema no es este emparejado
+   * sino `enlacesDelHorario()`, que enseña lo que quedó suelto para que
+   * lo decida ella. Aquí solo se propone el arranque.
+   */
+  const palabras = function (s) {
+    return norm(s).split(/[^a-z0-9]+/).filter(function (w) { return w.length > 2; });
+  };
   const enlazar = function (nombre) {
     const n = norm(nombre);
-    let mejor = null;
+    const mias = palabras(nombre);
+    const out = [];
     proyectos.forEach(function (pr) {
       const pn = norm(pr.nombre);
       if (!pn) return;
-      if (n === pn || n.indexOf(pn) !== -1 || pn.indexOf(n) !== -1) {
-        if (!mejor || pn.length > norm(mejor.nombre).length) mejor = pr;
+      // Calza si uno contiene al otro…
+      let calza = (n === pn || n.indexOf(pn) !== -1 || pn.indexOf(n) !== -1);
+      // …o si comparten una palabra con peso («nutrea», «carta»).
+      if (!calza) {
+        const suyas = palabras(pr.nombre);
+        calza = mias.some(function (w) { return suyas.indexOf(w) !== -1; });
       }
+      if (calza) out.push(pr.id);
     });
-    return mejor ? mejor.id : '';
+    return out;
   };
 
   const enlazados = [];
   filas.forEach(function (f, i) {
-    const trabajoId = enlazar(f[0]);
+    const ids = enlazar(f[0]);
+    const trabajoId = ids.join(',');
     if (trabajoId) enlazados.push(f[0]);
     const o = {
       id: 'b' + (i + 1) + Utilities.getUuid().slice(0, 4),

@@ -92,6 +92,7 @@ global.Date = class extends RealDate {
 
 (0, eval)(src + '\n;globalThis.__F = { soulHorario, bloquesDe_, diasDe_, huecosDelDia_, semanaComprometida_,' +
   ' horaNum_, libroOlvidar_, soulOlvidar_, sembrarBloques, soulDeQuien_,' +
+  ' enlacesDelHorario, bloquesDe_,' +
   ' HORARIO_DESDE, HORARIO_HASTA };');
 const F = globalThis.__F;
 
@@ -504,6 +505,95 @@ ok('y la segunda vez también se ve por qué no hizo nada',
 
 global.Logger = LOGGER_ORIG;
 global.Session = SESION_ORIG;
+
+
+console.log('\n══ 11 · UN BLOQUE QUE CUBRE VARIOS PROYECTOS ══');
+/**
+ * ┌─ SU CAPTURA ───────────────────────────────────────────────┐
+ * │                                                            │
+ * │   turnos            16 h                                   │
+ * │   Nutrea · tiendas  14 h   ← el bloque                     │
+ * │   NUTREA GT         12 h   ← y el proyecto                 │
+ * │   NUTREA EC         12 h   ← y el otro proyecto            │
+ * │                                                            │
+ * │ «changos se duplicó esta vaina, aparece Nutrea doble».      │
+ * │                                                            │
+ * │ Catorce horas de trabajo contadas como treinta y ocho,      │
+ * │ porque `trabajo_id` era UN id y «las tiendas» son DOS. Ni   │
+ * │ afinando el emparejado por nombre se arreglaba: habría      │
+ * │ tapado una tienda y la otra se contaría aparte igual.       │
+ * │                                                            │
+ * └────────────────────────────────────────────────────────────┘
+ */
+const NGT = { id: 'tgt', nombre: 'NUTREA GT', estado: 'activo', horasSemana: 12 };
+const NEC = { id: 'tec', nombre: 'NUTREA EC', estado: 'activo', horasSemana: 12 };
+const SKY = { id: 'tsky', nombre: 'Carta Sky Blue', estado: 'activo', horasSemana: 4 };
+const DOS_TIENDAS = [NGT, NEC, SKY];
+
+// Como quedó su hoja: el bloque sin enlazar a nada
+sembrar([bloque({ id: 'b1', nombre: 'Nutrea · tiendas', horas_min: 2, horas_max: 3,
+                  cada: 'dia', dias: '1-6', partes: 2, orden: 10 })]);
+let cc = F.semanaComprometida_(YO, DOS_TIENDAS);
+igual('sin enlazar: el bloque y las dos tiendas, por separado', 4, cc.detalle.length);
+igual('y el total está inflado', 2 * 6 + 12 + 12 + 4, cc.total);
+
+/** Con los dos ids en la misma celda, separados por coma. */
+sembrar([bloque({ id: 'b1', nombre: 'Nutrea · tiendas', trabajo_id: 'tgt,tec',
+                  horas_min: 2, horas_max: 3, cada: 'dia', dias: '1-6',
+                  partes: 2, orden: 10 })]);
+cc = F.semanaComprometida_(YO, DOS_TIENDAS);
+const nutreas = cc.detalle.filter(function (x) { return /NUTREA|Nutrea/.test(x.nombre); });
+igual('Nutrea aparece UNA sola vez', 1, nutreas.length);
+igual('y es el bloque, no los proyectos', 'Nutrea · tiendas', nutreas[0].nombre);
+igual('con las horas del bloque', 12, nutreas[0].horas);
+/** Lo que NO cubre el bloque sigue contando: taparlo todo sería el otro error. */
+ok('Carta Sky Blue, que no está en ningún bloque, sigue ahí',
+   cc.detalle.some(function (x) { return x.nombre === 'Carta Sky Blue'; }),
+   JSON.stringify(cc.detalle.map(function (x) { return x.nombre; })));
+igual('el total ya no está inflado', 12 + 4, cc.total);
+
+/** Un id suelto sin coma tiene que seguir valiendo igual que siempre. */
+sembrar([bloque({ id: 'b1', nombre: 'Nova', trabajo_id: 'tgt',
+                  horas_min: 2, horas_max: 3, cada: 'semana', veces: 3, orden: 20 })]);
+cc = F.semanaComprometida_(YO, DOS_TIENDAS);
+ok('un solo id, sin coma, sigue tapando su proyecto',
+   !cc.detalle.some(function (x) { return x.nombre === 'NUTREA GT'; }),
+   JSON.stringify(cc.detalle.map(function (x) { return x.nombre; })));
+
+console.log('\n══ 12 · Y NOVA ENSEÑA LO QUE QUEDÓ SUELTO ══');
+/**
+ * Lo que de verdad arregla esto no es el emparejado por nombre —que es
+ * justo lo que falló— sino que Nova diga qué NO sabe y ella lo decida.
+ * Mismo trato que con los estados sin clasificar en Empresarial.
+ */
+const LOGS3 = [];
+const LOG3 = global.Logger;
+global.Logger = { log: (m) => LOGS3.push(String(m)) };
+global.__TRABAJOS = DOS_TIENDAS;
+
+sembrar([bloque({ id: 'b1', nombre: 'Nutrea · tiendas', horas_min: 2, horas_max: 3,
+                  cada: 'dia', dias: '1-6', partes: 2, orden: 10 })]);
+LIBROS.s.Trabajos = [['id', 'nombre', 'estado', 'horas_semana']]
+  .concat(DOS_TIENDAS.map(function (t) {
+    return [t.id, t.nombre, t.estado, t.horasSemana];
+  }));
+LIBROS.cen = LIBROS.cen || {};
+LIBROS.cen.Trabajos = LIBROS.s.Trabajos;
+F.libroOlvidar_(); F.soulOlvidar_();
+
+const inf = F.enlacesDelHorario(YO);
+ok('nombra el bloque que quedó sin proyecto',
+   /Nutrea · tiendas.*sin proyecto/.test(inf), inf);
+ok('y lista los proyectos que se están contando aparte',
+   /NUTREA GT/.test(inf) && /NUTREA EC/.test(inf), inf);
+ok('con su id, que es lo que hay que copiar',
+   /tgt/.test(inf) && /tec/.test(inf), inf);
+ok('dice que van separados por coma', /separados por coma/.test(inf), inf);
+ok('y cuánto se estaría contando de más',
+   /pueden estar repetidas/.test(inf), inf);
+ok('queda en el registro, no solo en el return',
+   LOGS3.length === 1 && LOGS3[0] === inf);
+global.Logger = LOG3;
 
 console.log(fallas ? '\n' + fallas + ' FALLAS\n' : '\nTodo bien\n');
 process.exit(fallas ? 1 : 0);
