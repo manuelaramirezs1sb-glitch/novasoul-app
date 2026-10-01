@@ -110,7 +110,8 @@ global.Date = class extends RealDate {
 };
 (0, eval)(fs.readFileSync(__dirname + '/../apps-script/NOVA-COMPLETO.gs', 'utf8') +
   '\n;globalThis.__S = { soulArranque, soulCielo, soulCieloLectura, soulPlataOrdenada,' +
-  ' soulHoy, soulRutina, soulMaterias, libroOlvidar_, soulOlvidar_, SOUL_HOJAS };');
+  ' soulHoy, soulRutina, soulMaterias, soulHorario, libroOlvidar_, soulOlvidar_,' +
+  ' SOUL_HOJAS };');
 const SRV = globalThis.__S;
 const H = SRV.SOUL_HOJAS;
 const YO = 'manuela@nova.com';
@@ -132,6 +133,7 @@ function sembrarHojas() {
     Turnos: [H.Turnos.slice()], Pendientes: [H.Pendientes.slice()],
     Materias: [H.Materias.slice()], Mindlab: [H.Mindlab.slice()],
     Horas: [['usuario_id','dia_semana','horas_libres','nota']],
+    Bloques: [H.Bloques.slice()],
     Revolucion: [['usuario_id','anio','desde','hasta','ascendente','casa_sol','tema','texto','nota']],
     Usuarios: [['id','nombre','correo','fecha_nacimiento','hora_nacimiento',
                 'lugar_nacimiento','zona_horaria','acento','modo','idioma'],
@@ -160,6 +162,22 @@ function sembrarHojas() {
   LIBROS.s.Turnos.push(filaDe(H.Turnos, { id:'t1', usuario_id:YO, rutina_id:'r1',
     fecha:'2026-09-18', paga:90000, propinas:35000, moneda:'COP', estado:'hecho' }));
 
+  /**
+   * Horas útiles y bloques: sin ellos el servidor contesta `sinReglas`
+   * —«todavía no sé qué quieres que quepa»— y la pantalla no tiene
+   * horario que pintar. Mi primera versión de esta prueba no los tenía
+   * y la aserción falló por el fixture, no por el producto.
+   */
+  [1, 2, 3, 4, 5, 6, 7].forEach(function (d) {
+    LIBROS.s.Horas.push([YO, d, d === 7 ? 0 : 8, '']);
+  });
+  const blq = (o) => LIBROS.s.Bloques.push(filaDe(H.Bloques,
+    Object.assign({ usuario_id: YO, activo: 'si', tipo: 'trabajo' }, o)));
+  blq({ id:'b1', nombre:'Nutrea · tiendas', horas_min:2, horas_max:3, cada:'dia',
+        dias:'1-6', partes:2, franja:'cualquiera', orden:10 });
+  blq({ id:'b2', nombre:'Nova', horas_min:2, horas_max:3, cada:'semana', veces:3,
+        dias:'1-6', partes:1, franja:'tarde', orden:20 });
+
   LIBROS.s.Materias.push(filaDe(H.Materias, { id:'m1', usuario_id:YO,
     nombre:'Psicología del consumidor', codigo:'PSI-401', profesor:'Ramírez',
     semestre:'2026-2', estado:'activa' }));
@@ -173,11 +191,12 @@ const CIELO_ = SRV.soulCielo(SOCIA, {});
 const LECTURA_ = SRV.soulCieloLectura(SOCIA, { rango: 'semana' });
 const RUTINA_ = SRV.soulRutina(SOCIA, {});
 const UNI_ = SRV.soulMaterias(SOCIA, {});
+const HORARIO_ = SRV.soulHorario(SOCIA, {});
 sembrarHojas();
 const ARRANQUE_ = SRV.soulArranque(SOCIA, {});
 
 [['Hoy', HOY_], ['plata', PLATA_], ['cielo', CIELO_], ['lectura', LECTURA_],
- ['rutina', RUTINA_], ['universidad', UNI_], ['arranque', ARRANQUE_]
+ ['rutina', RUTINA_], ['universidad', UNI_], ['horario', HORARIO_], ['arranque', ARRANQUE_]
 ].forEach(function (par) {
   if (!par[1] || par[1].ok !== true) {
     console.log('  ⚠ el servidor falló en ' + par[0] + ': ' +
@@ -224,6 +243,7 @@ async function abrirNovaSoul(b, conPrecarga) {
         nc_soul: d.hoy, nc_soul_plata: d.plata, nc_soul_cielo: d.cielo,
         nc_soul_rutina: d.rutina, nc_soul_materias: d.uni,
         nc_soul_cielo_lectura: d.lectura, nc_soul_arranque: d.arranque,
+        nc_soul_horario: d.horario,
       }[accion];
       if (!R) return { ok: true };
       // Sin precarga, el arranque «no existe» en esa hoja.
@@ -233,7 +253,8 @@ async function abrirNovaSoul(b, conPrecarga) {
       return JSON.parse(JSON.stringify(R));
     };
   }, { hoy: HOY_, plata: PLATA_, cielo: CIELO_, rutina: RUTINA_, uni: UNI_,
-       lectura: LECTURA_, arranque: ARRANQUE_, conPrecarga: conPrecarga });
+       lectura: LECTURA_, arranque: ARRANQUE_, horario: HORARIO_,
+       conPrecarga: conPrecarga });
 
   await p.evaluate(() => cargar());
   await p.waitForTimeout(500);
@@ -288,6 +309,49 @@ async function abrirNovaSoul(b, conPrecarga) {
     ok('la lectura trae las cuatro preguntas' + C,
        /TIEMPO PARA QUÉ/.test(cielo) || /tiempo para/i.test(cielo));
     ok('y los ejes del karma' + C, /eje del karma/i.test(cielo));
+
+    console.log('\n── MI SEMANA SE ARMA SOLA AL ABRIRLA' + C + ' ──');
+    /**
+     * ┌─ LO QUE PASÓ ──────────────────────────────────────────┐
+     * │                                                        │
+     * │ «el horario no se organizó».                            │
+     * │                                                        │
+     * │ No estaba roto: había que apretar «Organízame la        │
+     * │ semana». Pero una pantalla que se llama «Mi semana» y   │
+     * │ enseña el hueco donde iría el horario no se distingue   │
+     * │ de una que falló. Y ella había pedido justo lo          │
+     * │ contrario: que Nova se mantenga sola.                   │
+     * │                                                        │
+     * └────────────────────────────────────────────────────────┘
+     */
+    await p.evaluate(() => { window.__pedidas.length = 0; });
+    await p.evaluate(() => go('semana'));
+    await p.waitForTimeout(500);
+    const sem1 = (await p.textContent('#v-semana')).replace(/\s+/g, ' ');
+    ok('al abrirla sale el horario, sin apretar nada' + C,
+       /TU SEMANA, ORGANIZADA/.test(sem1), sem1.slice(0, 200));
+    ok('con los días de la semana dibujados' + C,
+       (await p.evaluate(() => document.querySelectorAll('#sem-horario .sdia').length)) === 7);
+    const pedido1 = await p.evaluate(() => window.__pedidas.slice());
+    ok('y lo pidió una sola vez' + C,
+       pedido1.filter(function (x) { return x === 'nc_soul_horario'; }).length === 1,
+       JSON.stringify(pedido1));
+
+    /**
+     * Y volver NO puede costar otro viaje: cada `nc` es un arranque de
+     * motor de Apps Script, entre medio segundo y dos segundos, traiga
+     * lo que traiga. Es de donde salen los segundos que ella siente.
+     */
+    await p.evaluate(() => { window.__pedidas.length = 0; });
+    await p.evaluate(() => go('hoy'));
+    await p.waitForTimeout(150);
+    await p.evaluate(() => go('semana'));
+    await p.waitForTimeout(350);
+    const pedido2 = await p.evaluate(() => window.__pedidas.slice());
+    ok('volver a la pestaña no vuelve a viajar' + C,
+       pedido2.indexOf('nc_soul_horario') === -1, JSON.stringify(pedido2));
+    ok('y el horario sigue dibujado' + C,
+       /TU SEMANA, ORGANIZADA/.test((await p.textContent('#v-semana')).replace(/\s+/g, ' ')));
 
     ok('sin errores de JavaScript' + C, errores.length === 0, errores.join(' | '));
     await p.close();

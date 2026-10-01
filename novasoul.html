@@ -1024,7 +1024,26 @@ textarea,input,select,button{font-family:inherit;}
 const NOVA_API = 'https://script.google.com/macros/s/AKfycbwX7CAInPut44U0X4o18SARba6SCjUkAqYnfkl3Gbjr0xv2NB2D5gG9rRKcNTNylclI9g/exec';
 
 /** El sello lo pone sellar.py. Sirve para saber si lo abierto es lo último. */
-const VERSION_PANTALLA = '2026-09-29 · cde0';
+const VERSION_PANTALLA = '2026-10-01 · ad89';
+
+/**
+ * Lo que tardó el arranque y qué .gs está sirviendo. Van juntos en
+ * «Mi perfil» porque las dos preguntas se hacen el mismo día: «¿por
+ * qué va lento?» y «¿pegué el archivo nuevo?».
+ */
+let ARRANQUE_SOUL = null;
+
+function pintarSelloSoul() {
+  const el = document.getElementById('pf-version');
+  if (!el) return;
+  const a = ARRANQUE_SOUL;
+  el.textContent = VERSION_PANTALLA +
+    (a && a.gs ? ' · Apps Script ' + a.gs : '') +
+    (a && a.redondo >= 3000
+      ? ' · tardó ' + (a.redondo / 1000).toFixed(1) + ' s' +
+        (a.lentas.length ? ' (lo más pesado: ' + a.lentas.join(', ') + ')' : '')
+      : '');
+}
 
 let NC_TOKEN = localStorage.getItem('nc_token') || '';
 let SES = null;      // quién es
@@ -1178,7 +1197,7 @@ function entrar() {
   document.getElementById('sb-nm').textContent = nm;
   document.getElementById('sb-rl').textContent = SES.rol === 'socia' ? 'Socia' : 'Operadora';
   document.getElementById('sb-av').textContent = (nm.trim()[0] || '·').toUpperCase();
-  document.getElementById('pf-version').textContent = VERSION_PANTALLA;
+  pintarSelloSoul();
   document.getElementById('pf-correo').textContent = SES.correo || '—';
   document.getElementById('pf-rol').textContent = SES.rol === 'socia' ? 'Socia' : 'Operadora';
   if (SES.vence) {
@@ -1274,8 +1293,28 @@ function avisoGlobal(msg, bien) {
 
 async function precargarTodo() {
   let r;
+  const t0 = Date.now();
   try { r = await nc('nc_soul_arranque'); } catch (e) { return; }
   if (!r || !r.ok) return;
+
+  /**
+   * ── LO QUE TARDÓ, DICHO ──
+   *
+   * «se demora mucho en cargar». Con eso solo se puede suponer; con
+   * los milisegundos de cada una de las cinco secciones se puede
+   * cortar donde hay que cortar. Empresarial lleva esto desde hace
+   * días; NovaSoul no.
+   *
+   * `redondo` es lo que ella siente —incluye el viaje por la red—;
+   * `r.ms` es lo que tardó el servidor. Si son muy distintos, el
+   * problema no está en el código sino en la conexión, y eso también
+   * hay que poder distinguirlo.
+   */
+  ARRANQUE_SOUL = { redondo: Date.now() - t0, ms: r.ms || 0,
+                    tiempos: r.tiempos || {}, lentas: r.lentas || [],
+                    gs: r.gs || '' };
+  if (r.tiempos) console.info('[NovaSoul] arranque ' + r.ms + 'ms', r.tiempos);
+  pintarSelloSoul();
 
   /**
    * Se rellena solo lo que todavía está vacío. Si ella ya abrió una
@@ -1954,6 +1993,12 @@ async function mover(id, estado) {
 const FRANJA_COLOR = { manana: 'var(--acc-hi)', tarde: 'var(--acc)',
                        noche: 'var(--mut3)', cualquiera: 'var(--acc)' };
 
+/**
+ * La semana armada, guardada. Sin esto, volver a la pestaña costaba
+ * otro viaje a Apps Script —y ese viaje son segundos, no milisegundos.
+ */
+let HOR = null;
+
 async function armarSemana() {
   const caja = document.getElementById('sem-horario');
   if (!caja) return;
@@ -1970,9 +2015,37 @@ async function armarSemana() {
       esc(traducirError(r && r.error) || 'No se pudo.') + '</div></div>';
     return;
   }
+  HOR = r;
+  pintarHorario();
+}
+
+/**
+ * Pintar va aparte de traer, como en el resto de NovaSoul: al entrar a
+ * «Mi semana» se pinta lo que ya está, y solo se viaja la primera vez.
+ */
+function pintarHorario() {
+  const caja = document.getElementById('sem-horario');
+  const r = HOR;
+  if (!caja || !r) return;
   if (r.sinReglas) {
     caja.innerHTML = '<div class="card"><div class="card-h3">Todavía no sé qué quieres que quepa</div>' +
       '<p class="card-p" style="margin-top:8px;">' + esc(r.porque) + '</p></div>';
+    return;
+  }
+  /**
+   * Una respuesta a medias no puede tumbar la pantalla.
+   *
+   * Esto hacía `r.dias.map(...)` a pelo. Desde que la semana se arma
+   * SOLA al abrir la pestaña, una respuesta sin `dias` —un servidor
+   * viejo que todavía no conoce `nc_soul_horario`, por ejemplo— ya no
+   * da un botón que no hace nada: revienta al entrar, y se lleva por
+   * delante el resto de la sección. Lo encontró la prueba de pantalla
+   * en cuanto el horario pasó a ser automático.
+   */
+  if (!Array.isArray(r.dias)) {
+    caja.innerHTML = '<div class="card"><div class="vacio">No pude armar la semana: ' +
+      'la respuesta vino incompleta. Si acabas de pegar el Apps Script, implementa ' +
+      'una versión nueva y vuelve a entrar.</div></div>';
     return;
   }
 
@@ -4506,6 +4579,23 @@ const SECCIONES = {
             } },
   family: { hay: function () { return FAM; },   traer: function () { return cargarFamily(); },
             pintar: function () { pintarFamily(); } },
+  /**
+   * ── LA SEMANA SE ARMA SOLA AL ABRIRLA ──
+   *
+   * «el horario no se organizó».
+   *
+   * No estaba roto: había que apretar «Organízame la semana». Pero una
+   * pantalla que se llama «Mi semana» y enseña el hueco donde iría el
+   * horario no se distingue de una que falló — y encima ella pidió
+   * justo lo contrario: «no vamos a cambiar el código cada que me
+   * involucre en un proyecto nuevo».
+   *
+   * Se arma al entrar, y una sola vez: `HOR` guarda lo armado, así que
+   * volver a la pestaña no cuesta otro viaje. El botón se queda para
+   * rehacerla a propósito cuando ella cambie algo.
+   */
+  semana: { hay: function () { return HOR; }, traer: function () { return armarSemana(); },
+            pintar: function () { pintarHorario(); } },
 };
 
 function abrirSeccion(view) {

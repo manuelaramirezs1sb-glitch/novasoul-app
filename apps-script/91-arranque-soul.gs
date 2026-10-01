@@ -64,7 +64,24 @@ function soulArranque(s, p) {
 
   const out = { ok: true, hoy: ahoraISO().slice(0, 10), fallaron: [] };
 
+  /**
+   * ── CUÁNTO TARDA CADA SECCIÓN ──
+   *
+   * «se demora mucho en cargar».
+   *
+   * Son cinco secciones en un viaje, y el total no dice cuál se come
+   * los segundos. Medir cada una cuesta una resta, y quita la
+   * discusión de memoria — que es la que me hizo poner un tope de 90
+   * días en Meta por una cuota que resultó no existir.
+   *
+   * Empresarial lleva esto desde hace días y por eso ahí sé dónde
+   * mirar. NovaSoul no lo llevaba.
+   */
+  const tiempos = {};
+  const t0 = Date.now();
+
   const parte = function (nombre, clave, fn) {
+    const tp = Date.now();
     try {
       const r = fn();
       // Una sección que devuelve su propio error lo dice y no se pierde.
@@ -76,6 +93,7 @@ function soulArranque(s, p) {
       out.fallaron.push({ seccion: nombre, porque: e.message });
       out[clave] = null;
     }
+    tiempos[nombre] = Date.now() - tp;
   };
 
   /**
@@ -89,5 +107,14 @@ function soulArranque(s, p) {
   parte('Mi rutina', 'rutina', function () { return soulRutina(s, p); });
   parte('Universidad', 'materias', function () { return soulMaterias(s, p); });
 
+  out.ms = Date.now() - t0;
+  out.tiempos = tiempos;
+  // Las dos que más tardaron, ya ordenadas: es lo que hay que mirar
+  // cuando alguien dice «está lento».
+  out.lentas = Object.keys(tiempos)
+    .sort(function (a, b) { return tiempos[b] - tiempos[a]; })
+    .slice(0, 2)
+    .map(function (k) { return k + ' ' + tiempos[k] + 'ms'; });
+  out.gs = (typeof NOVA_GS === 'string' ? NOVA_GS : '');
   return out;
 }

@@ -101,7 +101,16 @@ const igual = (n, esp, real) => ok(n, JSON.stringify(esp) === JSON.stringify(rea
 
 const hoy = new Date().toISOString().slice(0, 10);
 const ayer = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-const mes = hoy.slice(0, 7);
+/**
+ * EL MES ES EL DE LA NOVEDAD, NO EL DE HOY.
+ *
+ * Esta prueba se puso roja sola el 1 de octubre: `ayer` era el 30 de
+ * septiembre y `agregarMes` se le pedía a octubre, así que la novedad
+ * quedaba fuera del mes y el KPI contaba 0. El producto estaba bien;
+ * la prueba asumía que ayer y hoy son del mismo mes, y una vez al mes
+ * eso es falso.
+ */
+const mes = ayer.slice(0, 7);
 
 /** Una fila con encabezados de verdad: los del esquema, no los que yo recuerde. */
 function fila(entidad, valores) {

@@ -176,9 +176,26 @@ igual('y viene marcada como en curso', true, !!(sem[LC] || {}).enCurso);
  * lado». Cuando hoy ES lunes las dos filas caen en el mismo día, y
  * entonces es uno: por eso se calcula en vez de escribirse.
  */
-igual('dice cuántos días llevan gasto',
-      HOY === LC ? 1 : 2, (sem[LC] || {}).diasConGasto);
-igual('y suma los dos días', 100, Math.round((sem[LC] || {}).gasto));
+/**
+ * CUÁNTOS DÍAS CAEN EN EL MES, NO CUÁNTOS PUSE.
+ *
+ * Esta aserción se puso roja sola el 1 de octubre: la semana en curso
+ * empezaba el 28 de septiembre, `agregarMes` se le pedía a OCTUBRE, y
+ * el lunes quedaba fuera del mes. El producto estaba bien —un mes es
+ * un mes— pero yo había escrito «2 días» dando por hecho que la semana
+ * entera cabe en el mes. Una vez al mes eso es falso.
+ *
+ * Se cuenta cuáles de los días sembrados pertenecen al mes que se está
+ * agregando, y se espera eso.
+ */
+const SEMBRADO = {};                 // día → lo que se puso en la hoja
+SEMBRADO[LC] = 40; SEMBRADO[HOY] = (SEMBRADO[HOY] || 0) + 60;
+const delMes = Object.keys(SEMBRADO).filter(function (d) {
+  return d.slice(0, 7) === mes;
+});
+const esperado = delMes.reduce(function (a, d) { return a + SEMBRADO[d]; }, 0);
+igual('dice cuántos días llevan gasto', delMes.length, (sem[LC] || {}).diasConGasto);
+igual('y suma solo lo que cae en el mes', esperado, Math.round((sem[LC] || {}).gasto));
 if (viejo) {
   igual('una semana vieja del mismo mes NO se marca en curso', false,
         !!(sem[F.lunesDe_(viejo)] || {}).enCurso);
